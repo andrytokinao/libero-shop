@@ -1,6 +1,6 @@
 package com.houssen.libertyshop.entity;
 
-import com.houssen.UserApp;
+
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

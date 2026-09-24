@@ -1,7 +1,7 @@
 package com.houssen.libertyshop.entity;
 
 import com.houssen.RemittanceStatus;
-import com.houssen.UserApp;
+
 import jakarta.persistence.*;
 import lombok.*;
 
