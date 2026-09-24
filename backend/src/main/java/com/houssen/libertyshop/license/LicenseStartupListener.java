@@ -35,6 +35,10 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
 
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
+        // Before anything is read: an enforcement switch turned off from the command line,
+        // the environment or a dropped-in file is put back to what the application ships.
+        LicensePropertyGuard.pin(event.getEnvironment());
+
         LicenseProperties properties = Binder.get(event.getEnvironment())
                 .bind("libertyshop.license", LicenseProperties.class)
                 .orElseGet(() -> new LicenseProperties(null, null, null, null, null));

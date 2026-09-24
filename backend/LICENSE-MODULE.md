@@ -264,6 +264,29 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 
 ## 5. Configuration
 
+> ⚠️ **Ces réglages ne sont lus que depuis le fichier livré dans le jar.**
+> Spring Boot donne normalement la priorité aux sources externes, ce qui rendait le
+> dispositif désarmable en une ligne :
+>
+> ```bash
+> java -jar backend.jar --libertyshop.license.enabled=false
+> LIBERTYSHOP_LICENSE_ENABLED=false java -jar backend.jar
+> echo libertyshop.license.enabled=false > ./config/application.properties
+> ```
+>
+> `LicensePropertyGuard` s'exécute avant toute lecture et **restaure la valeur du jar**
+> pour `enabled`, `clock-guard.enabled` et `trial.system-wide` dès que la clé provient
+> d'ailleurs, en le journalisant. Modifier ces valeurs suppose donc de repackager
+> l'application — c'est-à-dire le niveau d'effort déjà déclaré hors périmètre en §10.
+>
+> La durée d'essai est traitée à part, par un plafond compilé
+> (`TrialProperties.MAX_DAYS = 90`) : `trial.days` peut la **raccourcir**, jamais
+> l'allonger. Un `--libertyshop.license.trial.days=2000` est ramené à 90 sans bruit.
+>
+> Les **chemins** ne sont volontairement pas protégés : relocaliser le dossier de licence
+> est un choix de déploiement légitime, et cela ne rapporte rien — la date d'essai vit à
+> plusieurs endroits et c'est la plus ancienne qui gagne.
+
 Le projet utilise `application.properties` ; les valeurs réelles y sont déjà. Voici
 l'équivalent YAML si vous basculez un jour :
 
@@ -301,8 +324,10 @@ libertyshop:
       timeout: 10s
 ```
 
-En développement, désactivez simplement le contrôle :
-`libertyshop.license.enabled=false` (c'est déjà le cas dans `src/test/resources`).
+En développement, désactivez le contrôle **dans le fichier du classpath** —
+`src/main/resources/application.properties`, ou `src/test/resources` où c'est déjà fait.
+Passer `--libertyshop.license.enabled=false` en argument de lancement ne fonctionne plus :
+c'est précisément ce que le garde-fou annule.
 
 ---
 
@@ -378,7 +403,7 @@ prévoyez plusieurs `--fingerprint` dès le départ pour un client multi-caisses
 cd backend && ./mvnw test
 ```
 
-54 tests, dont : signature valide, charge utile modifiée après signature, signature par une
+64 tests, dont : signature valide, charge utile modifiée après signature, signature par une
 clé étrangère, algorithme et format inattendus, fichier corrompu, machine différente,
 expiration, période de grâce, bascule en lecture seule, refus d'une licence rejouée,
 protection contre le recul d'horloge, fichier d'état copié d'une autre installation,
@@ -394,6 +419,11 @@ Côté base de données, sur une vraie H2 en mémoire : l'essai survit à l'effa
 **tous** les fichiers, une ligne provenant d'une autre machine est rejetée, une base
 recréée vide est réalimentée depuis les fichiers, et une installation sans base du tout
 fonctionne normalement.
+
+Côté configuration : un essai de 2000 jours ramené au plafond, une durée raccourcie
+acceptée, une durée nulle ou négative refusée, et — pour chacun des trois interrupteurs —
+la valeur du jar restaurée face à un argument de ligne de commande, le repli sûr quand le
+jar ne dit rien, et la valeur du jar respectée quand elle vient bien de là.
 
 > Les tests de l'essai passent `system-wide: false` : un test qui écrirait dans le profil
 > ou dans la base de registre de la machine de build vaudrait moins que pas de test du tout.
@@ -415,14 +445,23 @@ fonctionne normalement.
   managé ; aucune obfuscation ne la supprime, elle ne fait qu'en augmenter le coût.
   La cible réaliste ici est le client qui copie le dossier sur une deuxième caisse ou
   recule l'horloge — pas l'ingénieur inverse déterminé.
-- **Supprimer le fichier d'état d'horloge** est possible : cela efface l'historique, mais ne
-  peut jamais rendre une licence plus jeune que sa propre date d'expiration.
-- **Effacer les quatre enregistrements d'essai à la fois** (dossier d'installation, profil,
-  `ProgramData` et base de registre) rouvre un essai de 30 jours. C'est le prix à payer pour
-  un dispositif entièrement hors ligne : sans serveur, la machine ne peut pas se souvenir de
-  ce qui a été effacé partout. Chaque suppression partielle est en revanche détectée,
-  restaurée et journalisée, et le vrai levier reste la licence signée — un essai rouvert ne
-  donne jamais 30 jours de plus qu'un client honnête n'en a déjà eus.
+- **Supprimer le fichier d'état d'horloge puis reculer l'horloge** ramène une licence
+  expirée à l'état actif : sans fichier, `ClockGuard` n'a plus de « date la plus avancée »
+  à opposer et évalue la date système telle quelle. Contrairement à ce que disait une
+  version antérieure de cette section, l'effacement n'est donc *pas* sans effet. Le frein
+  est commercial plutôt que technique — une caisse à la mauvaise date fausse les tickets et
+  les dates de vente. À corriger en répliquant l'état d'horloge dans les mêmes supports que
+  l'essai, la base comprise ; il est aujourd'hui seul dans `license/.license-state`.
+- **Effacer tous les enregistrements d'essai à la fois** rouvre un essai. C'est le prix d'un
+  dispositif entièrement hors ligne : sans serveur, la machine ne peut pas se souvenir de ce
+  qui a été effacé partout. Deux nuances depuis l'ajout de la copie en base : les
+  emplacements fichier se découvrent en trois minutes avec Process Monitor et s'effacent par
+  script, alors que la copie en base ne part qu'avec les ventes et le stock du client.
+  Chaque suppression partielle est détectée, restaurée et journalisée, et le vrai levier
+  reste la licence signée.
+- **La durée d'essai et les interrupteurs ne sont plus modifiables depuis l'extérieur**
+  (§5), mais ils le restent pour qui repackage le jar. C'est la même limite que la clé
+  publique embarquée, et elle se traite au même endroit : nulle part.
 - **Aucune authentification sur `/api/license/*`** pour l'instant, le projet n'ayant pas
   encore de sécurité HTTP. Aucun de ces endpoints ne peut affaiblir la licence, mais pensez
   à les intégrer à vos règles d'accès quand Spring Security arrivera.

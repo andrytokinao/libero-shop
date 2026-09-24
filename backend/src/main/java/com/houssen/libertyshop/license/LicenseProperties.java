@@ -9,12 +9,21 @@ import java.time.Duration;
  * Configuration of the license module, prefix {@code libertyshop.license}.
  *
  * <p>Only operational knobs live here -- where the file is, whether to phone home. The
- * trust anchor (the public key) and the enforcement rules are compiled in, so editing
- * {@code application.properties} can never turn an expired installation back into a
- * licensed one.
+ * trust anchor (the public key) is compiled in, so no configuration can make the
+ * application accept a license the publisher did not sign.
+ *
+ * <p>The switches are a different matter and are not self-protecting: {@link #enabled} set
+ * to {@code false} skips every check, and a trial length read straight from configuration
+ * would be no length at all. Two things keep that in hand. The evaluation period is capped
+ * by {@link TrialProperties#MAX_DAYS}, compiled in, so configuration can only shorten it.
+ * And {@link LicensePropertyGuard} restores the packaged value of every switch that an
+ * external source -- command line, environment variable, a file dropped next to the jar --
+ * tried to override. What remains is the value shipped inside the application itself,
+ * which cannot be changed without repacking it.
  *
  * @param enabled    master switch; keep it {@code true} on customer installations and set
- *                   it to {@code false} in development and tests
+ *                   it to {@code false} in development and tests. Only honoured from the
+ *                   application's own configuration, never from an external override
  * @param path       where the signed {@code .lic} file lives
  * @param clockGuard rollback protection settings
  * @param renewal    online renewal settings
@@ -88,9 +97,23 @@ public record LicenseProperties(
      */
     public record TrialProperties(Boolean enabled, Integer days, Path path, Boolean systemWide) {
 
+        /**
+         * The longest evaluation period this build will ever grant, whatever any
+         * configuration file says.
+         *
+         * <p>Compiled in for the same reason the public key is: a duration that could be
+         * raised from {@code application.properties} would not be a limit at all.
+         * {@code --libertyshop.license.trial.days=2000} is a one-line command, needs no
+         * decompiler, and unlike {@code enabled=false} it leaves nothing in the log that
+         * looks wrong -- the application would simply report a trial running until 2032.
+         * Configuration may still <em>shorten</em> the period, which can only ever work
+         * against whoever sets it.
+         */
+        public static final int MAX_DAYS = 90;
+
         public TrialProperties {
             enabled = enabled == null || enabled;
-            days = days == null ? 90 : Math.max(1, days);
+            days = days == null ? MAX_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
             systemWide = systemWide == null || systemWide;
         }
     }
