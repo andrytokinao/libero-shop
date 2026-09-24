@@ -32,3 +32,11 @@ build/
 ### VS Code ###
 .vscode/
 /.mvn/
+
+### License module ###
+# Installed license files and the clock-guard state are per-machine runtime data,
+# not source. The signing key lives in tools/license-generator and is ignored there.
+license/
+*.lic
+*.lic.bak
+.license-state

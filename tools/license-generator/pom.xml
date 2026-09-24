@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Standalone build for the publisher-side license generator.
+
+  This module is deliberately NOT part of the backend build: it holds the code
+  that handles the PRIVATE signing key and must never end up in a jar shipped
+  to a customer. It has zero third-party dependencies so it can be built and
+  run on any machine with a JDK 17+, without a Spring/Maven repository warm-up.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.houssen</groupId>
+    <artifactId>license-generator</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Liberty Shop License Generator</name>
+    <description>Publisher-only CLI: key generation and license signing. Never ship this.</description>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <finalName>license-generator</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.houssen.libertyshop.tools.LicenseGeneratorCli</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
