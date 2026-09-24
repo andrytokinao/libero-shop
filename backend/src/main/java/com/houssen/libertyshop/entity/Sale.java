@@ -1,6 +1,6 @@
 package com.houssen.libertyshop.entity;
 
-import com.houssen.SaleLine;
+
 
 import jakarta.persistence.*;
 import lombok.*;
