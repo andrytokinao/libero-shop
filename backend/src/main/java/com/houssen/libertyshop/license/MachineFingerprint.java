@@ -70,7 +70,8 @@ public final class MachineFingerprint {
             synchronized (MachineFingerprint.class) {
                 local = cached;
                 if (local == null) {
-                    local = compute(readHostName(), readHardwareId());
+                    String hostName =readHostName();
+                    local = compute(hostName, readHardwareId());
                     cached = local;
                 }
             }
@@ -209,8 +210,12 @@ public final class MachineFingerprint {
      * <p>Fingerprinting must never break startup, so every failure mode -- missing binary,
      * non-zero exit, hang -- degrades to {@code null} and lets the caller try the next
      * source.
+     *
+     * <p>Package-private rather than private: {@code TrialRegistry} shells out to
+     * {@code reg.exe} and needs exactly these guarantees, and one hardened runner is worth
+     * more than two similar ones.
      */
-    private static String runCommand(List<String> command) {
+    static String runCommand(List<String> command) {
         Process process = null;
         try {
             process = new ProcessBuilder(command).redirectErrorStream(true).start();

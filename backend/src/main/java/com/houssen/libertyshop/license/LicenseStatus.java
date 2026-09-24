@@ -36,6 +36,11 @@ public record LicenseStatus(
         return state.allowsWrites();
     }
 
+    /** Whether this is the local evaluation period rather than a license from the publisher. */
+    public boolean isTrial() {
+        return state.isTrial();
+    }
+
     /**
      * Message for the end user. Written in French because it is shown directly to shop
      * staff, unlike the rest of the code and logs which stay in English.
@@ -51,6 +56,15 @@ public record LicenseStatus(
                     + ". L'application est en lecture seule : la consultation des ventes, du stock et des "
                     + "factures reste possible, mais aucune nouvelle operation ne peut etre enregistree. "
                     + "Merci de renouveler votre licence.";
+            case TRIAL -> "Periode d'essai en cours jusqu'au " + license.expiresOn() + " ("
+                    + daysUntilExpiry() + " jour(s) restant(s)). Aucune licence n'est installee sur cette "
+                    + "machine : merci de communiquer l'empreinte " + fingerprint + " a l'editeur avant la "
+                    + "fin de l'essai.";
+            case TRIAL_EXPIRED -> "La periode d'essai s'est terminee le " + license.expiresOn()
+                    + ". L'application est en lecture seule : la consultation des ventes, du stock et des "
+                    + "factures reste possible, mais aucune nouvelle operation ne peut etre enregistree. "
+                    + "L'essai n'est accorde qu'une seule fois par machine : merci d'installer votre "
+                    + "licence (empreinte " + fingerprint + ").";
         };
     }
 }

@@ -39,7 +39,9 @@ public class LicenseController {
     public LicenseStatusResponse status() {
         return licenseService.findStatus()
                 .map(status -> new LicenseStatusResponse(
-                        true,
+                        // An installation running on the trial is not a licensed one, and
+                        // the banner must not tell the customer otherwise.
+                        !status.isTrial(),
                         status.state().name(),
                         status.writesAllowed(),
                         status.license().customerName(),

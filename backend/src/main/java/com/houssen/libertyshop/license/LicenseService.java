@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -15,6 +16,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Single entry point for everything license-related at runtime.
@@ -22,6 +24,11 @@ import java.util.Optional;
  * <p>Holds the current {@link LicenseStatus}, refreshes it, enforces read-only mode and
  * installs renewed licenses. The signed file is the only source of truth: nothing is read
  * from or written to the database, so there is no {@code is_active} column to flip.
+ *
+ * <p>With no file installed, {@link TrialRegistry} supplies a one-off evaluation period
+ * instead of blocking the boot. It can only ever grant what the machine has not already
+ * consumed, so this is a gentler start for a new installation, not a way back out of an
+ * expired one.
  *
  * <p>The status is recomputed on a day boundary rather than cached forever, so an
  * installation that stays up for weeks still degrades on the right day without a restart.
@@ -33,19 +40,36 @@ public class LicenseService {
     private final LicenseVerifier verifier;
     private final LicenseProperties properties;
     private final ClockGuard clockGuard;
+    private final TrialRegistry trialRegistry;
     private final Clock clock;
     private final String fingerprint;
 
     /** Last evaluation; {@code null} until the first check or while the module is disabled. */
     private volatile LicenseStatus status;
 
+    /**
+     * Without a database handle: the startup listener, which runs before any bean exists,
+     * and the unit tests, which have no pool either.
+     */
     public LicenseService(LicenseVerifier verifier, LicenseProperties properties, Clock clock, String fingerprint) {
+        this(verifier, properties, clock, fingerprint, () -> null);
+    }
+
+    /**
+     * @param dataSource lazy handle on the application database, where the trial registry
+     *                   keeps the one copy of its record that cannot be erased with a
+     *                   file manager. Resolved on first use, so declaring it here never
+     *                   forces a connection pool to be built early.
+     */
+    public LicenseService(LicenseVerifier verifier, LicenseProperties properties, Clock clock, String fingerprint,
+                          Supplier<DataSource> dataSource) {
         this.verifier = verifier;
         this.properties = properties;
         this.clock = clock;
         this.fingerprint = fingerprint;
         this.clockGuard = new ClockGuard(properties.resolvedClockGuardPath(), verifier.trustAnchor(),
                 fingerprint, properties.clockGuard().enabled());
+        this.trialRegistry = new TrialRegistry(properties, verifier.trustAnchor(), fingerprint, dataSource);
     }
 
     /**
@@ -64,17 +88,36 @@ public class LicenseService {
             return;
         }
         LicenseStatus current = refresh();
-        log.info("License: customer '{}' ({}), plan {}, expires {}, state {}.",
-                current.license().customerName(), current.license().customerId(),
-                current.license().plan(), current.license().expiresOn(), current.state());
+        if (current.isTrial()) {
+            log.info("No license installed: evaluation period from {} to {}, state {}.",
+                    current.license().issuedOn(), current.license().expiresOn(), current.state());
+        } else {
+            log.info("License: customer '{}' ({}), plan {}, expires {}, state {}.",
+                    current.license().customerName(), current.license().customerId(),
+                    current.license().plan(), current.license().expiresOn(), current.state());
+        }
         if (current.state() != LicenseState.ACTIVE) {
             log.warn("{}", current.userMessage());
         }
     }
 
-    /** Re-reads and re-verifies the license file from disk. */
+    /**
+     * Re-reads and re-verifies the license file from disk, falling back to the trial when
+     * there is none.
+     *
+     * <p>The first run is recorded on every refresh, licensed or not. That is what stops
+     * the trial from being a loophole: by the time a customer thinks of deleting a paid
+     * license to "go back to the trial", the trial recorded on the day they installed the
+     * application is long over.
+     */
     public LicenseStatus refresh() {
-        LicenseStatus fresh = verifier.verify(readLicenseFile(), fingerprint, evaluationDate());
+        LocalDate evaluationDate = evaluationDate();
+        trialRegistry.recordFirstRun(evaluationDate);
+
+        byte[] envelope = readLicenseFile();
+        LicenseStatus fresh = envelope != null
+                ? verifier.verify(envelope, fingerprint, evaluationDate)
+                : trialRegistry.statusOn(evaluationDate).orElseThrow(this::licenseNotFound);
         this.status = fresh;
         return fresh;
     }
@@ -144,7 +187,11 @@ public class LicenseService {
         LicenseStatus candidate = verifier.verify(rawEnvelope, fingerprint, evaluationDate());
 
         LicenseStatus current = findStatus().orElse(null);
-        if (current != null && !candidate.license().expiresOn().isAfter(current.license().expiresOn())) {
+        // The anti-replay rule compares against a real license only. A trial is not one:
+        // a customer whose 30 days have barely started must still be able to install a
+        // short licence that expires before the trial would have.
+        if (current != null && !current.isTrial()
+                && !candidate.license().expiresOn().isAfter(current.license().expiresOn())) {
             throw new LicenseInvalidException("La licence proposee (expiration "
                     + candidate.license().expiresOn() + ") n'est pas plus recente que la licence installee ("
                     + current.license().expiresOn() + "). Installation refusee.");
@@ -176,13 +223,17 @@ public class LicenseService {
         return clockGuard.effectiveDate(LocalDate.now(clock));
     }
 
+    /**
+     * The installed envelope, or {@code null} when no file is installed.
+     *
+     * <p>A missing file is not an error here -- the trial answers for it. A file that is
+     * present but unreadable still is: that is a broken installation, not an unlicensed
+     * one, and silently handing out a trial would hide it.
+     */
     private byte[] readLicenseFile() {
         Path path = properties.path();
         if (!Files.isRegularFile(path)) {
-            throw new LicenseNotFoundException(
-                    "Aucun fichier de licence trouve a l'emplacement " + path.toAbsolutePath() + ". "
-                            + "Merci de communiquer l'empreinte de cette machine a l'editeur pour obtenir "
-                            + "une licence : " + fingerprint);
+            return null;
         }
         try {
             return Files.readAllBytes(path);
@@ -190,6 +241,14 @@ public class LicenseService {
             throw new LicenseInvalidException(
                     "Le fichier de licence " + path.toAbsolutePath() + " n'a pas pu etre lu.", e);
         }
+    }
+
+    /** Raised only when the trial is switched off, which is the strict configuration. */
+    private LicenseNotFoundException licenseNotFound() {
+        return new LicenseNotFoundException(
+                "Aucun fichier de licence trouve a l'emplacement " + properties.path().toAbsolutePath() + ". "
+                        + "Merci de communiquer l'empreinte de cette machine a l'editeur pour obtenir "
+                        + "une licence : " + fingerprint);
     }
 
     /**

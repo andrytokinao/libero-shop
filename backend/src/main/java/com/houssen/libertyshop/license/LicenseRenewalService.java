@@ -76,6 +76,12 @@ public class LicenseRenewalService {
             log.debug("Skipping renewal check: no valid local license to renew.");
             return false;
         }
+        if (current.isTrial()) {
+            // There is no subscription behind a trial, so there is nothing for the server
+            // to look up. The customer installs their first license through /install.
+            log.debug("Skipping renewal check: the installation is running on its trial period.");
+            return false;
+        }
         try {
             String response = restClient.post()
                     .uri(properties.endpoint())
@@ -114,7 +120,7 @@ public class LicenseRenewalService {
             return false;
         }
         LicenseStatus current = licenseService.findStatus().orElse(null);
-        if (current == null) {
+        if (current == null || current.isTrial()) {
             return false;
         }
         if (current.daysUntilExpiry() <= properties.urgentWithinDays()) {

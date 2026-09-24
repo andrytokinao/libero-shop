@@ -12,6 +12,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
+import javax.sql.DataSource;
 import java.time.Clock;
 
 /** Wires the license module. */
@@ -38,9 +39,17 @@ public class LicenseConfiguration {
         return Clock.systemDefaultZone();
     }
 
+    /**
+     * The data source is taken through an {@link ObjectProvider} and resolved lazily: the
+     * trial registry needs it to keep its database copy, but the license module must stay
+     * usable on an installation that has no database configured at all, and must not be
+     * the reason a connection pool is built.
+     */
     @Bean
-    public LicenseService licenseService(LicenseVerifier verifier, LicenseProperties properties, Clock clock) {
-        return new LicenseService(verifier, properties, clock, MachineFingerprint.current());
+    public LicenseService licenseService(LicenseVerifier verifier, LicenseProperties properties, Clock clock,
+                                         ObjectProvider<DataSource> dataSource) {
+        return new LicenseService(verifier, properties, clock, MachineFingerprint.current(),
+                dataSource::getIfAvailable);
     }
 
     /**

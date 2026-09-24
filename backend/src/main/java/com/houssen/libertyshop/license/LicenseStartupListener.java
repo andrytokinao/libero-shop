@@ -7,6 +7,7 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationListener;
 
+import java.io.PrintStream;
 import java.time.Clock;
 
 /**
@@ -24,7 +25,9 @@ import java.time.Clock;
  *
  * <p>Only tampering aborts the boot. An expired license is logged and the application
  * starts read-only, because a shop that cannot consult yesterday's sales is worse off
- * than a publisher who waits a few days to be paid.
+ * than a publisher who waits a few days to be paid. A license that is simply absent falls
+ * back to the evaluation period, unless the trial has been switched off -- then, and only
+ * then, a missing file is fatal again.
  */
 public class LicenseStartupListener implements ApplicationListener<ApplicationEnvironmentPreparedEvent> {
 
@@ -34,7 +37,7 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
         LicenseProperties properties = Binder.get(event.getEnvironment())
                 .bind("libertyshop.license", LicenseProperties.class)
-                .orElseGet(() -> new LicenseProperties(null, null, null, null));
+                .orElseGet(() -> new LicenseProperties(null, null, null, null, null));
 
         if (!properties.enabled()) {
             log.warn("License checking is DISABLED (libertyshop.license.enabled=false).");
@@ -52,23 +55,36 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
             if (status.state() == LicenseState.ACTIVE) {
                 log.info("License valid until {} ({} day(s) left).",
                         status.license().expiresOn(), status.daysUntilExpiry());
+            } else if (status.isTrial()) {
+                // Printed, not logged: an unlicensed installation is exactly the situation
+                // where the shop owner has to read the fingerprint off the screen.
+                printBanner(System.out, "LIBERTY SHOP - PERIODE D'ESSAI", status.userMessage(),
+                        properties, fingerprint);
             } else {
                 log.warn("{}", status.userMessage());
             }
         } catch (LicenseException e) {
             // Printed rather than only logged: at this point the logging system may still
             // be starting, and this message is what the shop owner needs to read.
-            System.err.println();
-            System.err.println("=======================================================================");
-            System.err.println(" LIBERTY SHOP - DEMARRAGE IMPOSSIBLE (" + e.code() + ")");
-            System.err.println("=======================================================================");
-            System.err.println(" " + e.getMessage());
-            System.err.println();
-            System.err.println(" Fichier attendu   : " + properties.path().toAbsolutePath());
-            System.err.println(" Empreinte machine : " + fingerprint);
-            System.err.println("=======================================================================");
-            System.err.println();
+            printBanner(System.err, "LIBERTY SHOP - DEMARRAGE IMPOSSIBLE (" + e.code() + ")",
+                    e.getMessage(), properties, fingerprint);
             throw e;
         }
+    }
+
+    /** The console box the shop owner reads: what happened, where, and which fingerprint to send. */
+    private static void printBanner(PrintStream out, String title, String message,
+                                    LicenseProperties properties, String fingerprint) {
+        String rule = "=======================================================================";
+        out.println();
+        out.println(rule);
+        out.println(" " + title);
+        out.println(rule);
+        out.println(" " + message);
+        out.println();
+        out.println(" Fichier attendu   : " + properties.path().toAbsolutePath());
+        out.println(" Empreinte machine : " + fingerprint);
+        out.println(rule);
+        out.println();
     }
 }
