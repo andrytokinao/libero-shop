@@ -1,0 +1,8 @@
+# The signing key must never be committed: anyone holding it can mint licenses.
+# Back it up offline (encrypted USB drive, password manager), not in this repository.
+keys/
+out/
+target/
+
+# Issued customer licenses.
+*.lic
