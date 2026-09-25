@@ -1,11 +1,21 @@
-import { Component, computed, inject } from '@angular/core';
-import { PaymentStatus } from '../../core/models';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { Component, inject } from '@angular/core';
+import { DashboardApi } from '../../core/api/dashboard.api';
+import { apiResource } from '../../core/api/api-resource';
+import { CashierDashboard } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+
+const EMPTY: CashierDashboard = {
+  revenueToday: 0,
+  paidSalesToday: 0,
+  invoicesToday: 0,
+  unpaidInvoicesToday: 0,
+  averageBasket: 0,
+  outstandingToday: 0,
+  lowStockCount: 0,
+  latestInvoices: [],
+};
 
 @Component({
   selector: 'app-cashier-dashboard',
@@ -15,18 +25,22 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="grid g4">
       <app-kpi-card
         label="Mon chiffre d'affaires aujourd'hui"
-        [value]="revenueToday() | ariary"
-        [hint]="paidSalesToday().length + ' vente(s) encaissée(s)'"
+        [value]="data().revenueToday | ariary"
+        [hint]="data().paidSalesToday + ' vente(s) encaissée(s)'"
       />
       <app-kpi-card
         label="Factures émises aujourd'hui"
-        [value]="invoicesToday().length"
-        [hint]="'dont ' + unpaidCount() + ' non payée(s)'"
+        [value]="data().invoicesToday"
+        [hint]="'dont ' + data().unpaidInvoicesToday + ' non payée(s)'"
       />
-      <app-kpi-card label="Panier moyen" [value]="averageBasket() | ariary" />
+      <app-kpi-card
+        label="Panier moyen"
+        [value]="data().averageBasket | ariary"
+        [hint]="'reste à encaisser : ' + (data().outstandingToday | ariary)"
+      />
       <app-kpi-card
         label="Produits en alerte stock"
-        [value]="store.lowStockProducts().length"
+        [value]="data().lowStockCount"
         hint="stock inférieur à 10"
       />
     </div>
@@ -34,7 +48,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card" style="margin-top:16px;">
       <h2>Mes dernières factures</h2>
       <app-invoice-table
-        [invoices]="latestInvoices()"
+        [invoices]="data().latestInvoices"
         [showSeller]="false"
         [showDate]="true"
         emptyMessage="Vous n'avez émis aucune facture."
@@ -43,33 +57,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class CashierDashboardComponent {
-  protected readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
-
-  private readonly myInvoices = computed(() => this.store.invoicesOf(this.session.currentUser()));
-
-  protected readonly invoicesToday = computed(() =>
-    this.myInvoices().filter((i) => isToday(i.invoiceDate)),
-  );
-
-  protected readonly paidSalesToday = computed(() =>
-    this.store
-      .salesOf(this.session.currentUser())
-      .filter((s) => isToday(s.saleDate) && s.paymentStatus === PaymentStatus.PAID),
-  );
-
-  protected readonly revenueToday = computed(() =>
-    this.paidSalesToday().reduce((total, sale) => total + sale.totalAmount, 0),
-  );
-
-  protected readonly unpaidCount = computed(
-    () => this.invoicesToday().filter((i) => i.paymentStatus === PaymentStatus.UNPAID).length,
-  );
-
-  protected readonly averageBasket = computed(() => {
-    const sales = this.paidSalesToday();
-    return sales.length ? Math.round(this.revenueToday() / sales.length) : 0;
-  });
-
-  protected readonly latestInvoices = computed(() => this.myInvoices().slice(0, 6));
+  private readonly api = inject(DashboardApi);
+  private readonly dashboard = apiResource(EMPTY, () => this.api.cashier());
+  protected readonly data = this.dashboard.value;
 }

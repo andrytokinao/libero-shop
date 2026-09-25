@@ -1,15 +1,18 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
+import { StockApi } from '../../core/api/stock.api';
+import { Product, RoleApp, Supplier, Supply } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 @Component({
   selector: 'app-supply',
   standalone: true,
-  imports: [FormsModule, DatePipe, AriaryPipe],
+  imports: [FormsModule, DatePipe, HasRoleDirective, AriaryPipe],
   template: `
     <div class="grid g2">
       <div class="card">
@@ -23,10 +26,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <select
               id="supply-product"
               class="field"
-              [ngModel]="productId()"
+              [ngModel]="selectedProductId()"
               (ngModelChange)="productId.set($event)"
             >
-              @for (product of store.products(); track product.id) {
+              @for (product of products(); track product.id) {
                 <option [ngValue]="product.id">
                   {{ product.name }} — stock {{ product.stockQuantity }}
                 </option>
@@ -38,10 +41,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <select
               id="supply-supplier"
               class="field"
-              [ngModel]="supplierId()"
+              [ngModel]="selectedSupplierId()"
               (ngModelChange)="supplierId.set($event)"
             >
-              @for (supplier of store.suppliers(); track supplier.id) {
+              @for (supplier of suppliers(); track supplier.id) {
                 <option [ngValue]="supplier.id">{{ supplier.name }}</option>
               }
             </select>
@@ -57,8 +60,15 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               (ngModelChange)="quantity.set($event)"
             />
           </div>
-          <button class="btn" type="button" [disabled]="quantity() < 1" (click)="register()">
-            Ajouter au stock
+          <!-- Booking goods in belongs to the depot manager alone. -->
+          <button
+            *appHasRole="RoleApp.DEPOT_MANAGER"
+            class="btn"
+            type="button"
+            [disabled]="!canSubmit()"
+            (click)="register()"
+          >
+            {{ busy() ? 'Enregistrement...' : 'Ajouter au stock' }}
           </button>
         </div>
 
@@ -80,7 +90,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
       <div class="card">
         <h2>Derniers approvisionnements</h2>
-        @if (store.supplies().length) {
+        @if (supplies().length) {
           <table>
             <thead>
               <tr>
@@ -92,7 +102,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               </tr>
             </thead>
             <tbody>
-              @for (supply of store.supplies(); track supply.id) {
+              @for (supply of supplies(); track supply.id) {
                 <tr>
                   <td>{{ supply.product.name }}</td>
                   <td class="num">+{{ supply.quantity }}</td>
@@ -111,31 +121,73 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class SupplyComponent {
-  protected readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
+  private readonly catalog = inject(CatalogApi);
+  private readonly stock = inject(StockApi);
   private readonly toasts = inject(ToastService);
 
-  protected readonly productId = signal(this.store.products()[0].id);
-  protected readonly supplierId = signal(this.store.suppliers()[0].id);
+  protected readonly RoleApp = RoleApp;
+  protected readonly productId = signal<number | null>(null);
+  protected readonly supplierId = signal<number | null>(null);
   protected readonly quantity = signal(10);
+  protected readonly busy = signal(false);
 
-  protected readonly selectedProduct = computed(() =>
-    this.store.products().find((p) => p.id === this.productId()),
+  private readonly productResource = apiResource<Product[]>([], () => this.catalog.products());
+  private readonly supplierResource = apiResource<Supplier[]>([], () => this.catalog.suppliers());
+  private readonly supplyResource = apiResource<Supply[]>([], () => this.stock.supplies());
+
+  protected readonly products = this.productResource.value;
+  protected readonly suppliers = this.supplierResource.value;
+  protected readonly supplies = this.supplyResource.value;
+
+  /**
+   * Falls back to the first entry until the user picks one, so the form is usable as
+   * soon as the lists land. Derived rather than assigned in an effect: writing to a
+   * signal from an effect is refused by Angular (NG0600), and a computed says the same
+   * thing without the exception.
+   */
+  protected readonly selectedProductId = computed(
+    () => this.productId() ?? this.products()[0]?.id ?? null,
+  );
+  protected readonly selectedSupplierId = computed(
+    () => this.supplierId() ?? this.suppliers()[0]?.id ?? null,
   );
 
-  protected register(): void {
-    const supply = this.store.registerSupply({
-      productId: this.productId(),
-      supplierId: this.supplierId(),
-      quantity: Number(this.quantity()),
-      performedBy: this.session.currentUser(),
-    });
+  protected readonly selectedProduct = computed(() =>
+    this.products().find((p) => p.id === this.selectedProductId()),
+  );
 
-    if (supply) {
-      this.toasts.show(
-        `${supply.quantity} × ${supply.product.name} ajouté(s) au stock ` +
-          `(${supply.supplier.name}).`,
-      );
+  protected canSubmit(): boolean {
+    return (
+      !this.busy() &&
+      this.selectedProductId() !== null &&
+      this.selectedSupplierId() !== null &&
+      Number(this.quantity()) > 0
+    );
+  }
+
+  protected register(): void {
+    if (!this.canSubmit()) {
+      return;
     }
+    this.busy.set(true);
+    this.stock
+      .registerSupply({
+        productId: this.selectedProductId()!,
+        supplierId: this.selectedSupplierId()!,
+        quantity: Number(this.quantity()),
+      })
+      .subscribe({
+        next: (supply) => {
+          this.busy.set(false);
+          this.productResource.reload();
+          this.supplyResource.reload();
+          this.supplierResource.reload();
+          this.toasts.show(
+            `${supply.quantity} × ${supply.product.name} ajouté(s) au stock ` +
+              `(${supply.supplier.name}).`,
+          );
+        },
+        error: () => this.busy.set(false),
+      });
   }
 }

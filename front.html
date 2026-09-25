@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vaha Market — Gestion</title>
+<style>
+:root{
+  --ink:#152420; --ink-soft:#4d5f59;
+  --bg:#f2f5f1; --panel:#ffffff; --line:#dfe6df;
+  --brand:#22684a; --brand-dark:#123625; --brand-soft:#e4f0e8;
+  --amber:#b5750f; --amber-soft:#fbeed7;
+  --red:#a13a2f; --red-soft:#fbe6e2;
+  --side-w:250px;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,"Segoe UI",Inter,Roboto,Arial,sans-serif;
+  font-size:14px; -webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.app{display:flex; min-height:100vh;}
+
+/* SIDEBAR */
+.side{
+  width:var(--side-w); flex:0 0 auto; background:var(--brand-dark); color:#eef4ef;
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.side-head{padding:22px 20px 14px; border-bottom:1px solid rgba(255,255,255,.1);}
+.side-head .mark{font-size:20px; font-weight:700; letter-spacing:.2px;}
+.side-head .mark span{color:#8fd6ac;}
+.side-head .sub{font-size:12px; color:#b7c9bf; margin-top:3px;}
+.role-tag{
+  margin:14px 20px 4px; font-size:11px; color:#a9d6bb; text-transform:none;
+  border-top:1px solid rgba(255,255,255,.08); padding-top:14px;
+}
+nav.menu{flex:1; padding:6px 12px; overflow-y:auto;}
+nav.menu button{
+  width:100%; display:flex; align-items:center; gap:10px; text-align:left;
+  background:none; border:none; color:#d9e6de; padding:10px 12px; margin:2px 0;
+  border-radius:8px; font-size:13.5px; cursor:pointer; font-family:inherit;
+}
+nav.menu button .ic{font-size:15px; width:18px; text-align:center;}
+nav.menu button:hover{background:rgba(255,255,255,.07);}
+nav.menu button.active{background:var(--brand); color:#fff; font-weight:600;}
+
+.user-box{border-top:1px solid rgba(255,255,255,.12); padding:14px 16px 16px;}
+.user-box label{display:block; font-size:11px; color:#a9c2b5; margin-bottom:6px;}
+.user-box select{
+  width:100%; padding:9px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.18);
+  background:#0f2a1e; color:#eef4ef; font-size:13px; font-family:inherit;
+}
+.user-box .who{display:flex; align-items:center; gap:9px; margin-top:10px;}
+.avatar{
+  width:30px; height:30px; border-radius:50%; background:var(--brand);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:0 0 auto;
+}
+.who .name{font-size:12.5px; font-weight:600; line-height:1.3;}
+.who .role{font-size:11px; color:#a9c2b5;}
+
+/* MAIN */
+main{flex:1; min-width:0; display:flex; flex-direction:column;}
+.topbar{
+  padding:18px 28px; border-bottom:1px solid var(--line); background:var(--panel);
+  display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.topbar h1{font-size:19px; margin:0; font-weight:700;}
+.topbar .meta{font-size:12.5px; color:var(--ink-soft);}
+.content{padding:24px 28px; flex:1;}
+
+.grid{display:grid; gap:16px;}
+.g4{grid-template-columns:repeat(4,1fr);}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g2{grid-template-columns:1.3fr 1fr;}
+@media(max-width:980px){.g4{grid-template-columns:repeat(2,1fr);} .g2{grid-template-columns:1fr;}}
+
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px;}
+.kpi .label{font-size:12px; color:var(--ink-soft); margin-bottom:6px;}
+.kpi .value{font-size:24px; font-weight:700;}
+.kpi .hint{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+
+.card h2{font-size:14.5px; margin:0 0 14px; font-weight:700;}
+.card h2 small{font-weight:400; color:var(--ink-soft); font-size:12px;}
+
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th{text-align:left; color:var(--ink-soft); font-weight:600; font-size:11.5px; padding:0 10px 8px; border-bottom:1px solid var(--line);}
+td{padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.num{text-align:right; font-variant-numeric:tabular-nums;}
+
+.badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600;}
+.badge.green{background:var(--brand-soft); color:var(--brand-dark);}
+.badge.amber{background:var(--amber-soft); color:var(--amber);}
+.badge.red{background:var(--red-soft); color:var(--red);}
+.badge.grey{background:#eceeec; color:var(--ink-soft);}
+
+.btn{
+  border:1px solid var(--brand); background:var(--brand); color:#fff; padding:8px 14px;
+  border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+}
+.btn.ghost{background:#fff; color:var(--brand); }
+.btn.small{padding:5px 10px; font-size:12px;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+input[type=text],input[type=number],select.field{
+  padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; background:#fff;
+}
+
+.bar-row{display:flex; align-items:center; gap:10px; margin:10px 0;}
+.bar-row .bname{width:150px; font-size:12.5px; font-weight:600; flex:0 0 auto;}
+.bar-track{flex:1; background:#eef2ee; border-radius:6px; height:14px; overflow:hidden;}
+.bar-fill{height:100%; background:var(--brand); border-radius:6px;}
+.bar-row .bval{width:110px; text-align:right; font-size:12.5px; font-variant-numeric:tabular-nums;}
+
+.prod-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+.prod-card{border:1px solid var(--line); border-radius:9px; padding:12px; text-align:left; background:#fff; cursor:pointer; font-family:inherit;}
+.prod-card:hover{border-color:var(--brand);}
+.prod-card .pname{font-weight:600; font-size:13px;}
+.prod-card .pprice{color:var(--brand-dark); font-weight:700; margin-top:5px; font-size:13.5px;}
+.prod-card .pstock{font-size:11.5px; color:var(--ink-soft); margin-top:3px;}
+.prod-card.low .pstock{color:var(--red); font-weight:600;}
+
+.qtybtn{width:24px; height:24px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; font-family:inherit;}
+.toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--brand-dark); color:#fff;
+  padding:12px 20px; border-radius:9px; font-size:13.5px; box-shadow:0 6px 20px rgba(0,0,0,.2); z-index:50;
+}
+.empty{color:var(--ink-soft); font-size:13px; padding:20px 0; text-align:center;}
+.form-row{display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom:14px;}
+.form-row .fld{display:flex; flex-direction:column; gap:5px;}
+.form-row .fld label{font-size:11.5px; color:var(--ink-soft); font-weight:600;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const fmt = n => n.toLocaleString('fr-FR') + ' Ar';
+const todayStr = () => new Date().toLocaleDateString('fr-FR');
+
+const USERS = [
+  {id:'u1', name:'Fatima Randria', role:'caisse'},
+  {id:'u2', name:'Hary Rakoto', role:'caisse'},
+  {id:'u3', name:'Joseph Andrianina', role:'depot'},
+  {id:'u4', name:'Nadia Rasolofo', role:'responsable_depot'},
+  {id:'u5', name:'Mparany Solofo', role:'super_admin'},
+];
+
+const ROLE_INFO = {
+  caisse: {label:'Responsable de caisse', menus:[
+    {id:'dash', label:'Tableau de bord', ic:'◧'},
+    {id:'vente', label:'Nouvelle vente', ic:'＋'},
+    {id:'ventes-jour', label:'Ventes du jour', ic:'≣'},
+    {id:'factures-caisse', label:'Factures', ic:'▤'},
+    {id:'versements', label:'Versements dépôt', ic:'⇤'},
+  ]},
+  depot: {label:'Agent de dépôt', menus:[
+    {id:'dash', label:'Tableau de bord', ic:'◧'},
+    {id:'remise', label:'Remise de commande', ic:'⇥'},
+    {id:'caisse-depot', label:'Caisse dépôt', ic:'$'},
+    {id:'historique-remise', label:'Historique des remises', ic:'≣'},
+  ]},
+  responsable_depot: {label:"Responsable entrée-sortie dépôt", menus:[
+    {id:'dash', label:'Tableau de bord', ic:'◧'},
+    {id:'stock', label:'Stock', ic:'▢'},
+    {id:'appro', label:'Approvisionnement', ic:'⇩'},
+    {id:'sorties', label:'Sorties', ic:'⇧'},
+    {id:'fournisseurs', label:'Fournisseurs', ic:'⛟'},
+  ]},
+  super_admin: {label:'Super admin', menus:[
+    {id:'overview', label:"Vue d'ensemble", ic:'◧'},
+    {id:'ca-vendeurs', label:"Chiffre d'affaires", ic:'↗'},
+    {id:'stock-global', label:'Stock global', ic:'▢'},
+    {id:'factures-all', label:'Toutes les factures', ic:'▤'},
+    {id:'utilisateurs', label:'Utilisateurs', ic:'⚉'},
+  ]},
+};
+
+let DB = {
+  currentUserId:'u1',
+  view:'dash',
+  cart:{},
+  paiementCart:'payee',
+  factureSeq:1032,
+  products:[
+    {id:1,name:'Riz 5kg',price:12500,stock:40},
+    {id:2,name:'Huile 1L',price:6800,stock:25},
+    {id:3,name:'Sucre 1kg',price:3200,stock:8},
+    {id:4,name:'Farine 1kg',price:2800,stock:60},
+    {id:5,name:'Lait en poudre 400g',price:9500,stock:15},
+    {id:6,name:'Savon',price:1500,stock:100},
+    {id:7,name:'Eau minérale 1.5L',price:1200,stock:6},
+    {id:8,name:'Pâtes 500g',price:2100,stock:50},
+  ],
+  factures:[
+    {id:1031, client:'Rina H.', vendeur:'Fatima Randria', montant:28900, statutPaiement:'payee', statutRemise:'en_attente', date:todayStr()},
+    {id:1030, client:'Tovo R.', vendeur:'Hary Rakoto', montant:15600, statutPaiement:'non_payee', statutRemise:'en_attente', date:todayStr()},
+    {id:1029, client:'Client comptoir', vendeur:'Fatima Randria', montant:9500, statutPaiement:'payee', statutRemise:'remis', date:todayStr()},
+  ],
+  sales:[
+    {vendeur:'Fatima Randria', montant:28900},
+    {vendeur:'Fatima Randria', montant:9500},
+    {vendeur:'Hary Rakoto', montant:22300},
+  ],
+  approvisionnements:[
+    {produit:'Riz 5kg', qte:20, date:todayStr(), par:'Nadia Rasolofo'},
+  ],
+  encaissementsDepot:[], // argent encaissé par l'agent de dépôt, pas encore remis à la caisse
+  versements:[], // bordereaux remis par l'agent, en attente de confirmation par la caisse
+  versementSeq:1,
+  fournisseurs:[
+    {nom:'Grossiste Analakely', contact:'034 12 345 67', produits:'Riz, Sucre, Farine'},
+    {nom:'Distri Lait SARL', contact:'032 55 987 21', produits:'Lait, produits laitiers'},
+    {nom:'Aqua Plus', contact:'033 44 221 09', produits:'Eau minérale, boissons'},
+  ],
+  toast:null,
+};
+
+function showToast(msg){ DB.toast = msg; render(); setTimeout(()=>{DB.toast=null; render();}, 2600); }
+function currentUser(){ return USERS.find(u=>u.id===DB.currentUserId); }
+function initials(name){ return name.split(' ').map(s=>s[0]).slice(0,2).join(''); }
+
+window.selectUser = function(id){
+  DB.currentUserId = id;
+  DB.view = ROLE_INFO[currentUser().role].menus[0].id;
+  render();
+};
+window.selectMenu = function(id){ DB.view = id; render(); };
+
+/* ---------- Vente (caisse) ---------- */
+window.addToCart = function(pid){
+  const p = DB.products.find(x=>x.id===pid);
+  if(!p || p.stock<=0) return;
+  DB.cart[pid] = (DB.cart[pid]||0)+1;
+  render();
+};
+window.changeQty = function(pid, delta){
+  const cur = DB.cart[pid]||0;
+  const next = cur+delta;
+  if(next<=0) delete DB.cart[pid]; else DB.cart[pid]=next;
+  render();
+};
+window.setPaiement = function(v){ DB.paiementCart=v; render(); };
+window.validerVente = function(){
+  const items = Object.entries(DB.cart);
+  if(items.length===0) return;
+  let total=0;
+  items.forEach(([pid,qty])=>{
+    const p = DB.products.find(x=>x.id===Number(pid));
+    total += p.price*qty;
+    p.stock -= qty;
+  });
+  const num = DB.factureSeq++;
+  const u = currentUser();
+  DB.factures.unshift({id:num, client:'Client comptoir', vendeur:u.name, montant:total,
+    statutPaiement: DB.paiementCart, statutRemise:'en_attente', date:todayStr()});
+  if(DB.paiementCart==='payee') DB.sales.push({vendeur:u.name, montant:total});
+  DB.cart = {};
+  showToast('Vente enregistrée — facture n° F-'+num+' ('+fmt(total)+')');
+};
+
+/* ---------- Remise dépôt ---------- */
+window.remettreFacture = function(id){
+  const f = DB.factures.find(x=>x.id===id);
+  if(!f || f.statutRemise==='remis') return;
+  const agent = currentUser().name;
+  if(f.statutPaiement==='non_payee'){
+    f.statutPaiement='payee';
+    DB.sales.push({vendeur:f.vendeur, montant:f.montant});
+    DB.encaissementsDepot.push({id:f.id, factureId:f.id, montant:f.montant, date:todayStr(), agent});
+    f.statutRemise='remis';
+    showToast('F-'+id+' remise. '+fmt(f.montant)+' encaissé en espèces — à verser à la caisse.');
+  } else {
+    f.statutRemise='remis';
+    showToast('Commande F-'+id+' remise au client.');
+  }
+};
+
+/* ---------- Caisse dépôt : versement à la caisse ---------- */
+window.verserCaisse = function(){
+  const agent = currentUser().name;
+  const enMain = DB.encaissementsDepot.filter(e=>e.agent===agent);
+  if(!enMain.length) return;
+  const total = enMain.reduce((a,e)=>a+e.montant,0);
+  const num = DB.versementSeq++;
+  DB.versements.unshift({id:num, agent, montant:total, nbFactures:enMain.length, date:todayStr(), statut:'en_attente'});
+  DB.encaissementsDepot = DB.encaissementsDepot.filter(e=>e.agent!==agent);
+  showToast('Versement V-'+num+' de '+fmt(total)+' enregistré — en attente de confirmation par la caisse.');
+};
+window.confirmerVersement = function(id){
+  const v = DB.versements.find(x=>x.id===id);
+  if(v){ v.statut='confirme'; v.confirmePar = currentUser().name; showToast('Versement V-'+id+' confirmé reçu à la caisse.'); }
+};
+
+/* ---------- Approvisionnement ---------- */
+window.doAppro = function(){
+  const sel = document.getElementById('appro-prod');
+  const qtyEl = document.getElementById('appro-qty');
+  const pid = Number(sel.value); const qty = Number(qtyEl.value);
+  if(!qty || qty<=0) return;
+  const p = DB.products.find(x=>x.id===pid);
+  p.stock += qty;
+  DB.approvisionnements.unshift({produit:p.name, qte:qty, date:todayStr(), par:currentUser().name});
+  showToast(qty+' × '+p.name+' ajouté(s) au stock.');
+};
+
+/* ---------- Recherche facture dépôt ---------- */
+let searchTerm='';
+window.onSearchFacture = function(v){ searchTerm=v; render(); };
+
+function badgePaiement(s){ return s==='payee' ? '<span class="badge green">Payée</span>' : '<span class="badge amber">Non payée</span>'; }
+function badgeRemise(s){ return s==='remis' ? '<span class="badge grey">Remis</span>' : '<span class="badge green">À remettre</span>'; }
+
+/* ---------- Vues ---------- */
+function viewCaisseDash(u){
+  const mesVentes = DB.sales.filter(s=>s.vendeur===u.name);
+  const total = mesVentes.reduce((a,s)=>a+s.montant,0);
+  const mesFactures = DB.factures.filter(f=>f.vendeur===u.name);
+  return `
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Mon chiffre d'affaires aujourd'hui</div><div class="value">${fmt(total)}</div><div class="hint">${mesVentes.length} vente(s)</div></div>
+    <div class="card kpi"><div class="label">Factures émises</div><div class="value">${mesFactures.length}</div><div class="hint">dont ${mesFactures.filter(f=>f.statutPaiement==='non_payee').length} non payées</div></div>
+    <div class="card kpi"><div class="label">Panier moyen</div><div class="value">${fmt(mesVentes.length? Math.round(total/mesVentes.length):0)}</div></div>
+    <div class="card kpi"><div class="label">Produits en alerte stock</div><div class="value">${DB.products.filter(p=>p.stock<10).length}</div><div class="hint">stock &lt; 10</div></div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h2>Dernières factures émises par vous</h2>
+    ${tableFactures(mesFactures.slice(0,5))}
+  </div>`;
+}
+
+function tableFactures(list){
+  if(!list.length) return '<div class="empty">Aucune facture pour le moment.</div>';
+  return `<table><thead><tr><th>N° facture</th><th>Client</th><th>Vendeur</th><th class="num">Montant</th><th>Paiement</th><th>Remise</th></tr></thead><tbody>
+  ${list.map(f=>`<tr><td>F-${f.id}</td><td>${f.client}</td><td>${f.vendeur}</td><td class="num">${fmt(f.montant)}</td><td>${badgePaiement(f.statutPaiement)}</td><td>${badgeRemise(f.statutRemise)}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function viewVente(){
+  const items = Object.entries(DB.cart);
+  const total = items.reduce((a,[pid,qty])=>a+DB.products.find(x=>x.id===Number(pid)).price*qty,0);
+  return `
+  <div class="grid g2">
+    <div class="card">
+      <h2>Produits <small>cliquez pour ajouter au panier</small></h2>
+      <div class="prod-grid">
+        ${DB.products.map(p=>`
+        <button class="prod-card ${p.stock<10?'low':''}" onclick="addToCart(${p.id})">
+          <div class="pname">${p.name}</div>
+          <div class="pprice">${fmt(p.price)}</div>
+          <div class="pstock">Stock : ${p.stock}</div>
+        </button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h2>Panier</h2>
+      ${items.length? `<table><thead><tr><th>Produit</th><th></th><th class="num">Sous-total</th></tr></thead><tbody>
+        ${items.map(([pid,qty])=>{const p=DB.products.find(x=>x.id===Number(pid));return `
+        <tr><td>${p.name}</td>
+        <td><button class="qtybtn" onclick="changeQty(${p.id},-1)">−</button> ${qty} <button class="qtybtn" onclick="changeQty(${p.id},1)">+</button></td>
+        <td class="num">${fmt(p.price*qty)}</td></tr>`;}).join('')}
+      </tbody></table>` : '<div class="empty">Panier vide — sélectionnez des produits.</div>'}
+      <div style="display:flex; justify-content:space-between; margin-top:14px; font-weight:700; font-size:16px;">
+        <span>Total</span><span>${fmt(total)}</span>
+      </div>
+      <div class="form-row" style="margin-top:16px;">
+        <div class="fld"><label>Statut du paiement</label>
+          <select class="field" onchange="setPaiement(this.value)">
+            <option value="payee" ${DB.paiementCart==='payee'?'selected':''}>Payée à la caisse</option>
+            <option value="non_payee" ${DB.paiementCart==='non_payee'?'selected':''}>Non payée (à régler au dépôt)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" style="width:100%; padding:11px;" onclick="validerVente()" ${!items.length?'disabled':''}>Valider la vente et générer la facture</button>
+    </div>
+  </div>`;
+}
+
+function viewVentesJour(u){
+  const mesFactures = DB.factures.filter(f=>f.vendeur===u.name);
+  return `<div class="card"><h2>Ventes du jour — ${u.name}</h2>${tableFactures(mesFactures)}</div>`;
+}
+function viewFacturesCaisse(u){
+  return `<div class="card"><h2>Toutes mes factures</h2>${tableFactures(DB.factures.filter(f=>f.vendeur===u.name))}</div>`;
+}
+
+function viewDepotDash(){
+  const attente = DB.factures.filter(f=>f.statutRemise==='en_attente');
+  return `
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Commandes à remettre</div><div class="value">${attente.length}</div></div>
+    <div class="card kpi"><div class="label">Dont non payées</div><div class="value">${attente.filter(f=>f.statutPaiement==='non_payee').length}</div><div class="hint">remise autorisée, paiement au comptant</div></div>
+    <div class="card kpi"><div class="label">Remises effectuées</div><div class="value">${DB.factures.filter(f=>f.statutRemise==='remis').length}</div></div>
+    <div class="card kpi"><div class="label">Produits en alerte stock</div><div class="value">${DB.products.filter(p=>p.stock<10).length}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px;"><h2>Commandes en attente de remise</h2>${tableRemise(attente)}</div>`;
+}
+function tableRemise(list){
+  if(!list.length) return '<div class="empty">Aucune commande en attente.</div>';
+  return `<table><thead><tr><th>N° facture</th><th>Client</th><th class="num">Montant</th><th>Paiement</th><th>Remise</th><th></th></tr></thead><tbody>
+  ${list.map(f=>`<tr><td>F-${f.id}</td><td>${f.client}</td><td class="num">${fmt(f.montant)}</td><td>${badgePaiement(f.statutPaiement)}</td><td>${badgeRemise(f.statutRemise)}</td>
+  <td>${f.statutRemise==='en_attente'? `<button class="btn small" onclick="remettreFacture(${f.id})">${f.statutPaiement==='non_payee'?'Encaisser et remettre':'Remettre au client'}</button>`:'—'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function viewCaisseDepotAgent(){
+  const agent = currentUser().name;
+  const enMain = DB.encaissementsDepot.filter(e=>e.agent===agent);
+  const total = enMain.reduce((a,e)=>a+e.montant,0);
+  const mesVersements = DB.versements.filter(v=>v.agent===agent);
+  return `
+  <div class="grid g2">
+    <div class="card">
+      <h2>Espèces en main <small>encaissées lors des remises de commandes non payées</small></h2>
+      <div class="kpi" style="margin-bottom:14px;"><div class="label">Montant à verser à la caisse</div><div class="value">${fmt(total)}</div></div>
+      ${enMain.length? `<table><thead><tr><th>N° facture</th><th class="num">Montant</th><th>Date</th></tr></thead><tbody>
+        ${enMain.map(e=>`<tr><td>F-${e.factureId}</td><td class="num">${fmt(e.montant)}</td><td>${e.date}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="empty">Aucune espèce en main pour le moment.</div>'}
+      <button class="btn" style="width:100%; margin-top:14px;" onclick="verserCaisse()" ${!enMain.length?'disabled':''}>Verser ${total?fmt(total):''} à la caisse</button>
+    </div>
+    <div class="card">
+      <h2>Mes versements</h2>
+      ${mesVersements.length? `<table><thead><tr><th>N° versement</th><th class="num">Montant</th><th>Date</th><th>Statut</th></tr></thead><tbody>
+        ${mesVersements.map(v=>`<tr><td>V-${v.id}</td><td class="num">${fmt(v.montant)}</td><td>${v.date}</td><td>${v.statut==='confirme'?'<span class="badge green">Confirmé par '+v.confirmePar+'</span>':'<span class="badge amber">En attente</span>'}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="empty">Aucun versement effectué.</div>'}
+    </div>
+  </div>`;
+}
+function viewVersementsCaisse(){
+  const enAttente = DB.versements.filter(v=>v.statut==='en_attente');
+  const confirmes = DB.versements.filter(v=>v.statut==='confirme');
+  return `
+  <div class="card">
+    <h2>Versements en attente de confirmation <small>argent apporté par les agents de dépôt</small></h2>
+    ${enAttente.length? `<table><thead><tr><th>N° versement</th><th>Agent</th><th class="num">Montant</th><th>Date</th><th></th></tr></thead><tbody>
+      ${enAttente.map(v=>`<tr><td>V-${v.id}</td><td>${v.agent}</td><td class="num">${fmt(v.montant)}</td><td>${v.date}</td>
+      <td><button class="btn small" onclick="confirmerVersement(${v.id})">Confirmer réception</button></td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Aucun versement en attente.</div>'}
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h2>Versements confirmés</h2>
+    ${confirmes.length? `<table><thead><tr><th>N° versement</th><th>Agent</th><th class="num">Montant</th><th>Date</th><th>Confirmé par</th></tr></thead><tbody>
+      ${confirmes.map(v=>`<tr><td>V-${v.id}</td><td>${v.agent}</td><td class="num">${fmt(v.montant)}</td><td>${v.date}</td><td>${v.confirmePar}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Aucun versement confirmé pour le moment.</div>'}
+  </div>`;
+}
+function viewRemise(){
+  const list = DB.factures.filter(f=> String(f.id).includes(searchTerm) || f.client.toLowerCase().includes(searchTerm.toLowerCase()));
+  return `<div class="card">
+    <h2>Remise de commande <small>recherchez par n° de facture ou nom du client</small></h2>
+    <div class="form-row"><div class="fld"><label>Recherche</label>
+      <input type="text" placeholder="Ex : 1031 ou Rina" oninput="onSearchFacture(this.value)" value="${searchTerm}"></div></div>
+    ${tableRemise(list)}
+  </div>`;
+}
+function viewHistoriqueRemise(){
+  return `<div class="card"><h2>Historique des remises</h2>${tableRemise(DB.factures.filter(f=>f.statutRemise==='remis'))}</div>`;
+}
+
+function stockTable(products){
+  return `<table><thead><tr><th>Produit</th><th class="num">Stock</th><th class="num">Prix unitaire</th><th class="num">Valeur stock</th><th></th></tr></thead><tbody>
+  ${products.map(p=>`<tr><td>${p.name}</td><td class="num">${p.stock}</td><td class="num">${fmt(p.price)}</td><td class="num">${fmt(p.price*p.stock)}</td>
+  <td>${p.stock<10?'<span class="badge red">Stock bas</span>':'<span class="badge green">OK</span>'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function viewResponsableDash(){
+  const valeur = DB.products.reduce((a,p)=>a+p.price*p.stock,0);
+  const bas = DB.products.filter(p=>p.stock<10);
+  return `
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Valeur totale du stock</div><div class="value">${fmt(valeur)}</div></div>
+    <div class="card kpi"><div class="label">Références en alerte</div><div class="value">${bas.length}</div><div class="hint">stock inférieur à 10</div></div>
+    <div class="card kpi"><div class="label">Approvisionnements (7 j)</div><div class="value">${DB.approvisionnements.length}</div></div>
+    <div class="card kpi"><div class="label">Commandes livrées</div><div class="value">${DB.factures.filter(f=>f.statutRemise==='remis').length}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px;"><h2>Produits à réapprovisionner en priorité</h2>${stockTable(bas.length?bas:DB.products.slice(0,3))}</div>`;
+}
+function viewStock(){ return `<div class="card"><h2>Stock du dépôt</h2>${stockTable(DB.products)}</div>`; }
+function viewAppro(){
+  return `
+  <div class="grid g2">
+    <div class="card">
+      <h2>Nouvel approvisionnement</h2>
+      <div class="form-row">
+        <div class="fld"><label>Produit</label>
+          <select class="field" id="appro-prod">${DB.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+        </div>
+        <div class="fld"><label>Quantité reçue</label><input type="number" id="appro-qty" min="1" value="10" style="width:100px;"></div>
+        <button class="btn" onclick="doAppro()">Ajouter au stock</button>
+      </div>
+    </div>
+    <div class="card"><h2>Derniers approvisionnements</h2>
+      ${DB.approvisionnements.length? `<table><thead><tr><th>Produit</th><th class="num">Quantité</th><th>Date</th><th>Par</th></tr></thead><tbody>
+      ${DB.approvisionnements.map(a=>`<tr><td>${a.produit}</td><td class="num">+${a.qte}</td><td>${a.date}</td><td>${a.par}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="empty">Aucun approvisionnement enregistré.</div>'}
+    </div>
+  </div>`;
+}
+function viewSorties(){
+  const remis = DB.factures.filter(f=>f.statutRemise==='remis');
+  return `<div class="card"><h2>Sorties de dépôt <small>issues des commandes remises aux clients</small></h2>${tableFactures(remis)}</div>`;
+}
+function viewFournisseurs(){
+  return `<div class="card"><h2>Fournisseurs</h2><table><thead><tr><th>Nom</th><th>Contact</th><th>Produits fournis</th></tr></thead><tbody>
+  ${DB.fournisseurs.map(f=>`<tr><td>${f.nom}</td><td>${f.contact}</td><td>${f.produits}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function viewOverviewAdmin(){
+  const caTotal = DB.sales.reduce((a,s)=>a+s.montant,0);
+  const valeurStock = DB.products.reduce((a,p)=>a+p.price*p.stock,0);
+  const nonPayees = DB.factures.filter(f=>f.statutPaiement==='non_payee').length;
+  return `
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Chiffre d'affaires (aujourd'hui, toutes caisses)</div><div class="value">${fmt(caTotal)}</div></div>
+    <div class="card kpi"><div class="label">Valeur du stock</div><div class="value">${fmt(valeurStock)}</div></div>
+    <div class="card kpi"><div class="label">Factures non payées</div><div class="value">${nonPayees}</div></div>
+    <div class="card kpi"><div class="label">Commandes en attente de remise</div><div class="value">${DB.factures.filter(f=>f.statutRemise==='en_attente').length}</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px;">
+    <div class="card"><h2>Chiffre d'affaires par vendeur</h2>${caVendeurBars()}</div>
+    <div class="card"><h2>Produits en alerte stock</h2>${stockTable(DB.products.filter(p=>p.stock<10))}</div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h2>Suivi des espèces encaissées au dépôt <small>contrôle de la remise à la caisse</small></h2>
+    <div class="grid g3">
+      <div class="kpi"><div class="label">Espèces encore en main des agents</div><div class="value">${fmt(DB.encaissementsDepot.reduce((a,e)=>a+e.montant,0))}</div></div>
+      <div class="kpi"><div class="label">Versements en attente de confirmation</div><div class="value">${fmt(DB.versements.filter(v=>v.statut==='en_attente').reduce((a,v)=>a+v.montant,0))}</div></div>
+      <div class="kpi"><div class="label">Versements confirmés (jour)</div><div class="value">${fmt(DB.versements.filter(v=>v.statut==='confirme').reduce((a,v)=>a+v.montant,0))}</div></div>
+    </div>
+  </div>`;
+}
+function caVendeurBars(){
+  const map={};
+  DB.sales.forEach(s=>{map[s.vendeur]=(map[s.vendeur]||0)+s.montant;});
+  const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return '<div class="empty">Aucune vente enregistrée aujourd\'hui.</div>';
+  const max = Math.max(...entries.map(e=>e[1]));
+  return entries.map(([name,val])=>`
+    <div class="bar-row"><div class="bname">${name}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(val/max*100)}%"></div></div>
+    <div class="bval">${fmt(val)}</div></div>`).join('');
+}
+function viewCaVendeurs(){
+  return `<div class="card"><h2>Chiffre d'affaires par vendeur <small>mise à jour en temps réel à chaque vente</small></h2>${caVendeurBars()}</div>
+  <div class="card" style="margin-top:16px;"><h2>Détail des ventes du jour</h2>${tableFactures(DB.factures.filter(f=>f.statutPaiement==='payee'))}</div>`;
+}
+function viewFacturesAll(){ return `<div class="card"><h2>Toutes les factures</h2>${tableFactures(DB.factures)}</div>`; }
+function viewUtilisateurs(){
+  return `<div class="card"><h2>Utilisateurs</h2><table><thead><tr><th>Nom</th><th>Rôle</th></tr></thead><tbody>
+  ${USERS.map(u=>`<tr><td>${u.name}</td><td>${ROLE_INFO[u.role].label}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+const VIEW_TITLES = {
+  dash:'Tableau de bord', vente:'Nouvelle vente', 'ventes-jour':'Ventes du jour', 'factures-caisse':'Mes factures',
+  remise:'Remise de commande', 'historique-remise':'Historique des remises', 'caisse-depot':'Caisse dépôt', versements:'Versements dépôt',
+  stock:'Stock', appro:'Approvisionnement', sorties:'Sorties', fournisseurs:'Fournisseurs',
+  overview:"Vue d'ensemble", 'ca-vendeurs':"Chiffre d'affaires", 'stock-global':'Stock global',
+  'factures-all':'Toutes les factures', utilisateurs:'Utilisateurs',
+};
+
+function renderContent(u, role){
+  if(role==='caisse'){
+    if(DB.view==='vente') return viewVente();
+    if(DB.view==='ventes-jour') return viewVentesJour(u);
+    if(DB.view==='factures-caisse') return viewFacturesCaisse(u);
+    if(DB.view==='versements') return viewVersementsCaisse();
+    return viewCaisseDash(u);
+  }
+  if(role==='depot'){
+    if(DB.view==='remise') return viewRemise();
+    if(DB.view==='caisse-depot') return viewCaisseDepotAgent();
+    if(DB.view==='historique-remise') return viewHistoriqueRemise();
+    return viewDepotDash();
+  }
+  if(role==='responsable_depot'){
+    if(DB.view==='stock') return viewStock();
+    if(DB.view==='appro') return viewAppro();
+    if(DB.view==='sorties') return viewSorties();
+    if(DB.view==='fournisseurs') return viewFournisseurs();
+    return viewResponsableDash();
+  }
+  if(role==='super_admin'){
+    if(DB.view==='ca-vendeurs') return viewCaVendeurs();
+    if(DB.view==='stock-global') return viewStock();
+    if(DB.view==='factures-all') return viewFacturesAll();
+    if(DB.view==='utilisateurs') return viewUtilisateurs();
+    return viewOverviewAdmin();
+  }
+  return '';
+}
+
+function render(){
+  const u = currentUser();
+  const role = u.role;
+  const menus = ROLE_INFO[role].menus;
+  if(!menus.find(m=>m.id===DB.view)) DB.view = menus[0].id;
+
+  document.getElementById('app').innerHTML = `
+    <aside class="side">
+      <div class="side-head">
+        <div class="mark">Vaha <span>Market</span></div>
+        <div class="sub">Gestion supermarché</div>
+        <div class="role-tag">${ROLE_INFO[role].label}</div>
+      </div>
+      <nav class="menu">
+        ${menus.map(m=>`<button class="${m.id===DB.view?'active':''}" onclick="selectMenu('${m.id}')"><span class="ic">${m.ic}</span>${m.label}</button>`).join('')}
+      </nav>
+      <div class="user-box">
+        <label>Session en cours</label>
+        <select onchange="selectUser(this.value)">
+          ${USERS.map(us=>`<option value="${us.id}" ${us.id===u.id?'selected':''}>${us.name}</option>`).join('')}
+        </select>
+        <div class="who"><div class="avatar">${initials(u.name)}</div>
+          <div><div class="name">${u.name}</div><div class="role">${ROLE_INFO[u.role].label}</div></div>
+        </div>
+      </div>
+    </aside>
+    <main>
+      <div class="topbar">
+        <h1>${VIEW_TITLES[DB.view]}</h1>
+        <div class="meta">${todayStr()} — connecté en tant que ${u.name}</div>
+      </div>
+      <div class="content">${renderContent(u, role)}</div>
+    </main>
+    ${DB.toast? `<div class="toast">${DB.toast}</div>`:''}
+  `;
+}
+render();
+</script>
+</body>
+</html>

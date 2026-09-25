@@ -1,12 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Invoice } from '../../core/models';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { apiResource } from '../../core/api/api-resource';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import { DeliveryStatus, Invoice } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
-import { deliveryActionLabel, describeDelivery } from './delivery.util';
+import { deliveryActionLabel } from './delivery.util';
 
 @Component({
   selector: 'app-order-delivery',
@@ -26,7 +26,7 @@ import { deliveryActionLabel, describeDelivery } from './delivery.util';
             type="text"
             placeholder="Ex : F-1031 ou Rina"
             [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
+            (ngModelChange)="onSearch($event)"
           />
         </div>
         <div class="fld">
@@ -35,7 +35,7 @@ import { deliveryActionLabel, describeDelivery } from './delivery.util';
             id="delivery-filter"
             class="field"
             [ngModel]="onlyPending()"
-            (ngModelChange)="onlyPending.set($event)"
+            (ngModelChange)="onFilter($event)"
           >
             <option [ngValue]="true">Commandes à remettre</option>
             <option [ngValue]="false">Toutes les commandes</option>
@@ -43,8 +43,9 @@ import { deliveryActionLabel, describeDelivery } from './delivery.util';
         </div>
       </div>
       <app-invoice-table
-        [invoices]="filtered()"
+        [invoices]="invoices()"
         [showDate]="true"
+        [busy]="busy()"
         [actionLabel]="actionLabel"
         (action)="deliver($event)"
         emptyMessage="Aucune commande ne correspond à la recherche."
@@ -86,36 +87,50 @@ import { deliveryActionLabel, describeDelivery } from './delivery.util';
   `,
 })
 export class OrderDeliveryComponent {
-  private readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
+  private readonly api = inject(InvoiceApi);
   private readonly toasts = inject(ToastService);
 
   protected readonly search = signal('');
   protected readonly onlyPending = signal(true);
+  protected readonly busy = signal(false);
   protected readonly actionLabel = deliveryActionLabel;
 
-  protected readonly filtered = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const base = this.onlyPending() ? this.store.pendingDeliveries() : this.store.invoices();
-    if (!term) {
-      return base;
-    }
-    return base.filter(
-      (i) =>
-        i.invoiceNumber.toLowerCase().includes(term) || i.clientName.toLowerCase().includes(term),
-    );
-  });
+  private readonly resource = apiResource<Invoice[]>([], () =>
+    this.api.search({
+      search: this.search(),
+      deliveryStatus: this.onlyPending() ? DeliveryStatus.PENDING : undefined,
+    }),
+  );
+  protected readonly invoices = this.resource.value;
 
   /** When the search narrows down to a single order, show its picking list. */
   protected readonly selected = computed<Invoice | null>(() => {
-    const matches = this.filtered();
+    const matches = this.invoices();
     return this.search().trim() && matches.length === 1 ? matches[0] : null;
   });
 
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    this.resource.reload();
+  }
+
+  protected onFilter(onlyPending: boolean): void {
+    this.onlyPending.set(onlyPending);
+    this.resource.reload();
+  }
+
   protected deliver(invoice: Invoice): void {
-    const result = this.store.deliverInvoice(invoice.id, this.session.currentUser());
-    if (result) {
-      this.toasts.show(describeDelivery(result));
-    }
+    this.busy.set(true);
+    this.api.deliver(invoice.id).subscribe({
+      next: (result) => {
+        this.busy.set(false);
+        this.resource.reload();
+        this.toasts.show(result.message);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.resource.reload();
+      },
+    });
   }
 }

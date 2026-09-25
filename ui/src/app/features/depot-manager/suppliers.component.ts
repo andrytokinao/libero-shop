@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
 import { Supplier } from '../../core/models';
-import { ShopStore } from '../../core/services/shop-store.service';
 
 @Component({
   selector: 'app-suppliers',
@@ -11,51 +12,38 @@ import { ShopStore } from '../../core/services/shop-store.service';
         Fournisseurs
         <small>contacts du dépôt et volumes reçus</small>
       </h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Contact</th>
-            <th>Produits fournis</th>
-            <th class="num">Livraisons</th>
-            <th class="num">Unités reçues</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (supplier of store.suppliers(); track supplier.id) {
+      @if (suppliers().length) {
+        <table>
+          <thead>
             <tr>
-              <td>{{ supplier.name }}</td>
-              <td>{{ supplier.contact ?? '—' }}</td>
-              <td class="muted">{{ supplier.suppliedProducts ?? '—' }}</td>
-              <td class="num">{{ deliveryCount(supplier) }}</td>
-              <td class="num">{{ unitCount(supplier) }}</td>
+              <th>Nom</th>
+              <th>Contact</th>
+              <th>Produits fournis</th>
+              <th class="num">Livraisons</th>
+              <th class="num">Unités reçues</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (supplier of suppliers(); track supplier.id) {
+              <tr>
+                <td>{{ supplier.name }}</td>
+                <td>{{ supplier.contact ?? '—' }}</td>
+                <td class="muted">{{ supplier.suppliedProducts ?? '—' }}</td>
+                <td class="num">{{ supplier.deliveryCount }}</td>
+                <td class="num">{{ supplier.unitsReceived }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="empty">Aucun fournisseur enregistré.</div>
+      }
     </div>
   `,
 })
 export class SuppliersComponent {
-  protected readonly store = inject(ShopStore);
-
-  private readonly suppliesBySupplier = computed(() => {
-    const grouped = new Map<number, { deliveries: number; units: number }>();
-    for (const supply of this.store.supplies()) {
-      const current = grouped.get(supply.supplier.id) ?? { deliveries: 0, units: 0 };
-      grouped.set(supply.supplier.id, {
-        deliveries: current.deliveries + 1,
-        units: current.units + supply.quantity,
-      });
-    }
-    return grouped;
-  });
-
-  protected deliveryCount(supplier: Supplier): number {
-    return this.suppliesBySupplier().get(supplier.id)?.deliveries ?? 0;
-  }
-
-  protected unitCount(supplier: Supplier): number {
-    return this.suppliesBySupplier().get(supplier.id)?.units ?? 0;
-  }
+  private readonly api = inject(CatalogApi);
+  // Delivery counts are aggregated server-side, in the same query as the suppliers.
+  private readonly resource = apiResource<Supplier[]>([], () => this.api.suppliers());
+  protected readonly suppliers = this.resource.value;
 }

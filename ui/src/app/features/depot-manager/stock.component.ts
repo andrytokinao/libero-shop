@@ -1,6 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
+import { Category, Product } from '../../core/models';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -12,7 +14,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   template: `
     <div class="grid g3">
       <app-kpi-card label="Valeur du stock affiché" [value]="visibleValue() | ariary" />
-      <app-kpi-card label="Références affichées" [value]="visibleProducts().length" />
+      <app-kpi-card label="Références affichées" [value]="products().length" />
       <app-kpi-card label="Unités en stock" [value]="visibleUnits()" />
     </div>
 
@@ -24,9 +26,9 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           <input
             id="stock-search"
             type="text"
-            placeholder="Nom ou code-barres"
+            placeholder="Nom, catégorie ou code-barres"
             [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
+            (ngModelChange)="onSearch($event)"
           />
         </div>
         <div class="fld">
@@ -35,10 +37,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             id="stock-category"
             class="field"
             [ngModel]="categoryId()"
-            (ngModelChange)="categoryId.set($event)"
+            (ngModelChange)="onCategory($event)"
           >
             <option [ngValue]="null">Toutes les catégories</option>
-            @for (category of store.categories(); track category.id) {
+            @for (category of categories(); track category.id) {
               <option [ngValue]="category.id">{{ category.name }}</option>
             }
           </select>
@@ -49,7 +51,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             id="stock-alert"
             class="field"
             [ngModel]="onlyLowStock()"
-            (ngModelChange)="onlyLowStock.set($event)"
+            (ngModelChange)="onLowStock($event)"
           >
             <option [ngValue]="false">Tout le stock</option>
             <option [ngValue]="true">Alertes uniquement</option>
@@ -57,45 +59,53 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
       </div>
       <app-stock-table
-        [products]="visibleProducts()"
+        [products]="products()"
         emptyMessage="Aucun produit ne correspond aux filtres."
       />
     </div>
   `,
 })
 export class StockComponent {
-  protected readonly store = inject(ShopStore);
+  private readonly api = inject(CatalogApi);
 
   protected readonly search = signal('');
   protected readonly categoryId = signal<number | null>(null);
   protected readonly onlyLowStock = signal(false);
 
-  protected readonly visibleProducts = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const category = this.categoryId();
-    const lowStockIds = new Set(this.store.lowStockProducts().map((p) => p.id));
+  // The three filters are applied by the server, so the browser never holds the
+  // whole catalogue just to narrow it down.
+  private readonly resource = apiResource<Product[]>([], () =>
+    this.api.products({
+      search: this.search(),
+      categoryId: this.categoryId(),
+      lowStockOnly: this.onlyLowStock(),
+    }),
+  );
+  private readonly categoryResource = apiResource<Category[]>([], () => this.api.categories());
 
-    return this.store.products().filter((product) => {
-      if (category !== null && product.category?.id !== category) {
-        return false;
-      }
-      if (this.onlyLowStock() && !lowStockIds.has(product.id)) {
-        return false;
-      }
-      if (!term) {
-        return true;
-      }
-      return [product.name, product.barcode ?? ''].some((field) =>
-        field.toLowerCase().includes(term),
-      );
-    });
-  });
+  protected readonly products = this.resource.value;
+  protected readonly categories = this.categoryResource.value;
 
   protected readonly visibleValue = computed(() =>
-    this.visibleProducts().reduce((total, p) => total + p.price * p.stockQuantity, 0),
+    this.products().reduce((total, p) => total + p.stockValue, 0),
   );
 
   protected readonly visibleUnits = computed(() =>
-    this.visibleProducts().reduce((total, p) => total + p.stockQuantity, 0),
+    this.products().reduce((total, p) => total + p.stockQuantity, 0),
   );
+
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    this.resource.reload();
+  }
+
+  protected onCategory(categoryId: number | null): void {
+    this.categoryId.set(categoryId);
+    this.resource.reload();
+  }
+
+  protected onLowStock(onlyLowStock: boolean): void {
+    this.onlyLowStock.set(onlyLowStock);
+    this.resource.reload();
+  }
 }

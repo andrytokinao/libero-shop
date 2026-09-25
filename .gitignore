@@ -1,2 +1,10 @@
 /.idea/
 /ui/.vscode/
+
+# H2 database written at runtime by spring.datasource.url
+/backend/data/
+/backend/target/
+*.stackdump
+
+# Local experiments and verification artefacts
+/scratch/

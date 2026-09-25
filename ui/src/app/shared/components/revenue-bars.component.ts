@@ -1,5 +1,5 @@
 import { Component, Input, computed, signal } from '@angular/core';
-import { RevenueBySeller } from '../../core/services/shop-store.service';
+import { RevenueBySeller } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 
 @Component({
@@ -8,9 +8,9 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
   imports: [AriaryPipe],
   template: `
     @if (rows().length) {
-      @for (row of rows(); track row.seller.id) {
+      @for (row of rows(); track row.sellerId) {
         <div class="bar-row">
-          <div class="bname">{{ row.seller.fullName }}</div>
+          <div class="bname">{{ row.sellerName }}</div>
           <div class="bar-track">
             <div class="bar-fill" [style.width.%]="percentOf(row)"></div>
           </div>
@@ -26,7 +26,7 @@ export class RevenueBarsComponent {
   protected readonly rows = signal<readonly RevenueBySeller[]>([]);
 
   @Input({ required: true }) set data(value: readonly RevenueBySeller[]) {
-    this.rows.set(value);
+    this.rows.set(value ?? []);
   }
 
   private readonly max = computed(() => Math.max(1, ...this.rows().map((r) => r.amount)));

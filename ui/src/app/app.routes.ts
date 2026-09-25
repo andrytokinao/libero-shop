@@ -1,8 +1,16 @@
 import { Routes } from '@angular/router';
-import { homeRedirectGuard, roleGuard } from './core/guards/role.guard';
+import { anonymousOnlyGuard, homeRedirectGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [homeRedirectGuard], children: [] },
+
+  {
+    path: 'login',
+    title: 'Connexion',
+    canActivate: [anonymousOnlyGuard],
+    loadComponent: () =>
+      import('./features/auth/login.component').then((m) => m.LoginComponent),
+  },
 
   // ------------------------------------------------------------ cash desk
   {

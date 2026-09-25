@@ -1,48 +1,50 @@
-<div class="app">
-  <aside class="side">
-    <div class="side-head">
-      <div class="mark">Vaha <span>Market</span></div>
-      <div class="sub">Gestion supermarché</div>
-      <div class="role-tag">{{ session.roleLabel() }}</div>
-    </div>
+@if (auth.isAuthenticated()) {
+  <div class="app">
+    <aside class="side">
+      <div class="side-head">
+        <div class="mark">Vaha <span>Market</span></div>
+        <div class="sub">Gestion supermarché</div>
+        <div class="role-tag">{{ auth.roleLabel() }}</div>
+      </div>
 
-    <nav class="menu">
-      @for (item of session.menu(); track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active">
-          <span class="ic">{{ item.icon }}</span>{{ item.label }}
-        </a>
-      }
-    </nav>
-
-    <div class="user-box">
-      <label for="session-user">Session en cours</label>
-      <select id="session-user" [value]="session.currentUser().id" (change)="onUserChange($event)">
-        @for (user of session.availableUsers(); track user.id) {
-          <option [value]="user.id">{{ user.fullName }}</option>
+      <nav class="menu">
+        @for (item of auth.menu(); track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="active">
+            <span class="ic">{{ item.icon }}</span>{{ item.label }}
+          </a>
         }
-      </select>
-      <div class="who">
-        <div class="avatar">{{ session.initials() }}</div>
-        <div>
-          <div class="name">{{ session.currentUser().fullName }}</div>
-          <div class="role">{{ session.roleLabel() }}</div>
+      </nav>
+
+      <div class="user-box">
+        <div class="who">
+          <div class="avatar">{{ auth.initials() }}</div>
+          <div>
+            <div class="name">{{ auth.currentUser()?.fullName }}</div>
+            <div class="role">{{ auth.roleLabel() }}</div>
+          </div>
+        </div>
+        <button class="btn ghost block" type="button" style="margin-top:12px;" (click)="logout()">
+          Se déconnecter
+        </button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <h1>{{ pageTitle() }}</h1>
+        <div class="meta">
+          {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que
+          {{ auth.currentUser()?.fullName }}
         </div>
       </div>
-    </div>
-  </aside>
-
-  <main>
-    <div class="topbar">
-      <h1>{{ pageTitle() }}</h1>
-      <div class="meta">
-        {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que
-        {{ session.currentUser().fullName }}
+      <div class="content">
+        <router-outlet />
       </div>
-    </div>
-    <div class="content">
-      <router-outlet />
-    </div>
-  </main>
+    </main>
+  </div>
+} @else {
+  <!-- Signed out: the login page owns the whole viewport, with no shell around it. -->
+  <router-outlet />
+}
 
-  <app-toast />
-</div>
+<app-toast />

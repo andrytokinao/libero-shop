@@ -1,6 +1,5 @@
 import { Component, Input } from '@angular/core';
 import { DeliveryStatus, PaymentStatus, RemittanceStatus, UserApp } from '../../core/models';
-import { LOW_STOCK_THRESHOLD } from '../../core/services/shop-store.service';
 
 @Component({
   selector: 'app-payment-status-badge',
@@ -51,13 +50,17 @@ export class RemittanceStatusBadgeComponent {
   protected readonly RemittanceStatus = RemittanceStatus;
 }
 
+/**
+ * The alert state comes from the server's `lowStock` flag rather than from a threshold
+ * repeated here, so raising the reorder level is a backend change only.
+ */
 @Component({
   selector: 'app-stock-status-badge',
   standalone: true,
   template: `
     @if (quantity <= 0) {
       <span class="badge red">Épuisé</span>
-    } @else if (quantity < threshold) {
+    } @else if (lowStock) {
       <span class="badge red">Stock bas</span>
     } @else {
       <span class="badge green">OK</span>
@@ -66,5 +69,5 @@ export class RemittanceStatusBadgeComponent {
 })
 export class StockStatusBadgeComponent {
   @Input({ required: true }) quantity!: number;
-  protected readonly threshold = LOW_STOCK_THRESHOLD;
+  @Input({ required: true }) lowStock!: boolean;
 }

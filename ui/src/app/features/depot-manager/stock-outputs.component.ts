@@ -1,8 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { apiResource } from '../../core/api/api-resource';
+import { StockApi } from '../../core/api/stock.api';
+import { StockOutput } from '../../core/models';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { DeliveryStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -10,18 +11,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-stock-outputs',
   standalone: true,
-  imports: [
-    FormsModule,
-    DatePipe,
-    KpiCardComponent,
-    DeliveryStatusBadgeComponent,
-    AriaryPipe,
-  ],
+  imports: [FormsModule, DatePipe, KpiCardComponent, DeliveryStatusBadgeComponent, AriaryPipe],
   template: `
     <div class="grid g3">
-      <app-kpi-card label="Sorties du jour" [value]="outputsToday().length" />
-      <app-kpi-card label="Unités sorties aujourd'hui" [value]="unitsToday()" />
-      <app-kpi-card label="Valeur sortie aujourd'hui" [value]="valueToday() | ariary" />
+      <app-kpi-card label="Sorties affichées" [value]="outputs().length" />
+      <app-kpi-card label="Unités sorties" [value]="units()" />
+      <app-kpi-card label="Valeur sortie" [value]="value() | ariary" />
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -37,11 +32,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             type="text"
             placeholder="Produit, facture ou client"
             [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
+            (ngModelChange)="onSearch($event)"
           />
         </div>
       </div>
-      @if (filtered().length) {
+      @if (outputs().length) {
         <table>
           <thead>
             <tr>
@@ -55,14 +50,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </tr>
           </thead>
           <tbody>
-            @for (output of filtered(); track output.id) {
+            @for (output of outputs(); track output.id) {
               <tr>
                 <td class="muted">{{ output.movementDate | date: 'dd/MM HH:mm' }}</td>
                 <td>{{ output.product.name }}</td>
                 <td class="num">−{{ output.quantity }}</td>
                 <td>{{ output.invoice.invoiceNumber }}</td>
                 <td>{{ output.invoice.clientName }}</td>
-                <td class="num">{{ output.product.price * output.quantity | ariary }}</td>
+                <td class="num">{{ output.value | ariary }}</td>
                 <td><app-delivery-status-badge [status]="output.invoice.deliveryStatus" /></td>
               </tr>
             }
@@ -75,32 +70,23 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class StockOutputsComponent {
-  private readonly store = inject(ShopStore);
+  private readonly api = inject(StockApi);
 
   protected readonly search = signal('');
 
-  protected readonly filtered = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const outputs = this.store.stockOutputs();
-    if (!term) {
-      return outputs;
-    }
-    return outputs.filter((o) =>
-      [o.product.name, o.invoice.invoiceNumber, o.invoice.clientName].some((field) =>
-        field.toLowerCase().includes(term),
-      ),
-    );
-  });
+  private readonly resource = apiResource<StockOutput[]>([], () => this.api.outputs(this.search()));
+  protected readonly outputs = this.resource.value;
 
-  protected readonly outputsToday = computed(() =>
-    this.store.stockOutputs().filter((o) => isToday(o.movementDate)),
+  protected readonly units = computed(() =>
+    this.outputs().reduce((total, output) => total + output.quantity, 0),
   );
 
-  protected readonly unitsToday = computed(() =>
-    this.outputsToday().reduce((total, o) => total + o.quantity, 0),
+  protected readonly value = computed(() =>
+    this.outputs().reduce((total, output) => total + output.value, 0),
   );
 
-  protected readonly valueToday = computed(() =>
-    this.outputsToday().reduce((total, o) => total + o.product.price * o.quantity, 0),
-  );
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    this.resource.reload();
+  }
 }

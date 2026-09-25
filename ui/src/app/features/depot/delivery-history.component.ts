@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { apiResource } from '../../core/api/api-resource';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import { DeliveryStatus, Invoice } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -27,15 +28,19 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class DeliveryHistoryComponent {
-  private readonly store = inject(ShopStore);
+  private readonly api = inject(InvoiceApi);
 
-  protected readonly delivered = this.store.deliveredInvoices;
-
-  protected readonly deliveredToday = computed(() =>
-    this.delivered().filter((i) => isToday(i.invoiceDate)),
+  private readonly all = apiResource<Invoice[]>([], () =>
+    this.api.search({ deliveryStatus: DeliveryStatus.DELIVERED }),
+  );
+  private readonly today = apiResource<Invoice[]>([], () =>
+    this.api.search({ deliveryStatus: DeliveryStatus.DELIVERED, todayOnly: true }),
   );
 
+  protected readonly delivered = this.all.value;
+  protected readonly deliveredToday = this.today.value;
+
   protected readonly valueToday = computed(() =>
-    this.deliveredToday().reduce((total, i) => total + i.sale.totalAmount, 0),
+    this.deliveredToday().reduce((total, invoice) => total + invoice.sale.totalAmount, 0),
   );
 }

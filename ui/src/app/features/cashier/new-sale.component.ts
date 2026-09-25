@@ -1,14 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  PAYMENT_METHOD_LABELS,
-  PaymentMethod,
-  PaymentStatus,
-  Product,
-  calculateTotal,
-} from '../../core/models';
-import { SessionService } from '../../core/services/session.service';
-import { CartItem, LOW_STOCK_THRESHOLD, ShopStore } from '../../core/services/shop-store.service';
+import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus, Product } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -37,7 +32,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <button
               type="button"
               class="prod-card"
-              [class.low]="product.stockQuantity < lowStockThreshold"
+              [class.low]="product.lowStock"
               [disabled]="remainingStock(product) <= 0"
               (click)="addToCart(product)"
             >
@@ -117,8 +112,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               [ngModel]="paymentStatus()"
               (ngModelChange)="paymentStatus.set($event)"
             >
-              <option [value]="PaymentStatus.PAID">Payée à la caisse</option>
-              <option [value]="PaymentStatus.UNPAID">Non payée (à régler au dépôt)</option>
+              <option [ngValue]="PaymentStatus.PAID">Payée à la caisse</option>
+              <option [ngValue]="PaymentStatus.UNPAID">Non payée (à régler au dépôt)</option>
             </select>
           </div>
           @if (paymentStatus() === PaymentStatus.PAID) {
@@ -131,7 +126,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 (ngModelChange)="paymentMethod.set($event)"
               >
                 @for (method of paymentMethods; track method) {
-                  <option [value]="method">{{ methodLabels[method] }}</option>
+                  <option [ngValue]="method">{{ methodLabels[method] }}</option>
                 }
               </select>
             </div>
@@ -142,63 +137,56 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           class="btn block"
           type="button"
           style="padding:11px;"
-          [disabled]="!cartItems().length"
+          [disabled]="!cartItems().length || submitting()"
           (click)="validateSale()"
         >
-          Valider la vente et générer la facture
+          {{ submitting() ? 'Enregistrement...' : 'Valider la vente et générer la facture' }}
         </button>
       </div>
     </div>
   `,
 })
 export class NewSaleComponent {
-  private readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
+  private readonly catalog = inject(CatalogApi);
+  private readonly invoices = inject(InvoiceApi);
   private readonly toasts = inject(ToastService);
 
   protected readonly PaymentStatus = PaymentStatus;
   protected readonly paymentMethods = Object.values(PaymentMethod);
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
-  protected readonly lowStockThreshold = LOW_STOCK_THRESHOLD;
 
   protected readonly search = signal('');
   protected readonly clientName = signal('');
   protected readonly paymentStatus = signal<PaymentStatus>(PaymentStatus.PAID);
   protected readonly paymentMethod = signal<PaymentMethod>(PaymentMethod.CASH);
+  protected readonly submitting = signal(false);
 
-  /** Quantity per product id — the cart is resolved against live stock. */
+  /** Quantity per product id; the cart is resolved against the live catalogue. */
   private readonly quantities = signal<Record<number, number>>({});
+
+  private readonly catalogResource = apiResource<Product[]>([], () => this.catalog.products());
+  private readonly products = this.catalogResource.value;
 
   protected readonly visibleProducts = computed(() => {
     const term = this.search().trim().toLowerCase();
     if (!term) {
-      return this.store.products();
+      return this.products();
     }
-    return this.store
-      .products()
-      .filter((p) =>
-        [p.name, p.category?.name ?? '', p.barcode ?? ''].some((field) =>
-          field.toLowerCase().includes(term),
-        ),
-      );
+    return this.products().filter((p) =>
+      [p.name, p.category?.name ?? '', p.barcode ?? ''].some((field) =>
+        field.toLowerCase().includes(term),
+      ),
+    );
   });
 
-  protected readonly cartItems = computed<CartItem[]>(() =>
-    this.store
-      .products()
+  protected readonly cartItems = computed(() =>
+    this.products()
       .filter((p) => (this.quantities()[p.id] ?? 0) > 0)
-      .map((p) => ({ product: p, quantity: this.quantities()[p.id] })),
+      .map((product) => ({ product, quantity: this.quantities()[product.id] })),
   );
 
   protected readonly total = computed(() =>
-    calculateTotal(
-      this.cartItems().map((item) => ({
-        id: 0,
-        quantity: item.quantity,
-        unitPrice: item.product.price,
-        product: item.product,
-      })),
-    ),
+    this.cartItems().reduce((sum, item) => sum + item.product.price * item.quantity, 0),
   );
 
   protected remainingStock(product: Product): number {
@@ -224,23 +212,35 @@ export class NewSaleComponent {
 
   protected validateSale(): void {
     const cart = this.cartItems();
-    if (!cart.length) {
+    if (!cart.length || this.submitting()) {
       return;
     }
+    this.submitting.set(true);
 
-    const invoice = this.store.registerSale({
-      seller: this.session.currentUser(),
-      clientName: this.clientName(),
-      cart,
-      paymentStatus: this.paymentStatus(),
-      paymentMethod: this.paymentMethod(),
-    });
-
-    this.quantities.set({});
-    this.clientName.set('');
-    this.toasts.show(
-      `Vente enregistrée — facture ${invoice.invoiceNumber} ` +
-        `(${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar)`,
-    );
+    this.invoices
+      .createSale({
+        clientName: this.clientName(),
+        paymentStatus: this.paymentStatus(),
+        paymentMethod: this.paymentMethod(),
+        lines: cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+      })
+      .subscribe({
+        next: (invoice) => {
+          this.submitting.set(false);
+          this.quantities.set({});
+          this.clientName.set('');
+          // The server has moved the stock; re-read it rather than guess the new figures.
+          this.catalogResource.reload();
+          this.toasts.show(
+            `Vente enregistrée — facture ${invoice.invoiceNumber} ` +
+              `(${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar)`,
+          );
+        },
+        error: () => {
+          this.submitting.set(false);
+          // The interceptor has already shown why; refresh in case stock moved elsewhere.
+          this.catalogResource.reload();
+        },
+      });
   }
 }

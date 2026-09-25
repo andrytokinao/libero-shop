@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DeliveryStatus, PaymentStatus } from '../../core/models';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { apiResource } from '../../core/api/api-resource';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import { DeliveryStatus, Invoice, PaymentStatus } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -14,16 +15,12 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
   imports: [FormsModule, KpiCardComponent, InvoiceTableComponent, AriaryPipe],
   template: `
     <div class="grid g3">
-      <app-kpi-card
-        label="Factures affichées"
-        [value]="filtered().length"
-        [hint]="'sur ' + store.invoices().length + ' au total'"
-      />
-      <app-kpi-card label="Montant affiché" [value]="filteredAmount() | ariary" />
+      <app-kpi-card label="Factures affichées" [value]="invoices().length" />
+      <app-kpi-card label="Montant affiché" [value]="totalAmount() | ariary" />
       <app-kpi-card
         label="Factures imprimées"
         [value]="printedCount()"
-        [hint]="'sur ' + store.invoices().length"
+        [hint]="'sur ' + invoices().length + ' affichée(s)'"
       />
     </div>
 
@@ -37,7 +34,7 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
             type="text"
             placeholder="Numéro, client ou vendeur"
             [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
+            (ngModelChange)="onSearch($event)"
           />
         </div>
         <div class="fld">
@@ -46,7 +43,7 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
             id="all-invoice-filter"
             class="field"
             [ngModel]="filter()"
-            (ngModelChange)="filter.set($event)"
+            (ngModelChange)="onFilter($event)"
           >
             <option value="ALL">Toutes</option>
             <option value="UNPAID">Non payées</option>
@@ -56,7 +53,7 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
         </div>
       </div>
       <app-invoice-table
-        [invoices]="filtered()"
+        [invoices]="invoices()"
         [showDate]="true"
         emptyMessage="Aucune facture ne correspond aux critères."
       />
@@ -64,39 +61,42 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
   `,
 })
 export class AllInvoicesComponent {
-  protected readonly store = inject(ShopStore);
+  private readonly api = inject(InvoiceApi);
 
   protected readonly search = signal('');
   protected readonly filter = signal<InvoiceFilter>('ALL');
 
-  protected readonly filtered = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const mode = this.filter();
+  // Search and filter are both server-side; the UI only maps its labels onto the
+  // paymentStatus / deliveryStatus the API already understands.
+  private readonly resource = apiResource<Invoice[]>([], () =>
+    this.api.search({
+      search: this.search(),
+      paymentStatus: this.filter() === 'UNPAID' ? PaymentStatus.UNPAID : undefined,
+      deliveryStatus:
+        this.filter() === 'PENDING_DELIVERY'
+          ? DeliveryStatus.PENDING
+          : this.filter() === 'DELIVERED'
+            ? DeliveryStatus.DELIVERED
+            : undefined,
+    }),
+  );
+  protected readonly invoices = this.resource.value;
 
-    return this.store.invoices().filter((invoice) => {
-      if (mode === 'UNPAID' && invoice.paymentStatus !== PaymentStatus.UNPAID) {
-        return false;
-      }
-      if (mode === 'PENDING_DELIVERY' && invoice.deliveryStatus !== DeliveryStatus.PENDING) {
-        return false;
-      }
-      if (mode === 'DELIVERED' && invoice.deliveryStatus !== DeliveryStatus.DELIVERED) {
-        return false;
-      }
-      if (!term) {
-        return true;
-      }
-      return [invoice.invoiceNumber, invoice.clientName, invoice.sale.seller.fullName].some(
-        (field) => field.toLowerCase().includes(term),
-      );
-    });
-  });
-
-  protected readonly filteredAmount = computed(() =>
-    this.filtered().reduce((total, i) => total + i.sale.totalAmount, 0),
+  protected readonly totalAmount = computed(() =>
+    this.invoices().reduce((total, invoice) => total + invoice.sale.totalAmount, 0),
   );
 
   protected readonly printedCount = computed(
-    () => this.store.invoices().filter((i) => i.printed).length,
+    () => this.invoices().filter((invoice) => invoice.printed).length,
   );
+
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    this.resource.reload();
+  }
+
+  protected onFilter(value: InvoiceFilter): void {
+    this.filter.set(value);
+    this.resource.reload();
+  }
 }

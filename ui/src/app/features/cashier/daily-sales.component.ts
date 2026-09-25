@@ -1,8 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
-import { PaymentStatus } from '../../core/models';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { apiResource } from '../../core/api/api-resource';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import { Invoice, PaymentStatus } from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -15,8 +15,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="grid g3">
       <app-kpi-card
         label="Ventes du jour"
-        [value]="invoicesToday().length"
-        [hint]="session.currentUser().fullName"
+        [value]="invoices().length"
+        [hint]="auth.currentUser()?.fullName ?? ''"
       />
       <app-kpi-card label="Total encaissé" [value]="collected() | ariary" />
       <app-kpi-card
@@ -29,7 +29,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card" style="margin-top:16px;">
       <h2>Détail des ventes du jour</h2>
       <app-invoice-table
-        [invoices]="invoicesToday()"
+        [invoices]="invoices()"
         [showSeller]="false"
         [showDate]="true"
         emptyMessage="Aucune vente enregistrée aujourd'hui."
@@ -38,19 +38,21 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class DailySalesComponent {
-  private readonly store = inject(ShopStore);
-  protected readonly session = inject(SessionService);
+  private readonly api = inject(InvoiceApi);
+  protected readonly auth = inject(AuthService);
 
-  protected readonly invoicesToday = computed(() =>
-    this.store.invoicesOf(this.session.currentUser()).filter((i) => isToday(i.invoiceDate)),
+  // mine + todayOnly are resolved server-side: the client cannot ask for another seller.
+  private readonly resource = apiResource<Invoice[]>([], () =>
+    this.api.search({ mine: true, todayOnly: true }),
   );
+  protected readonly invoices = this.resource.value;
 
   private readonly paid = computed(() =>
-    this.invoicesToday().filter((i) => i.paymentStatus === PaymentStatus.PAID),
+    this.invoices().filter((i) => i.paymentStatus === PaymentStatus.PAID),
   );
 
   protected readonly unpaid = computed(() =>
-    this.invoicesToday().filter((i) => i.paymentStatus === PaymentStatus.UNPAID),
+    this.invoices().filter((i) => i.paymentStatus === PaymentStatus.UNPAID),
   );
 
   protected readonly collected = computed(() =>

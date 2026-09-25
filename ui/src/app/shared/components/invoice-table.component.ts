@@ -42,14 +42,19 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
               @if (showSeller) {
                 <td>{{ invoice.sale.seller.fullName }}</td>
               }
-              <td class="num">{{ lineCount(invoice) }}</td>
+              <td class="num">{{ invoice.itemCount }}</td>
               <td class="num">{{ invoice.sale.totalAmount | ariary }}</td>
               <td><app-payment-status-badge [status]="invoice.paymentStatus" /></td>
               <td><app-delivery-status-badge [status]="invoice.deliveryStatus" /></td>
               @if (actionLabel) {
                 <td>
                   @if (actionLabel(invoice); as label) {
-                    <button class="btn small" type="button" (click)="action.emit(invoice)">
+                    <button
+                      class="btn small"
+                      type="button"
+                      [disabled]="busy"
+                      (click)="action.emit(invoice)"
+                    >
                       {{ label }}
                     </button>
                   } @else {
@@ -71,11 +76,9 @@ export class InvoiceTableComponent {
   @Input() showSeller = true;
   @Input() showDate = false;
   @Input() emptyMessage = 'Aucune facture pour le moment.';
+  /** Blocks the row actions while a call is in flight, so nothing is posted twice. */
+  @Input() busy = false;
   /** Returns the button label for a row, or null to show no action. */
   @Input() actionLabel?: (invoice: Invoice) => string | null;
   @Output() readonly action = new EventEmitter<Invoice>();
-
-  protected lineCount(invoice: Invoice): number {
-    return invoice.sale.lines.reduce((total, line) => total + line.quantity, 0);
-  }
 }

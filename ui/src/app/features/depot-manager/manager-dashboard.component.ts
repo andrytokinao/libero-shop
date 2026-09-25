@@ -1,8 +1,21 @@
-import { Component, computed, inject } from '@angular/core';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { Component, inject } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { DashboardApi } from '../../core/api/dashboard.api';
+import { StockDashboard } from '../../core/models';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+
+const EMPTY: StockDashboard = {
+  stockValue: 0,
+  referenceCount: 0,
+  unitsInStock: 0,
+  lowStockCount: 0,
+  suppliesLastWeek: 0,
+  unitsSuppliedLastWeek: 0,
+  deliveredInvoices: 0,
+  toRestock: [],
+};
 
 @Component({
   selector: 'app-manager-dashboard',
@@ -12,20 +25,20 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="grid g4">
       <app-kpi-card
         label="Valeur totale du stock"
-        [value]="store.stockValue() | ariary"
-        [hint]="store.products().length + ' références'"
+        [value]="data().stockValue | ariary"
+        [hint]="data().referenceCount + ' références, ' + data().unitsInStock + ' unités'"
       />
       <app-kpi-card
         label="Références en alerte"
-        [value]="store.lowStockProducts().length"
+        [value]="data().lowStockCount"
         hint="stock inférieur à 10"
       />
       <app-kpi-card
         label="Approvisionnements (7 j)"
-        [value]="store.suppliesLastWeek().length"
-        [hint]="unitsSuppliedLastWeek() + ' unités reçues'"
+        [value]="data().suppliesLastWeek"
+        [hint]="data().unitsSuppliedLastWeek + ' unités reçues'"
       />
-      <app-kpi-card label="Commandes livrées" [value]="store.deliveredInvoices().length" />
+      <app-kpi-card label="Commandes livrées" [value]="data().deliveredInvoices" />
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -34,20 +47,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <small>triés du stock le plus faible au plus élevé</small>
       </h2>
       <app-stock-table
-        [products]="toRestock()"
+        [products]="data().toRestock"
         emptyMessage="Aucun produit en alerte — le stock est sain."
       />
     </div>
   `,
 })
 export class ManagerDashboardComponent {
-  protected readonly store = inject(ShopStore);
-
-  protected readonly toRestock = computed(() =>
-    [...this.store.lowStockProducts()].sort((a, b) => a.stockQuantity - b.stockQuantity),
-  );
-
-  protected readonly unitsSuppliedLastWeek = computed(() =>
-    this.store.suppliesLastWeek().reduce((total, s) => total + s.quantity, 0),
-  );
+  private readonly api = inject(DashboardApi);
+  private readonly resource = apiResource(EMPTY, () => this.api.stock());
+  protected readonly data = this.resource.value;
 }

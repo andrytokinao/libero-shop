@@ -1,11 +1,25 @@
-import { Component, computed, inject } from '@angular/core';
-import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus } from '../../core/models';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { Component, inject } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { DashboardApi } from '../../core/api/dashboard.api';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import {
+  Invoice,
+  PAYMENT_METHOD_LABELS,
+  PaymentStatus,
+  RevenueReport,
+} from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+
+const EMPTY: RevenueReport = {
+  totalToday: 0,
+  averageBasket: 0,
+  topSeller: null,
+  bySeller: [],
+  byPaymentMethod: [],
+};
 
 @Component({
   selector: 'app-revenue',
@@ -15,14 +29,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="grid g3">
       <app-kpi-card
         label="Chiffre d'affaires du jour"
-        [value]="store.revenueToday() | ariary"
-        [hint]="store.revenueBySeller().length + ' vendeur(s) actif(s)'"
+        [value]="report().totalToday | ariary"
+        [hint]="report().bySeller.length + ' vendeur(s) actif(s)'"
       />
-      <app-kpi-card label="Panier moyen" [value]="averageBasket() | ariary" />
+      <app-kpi-card label="Panier moyen" [value]="report().averageBasket | ariary" />
       <app-kpi-card
         label="Meilleur vendeur"
-        [value]="topSeller()"
-        [hint]="topSellerAmount() | ariary"
+        [value]="report().topSeller?.sellerName ?? '—'"
+        [hint]="(report().topSeller?.amount ?? 0) | ariary"
       />
     </div>
 
@@ -31,12 +45,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         Chiffre d'affaires par vendeur
         <small>mis à jour en temps réel à chaque vente</small>
       </h2>
-      <app-revenue-bars [data]="store.revenueBySeller()" />
+      <app-revenue-bars [data]="report().bySeller" />
     </div>
 
     <div class="card" style="margin-top:16px;">
       <h2>Répartition par mode de paiement <small>encaissements du jour</small></h2>
-      @if (byMethod().length) {
+      @if (report().byPaymentMethod.length) {
         <table>
           <thead>
             <tr>
@@ -46,9 +60,9 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </tr>
           </thead>
           <tbody>
-            @for (row of byMethod(); track row.method) {
+            @for (row of report().byPaymentMethod; track row.paymentMethod) {
               <tr>
-                <td>{{ methodLabels[row.method] }}</td>
+                <td>{{ methodLabels[row.paymentMethod] }}</td>
                 <td class="num">{{ row.count }}</td>
                 <td class="num">{{ row.amount | ariary }}</td>
               </tr>
@@ -71,43 +85,16 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class RevenueComponent {
-  protected readonly store = inject(ShopStore);
+  private readonly dashboardApi = inject(DashboardApi);
+  private readonly invoiceApi = inject(InvoiceApi);
+
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 
-  protected readonly paidToday = computed(() =>
-    this.store
-      .invoices()
-      .filter((i) => isToday(i.invoiceDate) && i.paymentStatus === PaymentStatus.PAID),
+  private readonly reportResource = apiResource(EMPTY, () => this.dashboardApi.revenue());
+  private readonly invoiceResource = apiResource<Invoice[]>([], () =>
+    this.invoiceApi.search({ todayOnly: true, paymentStatus: PaymentStatus.PAID }),
   );
 
-  protected readonly averageBasket = computed(() => {
-    const rows = this.store.revenueBySeller();
-    const sales = rows.reduce((total, row) => total + row.saleCount, 0);
-    return sales ? Math.round(this.store.revenueToday() / sales) : 0;
-  });
-
-  protected readonly topSeller = computed(
-    () => this.store.revenueBySeller()[0]?.seller.fullName ?? '—',
-  );
-
-  protected readonly topSellerAmount = computed(
-    () => this.store.revenueBySeller()[0]?.amount ?? 0,
-  );
-
-  protected readonly byMethod = computed(() => {
-    const grouped = new Map<PaymentMethod, { method: PaymentMethod; count: number; amount: number }>();
-    for (const payment of this.store.payments().filter((p) => isToday(p.paymentDate))) {
-      const current = grouped.get(payment.paymentMethod) ?? {
-        method: payment.paymentMethod,
-        count: 0,
-        amount: 0,
-      };
-      grouped.set(payment.paymentMethod, {
-        method: payment.paymentMethod,
-        count: current.count + 1,
-        amount: current.amount + payment.amount,
-      });
-    }
-    return [...grouped.values()].sort((a, b) => b.amount - a.amount);
-  });
+  protected readonly report = this.reportResource.value;
+  protected readonly paidToday = this.invoiceResource.value;
 }

@@ -29,8 +29,13 @@ import { StockStatusBadgeComponent } from './status-badges.component';
               <td class="muted">{{ product.barcode ?? '—' }}</td>
               <td class="num">{{ product.stockQuantity }}</td>
               <td class="num">{{ product.price | ariary }}</td>
-              <td class="num">{{ product.price * product.stockQuantity | ariary }}</td>
-              <td><app-stock-status-badge [quantity]="product.stockQuantity" /></td>
+              <td class="num">{{ product.stockValue | ariary }}</td>
+              <td>
+                <app-stock-status-badge
+                  [quantity]="product.stockQuantity"
+                  [lowStock]="product.lowStock"
+                />
+              </td>
             </tr>
           }
         </tbody>

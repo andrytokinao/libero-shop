@@ -1,16 +1,24 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { Component, computed, inject, signal } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { RemittanceApi } from '../../core/api/remittance.api';
+import { CashRemittance, Payment, RoleApp } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
+import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 @Component({
   selector: 'app-depot-cash',
   standalone: true,
-  imports: [DatePipe, KpiCardComponent, RemittanceStatusBadgeComponent, AriaryPipe],
+  imports: [
+    DatePipe,
+    KpiCardComponent,
+    RemittanceStatusBadgeComponent,
+    HasRoleDirective,
+    AriaryPipe,
+  ],
   template: `
     <div class="grid g2">
       <div class="card">
@@ -52,11 +60,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           }
         </div>
 
+        <!-- Only an agent remits; the API takes the collector from the session. -->
         <button
+          *appHasRole="RoleApp.DEPOT_AGENT"
           class="btn block"
           type="button"
           style="margin-top:14px;"
-          [disabled]="!cashInHand().length"
+          [disabled]="!cashInHand().length || busy()"
           (click)="submit()"
         >
           Verser {{ cashInHandTotal() | ariary }} à la caisse
@@ -99,27 +109,40 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class DepotCashComponent {
-  private readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
+  private readonly api = inject(RemittanceApi);
   private readonly toasts = inject(ToastService);
 
-  protected readonly cashInHand = computed(() =>
-    this.store.cashInHandOf(this.session.currentUser()),
+  protected readonly RoleApp = RoleApp;
+  protected readonly busy = signal(false);
+
+  private readonly cashResource = apiResource<Payment[]>([], () => this.api.cashInHand());
+  private readonly remittanceResource = apiResource<CashRemittance[]>([], () =>
+    this.api.search({ mine: true }),
   );
 
-  protected readonly cashInHandTotal = computed(() => ShopStore.total(this.cashInHand()));
+  protected readonly cashInHand = this.cashResource.value;
+  protected readonly myRemittances = this.remittanceResource.value;
 
-  protected readonly myRemittances = computed(() =>
-    this.store.remittancesOf(this.session.currentUser()),
+  protected readonly cashInHandTotal = computed(() =>
+    this.cashInHand().reduce((total, payment) => total + payment.amount, 0),
   );
 
   protected submit(): void {
-    const remittance = this.store.submitRemittance(this.session.currentUser());
-    if (remittance) {
-      this.toasts.show(
-        `Versement V-${remittance.id} de ${remittance.amount.toLocaleString('fr-FR')} Ar ` +
-          `enregistré — en attente de confirmation par la caisse.`,
-      );
-    }
+    this.busy.set(true);
+    this.api.submit().subscribe({
+      next: (remittance) => {
+        this.busy.set(false);
+        this.cashResource.reload();
+        this.remittanceResource.reload();
+        this.toasts.show(
+          `Versement V-${remittance.id} de ${remittance.amount.toLocaleString('fr-FR')} Ar ` +
+            `enregistré — en attente de confirmation par la caisse.`,
+        );
+      },
+      error: () => {
+        this.busy.set(false);
+        this.cashResource.reload();
+      },
+    });
   }
 }

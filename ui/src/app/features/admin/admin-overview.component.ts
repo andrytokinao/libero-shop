@@ -1,10 +1,27 @@
-import { Component, computed, inject } from '@angular/core';
-import { ShopStore } from '../../core/services/shop-store.service';
-import { isToday } from '../../core/utils/date.util';
+import { Component, inject } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { DashboardApi } from '../../core/api/dashboard.api';
+import { AdminDashboard } from '../../core/models';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+
+const EMPTY: AdminDashboard = {
+  revenueToday: 0,
+  stockValue: 0,
+  referenceCount: 0,
+  unpaidInvoices: 0,
+  unpaidAmount: 0,
+  pendingDeliveries: 0,
+  depotCashInHand: 0,
+  depotCashInHandCount: 0,
+  pendingRemittanceAmount: 0,
+  pendingRemittanceCount: 0,
+  confirmedRemittanceAmountToday: 0,
+  revenueBySeller: [],
+  lowStockProducts: [],
+};
 
 @Component({
   selector: 'app-admin-overview',
@@ -14,23 +31,20 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="grid g4">
       <app-kpi-card
         label="Chiffre d'affaires du jour"
-        [value]="store.revenueToday() | ariary"
+        [value]="data().revenueToday | ariary"
         hint="toutes caisses confondues"
       />
       <app-kpi-card
         label="Valeur du stock"
-        [value]="store.stockValue() | ariary"
-        [hint]="store.products().length + ' références'"
+        [value]="data().stockValue | ariary"
+        [hint]="data().referenceCount + ' références'"
       />
       <app-kpi-card
         label="Factures non payées"
-        [value]="store.unpaidInvoices().length"
-        [hint]="unpaidAmount() | ariary"
+        [value]="data().unpaidInvoices"
+        [hint]="data().unpaidAmount | ariary"
       />
-      <app-kpi-card
-        label="Commandes en attente de remise"
-        [value]="store.pendingDeliveries().length"
-      />
+      <app-kpi-card label="Commandes en attente de remise" [value]="data().pendingDeliveries" />
     </div>
 
     <div class="grid g2" style="margin-top:16px;">
@@ -39,12 +53,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           Chiffre d'affaires par vendeur
           <small>mis à jour à chaque vente encaissée</small>
         </h2>
-        <app-revenue-bars [data]="store.revenueBySeller()" />
+        <app-revenue-bars [data]="data().revenueBySeller" />
       </div>
       <div class="card">
         <h2>Produits en alerte stock</h2>
         <app-stock-table
-          [products]="store.lowStockProducts()"
+          [products]="data().lowStockProducts"
           emptyMessage="Aucun produit en alerte."
         />
       </div>
@@ -59,40 +73,26 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <app-kpi-card
           [flat]="true"
           label="Encore en main des agents"
-          [value]="cashInHandTotal() | ariary"
-          [hint]="store.depotCashInHand().length + ' encaissement(s)'"
+          [value]="data().depotCashInHand | ariary"
+          [hint]="data().depotCashInHandCount + ' encaissement(s)'"
         />
         <app-kpi-card
           [flat]="true"
           label="Versements en attente de confirmation"
-          [value]="pendingTotal() | ariary"
-          [hint]="store.pendingRemittances().length + ' bordereau(x)'"
+          [value]="data().pendingRemittanceAmount | ariary"
+          [hint]="data().pendingRemittanceCount + ' bordereau(x)'"
         />
         <app-kpi-card
           [flat]="true"
           label="Versements confirmés aujourd'hui"
-          [value]="confirmedTodayTotal() | ariary"
+          [value]="data().confirmedRemittanceAmountToday | ariary"
         />
       </div>
     </div>
   `,
 })
 export class AdminOverviewComponent {
-  protected readonly store = inject(ShopStore);
-
-  protected readonly unpaidAmount = computed(() =>
-    this.store.unpaidInvoices().reduce((total, i) => total + i.sale.totalAmount, 0),
-  );
-
-  protected readonly cashInHandTotal = computed(() =>
-    ShopStore.total(this.store.depotCashInHand()),
-  );
-
-  protected readonly pendingTotal = computed(() =>
-    ShopStore.total(this.store.pendingRemittances()),
-  );
-
-  protected readonly confirmedTodayTotal = computed(() =>
-    ShopStore.total(this.store.confirmedRemittances().filter((r) => isToday(r.remittanceDate))),
-  );
+  private readonly api = inject(DashboardApi);
+  private readonly resource = apiResource(EMPTY, () => this.api.admin());
+  protected readonly data = this.resource.value;
 }

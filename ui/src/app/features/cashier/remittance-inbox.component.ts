@@ -1,29 +1,35 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
-import { CashRemittance } from '../../core/models';
-import { SessionService } from '../../core/services/session.service';
-import { ShopStore } from '../../core/services/shop-store.service';
+import { Component, computed, inject, signal } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { RemittanceApi } from '../../core/api/remittance.api';
+import { CashRemittance, RemittanceStatus, RoleApp } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
+import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 @Component({
   selector: 'app-remittance-inbox',
   standalone: true,
-  imports: [DatePipe, KpiCardComponent, RemittanceStatusBadgeComponent, AriaryPipe],
+  imports: [
+    DatePipe,
+    KpiCardComponent,
+    RemittanceStatusBadgeComponent,
+    HasRoleDirective,
+    AriaryPipe,
+  ],
   template: `
-    <div class="grid g3">
+    <div class="grid g2">
       <app-kpi-card
         label="En attente de confirmation"
         [value]="pendingTotal() | ariary"
         [hint]="pending().length + ' bordereau(x)'"
       />
-      <app-kpi-card label="Confirmé aujourd'hui" [value]="confirmedTotal() | ariary" />
       <app-kpi-card
-        label="Encore en main des agents"
-        [value]="cashInHandTotal() | ariary"
-        hint="pas encore apporté à la caisse"
+        label="Total confirmé"
+        [value]="confirmedTotal() | ariary"
+        [hint]="confirmed().length + ' bordereau(x)'"
       />
     </div>
 
@@ -39,6 +45,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               <th>N° versement</th>
               <th>Agent</th>
               <th>Date</th>
+              <th class="num">Paiements</th>
               <th class="num">Montant</th>
               <th></th>
             </tr>
@@ -49,9 +56,17 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 <td>V-{{ remittance.id }}</td>
                 <td>{{ remittance.submittedBy.fullName }}</td>
                 <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
+                <td class="num">{{ remittance.paymentCount }}</td>
                 <td class="num">{{ remittance.amount | ariary }}</td>
                 <td>
-                  <button class="btn small" type="button" (click)="confirm(remittance)">
+                  <!-- Only a cash desk may acknowledge a slip; the API enforces it too. -->
+                  <button
+                    *appHasRole="RoleApp.CASHIER"
+                    class="btn small"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="confirm(remittance)"
+                  >
                     Confirmer réception
                   </button>
                 </td>
@@ -101,22 +116,44 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class RemittanceInboxComponent {
-  private readonly store = inject(ShopStore);
-  private readonly session = inject(SessionService);
+  private readonly api = inject(RemittanceApi);
   private readonly toasts = inject(ToastService);
 
-  protected readonly pending = this.store.pendingRemittances;
-  protected readonly confirmed = this.store.confirmedRemittances;
+  protected readonly RoleApp = RoleApp;
+  protected readonly busy = signal(false);
 
-  protected readonly pendingTotal = computed(() => ShopStore.total(this.pending()));
-  protected readonly confirmedTotal = computed(() => ShopStore.total(this.confirmed()));
-  protected readonly cashInHandTotal = computed(() => ShopStore.total(this.store.depotCashInHand()));
+  private readonly resource = apiResource<CashRemittance[]>([], () => this.api.search());
+  private readonly remittances = this.resource.value;
+
+  protected readonly pending = computed(() =>
+    this.remittances().filter((r) => r.status === RemittanceStatus.PENDING),
+  );
+  protected readonly confirmed = computed(() =>
+    this.remittances().filter((r) => r.status === RemittanceStatus.CONFIRMED),
+  );
+
+  protected readonly pendingTotal = computed(() =>
+    this.pending().reduce((total, r) => total + r.amount, 0),
+  );
+  protected readonly confirmedTotal = computed(() =>
+    this.confirmed().reduce((total, r) => total + r.amount, 0),
+  );
 
   protected confirm(remittance: CashRemittance): void {
-    this.store.confirmRemittance(remittance.id, this.session.currentUser());
-    this.toasts.show(
-      `Versement V-${remittance.id} confirmé reçu à la caisse ` +
-        `(${remittance.amount.toLocaleString('fr-FR')} Ar).`,
-    );
+    this.busy.set(true);
+    this.api.confirm(remittance.id).subscribe({
+      next: (confirmed) => {
+        this.busy.set(false);
+        this.resource.reload();
+        this.toasts.show(
+          `Versement V-${confirmed.id} confirmé reçu à la caisse ` +
+            `(${confirmed.amount.toLocaleString('fr-FR')} Ar).`,
+        );
+      },
+      error: () => {
+        this.busy.set(false);
+        this.resource.reload();
+      },
+    });
   }
 }

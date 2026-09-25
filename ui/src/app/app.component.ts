@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
-import { SessionService } from './core/services/session.service';
 import { ToastComponent } from './shared/components/toast.component';
 
 /** Application shell: role sidebar, top bar, routed page and toast host. */
@@ -14,11 +14,12 @@ import { ToastComponent } from './shared/components/toast.component';
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
-  protected readonly session = inject(SessionService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   protected readonly pageTitle = inject(PageTitleStrategy).pageTitle;
   protected readonly today = new Date();
 
-  protected onUserChange(event: Event): void {
-    this.session.switchUser(Number((event.target as HTMLSelectElement).value));
+  protected logout(): void {
+    this.auth.logout().subscribe(() => void this.router.navigateByUrl('/login'));
   }
 }

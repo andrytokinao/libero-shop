@@ -1,18 +1,19 @@
-import { CashRemittance } from './cash-remittance.model';
 import { PaymentMethod } from './enums';
-import { Invoice } from './invoice.model';
+import { InvoiceRef } from './invoice.model';
 import { UserApp } from './user-app.model';
 
-/** Mirrors com.houssen.libertyshop.entity.Payment (table payment). */
+/**
+ * Mirrors com.houssen.libertyshop.entity.Payment (table payment), as served by
+ * PaymentResponse.
+ */
 export interface Payment {
   id: number;
-  /** BigDecimal(12,2) on the backend. */
   amount: number;
   paymentMethod: PaymentMethod;
   /** LocalDateTime serialized as ISO-8601. */
   paymentDate: string;
-  invoice: Invoice;
+  invoice: InvoiceRef;
   collectedBy: UserApp;
-  /** Null while the cash is still in the collector's hands. */
-  cashRemittance: CashRemittance | null;
+  /** Null while the collector still physically holds the cash. */
+  cashRemittanceId: number | null;
 }
