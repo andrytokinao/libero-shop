@@ -8,3 +8,4 @@
 
 # Local experiments and verification artefacts
 /scratch/
+/backend/${project.build.directory}/
