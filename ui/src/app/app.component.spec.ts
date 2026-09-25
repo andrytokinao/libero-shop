@@ -7,6 +7,7 @@ import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api.config';
 import { RoleApp, Session } from './core/models';
 import { AuthService } from './core/services/auth.service';
+import { TokenStorage } from './core/services/token-storage.service';
 
 const CASHIER_SESSION: Session = {
   authenticated: true,
@@ -41,6 +42,10 @@ describe('AppComponent', () => {
   });
 
   it('renders the sidebar with the role menu once the session resolves', () => {
+    // Without a stored token there is nothing to resolve and no call is made, so the
+    // signed-in case has to start from a token the way a returning browser would.
+    TestBed.inject(TokenStorage).save('jeton-de-test', 3600);
+
     const auth = TestBed.inject(AuthService);
     auth.ensureLoaded().subscribe();
     httpMock.expectOne(`${API_BASE_URL}/auth/session`).flush(CASHIER_SESSION);
@@ -53,5 +58,9 @@ describe('AppComponent', () => {
     expect(sidebar.querySelectorAll('nav.menu a').length).toBe(5);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock.verify();
+    // localStorage outlives the TestBed; a token left behind would decide the next test.
+    TestBed.inject(TokenStorage).clear();
+  });
 });

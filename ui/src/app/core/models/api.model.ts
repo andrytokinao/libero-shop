@@ -11,7 +11,7 @@ import { UserApp } from './user-app.model';
 
 // ------------------------------------------------------------------- session
 
-/** GET /api/auth/session and POST /api/auth/login. */
+/** GET /api/auth/session, and the `session` of a LoginResponse. */
 export interface Session {
   authenticated: boolean;
   user: UserApp | null;
@@ -25,6 +25,17 @@ export interface Session {
 export interface LoginRequest {
   username: string;
   password: string;
+}
+
+/** POST /api/auth/login — the access token, and the session it stands for. */
+export interface LoginResponse {
+  /** Signed JWT, sent back as `Authorization: Bearer ...` on every later call. */
+  accessToken: string;
+  /** Always 'Bearer'. Sent by the server so the scheme is not hard-coded here. */
+  tokenType: string;
+  /** Seconds of validity, not a date: a browser clock that is off still expires it right. */
+  expiresIn: number;
+  session: Session;
 }
 
 // ------------------------------------------------------------------ requests

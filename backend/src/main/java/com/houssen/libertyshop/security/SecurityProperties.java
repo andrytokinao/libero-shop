@@ -11,11 +11,13 @@ import java.util.List;
  * {@code ng serve} during development and behind a single origin in production, where
  * {@code allowed-origins} is simply left empty.
  *
- * @param allowedOrigins browser origins allowed to call the API with credentials
- * @param secureCookies  send the session and CSRF cookies only over HTTPS
+ * <p>Token signing and lifetime live in {@link JwtProperties}, under
+ * {@code libertyshop.security.jwt}.
+ *
+ * @param allowedOrigins browser origins allowed to call the API
  */
 @ConfigurationProperties(prefix = "libertyshop.security")
-public record SecurityProperties(List<String> allowedOrigins, boolean secureCookies) {
+public record SecurityProperties(List<String> allowedOrigins) {
 
     public SecurityProperties {
         allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);

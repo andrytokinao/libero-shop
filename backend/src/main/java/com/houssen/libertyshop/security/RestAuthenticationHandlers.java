@@ -18,9 +18,11 @@ import java.util.Map;
 /**
  * Turns "not logged in" and "not allowed" into JSON instead of a redirect to a login page.
  *
- * <p>An Angular client that receives a 302 to an HTML page cannot tell a session timeout
+ * <p>An Angular client that receives a 302 to an HTML page cannot tell an expired token
  * from a successful call; a 401 with a stable {@code code} gives the interceptor exactly
- * one thing to branch on.
+ * one thing to branch on. This is also what replaces the bearer-token entry point the
+ * resource server installs by default, whose answer is an empty body and a
+ * {@code WWW-Authenticate} header.
  */
 @Component
 public class RestAuthenticationHandlers implements AuthenticationEntryPoint, AccessDeniedHandler {

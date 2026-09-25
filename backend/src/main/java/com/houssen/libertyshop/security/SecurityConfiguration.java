@@ -4,7 +4,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -12,13 +11,14 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.RequestCacheConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfFilter;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -28,17 +28,26 @@ import java.util.List;
 /**
  * Security for the API consumed by the Angular front end.
  *
- * <p>Authentication is session based: the browser holds a {@code JSESSIONID} cookie and
- * the API stays stateless from the client's point of view. Compared with a token kept in
- * {@code localStorage}, an {@code HttpOnly} session cookie cannot be read by injected
- * script, and revoking a shift is a matter of invalidating the session. CSRF is therefore
- * on — a cookie is sent automatically by the browser, so it must be paired with a header
- * only same-origin script can set.
+ * <p>Authentication is by bearer token: {@code POST /api/auth/login} returns a signed JWT
+ * and the client sends it back in the {@code Authorization} header on every call. Nothing
+ * about the caller is kept on the server -- no session, no token table -- so any instance
+ * can answer any request, and a restart does not sign anyone out (as long as the signing
+ * secret is configured rather than generated).
+ *
+ * <p>The price of that is revocation: a token stays valid until it expires, so disabling
+ * an account does not cut the current holder off mid-request. {@link CurrentUser} closes
+ * the gap for anything that acts in a user's name by re-reading the account and refusing a
+ * disabled one; read-only calls keep working until the token runs out. That is the trade
+ * this application accepts -- see {@code libertyshop.security.jwt.ttl}.
+ *
+ * <p>CSRF is off, and that follows from the above rather than being a shortcut: the
+ * identity no longer travels in a cookie the browser attaches by itself, and a cross-site
+ * form cannot set an {@code Authorization} header.
  *
  * <p>Authorisation is expressed twice on purpose: coarse-grained here, per URL, and
  * per-role on each handler with {@code @PreAuthorize}. The rule here is the safety net --
- * everything under {@code /api} needs a session — while the handler annotation states
- * which role the operation belongs to, right where a reader looks for it.
+ * everything under {@code /api} needs a token -- while the handler annotation states which
+ * role the operation belongs to, right where a reader looks for it.
  */
 @Configuration
 @EnableWebSecurity
@@ -54,19 +63,18 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    RestAuthenticationHandlers restHandlers,
-                                                   SecurityProperties properties) throws Exception {
-        CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        csrfRepository.setCookieCustomizer(cookie -> cookie.secure(properties.secureCookies()));
-
+                                                   JwtDecoder jwtDecoder,
+                                                   JwtAuthenticationConverter jwtAuthenticationConverter)
+            throws Exception {
         http
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(csrfRepository)
-                        // Plain handler, not the XOR one: Angular's HttpClient echoes the
-                        // raw cookie value back in X-XSRF-TOKEN, unmasked.
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+                // Safe only because the identity is in a header the client sets itself.
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        // Answers 204 whatever the token's state: signing out must work
+                        // even once the token the client is holding has expired.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()
                         // Installing or renewing a license is an administrative act.
@@ -74,20 +82,23 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/**").authenticated()
                         // Anything else is the packaged SPA: index.html, JS, CSS, icons.
                         .anyRequest().permitAll())
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter))
+                        // Set here as well as below: the resource server installs its own
+                        // entry point for bearer-token failures, which answers with an
+                        // empty body and a WWW-Authenticate header the SPA cannot read.
+                        .authenticationEntryPoint(restHandlers)
+                        .accessDeniedHandler(restHandlers))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(restHandlers)
                         .accessDeniedHandler(restHandlers))
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .logout(logout -> logout
-                        .logoutUrl("/api/auth/logout")
-                        // 204 rather than the default redirect: there is no page to go to.
-                        .logoutSuccessHandler((request, response, authentication) ->
-                                response.setStatus(HttpStatus.NO_CONTENT.value()))
-                        .deleteCookies("JSESSIONID")
-                        .invalidateHttpSession(true))
-                // Runs after the CSRF filter has put the token in the request attributes.
-                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // The default cache stores the refused request in an HTTP session, which
+                // would create the very session the policy above says we do not keep.
+                .requestCache(RequestCacheConfigurer::disable);
 
         return http.build();
     }
@@ -111,6 +122,10 @@ public class SecurityConfiguration {
      * Only needed while the UI is served by {@code ng serve} on another port. In
      * production the SPA is packaged with the jar, the origin list is empty, and no
      * cross-origin call is allowed at all.
+     *
+     * <p>Credentials are not allowed: with the token in a header there is no cookie left
+     * for the browser to attach, and asking for credentialed CORS would forbid the
+     * {@code *} header list below for nothing.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(SecurityProperties properties) {
@@ -118,8 +133,7 @@ public class SecurityConfiguration {
         configuration.setAllowedOrigins(properties.allowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        // Required for the session and CSRF cookies to travel cross-origin.
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
