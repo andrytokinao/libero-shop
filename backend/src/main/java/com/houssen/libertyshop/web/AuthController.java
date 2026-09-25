@@ -104,7 +104,7 @@ public class AuthController {
                 .map(GrantedAuthority::getAuthority)
                 .filter(authority -> authority.startsWith(ROLE_PREFIX))
                 .toList();
-        return SessionResponse.of(user, RolePolicy.labelOf(user.getRole()),
-                RolePolicy.homePathOf(user.getRole()), authorities);
+        return SessionResponse.of(user, RolePolicy.labelOf(user.getRoles()),
+                RolePolicy.homePathOf(user.getRoles()), authorities);
     }
 }

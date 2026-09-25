@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
-import { ROLE_LABELS, RoleApp, UserActivity, UserApp } from '../../core/models';
+import { ROLE_LABELS, RoleApp, UserActivity, UserApp, describeRoles } from '../../core/models';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 @Component({
@@ -33,7 +33,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               <tr>
                 <td>{{ row.user.fullName }}</td>
                 <td class="muted">{{ row.user.username }}</td>
-                <td class="muted">{{ roleLabels[row.user.role] }}</td>
+                <td class="muted">{{ describe(row.user.roles) }}</td>
                 <td>
                   @if (row.user.enabled) {
                     <span class="badge green">Actif</span>
@@ -55,7 +55,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Répartition des rôles</h2>
+      <h2>
+        Répartition des rôles
+        <small>un compte peut en cumuler plusieurs et apparaître sur plusieurs lignes</small>
+      </h2>
       <table>
         <thead>
           <tr>
@@ -82,6 +85,7 @@ export class UsersComponent {
 
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly roles = Object.values(RoleApp);
+  protected readonly describe = describeRoles;
 
   private readonly resource = apiResource<UserActivity[]>([], () => this.api.userActivity());
   protected readonly activity = this.resource.value;
@@ -89,7 +93,7 @@ export class UsersComponent {
   private readonly users = computed<UserApp[]>(() => this.activity().map((row) => row.user));
 
   protected usersOf(role: RoleApp): UserApp[] {
-    return this.users().filter((user) => user.role === role);
+    return this.users().filter((user) => user.roles.includes(role));
   }
 
   protected namesOf(role: RoleApp): string {

@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import javax.crypto.SecretKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,6 +56,20 @@ class JwtServiceTest {
         // session reaches the client -- see the filter there.
         assertTrue(authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).toList().contains("ROLE_CASHIER"));
+    }
+
+    @Test
+    @DisplayName("carries every role of an account that holds several")
+    void carriesEveryRoleOfTheAccount() {
+        JwtService service = serviceWith(SECRET, ISSUER);
+
+        // The one-person grocery: she sells at the desk and hands the goods over herself.
+        String token = service.issue(detailsOf(7L, "soa", RoleApp.CASHIER, RoleApp.DEPOT_AGENT)).value();
+        List<String> authorities = service.authenticationOf(token).getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        assertTrue(authorities.containsAll(List.of("ROLE_CASHIER", "ROLE_DEPOT_AGENT")));
     }
 
     @Test
@@ -144,13 +159,13 @@ class JwtServiceTest {
         return new JwtProperties(secret, Duration.ofHours(12), issuer);
     }
 
-    private static AppUserDetails detailsOf(long id, String username, RoleApp role) {
+    private static AppUserDetails detailsOf(long id, String username, RoleApp... roles) {
         return new AppUserDetails(UserApp.builder()
                 .id(id)
                 .fullName("Compte de test")
                 .username(username)
                 .password("{bcrypt}ignore")
-                .role(role)
+                .roles(EnumSet.copyOf(List.of(roles)))
                 .enabled(true)
                 .build());
     }

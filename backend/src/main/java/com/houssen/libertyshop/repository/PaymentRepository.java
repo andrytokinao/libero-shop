@@ -26,7 +26,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             select p from Payment p
               join fetch p.collectedBy u
               join fetch p.invoice i
-            where p.cashRemittance is null and u.role = com.houssen.libertyshop.entity.RoleApp.DEPOT_AGENT
+            where p.cashRemittance is null
+              and com.houssen.libertyshop.entity.RoleApp.DEPOT_AGENT member of u.roles
             order by p.paymentDate
             """)
     List<Payment> findUnremittedDepotCash();
@@ -54,8 +55,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("""
             select coalesce(sum(p.amount), 0) from Payment p
+              join p.collectedBy u
             where p.cashRemittance is null
-              and p.collectedBy.role = com.houssen.libertyshop.entity.RoleApp.DEPOT_AGENT
+              and com.houssen.libertyshop.entity.RoleApp.DEPOT_AGENT member of u.roles
             """)
     BigDecimal sumUnremittedDepotCash();
 }

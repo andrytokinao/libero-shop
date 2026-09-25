@@ -8,6 +8,10 @@ export interface UserApp {
   id: number;
   fullName: string;
   username: string;
-  role: RoleApp;
+  /**
+   * Every job the account may do, in the server's order of precedence. One entry for a
+   * depot that splits the duties, several for the grocery where one person does everything.
+   */
+  roles: RoleApp[];
   enabled: boolean;
 }

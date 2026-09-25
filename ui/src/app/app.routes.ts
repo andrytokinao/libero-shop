@@ -175,6 +175,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/users.component').then((m) => m.UsersComponent),
       },
+      {
+        path: 'licence',
+        title: 'Licence',
+        loadComponent: () =>
+          import('./features/admin/license.component').then((m) => m.LicenseComponent),
+      },
     ],
   },
 

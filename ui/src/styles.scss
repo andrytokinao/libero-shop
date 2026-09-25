@@ -18,6 +18,7 @@
   --red: #a13a2f;
   --red-soft: #fbe6e2;
   --side-w: 250px;
+  --mobile-bar-h: 52px;
 }
 
 * {
@@ -47,6 +48,14 @@ body {
   min-height: 100vh;
 }
 
+/* The phone chrome — bar, scrim and drawer close button — only exists below the
+   breakpoint at the bottom of this file; on a desktop the sidebar is always there. */
+.mobile-bar,
+.scrim,
+.side-close {
+  display: none;
+}
+
 .side {
   width: var(--side-w);
   flex: 0 0 auto;
@@ -63,6 +72,7 @@ body {
 .side-head {
   padding: 22px 20px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
 
   .mark {
     font-size: 20px;
@@ -93,6 +103,22 @@ nav.menu {
   flex: 1;
   padding: 6px 12px;
   overflow-y: auto;
+
+  /* Heading of a role's section. Only rendered when the account holds several roles, so
+     the four-person depot keeps the flat menu it always had. */
+  .group {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8fbfa4;
+    padding: 6px 12px 2px;
+    margin-top: 8px;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
 
   a {
     width: 100%;
@@ -329,6 +355,163 @@ tr:last-child td {
   color: var(--ink-soft);
 }
 
+/* ------------------------------------------------- invoice articles & cards */
+
+/* Opens the picking list of a row in a dialog. Narrow column: the label is the content. */
+.col-detail {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.lnk-detail {
+  border: none;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--brand-soft);
+    color: var(--brand-dark);
+  }
+}
+
+/* The articles of an invoice: quantity and product first, money last — it is read
+   while the goods are counted, not while they are billed. */
+.lines {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px 12px;
+
+  .lines-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 700;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    white-space: normal;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .qty {
+    flex: 0 0 auto;
+    min-width: 34px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--brand-dark);
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .unit {
+    flex: 0 0 auto;
+    font-size: 12px;
+  }
+
+  .sub {
+    flex: 0 0 auto;
+    min-width: 90px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lines-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-weight: 700;
+    font-size: 14px;
+  }
+}
+
+/* Phone rendering of the invoice list; the table takes over above the breakpoint. */
+.inv-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+}
+
+.inv-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+
+  .head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13.5px;
+  }
+
+  .who {
+    font-size: 13px;
+    margin-top: 3px;
+  }
+
+  .badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 11.5px;
+  }
+
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+
+    .amount {
+      font-size: 16px;
+      font-weight: 700;
+    }
+  }
+
+  .lnk-detail {
+    display: block;
+    margin-top: 8px;
+    padding: 4px 0;
+  }
+}
+
 /* ------------------------------------------------------------------ badges */
 
 .badge {
@@ -390,6 +573,12 @@ tr:last-child td {
     opacity: 0.45;
     cursor: not-allowed;
   }
+}
+
+/* A link that looks like a button — used where navigating is the action. */
+a.btn {
+  display: inline-block;
+  text-decoration: none;
 }
 
 input[type='text'],
@@ -557,4 +746,519 @@ select.field {
   margin-top: 14px;
   font-weight: 700;
   font-size: 16px;
+}
+
+/* ------------------------------------------------------------------ licence */
+
+/* Sits between the sidebar and the page title, full width, so it is read before
+   the figures rather than beside them. */
+.lic-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  font-size: 13px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-bottom: 1px solid rgba(181, 117, 15, 0.25);
+
+  /* A filled disc with the glyph punched out in the banner's own background colour. */
+  .ic {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--amber);
+    color: var(--amber-soft);
+  }
+
+  &.danger {
+    background: var(--red-soft);
+    color: var(--red);
+    border-bottom-color: rgba(161, 58, 47, 0.25);
+
+    .ic {
+      background: var(--red);
+      color: var(--red-soft);
+    }
+  }
+
+  .msg {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  .lnk {
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .x {
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 2px;
+    opacity: 0.7;
+  }
+}
+
+.lic-message {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* Three segments: active, tolerance, read-only. The one in force is filled. */
+.lic-track {
+  display: flex;
+  gap: 4px;
+
+  span {
+    flex: 1;
+    height: 7px;
+    border-radius: 4px;
+    background: #e8ece8;
+
+    &.on.s-ok {
+      background: var(--brand);
+    }
+
+    &.on.s-warn {
+      background: var(--amber);
+    }
+
+    &.on.s-bad {
+      background: var(--red);
+    }
+  }
+}
+
+.lic-track-legend {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+
+  span {
+    flex: 1;
+  }
+
+  span:nth-child(2) {
+    text-align: center;
+  }
+
+  span:last-child {
+    text-align: right;
+  }
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 8px 16px;
+  margin: 0 0 14px;
+  font-size: 13px;
+
+  dt {
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+/* The renewal code and the fingerprint: read off the screen or copied, never typed. */
+.code-box {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  word-break: break-all;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  border: 1px solid rgba(34, 104, 74, 0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  user-select: all;
+
+  &.big {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+}
+
+.hints {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+textarea.field {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #fff;
+  color: inherit;
+  resize: vertical;
+}
+
+/* A file input styled as a button: the native control is unreachable but still the
+   thing that opens the picker, so it is hidden inside its own label. */
+.file-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+
+  input[type='file'] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+/* ------------------------------------------------------------------- dialog */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 36, 32, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.modal {
+  background: var(--panel);
+  border-radius: 12px;
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+
+  /* A picking list needs the room: product names are long and the money must stay aligned. */
+  &.wide {
+    width: min(680px, 100%);
+  }
+}
+
+.modal-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .x {
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+  }
+
+  .sub {
+    font-size: 12.5px;
+    margin-bottom: 8px;
+  }
+
+  .badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+}
+
+.modal-body {
+  padding: 18px 20px;
+
+  /* The dialog is already a frame; a second one around the articles is noise. */
+  .lines {
+    border: none;
+    padding: 0;
+  }
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.lic-code {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+
+  .lbl {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  .btn {
+    margin-top: 10px;
+  }
+}
+
+/* ==========================================================================
+   Phone layout.
+   Below this width the sidebar cannot hold a column of its own: it becomes a
+   drawer behind a top bar, and the invoice list swaps its table for cards.
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .app {
+    display: block;
+  }
+
+  .mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: var(--mobile-bar-h);
+    padding: 0 14px;
+    background: var(--brand-dark);
+    color: #eef4ef;
+
+    .burger {
+      border: none;
+      background: none;
+      color: inherit;
+      font-size: 20px;
+      line-height: 1;
+      padding: 8px;
+      margin-left: -8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .mark {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+
+      span {
+        color: #8fd6ac;
+      }
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
+    }
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(21, 36, 32, 0.5);
+    z-index: 55;
+  }
+
+  .side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 60;
+    width: min(278px, 82vw);
+    height: 100%;
+    /* Hidden rather than merely shifted, so the menu links stay out of the tab order. */
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition:
+      transform 0.22s ease,
+      visibility 0.22s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .app.nav-open .side {
+    visibility: visible;
+    transform: none;
+  }
+
+  .side-close {
+    display: block;
+    position: absolute;
+    top: 14px;
+    right: 10px;
+    border: none;
+    background: none;
+    color: #cfe0d6;
+    font-size: 14px;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+
+  .topbar {
+    padding: 14px 16px;
+
+    h1 {
+      font-size: 17px;
+    }
+
+    .meta {
+      font-size: 12px;
+    }
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .lic-banner {
+    padding: 10px 16px;
+    font-size: 12.5px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .grid {
+    gap: 12px;
+  }
+
+  /* Nine columns of invoice never fit a phone, so cards take over from the table. */
+  table.inv-table {
+    display: none;
+  }
+
+  .inv-cards {
+    display: grid;
+  }
+
+  /* Every other table keeps its columns and scrolls sideways rather than squeezing. */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* One field per line. The screens size their fields inline for the wide layout,
+     which is why these have to be forced. The login page sits outside .content. */
+  .content .form-row .fld {
+    flex: 1 1 100% !important;
+    max-width: none !important;
+  }
+
+  /* 16px is the size below which iOS zooms in on a focused field. */
+  input[type='text'],
+  input[type='number'],
+  select.field,
+  textarea.field {
+    font-size: 16px;
+    width: 100%;
+  }
+
+  /* Touch targets: a thumb needs more room than a mouse pointer. */
+  .btn {
+    padding: 10px 14px;
+  }
+
+  .btn.small {
+    padding: 8px 12px;
+  }
+
+  .qtybtn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .bar-row {
+    .bname {
+      width: 110px;
+    }
+
+    .bval {
+      width: 92px;
+    }
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 14px;
+    transform: none;
+    text-align: center;
+  }
+
+  .modal-backdrop {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi .value {
+    font-size: 19px;
+  }
+
+  .prod-grid {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+
+  /* Product, quantity and subtotal earn the width before the unit price does. */
+  .lines .unit {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side {
+    transition: none;
+  }
 }

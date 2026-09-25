@@ -58,7 +58,9 @@ public class UserAccountService {
                             collectedToday.stream().map(Payment::getAmount)
                                     .reduce(BigDecimal.ZERO, BigDecimal::add),
                             // Cash taken at hand-over is what a depot agent's day amounts to.
-                            user.getRole() == RoleApp.DEPOT_AGENT ? collectedToday.size() : 0,
+                            // Counted for anyone who holds the role, including the owner of a
+                            // small grocery who also sells at the desk.
+                            user.hasRole(RoleApp.DEPOT_AGENT) ? collectedToday.size() : 0,
                             remittances.countBySubmittedById(user.getId()));
                 })
                 .toList();

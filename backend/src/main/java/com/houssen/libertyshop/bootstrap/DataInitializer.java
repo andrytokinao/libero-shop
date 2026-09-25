@@ -41,6 +41,7 @@ import javax.xml.catalog.Catalog;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 
@@ -111,21 +112,22 @@ public class DataInitializer implements ApplicationRunner {
 
     private Accounts seedAccounts() {
         String hash = passwordEncoder.encode(properties.password());
-        UserApp fatima = user("Fatima Randria", "fatima", RoleApp.CASHIER, hash);
-        UserApp hary = user("Hary Rakoto", "hary", RoleApp.CASHIER, hash);
-        UserApp joseph = user("Joseph Andrianina", "joseph", RoleApp.DEPOT_AGENT, hash);
-        UserApp nadia = user("Nadia Rasolofo", "nadia", RoleApp.DEPOT_MANAGER, hash);
-        UserApp mparany = user("Mparany Solofo", "mparany", RoleApp.SUPER_ADMIN, hash);
+        UserApp fatima = user("Fatima Randria", "fatima", hash, RoleApp.CASHIER);
+        UserApp hary = user("Hary Rakoto", "hary", hash, RoleApp.CASHIER);
+        UserApp joseph = user("Joseph Andrianina", "joseph", hash, RoleApp.DEPOT_AGENT);
+        UserApp nadia = user("Nadia Rasolofo", "nadia", hash, RoleApp.DEPOT_MANAGER);
+        UserApp mparany = user("Mparany Solofo", "mparany", hash, RoleApp.SUPER_ADMIN);
+        user("Soa Ravelo", "soa", hash, RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
         return new Accounts(fatima, hary, joseph, nadia, mparany);
     }
 
-    private UserApp user(String fullName, String username, RoleApp role, String passwordHash) {
+    private UserApp user(String fullName, String username, String passwordHash, RoleApp... roles) {
         return users.save(UserApp.builder()
                 .fullName(fullName)
                 .username(username)
                 .password(passwordHash)
                 .enabled(true)
-                .role(role)
+                .roles(EnumSet.copyOf(List.of(roles)))
                 .build());
     }
 

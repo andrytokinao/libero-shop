@@ -11,12 +11,15 @@ export interface MenuItem {
 export interface RoleNavigation {
   /** Route segment owned by the role, used by the role guard. */
   segment: string;
+  /** Short name of the job, shown as a heading when an account holds several roles. */
+  label: string;
   items: MenuItem[];
 }
 
 export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.CASHIER]: {
     segment: 'caisse',
+    label: 'Caisse',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/caisse/tableau-de-bord' },
       { icon: '＋', label: 'Nouvelle vente', path: '/caisse/nouvelle-vente' },
@@ -27,6 +30,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   },
   [RoleApp.DEPOT_AGENT]: {
     segment: 'depot',
+    label: 'Dépôt',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/depot/tableau-de-bord' },
       { icon: '⇥', label: 'Remise de commande', path: '/depot/remise' },
@@ -36,6 +40,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   },
   [RoleApp.DEPOT_MANAGER]: {
     segment: 'gestion-depot',
+    label: 'Stock',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/gestion-depot/tableau-de-bord' },
       { icon: '▢', label: 'Stock', path: '/gestion-depot/stock' },
@@ -46,17 +51,42 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   },
   [RoleApp.SUPER_ADMIN]: {
     segment: 'admin',
+    label: 'Admin',
     items: [
       { icon: '◧', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
       { icon: '↗', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
       { icon: '▢', label: 'Stock global', path: '/admin/stock-global' },
       { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },
+      { icon: '⚿', label: 'Licence', path: '/admin/licence' },
     ],
   },
 };
 
-/** Landing page of a role — the first entry of its menu. */
-export function homePathOf(role: RoleApp): string {
-  return ROLE_NAVIGATION[role].items[0].path;
+/**
+ * Order the sections appear in, mirroring RolePolicy.PRECEDENCE on the server: the counter
+ * first, because whoever holds every role in a small grocery opens the day by selling.
+ */
+const ROLE_PRECEDENCE: readonly RoleApp[] = [
+  RoleApp.CASHIER,
+  RoleApp.DEPOT_AGENT,
+  RoleApp.DEPOT_MANAGER,
+  RoleApp.SUPER_ADMIN,
+];
+
+/**
+ * The sidebar of an account: one section per role it holds.
+ *
+ * <p>A single-role account gets exactly the menu it had before, so nothing changes for a
+ * depot that splits the duties between four people. An account that cumulates them gets the
+ * sections one after another rather than a merged list, because "Tableau de bord" appears in
+ * three of them and only the heading tells them apart.
+ */
+export function navigationFor(roles: readonly RoleApp[]): RoleNavigation[] {
+  return ROLE_PRECEDENCE.filter((role) => roles.includes(role)).map((role) => ROLE_NAVIGATION[role]);
+}
+
+/** True when one of the roles owns that route segment — what the role guard asks. */
+export function ownsSegment(roles: readonly RoleApp[], segment: string): boolean {
+  return roles.some((role) => ROLE_NAVIGATION[role].segment === segment);
 }

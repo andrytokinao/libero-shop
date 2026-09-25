@@ -5,7 +5,7 @@ import { Observable, of, tap } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { API_BASE_URL } from '../api/api.config';
 import { LoginRequest, LoginResponse, RoleApp, Session, UserApp, authorityOf } from '../models';
-import { ROLE_NAVIGATION } from '../config/navigation';
+import { navigationFor, ownsSegment } from '../config/navigation';
 import { TokenStorage } from './token-storage.service';
 
 const ANONYMOUS: Session = {
@@ -44,15 +44,13 @@ export class AuthService {
   readonly state = this.session.asReadonly();
   readonly isAuthenticated = computed(() => this.session().authenticated);
   readonly currentUser = computed<UserApp | null>(() => this.session().user);
-  readonly role = computed<RoleApp | null>(() => this.session().user?.role ?? null);
+  /** Every job the account may do — several when one person runs the whole shop. */
+  readonly roles = computed<readonly RoleApp[]>(() => this.session().user?.roles ?? []);
   readonly roleLabel = computed(() => this.session().roleLabel ?? '');
   readonly homePath = computed(() => this.session().homePath);
 
-  /** Menu of the current role, empty while signed out. */
-  readonly menu = computed(() => {
-    const role = this.role();
-    return role ? ROLE_NAVIGATION[role].items : [];
-  });
+  /** Sidebar of the current account: one section per role, empty while signed out. */
+  readonly menu = computed(() => navigationFor(this.roles()));
 
   readonly initials = computed(() => {
     const user = this.currentUser();
@@ -136,9 +134,9 @@ export class AuthService {
     return roles.some((role) => granted.includes(authorityOf(role)));
   }
 
+  /** True when any of the account's roles owns that section of the router. */
   owns(segment: string): boolean {
-    const role = this.role();
-    return role != null && ROLE_NAVIGATION[role].segment === segment;
+    return ownsSegment(this.roles(), segment);
   }
 
   goHome(): void {

@@ -30,8 +30,14 @@ public class AppUserDetails implements UserDetails {
         this.username = user.getUsername();
         this.password = user.getPassword();
         this.enabled = user.isEnabled();
-        // "ROLE_" prefix is what hasRole(...) and @PreAuthorize expect.
-        this.authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        // One authority per role the account holds, so hasRole('CASHIER') answers true for
+        // the owner of a small grocery who is also the depot. "ROLE_" prefix is what
+        // hasRole(...) and @PreAuthorize expect. Sorted, so the token a login mints does not
+        // depend on the order Hibernate happened to read the rows in.
+        this.authorities = user.getRoles().stream()
+                .sorted()
+                .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.name()))
+                .toList();
     }
 
     public Long getId() {

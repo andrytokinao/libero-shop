@@ -1,17 +1,49 @@
 @if (auth.isAuthenticated()) {
-  <div class="app">
-    <aside class="side">
+  <div class="app" [class.nav-open]="navOpen()">
+    <!-- Phone-only bar: on a small screen the sidebar is off-canvas, so the menu
+         needs a permanent handle at the top of the page. -->
+    <header class="mobile-bar">
+      <button
+        class="burger"
+        type="button"
+        aria-label="Ouvrir le menu"
+        aria-controls="app-side"
+        [attr.aria-expanded]="navOpen()"
+        (click)="toggleNav()"
+      >
+        ☰
+      </button>
+      <div class="mark">Vaha <span>Market</span></div>
+      <div class="avatar" [title]="auth.currentUser()?.fullName ?? ''">{{ auth.initials() }}</div>
+    </header>
+
+    @if (navOpen()) {
+      <!-- Tapping beside the open drawer closes it, the way a phone menu is expected to. -->
+      <div class="scrim" (click)="closeNav()"></div>
+    }
+
+    <aside class="side" id="app-side">
       <div class="side-head">
         <div class="mark">Vaha <span>Market</span></div>
         <div class="sub">Gestion supermarché</div>
         <div class="role-tag">{{ auth.roleLabel() }}</div>
+        <button class="side-close" type="button" aria-label="Fermer le menu" (click)="closeNav()">
+          ✕
+        </button>
       </div>
 
       <nav class="menu">
-        @for (item of auth.menu(); track item.path) {
-          <a [routerLink]="item.path" routerLinkActive="active">
-            <span class="ic">{{ item.icon }}</span>{{ item.label }}
-          </a>
+        <!-- One section per role. The heading only appears when the account holds several:
+             three of the sections open on a "Tableau de bord" of their own. -->
+        @for (section of auth.menu(); track section.segment) {
+          @if (auth.menu().length > 1) {
+            <div class="group">{{ section.label }}</div>
+          }
+          @for (item of section.items; track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active">
+              <span class="ic">{{ item.icon }}</span>{{ item.label }}
+            </a>
+          }
         }
       </nav>
 
@@ -30,6 +62,8 @@
     </aside>
 
     <main>
+      <!-- Above the title so an expiring licence is read before the day's figures are. -->
+      <app-license-banner />
       <div class="topbar">
         <h1>{{ pageTitle() }}</h1>
         <div class="meta">

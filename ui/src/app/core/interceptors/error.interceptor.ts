@@ -46,6 +46,15 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
           // The license module's own status: writes are refused, reads still work.
           toasts.show(message ?? 'Licence expiree : l\'application est en lecture seule.');
           break;
+        case 501:
+          // Only POST /api/license/renew answers this, and it is not a failure: online
+          // renewal simply is not configured here. The default branch would have shown
+          // "Erreur 501", sending someone looking for a fault that does not exist.
+          toasts.show(
+            "Le renouvellement en ligne n'est pas active sur cette installation. " +
+              'Utilisez le code de renouvellement.',
+          );
+          break;
         default:
           toasts.show(message ?? `Erreur ${error.status} lors de l'appel au serveur.`);
       }

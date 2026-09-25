@@ -1,22 +1,24 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { DeliveryStatus, Invoice } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
-import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { deliveryActionLabel } from './delivery.util';
 
 @Component({
   selector: 'app-order-delivery',
   standalone: true,
-  imports: [FormsModule, InvoiceTableComponent, AriaryPipe],
+  imports: [FormsModule, InvoiceTableComponent],
   template: `
     <div class="card">
       <h2>
         Remise de commande
-        <small>recherchez par n° de facture ou nom du client</small>
+        <small>
+          recherchez par n° de facture ou nom du client, puis ouvrez le détail pour
+          vérifier les articles avant de remettre
+        </small>
       </h2>
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:320px;">
@@ -51,39 +53,6 @@ import { deliveryActionLabel } from './delivery.util';
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
     </div>
-
-    @if (selected(); as invoice) {
-      <div class="card" style="margin-top:16px;">
-        <h2>
-          Détail de {{ invoice.invoiceNumber }}
-          <small>{{ invoice.clientName }} — articles à préparer</small>
-        </h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th class="num">Quantité</th>
-              <th class="num">Prix unitaire</th>
-              <th class="num">Sous-total</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (line of invoice.sale.lines; track line.id) {
-              <tr>
-                <td>{{ line.product.name }}</td>
-                <td class="num">{{ line.quantity }}</td>
-                <td class="num">{{ line.unitPrice | ariary }}</td>
-                <td class="num">{{ line.unitPrice * line.quantity | ariary }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <div class="total-row">
-          <span>Total</span>
-          <span>{{ invoice.sale.totalAmount | ariary }}</span>
-        </div>
-      </div>
-    }
   `,
 })
 export class OrderDeliveryComponent {
@@ -102,12 +71,6 @@ export class OrderDeliveryComponent {
     }),
   );
   protected readonly invoices = this.resource.value;
-
-  /** When the search narrows down to a single order, show its picking list. */
-  protected readonly selected = computed<Invoice | null>(() => {
-    const matches = this.invoices();
-    return this.search().trim() && matches.length === 1 ? matches[0] : null;
-  });
 
   protected onSearch(value: string): void {
     this.search.set(value);
