@@ -209,6 +209,22 @@ public class LicenseService {
         return fingerprint;
     }
 
+    /**
+     * The one string to send the publisher to order or renew a license.
+     *
+     * <p>Preferred over {@link #machineFingerprint()} for that purpose: it carries the same
+     * machine identity plus the current expiry date, so the publisher does not have to look
+     * up where the previous period ended. See {@link RenewalCode}.
+     *
+     * <p>Never throws. An installation that cannot evaluate its own license is exactly the
+     * one that needs to order one.
+     */
+    public String renewalCode() {
+        return findStatus()
+                .map(RenewalCode::of)
+                .orElseGet(() -> RenewalCode.ofUnlicensed(fingerprint, evaluationDate()));
+    }
+
     /** Whether license checking is active at all. */
     public boolean isEnabled() {
         return properties.enabled();

@@ -70,6 +70,19 @@ public class LicenseController {
     }
 
     /**
+     * The renewal code: what the customer actually sends to order or renew a license.
+     *
+     * <p>Superset of {@code /fingerprint}, which stays for the case where someone is
+     * reading a value out over the phone. This one carries the current expiry date too, so
+     * the publisher issues the renewal without looking anything up -- see
+     * {@link RenewalCode}.
+     */
+    @GetMapping("/renewal-code")
+    public RenewalCodeResponse renewalCode() {
+        return RenewalCodeResponse.of(licenseService.renewalCode());
+    }
+
+    /**
      * Installs a license file received out of band -- typically emailed to a customer
      * whose shop has no usable internet link at all.
      *
@@ -110,6 +123,18 @@ public class LicenseController {
             long daysUntilReadOnly,
             String message,
             String machineFingerprint) {
+    }
+
+    /** The renewal code plus the wording shown next to it in the UI. */
+    public record RenewalCodeResponse(String renewalCode, List<String> instructions) {
+
+        static RenewalCodeResponse of(String renewalCode) {
+            return new RenewalCodeResponse(renewalCode, List.of(
+                    "Envoyez ce code a l'editeur pour commander ou renouveler votre licence.",
+                    "Il contient l'identifiant de cet ordinateur et la date de fin de votre licence "
+                            + "actuelle, rien d'autre : ni nom, ni chiffre d'affaires, ni donnee de vente.",
+                    "Vous recevrez en retour un fichier de licence a installer depuis cet ecran."));
+        }
     }
 
     /** The fingerprint plus the wording shown next to it in the UI. */

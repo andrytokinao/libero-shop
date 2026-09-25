@@ -1,0 +1,28 @@
+import { PaymentStatus } from './enums';
+import { Product } from './product.model';
+import { UserApp } from './user-app.model';
+
+/** Mirrors com.houssen.libertyshop.entity.SaleLine (table sale_line). */
+export interface SaleLine {
+  id: number;
+  quantity: number;
+  /** BigDecimal(12,2) on the backend — price frozen at sale time. */
+  unitPrice: number;
+  product: Product;
+}
+
+/** Mirrors com.houssen.libertyshop.entity.Sale (table sale). */
+export interface Sale {
+  id: number;
+  /** LocalDateTime serialized as ISO-8601. */
+  saleDate: string;
+  paymentStatus: PaymentStatus;
+  totalAmount: number;
+  seller: UserApp;
+  lines: SaleLine[];
+}
+
+/** Front-end counterpart of Sale#calculateTotal(). */
+export function calculateTotal(lines: readonly SaleLine[]): number {
+  return lines.reduce((total, line) => total + line.unitPrice * line.quantity, 0);
+}

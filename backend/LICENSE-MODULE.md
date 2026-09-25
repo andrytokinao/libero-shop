@@ -82,20 +82,49 @@ java -jar target/license-generator.jar inspect \
      --file ./out/CUST-0042.lic --public-key ./keys/license-public.key
 ```
 
-**Renouvellement.** Passez `--starts-on <date d'expiration précédente>` pour que le client
-ne perde pas les jours déjà payés :
+**Renouvellement — utilisez `renew`, pas `issue`.** Le client vous envoie son *code de
+renouvellement* (§6 bis) et la commande en extrait tout ce qui se ressaisissait à la main :
 
 ```bash
-java -jar target/license-generator.jar issue \
+java -jar target/license-generator.jar renew \
      --private-key ./keys/license-private.key \
+     --request LSR1-04JEX-397KW-AJ4YV-Q1GEQ-DC021-C3GK6-RBNQ5-FWBSY-4CS78 \
      --customer-id CUST-0042 --customer-name "Supermarche Houssen Analakely" \
-     --fingerprint LS1-4KQ8T-9WZ2M-H7PXR-C3NVB \
-     --plan MONTHLY --starts-on 2027-09-24 \
+     --plan MONTHLY \
      --out ./out/CUST-0042-renouvellement.lic
 ```
 
+```
+Renewal request
+  machine      : LS1-4KQ8T-9WZ2M-H7PXR-C3NVB
+  state        : GRACE (expired, still usable)
+  current end  : 2027-09-24
+  produced on  : 2026-09-25 (0 day(s) ago)
+  reference    : 0BADCAFE
+
+License issued: .../CUST-0042-renouvellement.lic
+  valid        : 2027-09-24 -> 2027-10-24 (+15 grace days)
+```
+
+L'empreinte vient du code — vingt caractères jamais retapés — et `--starts-on` est **déduit
+de l'expiration que le code annonce**, donc le client ne perd pas les jours déjà payés sans
+que personne consulte un tableur. Un code produit il y a plus de 30 jours est refusé
+(`--max-age-days` pour passer outre) : renouveler depuis un code périmé, c'est renouveler
+depuis une date d'expiration périmée.
+
+Tout reste surchargeable : un `--starts-on` ou un `--fingerprint` supplémentaire est honoré,
+pour un client multi-caisses ou un geste commercial.
+
+`issue` reste la commande d'une **première** licence commandée par téléphone, quand vous
+n'avez que l'empreinte.
+
 Options utiles : `--plan MONTHLY|ANNUAL|TRIAL`, `--months <n>`, `--expires-on`,
 `--grace-days <n>`, `--fingerprint` répétable (plusieurs caisses), `--notes`.
+
+> **Prolonger une évaluation ne se fait pas en rallongeant l'essai.** Émettez une vraie
+> licence courte, `--plan TRIAL --months 1` : elle est signée, tracée, et `install`
+> l'accepte même si elle expire avant la fin de l'essai en cours. Un essai qui se renouvelle
+> serait exactement le trou que `TrialRegistry` existe pour fermer.
 
 ⚠️ **La clé privée est le seul secret du dispositif.** Qui la détient peut générer des
 licences illimitées. Sauvegarde chiffrée hors ligne, jamais dans le dépôt
@@ -362,12 +391,83 @@ pas encore payé. Le serveur doit signer pour l'empreinte reçue.
 
 ---
 
+## 6 bis. Code de renouvellement — le canal hors ligne
+
+Commander une licence se faisait en lisant l'empreinte machine au téléphone. Ça marche,
+mais ça ne vous dit que **quelle** machine demande — ni ce qu'elle a déjà, ni depuis quand.
+Le reste se retrouvait à la main, en particulier la date d'expiration précédente dont
+`--starts-on` a besoin. C'est là que naissaient les erreurs : un `--starts-on` oublié offre
+des jours, un `--starts-on` erroné en vole.
+
+Le client envoie donc un **code** qui porte le contexte :
+
+```
+GET /api/license/renewal-code
+→ LSR1-04JEX-397KW-AJ4YV-Q1GEQ-DC021-C3GK6-RBNQ5-FWBSY-4CS78
+```
+
+| Décalage | Taille | Champ |
+|---|---|---|
+| 0 | 1 | version du format |
+| 1 | 13 | empreinte machine, 100 bits compactés |
+| 14 | 1 | état courant (1 ACTIVE, 2 GRACE, 3 READ_ONLY, 4 TRIAL, 5 TRIAL_EXPIRED, 0 inconnu) |
+| 15 | 2 | expiration courante, en jours depuis 2020-01-01 (`0xFFFF` = aucune) |
+| 17 | 2 | jour de production du code, même encodage |
+| 19 | 4 | aléa, pour distinguer deux demandes du même jour |
+| 23 | 5 | somme de contrôle |
+
+Le tout en base32 Crockford, groupes de cinq, 58 caractères : trop long pour le téléphone,
+juste ce qu'il faut pour un copier-coller, une photo ou un QR code.
+
+**La date de production vient de la date corrigée par `ClockGuard`**, donc un code ne peut
+pas être rendu plus frais qu'il n'est en avançant puis reculant l'horloge.
+
+**Un essai ne transmet aucune expiration** (`0xFFFF`). Une expiration d'essai est forgée
+localement ; la laisser passer ferait démarrer une période payante à une date que la machine
+s'est inventée. Le générateur affiche alors `none -- this is a first license`.
+
+### Ce que la somme de contrôle est, et ce qu'elle n'est pas
+
+Elle attrape une faute de recopie — un groupe sauté, deux caractères permutés, un caractère
+faux. **Elle n'est pas une signature et le code ne porte aucune autorité.** Elle n'utilise
+délibérément aucun secret : en vérifier un supposerait d'embarquer une clé partagée dans
+`tools/license-generator`, pour presque rien. Un client qui modifie son code pour annoncer
+une expiration plus tardive n'y gagne rien — vous émettez ce qui a été payé, et `install`
+refuse déjà une licence qui n'expire pas plus tard que l'installée. L'autorité, c'est la
+signature Ed25519 du `.lic` qui repart, et c'est le seul endroit où elle a besoin d'être.
+
+Deux points trouvés en vérifiant les deux implémentations l'une contre l'autre, et corrigés :
+
+- **la somme de contrôle est vérifiée avant la version.** Un caractère corrompu peut tomber
+  sur l'octet de version, et un message « version 32 non supportée » envoyait chercher une
+  mise à jour d'outil alors que le client avait juste mal recopié ;
+- **les bits de bourrage du dernier caractère doivent être nuls.** Le dernier caractère porte
+  quatre bits utiles et un bit libre : tant qu'il l'était, chaque code avait un jumeau qui se
+  décodait à l'identique, et un client qui tapait le dernier caractère de travers passait la
+  somme de contrôle sans que rien ne le signale — une licence était émise. L'encodage est
+  canonique maintenant.
+
+`O` est lu comme `0`, `I` et `L` comme `1`, conformément à Crockford : ce sont exactement
+les lettres que l'alphabet exclut parce qu'on les substitue, donc les réparer vaut mieux que
+refuser un code par ailleurs correct. Le préfixe `LSR1`, lui, reste strict — il se copie tel
+quel et mérite son propre message d'erreur.
+
+### Le format est écrit deux fois, exprès
+
+`RenewalCode` côté client, `RenewalCodeReader` côté générateur. Duplication assumée : le
+module outil doit rester sans dépendance et ne jamais tirer le backend — c'est cette
+séparation qui garantit que la clé privée ne peut pas se retrouver dans le jar du client, et
+elle vaut plus que les quarante lignes économisées. Le javadoc de `RenewalCode` est le
+contrat ; les deux côtés sont confrontés par le test de round-trip et par une émission réelle
+avant livraison.
+
 ## 7. Endpoints
 
 | Méthode | Chemin | Usage |
 |---|---|---|
 | `GET` | `/api/license/status` | Bandeau de renouvellement dans l'interface |
-| `GET` | `/api/license/fingerprint` | Empreinte à communiquer à l'éditeur |
+| `GET` | `/api/license/renewal-code` | **Code à envoyer à l'éditeur pour commander ou renouveler** (§6 bis) |
+| `GET` | `/api/license/fingerprint` | Empreinte seule, pour une commande dictée au téléphone |
 | `POST` | `/api/license/install` | Installer un `.lic` reçu par e-mail (boutique hors ligne) |
 | `POST` | `/api/license/renew` | Forcer une tentative après paiement |
 
@@ -403,7 +503,7 @@ prévoyez plusieurs `--fingerprint` dès le départ pour un client multi-caisses
 cd backend && ./mvnw test
 ```
 
-64 tests, dont : signature valide, charge utile modifiée après signature, signature par une
+76 tests, dont : signature valide, charge utile modifiée après signature, signature par une
 clé étrangère, algorithme et format inattendus, fichier corrompu, machine différente,
 expiration, période de grâce, bascule en lecture seule, refus d'une licence rejouée,
 protection contre le recul d'horloge, fichier d'état copié d'une autre installation,
@@ -424,6 +524,16 @@ Côté configuration : un essai de 2000 jours ramené au plafond, une durée rac
 acceptée, une durée nulle ou négative refusée, et — pour chacun des trois interrupteurs —
 la valeur du jar restaurée face à un argument de ligne de commande, le repli sûr quand le
 jar ne dit rien, et la valeur du jar respectée quand elle vient bien de là.
+
+Côté code de renouvellement : round-trip de tous les champs, essai qui ne transmet pas son
+expiration, installation dont l'état est inévaluable, tolérance aux minuscules / espaces /
+séparateurs manquants, réparation de `O`/`I`/`L`, rejet d'une permutation, d'un dernier
+caractère faux, d'un code tronqué, d'une date hors de portée du format, et longueur stable.
+
+> Les deux implémentations du format sont aussi confrontées **hors tests** : un code produit
+> par le client réel est passé au générateur réel, qui doit en tirer la bonne empreinte, le
+> bon `--starts-on`, et un `.lic` dont `inspect` dit `Signature: VALID`. C'est ce contrôle,
+> et non les tests unitaires, qui a révélé les deux défauts corrigés en §6 bis.
 
 > Les tests de l'essai passent `system-wide: false` : un test qui écrirait dans le profil
 > ou dans la base de registre de la machine de build vaudrait moins que pas de test du tout.

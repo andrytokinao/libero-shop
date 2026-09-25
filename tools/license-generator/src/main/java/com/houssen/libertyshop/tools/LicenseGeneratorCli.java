@@ -16,6 +16,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -71,6 +72,15 @@ public final class LicenseGeneratorCli {
     /** Default number of days the app stays fully usable after the expiry date. */
     private static final int DEFAULT_GRACE_DAYS = 15;
 
+    /**
+     * How old a renewal code may be before {@code renew} refuses it.
+     *
+     * <p>Not a security control -- the code is not signed and grants nothing. It stops a
+     * stale code being renewed from: a request forwarded weeks later carries an expiry date
+     * that has since moved on, and honouring it would quietly hand out free time.
+     */
+    private static final int DEFAULT_MAX_REQUEST_AGE_DAYS = 30;
+
     private LicenseGeneratorCli() {
     }
 
@@ -85,6 +95,7 @@ public final class LicenseGeneratorCli {
             switch (command) {
                 case "keygen" -> keygen(options);
                 case "issue" -> issue(options);
+                case "renew" -> renew(options);
                 case "inspect" -> inspect(options);
                 case "help", "--help", "-h" -> printUsage();
                 default -> {
@@ -211,6 +222,59 @@ public final class LicenseGeneratorCli {
         System.out.println("  valid        : " + startsOn + " -> " + expiresOn + " (+" + graceDays + " grace days)");
         System.out.println("  read-only on : " + expiresOn.plusDays(graceDays + 1L));
         System.out.println("  machines     : " + String.join(", ", fingerprints));
+    }
+
+    /**
+     * Issues a license from the renewal code the customer sent, rather than from options
+     * typed by hand.
+     *
+     * <p>Same signing path as {@link #issue}; it only fills in the two values that used to
+     * be transcribed and looked up. The fingerprint comes out of the code, so a twenty
+     * character string is never retyped. {@code --starts-on} is set to the expiry the code
+     * reports, so the customer keeps the days they already paid for without anyone
+     * consulting a spreadsheet -- forgetting it gave days away, getting it wrong took them.
+     *
+     * <p>Everything stays overridable: pass {@code --starts-on} or an extra
+     * {@code --fingerprint} and it is honoured, because a multi-till customer or a
+     * commercial gesture must not require a different command.
+     */
+    private static void renew(Map<String, List<String>> options) throws Exception {
+        RenewalCodeReader.Decoded request;
+        try {
+            request = RenewalCodeReader.decode(required(options, "request"));
+        } catch (IllegalArgumentException e) {
+            // A mistyped code is an ordinary thing for the person at the keyboard to fix,
+            // so it deserves the plain message, not a stack trace.
+            throw new CliException(e.getMessage());
+        }
+        long ageDays = ChronoUnit.DAYS.between(request.requestedOn(), LocalDate.now());
+
+        System.out.println("Renewal request");
+        System.out.println("  machine      : " + request.fingerprint());
+        System.out.println("  state        : " + request.describeState());
+        System.out.println("  current end  : "
+                + (request.isFirstPurchase() ? "none -- this is a first license" : request.currentExpiry()));
+        System.out.println("  produced on  : " + request.requestedOn() + " (" + ageDays + " day(s) ago)");
+        System.out.println("  reference    : " + String.format("%08X", request.nonce()));
+        System.out.println();
+
+        int maxAgeDays = optional(options, "max-age-days").map(Integer::parseInt).orElse(DEFAULT_MAX_REQUEST_AGE_DAYS);
+        if (ageDays > maxAgeDays) {
+            throw new CliException("this request was produced " + ageDays + " days ago, more than the "
+                    + maxAgeDays + " allowed. Renewing from a stale code means renewing from a stale expiry "
+                    + "date. Ask for a fresh one, or pass --max-age-days if you know this is fine.");
+        }
+        if (ageDays < 0) {
+            System.out.println("warning: this request is dated in the future. The customer's clock is ahead,");
+            System.out.println("         which is worth a word with them before renewing.");
+            System.out.println();
+        }
+
+        options.computeIfAbsent("fingerprint", key -> new ArrayList<>()).add(request.fingerprint());
+        if (!request.isFirstPurchase() && !options.containsKey("starts-on")) {
+            options.put("starts-on", new ArrayList<>(List.of(request.currentExpiry().toString())));
+        }
+        issue(options);
     }
 
     /**
@@ -376,10 +440,18 @@ public final class LicenseGeneratorCli {
                            [--plan ANNUAL|MONTHLY|TRIAL] [--months <n>]
                            [--starts-on yyyy-MM-dd] [--expires-on yyyy-MM-dd]
                            [--grace-days <n>] [--license-id <id>] [--notes <text>] [--out <file>]
+                  renew    --private-key <file> --request <LSR1-...>
+                           --customer-id <id> --customer-name <name>
+                           [--max-age-days <n>] [any issue option]
                   inspect  --file <file> [--public-key <file>]
 
-                Renewal tip: pass --starts-on <previous expiry date> so the customer keeps
-                the days they already paid for.
+                Prefer 'renew' over 'issue' whenever the customer can send their renewal code
+                (GET /api/license/renewal-code, or the licence screen in the application). It
+                reads the machine fingerprint and the previous expiry date straight out of the
+                code, so neither is retyped and the customer keeps the days they paid for.
+
+                Use 'issue' for a first license ordered by phone, where all you have is the
+                fingerprint.
                 """);
     }
 

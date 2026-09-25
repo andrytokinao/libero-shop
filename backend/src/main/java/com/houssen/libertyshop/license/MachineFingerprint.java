@@ -41,7 +41,7 @@ public final class MachineFingerprint {
     public static final String PREFIX = "LS1";
 
     /** Crockford Base32: no I, L, O or U, so 1/I, 0/O and similar cannot be confused. */
-    private static final char[] ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
+    private static final char[] ALPHABET = Crockford.ALPHABET;
 
     /** 20 Base32 characters = 100 bits of the digest; far beyond any collision concern here. */
     private static final int CHARACTERS = 20;
@@ -281,15 +281,78 @@ public final class MachineFingerprint {
         return out.toString();
     }
 
+    // ------------------------------------------------------------------
+    // Conversion to and from the raw bits
+    // ------------------------------------------------------------------
+
+    /** Number of bytes needed to hold {@link #CHARACTERS} five-bit groups. */
+    static final int PACKED_BYTES = (CHARACTERS * 5 + 7) / 8;
+
+    /**
+     * The {@value #CHARACTERS} five-bit groups behind a formatted fingerprint, packed into
+     * {@link #PACKED_BYTES} bytes with the spare low bits left at zero.
+     *
+     * <p>Exists so a renewal code can carry the fingerprint in binary instead of as twenty
+     * characters of text. Re-transcribing those characters is the single most error-prone
+     * step of the whole offline workflow, which is exactly what the code removes.
+     *
+     * @throws IllegalArgumentException if the value is not a fingerprint this build emits
+     */
+    static byte[] pack(String fingerprint) {
+        String body = strip(fingerprint);
+        byte[] packed = new byte[PACKED_BYTES];
+        int buffer = 0;
+        int bits = 0;
+        int index = 0;
+        for (int i = 0; i < body.length(); i++) {
+            buffer = (buffer << 5) | symbol(body.charAt(i));
+            bits += 5;
+            if (bits >= 8) {
+                bits -= 8;
+                packed[index++] = (byte) (buffer >>> bits);
+            }
+        }
+        if (bits > 0) {
+            packed[index] = (byte) (buffer << (8 - bits));
+        }
+        return packed;
+    }
+
+    /** Rebuilds the display form from {@link #pack}'s output. */
+    static String unpack(byte[] packed) {
+        if (packed == null || packed.length != PACKED_BYTES) {
+            throw new IllegalArgumentException("a packed fingerprint is " + PACKED_BYTES + " bytes");
+        }
+        return PREFIX + '-' + group(encodeBase32(packed));
+    }
+
+    /** Removes the prefix and the group separators, checking the shape on the way. */
+    private static String strip(String fingerprint) {
+        if (fingerprint == null) {
+            throw new IllegalArgumentException("fingerprint is required");
+        }
+        String body = fingerprint.trim().toUpperCase(Locale.ROOT).replace("-", "");
+        if (!body.startsWith(PREFIX)) {
+            throw new IllegalArgumentException("not a " + PREFIX + " fingerprint: " + fingerprint);
+        }
+        body = body.substring(PREFIX.length());
+        if (body.length() != CHARACTERS) {
+            throw new IllegalArgumentException("expected " + CHARACTERS + " characters after the prefix, got "
+                    + body.length() + ": " + fingerprint);
+        }
+        return body;
+    }
+
+    /**
+     * The five-bit value of one Crockford character, tolerating the letters a customer
+     * substitutes when reading a fingerprint out over the phone.
+     */
+    private static int symbol(char c) {
+        return Crockford.symbol(c);
+    }
+
     /** Splits into groups of five for readability: {@code 4KQ8T-9WZ2M-H7PXR-C3NVB}. */
     private static String group(String raw) {
-        StringBuilder out = new StringBuilder(raw.length() + raw.length() / 5);
-        for (int i = 0; i < raw.length(); i++) {
-            if (i > 0 && i % 5 == 0) {
-                out.append('-');
-            }
-            out.append(raw.charAt(i));
-        }
-        return out.toString();
+        return Crockford.group(raw);
     }
 }
