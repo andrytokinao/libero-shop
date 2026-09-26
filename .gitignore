@@ -9,3 +9,6 @@
 # Local experiments and verification artefacts
 /scratch/
 /backend/${project.build.directory}/
+/license/.license-state
+/license/.license-trial
+/data/libertyshop.mv.db
