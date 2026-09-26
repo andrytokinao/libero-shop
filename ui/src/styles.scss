@@ -355,6 +355,40 @@ tr:last-child td {
   color: var(--ink-soft);
 }
 
+/* A card's title with its one action on the same line — the users, categories and stock
+   screens all want it, so it lives here rather than three times over. */
+.head-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+/* Paging a long list. Only rendered when there is more than one page, so it never appears
+   under a table it has nothing to say about. */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+
+  .pager-at {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    min-width: 130px;
+    text-align: center;
+  }
+}
+
 /* ------------------------------------------------- invoice articles & cards */
 
 /* Opens the picking list of a row in a dialog. Narrow column: the label is the content. */
@@ -977,6 +1011,12 @@ textarea.field {
   /* A picking list needs the room: product names are long and the money must stay aligned. */
   &.wide {
     width: min(680px, 100%);
+  }
+
+  /* The import preview: nine columns, four of them editable. Anything narrower turns the
+     product name into a two-character box, which is the one field that must stay readable. */
+  &.widest {
+    width: min(1180px, 100%);
   }
 }
 

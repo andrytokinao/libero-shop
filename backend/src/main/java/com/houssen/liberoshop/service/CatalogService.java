@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Read side of the catalogue: products, categories, suppliers.
@@ -34,25 +35,31 @@ public class CatalogService {
     private final CategoryRepository categories;
     private final SupplierRepository suppliers;
     private final StockMovementRepository movements;
+    private final CategoryService categoryService;
 
     public CatalogService(ProductRepository products, CategoryRepository categories,
-                          SupplierRepository suppliers, StockMovementRepository movements) {
+                          SupplierRepository suppliers, StockMovementRepository movements,
+                          CategoryService categoryService) {
         this.products = products;
         this.categories = categories;
         this.suppliers = suppliers;
         this.movements = movements;
+        this.categoryService = categoryService;
     }
 
     /**
      * @param search      matched against name, barcode and category name; null or blank means all
-     * @param categoryId  restrict to one category, or null
+     * @param categoryId  restrict to one rayon <em>and everything below it</em>, or null for all
+     *                    -- see {@link CategoryService#branchOf(Long)} for why the children count
      * @param lowStockOnly keep only the references under the alert threshold
      */
     public List<ProductResponse> findProducts(String search, Long categoryId, boolean lowStockOnly) {
         String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        Set<Long> branch = categoryService.branchOf(categoryId);
         return products.findAllWithCategory().stream()
                 .filter(product -> categoryId == null
-                        || (product.getCategory() != null && categoryId.equals(product.getCategory().getId())))
+                        || (product.getCategory() != null
+                        && branch.contains(product.getCategory().getId())))
                 .filter(product -> !lowStockOnly || StockPolicy.isLowStock(product))
                 .filter(product -> needle.isEmpty() || matches(product, needle))
                 .map(ProductResponse::of)
@@ -63,10 +70,6 @@ public class CatalogService {
         return products.findLowStock(StockPolicy.LOW_STOCK_THRESHOLD).stream()
                 .map(ProductResponse::of)
                 .toList();
-    }
-
-    public List<CategoryResponse> findCategories() {
-        return categories.findAllByOrderByNameAsc().stream().map(CategoryResponse::of).toList();
     }
 
     /** Suppliers, each carrying how much has actually been received from them. */
@@ -90,7 +93,7 @@ public class CatalogService {
                 .map(CatalogService::valueOf)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return categories.findAllByOrderByNameAsc().stream()
+        return categories.findAllWithParent().stream()
                 .map(category -> {
                     List<Product> inCategory = all.stream()
                             .filter(p -> p.getCategory() != null && p.getCategory().getId().equals(category.getId()))
@@ -100,6 +103,7 @@ public class CatalogService {
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     return new CategoryStockResponse(
                             CategoryResponse.of(category),
+                            CategoryService.pathOf(category),
                             inCategory.size(),
                             inCategory.stream().mapToLong(Product::getStockQuantity).sum(),
                             value,

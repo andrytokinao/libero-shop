@@ -48,6 +48,7 @@ public class LicenseService {
     private final LicenseProperties properties;
     private final ClockGuard clockGuard;
     private final TrialRegistry trialRegistry;
+    private final BusinessDataWitness witness;
     private final Clock clock;
     private final String fingerprint;
 
@@ -76,7 +77,8 @@ public class LicenseService {
         this.fingerprint = fingerprint;
         this.clockGuard = new ClockGuard(properties.resolvedClockGuardPath(), verifier.trustAnchor(),
                 fingerprint, properties.clockGuard().enabled());
-        this.trialRegistry = new TrialRegistry(properties, verifier.trustAnchor(), fingerprint, dataSource);
+        this.witness = new BusinessDataWitness(dataSource);
+        this.trialRegistry = new TrialRegistry(properties, verifier.trustAnchor(), fingerprint, dataSource, witness);
     }
 
     /**
@@ -241,9 +243,53 @@ public class LicenseService {
         return properties;
     }
 
-    /** Today, corrected for a clock that has been wound back. */
+    /**
+     * What the installation's own records and data disagree about, if anything.
+     *
+     * <p>Two independent contradictions, both meaning the same thing -- that what the
+     * licence records claim is not what the shop's activity shows:
+     * <ul>
+     *   <li>the evaluation records say this installation is new, while months of sales
+     *       and invoices say otherwise;</li>
+     *   <li>the system clock is behind a day this installation has already worked
+     *       through, which is what winding it back looks like from the inside.</li>
+     * </ul>
+     *
+     * <p>Surfaced to the user rather than kept in the log. The wording says what was seen
+     * and warns that editing the database directly puts their own sales and stock at
+     * risk, which is true and is the point: on a machine where someone is doing that, the
+     * owner is usually the last to find out. Nothing is ever deleted in response -- the
+     * consequence is a shortened trial and a visible warning, never a reprisal against
+     * data the customer paid for.
+     */
+    public Optional<String> integrityWarning() {
+        Optional<String> fromRecords = trialRegistry.integrityWarning();
+        if (fromRecords.isPresent()) {
+            return fromRecords;
+        }
+        LocalDate systemDate = LocalDate.now(clock);
+        LocalDate lastActivity = witness.read().latest();
+        if (lastActivity != null && lastActivity.isAfter(systemDate)) {
+            return Optional.of("Incoherence detectee : des operations sont enregistrees jusqu'au "
+                    + lastActivity + ", alors que la date de cet ordinateur indique le " + systemDate
+                    + ". L'horloge du poste a ete reculee. Les tickets et les dates de vente en sont "
+                    + "fausses : merci de remettre la date a l'heure. Si vous n'etes pas a l'origine "
+                    + "de ce changement, contactez l'editeur.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Today, corrected for a clock that has been wound back.
+     *
+     * <p>Corrected twice, from two sources that fail differently. {@link ClockGuard} keeps
+     * a high-water mark in a file, which is precise but can be deleted before the clock is
+     * moved. {@link BusinessDataWitness} raises the date to the last day the shop is known
+     * to have been trading, which is coarser but has no file to delete: suppressing it
+     * means deleting the invoices that prove it.
+     */
     private LocalDate evaluationDate() {
-        return clockGuard.effectiveDate(LocalDate.now(clock));
+        return witness.notBefore(clockGuard.effectiveDate(LocalDate.now(clock)));
     }
 
     /**

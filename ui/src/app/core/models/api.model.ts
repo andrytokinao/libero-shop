@@ -120,8 +120,15 @@ export interface PaymentMethodBreakdown {
   amount: number;
 }
 
+/**
+ * What one rayon is worth. Rows are per rayon, not rolled up into their parent: "Boissons"
+ * counts the goods filed directly under it, "Boissons > Eau" its own, so the figures still
+ * add up to the shop's total.
+ */
 export interface CategoryStock {
   category: Category;
+  /** The rayon with its ancestors, since a bare name is ambiguous once there is a tree. */
+  path: string;
   references: number;
   units: number;
   value: number;

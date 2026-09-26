@@ -116,6 +116,12 @@ export const routes: Routes = [
           import('./features/depot-manager/stock.component').then((m) => m.StockComponent),
       },
       {
+        path: 'categories',
+        title: 'Catégories',
+        loadComponent: () =>
+          import('./features/depot-manager/categories.component').then((m) => m.CategoriesComponent),
+      },
+      {
         path: 'approvisionnement',
         title: 'Approvisionnement',
         loadComponent: () =>

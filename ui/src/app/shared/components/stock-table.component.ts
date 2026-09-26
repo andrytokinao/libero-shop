@@ -16,6 +16,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
             <th>Catégorie</th>
             <th>Code-barres</th>
             <th class="num">Stock</th>
+            <th>Unité</th>
             <th class="num">Prix unitaire</th>
             <th class="num">Valeur stock</th>
             <th></th>
@@ -28,6 +29,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
               <td class="muted">{{ product.category?.name ?? '—' }}</td>
               <td class="muted">{{ product.barcode ?? '—' }}</td>
               <td class="num">{{ product.stockQuantity }}</td>
+              <td class="muted">{{ product.unit ?? '—' }}</td>
               <td class="num">{{ product.price | ariary }}</td>
               <td class="num">{{ product.stockValue | ariary }}</td>
               <td>

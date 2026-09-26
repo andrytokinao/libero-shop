@@ -2,15 +2,24 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { Category, Product } from '../../core/models';
+import { CategoryNode, Product } from '../../core/models';
+import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { ProductImportComponent } from './product-import.component';
 
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [FormsModule, KpiCardComponent, StockTableComponent, AriaryPipe],
+  imports: [
+    FormsModule,
+    CategoryPickerComponent,
+    KpiCardComponent,
+    ProductImportComponent,
+    StockTableComponent,
+    AriaryPipe,
+  ],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Valeur du stock affiché" [value]="visibleValue() | ariary" />
@@ -19,7 +28,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Stock du dépôt</h2>
+      <div class="head-row">
+        <h2>Stock du dépôt</h2>
+        <app-product-import (imported)="onImported()" />
+      </div>
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:280px;">
           <label for="stock-search">Recherche</label>
@@ -33,17 +45,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
         <div class="fld">
           <label for="stock-category">Catégorie</label>
-          <select
-            id="stock-category"
-            class="field"
-            [ngModel]="categoryId()"
-            (ngModelChange)="onCategory($event)"
-          >
-            <option [ngValue]="null">Toutes les catégories</option>
-            @for (category of categories(); track category.id) {
-              <option [ngValue]="category.id">{{ category.name }}</option>
-            }
-          </select>
+          <!-- Picking a parent rayon brings its sub-rayons with it; the server decides that,
+               so this screen and the cash desk's product search agree on what "Boissons" means. -->
+          <app-category-picker
+            fieldId="stock-category"
+            [categories]="categories()"
+            [value]="categoryId()"
+            (valueChange)="onCategory($event)"
+          />
         </div>
         <div class="fld">
           <label for="stock-alert">Filtre</label>
@@ -81,7 +90,7 @@ export class StockComponent {
       lowStockOnly: this.onlyLowStock(),
     }),
   );
-  private readonly categoryResource = apiResource<Category[]>([], () => this.api.categories());
+  private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
 
   protected readonly products = this.resource.value;
   protected readonly categories = this.categoryResource.value;
@@ -107,5 +116,14 @@ export class StockComponent {
   protected onLowStock(onlyLowStock: boolean): void {
     this.onlyLowStock.set(onlyLowStock);
     this.resource.reload();
+  }
+
+  /**
+   * Both lists after an import: it adds references and quantities, and it may have created the
+   * rayons the file named — which the filter above has to offer straight away.
+   */
+  protected onImported(): void {
+    this.resource.reload();
+    this.categoryResource.reload();
   }
 }

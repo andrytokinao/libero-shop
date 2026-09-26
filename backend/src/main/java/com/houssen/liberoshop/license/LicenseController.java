@@ -51,13 +51,15 @@ public class LicenseController {
                         status.daysUntilExpiry(),
                         status.daysUntilReadOnly(),
                         status.userMessage(),
-                        status.fingerprint()))
+                        status.fingerprint(),
+                        licenseService.integrityWarning().orElse(null)))
                 .orElseGet(() -> new LicenseStatusResponse(
                         false, "UNLICENSED", !licenseService.isEnabled(),
                         null, null, null, null, 0, 0,
                         "Aucune licence valide n'est installee sur cette machine. Merci de contacter "
                                 + "l'editeur en communiquant l'empreinte ci-dessous.",
-                        licenseService.machineFingerprint()));
+                        licenseService.machineFingerprint(),
+                        licenseService.integrityWarning().orElse(null)));
     }
 
     /**
@@ -110,7 +112,15 @@ public class LicenseController {
         return ResponseEntity.ok(status());
     }
 
-    /** Flat view of the license state, shaped for the UI rather than for storage. */
+    /**
+     * Flat view of the license state, shaped for the UI rather than for storage.
+     *
+     * @param integrityWarning what the installation's records and its own data disagree
+     *                         about, or {@code null} when they agree. Carried on the same
+     *                         payload as the rest on purpose: the screen that shows how
+     *                         many days are left is the one that should say when that
+     *                         count rests on something that does not add up
+     */
     public record LicenseStatusResponse(
             boolean licensed,
             String state,
@@ -122,7 +132,8 @@ public class LicenseController {
             long daysUntilExpiry,
             long daysUntilReadOnly,
             String message,
-            String machineFingerprint) {
+            String machineFingerprint,
+            String integrityWarning) {
     }
 
     /** The renewal code plus the wording shown next to it in the UI. */

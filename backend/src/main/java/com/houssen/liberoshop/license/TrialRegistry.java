@@ -111,6 +111,16 @@ class TrialRegistry {
     private final List<TrialStore> stores;
 
     /**
+     * The shop's own sales and invoices, consulted as a witness to the age of this
+     * installation. Unlike every store above, it is read and never written: its value
+     * comes precisely from being data nobody keeps for the licence's sake.
+     */
+    private final BusinessDataWitness witness;
+
+    /** Set when the records and the shop's own data disagree; French, it reaches the user. */
+    private volatile String integrityWarning;
+
+    /**
      * Resolved start date, cached: resolution shells out to the registry and touches
      * several directories, which is fine once per run but not once per sale.
      */
@@ -127,9 +137,14 @@ class TrialRegistry {
      *                   quietly skipped.
      */
     TrialRegistry(LicenseProperties properties, byte[] trustAnchor, String fingerprint,
-                  Supplier<DataSource> dataSource) {
+                  Supplier<DataSource> dataSource, BusinessDataWitness witness) {
         this(properties.trial().enabled(), properties.trial().days(),
-                defaultStores(properties, dataSource), trustAnchor, fingerprint);
+                defaultStores(properties, dataSource), trustAnchor, fingerprint, witness);
+    }
+
+    /** Without a witness: the unit tests, and any installation with no database at all. */
+    TrialRegistry(boolean enabled, int days, List<TrialStore> stores, byte[] trustAnchor, String fingerprint) {
+        this(enabled, days, stores, trustAnchor, fingerprint, BusinessDataWitness.none());
     }
 
     /**
@@ -138,13 +153,16 @@ class TrialRegistry {
      * @param stores      where the record is replicated; all of them are read, all repaired
      * @param trustAnchor encoded public key of the build, mixed into the HMAC key
      * @param fingerprint machine fingerprint, mixed into the HMAC key
+     * @param witness     the shop's own data, read as a second opinion on the records above
      */
-    TrialRegistry(boolean enabled, int days, List<TrialStore> stores, byte[] trustAnchor, String fingerprint) {
+    TrialRegistry(boolean enabled, int days, List<TrialStore> stores, byte[] trustAnchor, String fingerprint,
+                  BusinessDataWitness witness) {
         this.enabled = enabled;
         this.days = days;
         this.stores = List.copyOf(stores);
         this.fingerprint = fingerprint;
         this.key = deriveKey(trustAnchor, fingerprint);
+        this.witness = witness;
     }
 
     /**
@@ -215,11 +233,23 @@ class TrialRegistry {
         return start;
     }
 
+    /** What the records and the shop's own data disagreed about, if anything. */
+    Optional<String> integrityWarning() {
+        return Optional.ofNullable(integrityWarning);
+    }
+
     /**
      * Reads every copy, keeps the earliest trustworthy one and repairs the rest.
      *
      * <p>Earliest rather than latest: a record that has been removed or rewritten must
      * never be able to postpone the end of the trial.
+     *
+     * <p>The shop's own data has a vote here, and it is the vote that cannot be bought
+     * cheaply. Erasing every marker makes this installation look new; it does not make
+     * eight months of sales disappear, and those are consulted alongside the markers. What
+     * the two disagree about is recorded in {@link #integrityWarning} and shown to the
+     * user -- because a customer whose database is being edited behind their back has a
+     * problem worth hearing about, whoever is doing it.
      */
     private LocalDate resolve(LocalDate today) {
         List<LocalDate> readings = new ArrayList<>(stores.size());
@@ -257,6 +287,15 @@ class TrialRegistry {
             }
         }
 
+        // The shop's own history, which nobody keeps for the licence's sake. It only ever
+        // pulls the start date backwards -- it is a lower bound on when this installation
+        // was already working, so it can shorten a trial and never extend one.
+        LocalDate provenSince = witness.provenActiveSince(today);
+        boolean contradicted = provenSince != null && (earliest == null || provenSince.isBefore(earliest));
+        if (contradicted) {
+            earliest = provenSince;
+        }
+
         // A start date in the future would describe a trial that never ends. It cannot
         // happen honestly -- the evaluation date never moves backwards, the clock guard
         // sees to that -- so it is clamped to today and rewritten. The worst a forged
@@ -272,6 +311,24 @@ class TrialRegistry {
             if (!resolved.equals(readings.get(i))) {
                 stores.get(i).write(record(resolved));
             }
+        }
+
+        if (contradicted) {
+            // The records say one thing, the shop's own till roll says another. Reported
+            // as its own line, and to the user rather than only to the log: on a machine
+            // where someone is editing the database directly, the owner is usually the
+            // last to know.
+            long operations = witness.read().rows();
+            log.warn("Installation age contradicted: {} intact trial record(s) claimed a newer "
+                            + "installation, but {} business operation(s) are on file from {} onwards. "
+                            + "The evaluation period is counted from the data.",
+                    intact, operations, provenSince);
+            integrityWarning = "Incoherence detectee : " + operations + " operation(s) (ventes, factures, "
+                    + "mouvements de stock) sont enregistrees sur ce poste depuis le " + provenSince
+                    + ", alors que les reperes d'installation le presentent comme neuf. La periode "
+                    + "d'essai est donc decomptee depuis cette date. Si vous n'etes pas a l'origine "
+                    + "de cette modification, contactez l'editeur : toute intervention directe dans "
+                    + "la base de donnees risque de vous faire perdre vos ventes et votre stock.";
         }
 
         if (firstEver) {

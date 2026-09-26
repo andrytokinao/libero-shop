@@ -35,7 +35,13 @@ const EMPTY: StockDashboard = {
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Valeur du stock par catégorie</h2>
+      <h2>
+        Valeur du stock par catégorie
+        <small>
+          un rayon compte les produits classés directement dessus, pas ceux de ses sous-rayons —
+          les lignes s'additionnent donc au total du stock
+        </small>
+      </h2>
       @if (byCategory().length) {
         <table>
           <thead>
@@ -50,7 +56,7 @@ const EMPTY: StockDashboard = {
           <tbody>
             @for (row of byCategory(); track row.category.id) {
               <tr>
-                <td>{{ row.category.name }}</td>
+                <td>{{ row.path }}</td>
                 <td class="num">{{ row.references }}</td>
                 <td class="num">{{ row.units }}</td>
                 <td class="num">{{ row.value | ariary }}</td>

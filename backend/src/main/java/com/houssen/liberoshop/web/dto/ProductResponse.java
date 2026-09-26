@@ -6,6 +6,9 @@ import com.houssen.liberoshop.service.StockPolicy;
 import java.math.BigDecimal;
 
 /**
+ * @param unit     how the shelf counts it, as the operator wrote it -- null for a catalogue
+ *                 counted in bare units, which the UI renders as a dash rather than inventing
+ *                 a word for
  * @param lowStock decided server-side so the alert threshold has a single definition;
  *                 the UI only has to style what it is told
  */
@@ -13,6 +16,7 @@ public record ProductResponse(Long id,
                               String name,
                               BigDecimal price,
                               int stockQuantity,
+                              String unit,
                               String barcode,
                               CategoryResponse category,
                               boolean lowStock,
@@ -24,6 +28,7 @@ public record ProductResponse(Long id,
                 product.getName(),
                 product.getPrice(),
                 product.getStockQuantity(),
+                product.getUnit(),
                 product.getBarcode(),
                 CategoryResponse.of(product.getCategory()),
                 StockPolicy.isLowStock(product),

@@ -182,18 +182,6 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
     }
   `,
   styles: `
-    .head-row {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 14px;
-
-      h2 {
-        margin: 0;
-      }
-    }
-
     /* Nine columns do not fit a laptop once the buttons are there. */
     .table-scroll {
       overflow-x: auto;

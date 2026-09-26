@@ -1,7 +1,6 @@
 package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.service.CatalogService;
-import com.houssen.liberoshop.web.dto.CategoryResponse;
 import com.houssen.liberoshop.web.dto.CategoryStockResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import com.houssen.liberoshop.web.dto.SupplierResponse;
@@ -33,10 +32,8 @@ public class CatalogController {
         return catalogService.findProducts(search, categoryId, lowStockOnly);
     }
 
-    @GetMapping("/categories")
-    public List<CategoryResponse> categories() {
-        return catalogService.findCategories();
-    }
+    // Categories are served by CategoryController: they are a tree now, with writes beside the
+    // read, and two handlers on /api/categories would not even start.
 
     @GetMapping("/suppliers")
     public List<SupplierResponse> suppliers() {
