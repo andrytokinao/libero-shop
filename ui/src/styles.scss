@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Vaha Market — global design system.
+   Libero Shop — global design system.
    Ported from the front.html mock-up; components rely on these classes rather
    than on per-component styles so the whole app stays visually consistent.
    ========================================================================== */
@@ -581,8 +581,11 @@ a.btn {
   text-decoration: none;
 }
 
+/* Password fields are listed too: the login page and the account dialogs use them, and a
+   native-looking box next to a styled one reads as a bug. */
 input[type='text'],
 input[type='number'],
+input[type='password'],
 select.field {
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -1199,6 +1202,7 @@ textarea.field {
   /* 16px is the size below which iOS zooms in on a focused field. */
   input[type='text'],
   input[type='number'],
+  input[type='password'],
   select.field,
   textarea.field {
     font-size: 16px;

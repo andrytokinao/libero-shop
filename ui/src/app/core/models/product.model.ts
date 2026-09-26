@@ -1,7 +1,7 @@
 import { Category } from './category.model';
 
 /**
- * Mirrors com.houssen.libertyshop.entity.Product (table product), as served by
+ * Mirrors com.houssen.liberoshop.entity.Product (table product), as served by
  * ProductResponse.
  */
 export interface Product {

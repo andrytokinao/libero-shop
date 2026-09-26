@@ -1,5 +1,5 @@
 /**
- * Mirrors com.houssen.libertyshop.license — LicenseState, and the three payloads
+ * Mirrors com.houssen.liberoshop.license — LicenseState, and the three payloads
  * LicenseController hands to the UI.
  *
  * <p>Every date arithmetic already happened server-side: `daysUntilExpiry`,
@@ -75,7 +75,7 @@ export type LicenseSeverity = 'ok' | 'warn' | 'danger';
 /**
  * Days before expiry at which the banner starts asking for a renewal.
  *
- * <p>Same figure as the backend's `libertyshop.license.renewal.urgent-within-days`: the
+ * <p>Same figure as the backend's `liberoshop.license.renewal.urgent-within-days`: the
  * screen begins insisting on the day the online check starts trying every day.
  */
 export const RENEWAL_WARNING_DAYS = 30;

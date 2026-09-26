@@ -13,7 +13,7 @@
       >
         ☰
       </button>
-      <div class="mark">Vaha <span>Market</span></div>
+      <div class="mark">Libero <span>Shop</span></div>
       <div class="avatar" [title]="auth.currentUser()?.fullName ?? ''">{{ auth.initials() }}</div>
     </header>
 
@@ -24,7 +24,7 @@
 
     <aside class="side" id="app-side">
       <div class="side-head">
-        <div class="mark">Vaha <span>Market</span></div>
+        <div class="mark">Libero <span>Shop</span></div>
         <div class="sub">Gestion supermarché</div>
         <div class="role-tag">{{ auth.roleLabel() }}</div>
         <button class="side-close" type="button" aria-label="Fermer le menu" (click)="closeNav()">

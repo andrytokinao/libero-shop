@@ -2,7 +2,7 @@ import { DeliveryStatus, PaymentStatus } from './enums';
 import { Sale } from './sale.model';
 
 /**
- * Mirrors com.houssen.libertyshop.entity.Invoice (table invoice), as served by
+ * Mirrors com.houssen.liberoshop.entity.Invoice (table invoice), as served by
  * InvoiceResponse.
  */
 export interface Invoice {

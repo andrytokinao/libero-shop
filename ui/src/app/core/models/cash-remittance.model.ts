@@ -2,7 +2,7 @@ import { RemittanceStatus } from './enums';
 import { UserApp } from './user-app.model';
 
 /**
- * Mirrors com.houssen.libertyshop.entity.CashRemittance (table cash_remittance), as
+ * Mirrors com.houssen.liberoshop.entity.CashRemittance (table cash_remittance), as
  * served by CashRemittanceResponse.
  */
 export interface CashRemittance {

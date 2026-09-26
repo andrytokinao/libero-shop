@@ -53,6 +53,42 @@ export interface CreateSupplyRequest {
   quantity: number;
 }
 
+/**
+ * POST /api/users. The handle is lower-cased by the server, since sign-in matches it
+ * exactly; the screen says so rather than silently changing what was typed.
+ */
+export interface CreateUserRequest {
+  fullName: string;
+  username: string;
+  password: string;
+  roles: RoleApp[];
+}
+
+/**
+ * PUT /api/users/{id} — the name and the whole new set of roles.
+ *
+ * <p>No handle and no password: the login handle is fixed once created, and a password goes
+ * through its own endpoint so a rename cannot reset one by accident.
+ */
+export interface UpdateUserRequest {
+  fullName: string;
+  roles: RoleApp[];
+}
+
+/** PUT /api/users/{id}/password — the administrator hands a new one, no old one asked. */
+export interface SetPasswordRequest {
+  password: string;
+}
+
+/**
+ * Mirrors UserAccountService.MIN_PASSWORD_LENGTH. Checked here only so the screen can say
+ * what is wrong before the round trip — the server refuses anything shorter regardless.
+ */
+export const MIN_PASSWORD_LENGTH = 6;
+
+/** Mirrors the @Pattern on CreateUserRequest.username: no spaces in something people type. */
+export const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
+
 // ----------------------------------------------------------------- responses
 
 export interface Supplier {

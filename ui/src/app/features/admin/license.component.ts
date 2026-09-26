@@ -116,7 +116,7 @@ import { KpiCardComponent } from '../../shared/components/kpi-card.component';
           class="field lic-paste"
           rows="7"
           spellcheck="false"
-          placeholder='{ "format": "liberty-shop-license", "version": 1, ... }'
+          placeholder='{ "format": "libero-shop-license", "version": 1, ... }'
           [value]="content()"
           (input)="content.set($any($event.target).value)"
         ></textarea>

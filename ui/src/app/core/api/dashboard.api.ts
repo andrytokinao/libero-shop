@@ -8,8 +8,6 @@ import {
   DepotDashboard,
   RevenueReport,
   StockDashboard,
-  UserActivity,
-  UserApp,
 } from '../models';
 
 /** One call per landing page: the figures shown side by side come from one snapshot. */
@@ -35,13 +33,5 @@ export class DashboardApi {
 
   revenue(): Observable<RevenueReport> {
     return this.http.get<RevenueReport>(`${API_BASE_URL}/dashboard/revenue`);
-  }
-
-  users(): Observable<UserApp[]> {
-    return this.http.get<UserApp[]>(`${API_BASE_URL}/users`);
-  }
-
-  userActivity(): Observable<UserActivity[]> {
-    return this.http.get<UserActivity[]>(`${API_BASE_URL}/users/activity`);
   }
 }

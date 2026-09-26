@@ -16,12 +16,12 @@ interface StockMovementBase {
   performedBy: UserApp;
 }
 
-/** Mirrors com.houssen.libertyshop.entity.Supply — goods coming in. */
+/** Mirrors com.houssen.liberoshop.entity.Supply — goods coming in. */
 export interface Supply extends StockMovementBase {
   supplier: { id: number; name: string };
 }
 
-/** Mirrors com.houssen.libertyshop.entity.StockOutput — goods leaving against an invoice. */
+/** Mirrors com.houssen.liberoshop.entity.StockOutput — goods leaving against an invoice. */
 export interface StockOutput extends StockMovementBase {
   invoice: InvoiceRef;
   /** unit price × quantity, precomputed server-side. */

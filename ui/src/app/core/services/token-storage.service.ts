@@ -1,8 +1,15 @@
 import { Injectable, signal } from '@angular/core';
 
 /** Namespaced, so another app served from the same origin cannot clobber them. */
-const TOKEN_KEY = 'libertyshop.access-token';
-const EXPIRY_KEY = 'libertyshop.access-token-expiry';
+const TOKEN_KEY = 'liberoshop.access-token';
+const EXPIRY_KEY = 'liberoshop.access-token-expiry';
+
+/**
+ * Keys used before the product was renamed. Only ever deleted: the token they hold was signed
+ * by an issuer this build no longer accepts, so keeping it would leave a dead credential in
+ * every returning browser instead of one extra sign-in.
+ */
+const LEGACY_KEYS = ['libertyshop.access-token', 'libertyshop.access-token-expiry'];
 
 /**
  * Keeps the access token across page loads.
@@ -47,6 +54,7 @@ export class TokenStorage {
  * no one can edit from here.
  */
 function restore(): string | null {
+  LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));
   const token = localStorage.getItem(TOKEN_KEY);
   const expiry = Number(localStorage.getItem(EXPIRY_KEY));
   if (!token || !Number.isFinite(expiry) || expiry <= Date.now()) {

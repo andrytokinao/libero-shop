@@ -13,7 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="login-page">
       <form class="card login-card" (ngSubmit)="submit()">
         <div class="login-brand">
-          <div class="mark">Vaha <span>Market</span></div>
+          <div class="mark">Libero <span>Shop</span></div>
           <div class="sub">Gestion supermarche</div>
         </div>
 

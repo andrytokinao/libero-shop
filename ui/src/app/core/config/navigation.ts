@@ -1,4 +1,4 @@
-import { RoleApp } from '../models';
+import { ROLE_PRECEDENCE, RoleApp } from '../models';
 
 export interface MenuItem {
   /** Glyph shown in the sidebar — kept text-only, no icon font needed. */
@@ -62,17 +62,6 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
     ],
   },
 };
-
-/**
- * Order the sections appear in, mirroring RolePolicy.PRECEDENCE on the server: the counter
- * first, because whoever holds every role in a small grocery opens the day by selling.
- */
-const ROLE_PRECEDENCE: readonly RoleApp[] = [
-  RoleApp.CASHIER,
-  RoleApp.DEPOT_AGENT,
-  RoleApp.DEPOT_MANAGER,
-  RoleApp.SUPER_ADMIN,
-];
 
 /**
  * The sidebar of an account: one section per role it holds.

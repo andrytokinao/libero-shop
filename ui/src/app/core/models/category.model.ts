@@ -1,4 +1,4 @@
-/** Mirrors com.houssen.libertyshop.entity.Category (table category). */
+/** Mirrors com.houssen.liberoshop.entity.Category (table category). */
 export interface Category {
   id: number;
   /** Unique. */

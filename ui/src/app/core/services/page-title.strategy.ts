@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 
-const APP_NAME = 'Vaha Market';
+const APP_NAME = 'Libero Shop';
 
 /**
  * Publishes the active route's `title` so the top bar and the browser tab stay

@@ -1,4 +1,4 @@
-# Module de licence — Liberty Shop
+# Module de licence — Libero Shop
 
 Protection de l'application installée chez le client, sans SaaS et sans dépendance à
 Internet. La seule source de vérité est un fichier signé sur le poste du client ; rien
@@ -25,7 +25,7 @@ Une enveloppe JSON contenant la charge utile **encodée**, plus sa signature dé
 
 ```json
 {
-  "format": "liberty-shop-license",
+  "format": "libero-shop-license",
   "version": 1,
   "algorithm": "Ed25519",
   "payload": "eyJsaWNlbnNlSWQiOi...",
@@ -145,7 +145,7 @@ licences illimitées. Sauvegarde chiffrée hors ligne, jamais dans le dépôt
    - **Fichier absent** → bascule sur la période d'essai (§ 4 bis), encadré en console avec
      l'empreinte à communiquer. Si l'essai a déjà été consommé sur cette machine,
      l'application démarre directement en lecture seule. Avec
-     `libertyshop.license.trial.enabled=false`, le démarrage est refusé comme avant.
+     `liberoshop.license.trial.enabled=false`, le démarrage est refusé comme avant.
    - **Expirée** → l'application démarre en avertissant, puis dégrade.
 4. `LicenseService` refait la vérification dans le contexte Spring (quelques
    millisecondes), ce qui couvre les chemins qui ne passent pas par `main()`.
@@ -298,9 +298,9 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 > dispositif désarmable en une ligne :
 >
 > ```bash
-> java -jar backend.jar --libertyshop.license.enabled=false
-> LIBERTYSHOP_LICENSE_ENABLED=false java -jar backend.jar
-> echo libertyshop.license.enabled=false > ./config/application.properties
+> java -jar backend.jar --liberoshop.license.enabled=false
+> LIBEROSHOP_LICENSE_ENABLED=false java -jar backend.jar
+> echo liberoshop.license.enabled=false > ./config/application.properties
 > ```
 >
 > `LicensePropertyGuard` s'exécute avant toute lecture et **restaure la valeur du jar**
@@ -310,7 +310,7 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 >
 > La durée d'essai est traitée à part, par un plafond compilé
 > (`TrialProperties.MAX_DAYS = 90`) : `trial.days` peut la **raccourcir**, jamais
-> l'allonger. Un `--libertyshop.license.trial.days=2000` est ramené à 90 sans bruit.
+> l'allonger. Un `--liberoshop.license.trial.days=2000` est ramené à 90 sans bruit.
 >
 > Les **chemins** ne sont volontairement pas protégés : relocaliser le dossier de licence
 > est un choix de déploiement légitime, et cela ne rapporte rien — la date d'essai vit à
@@ -320,13 +320,13 @@ Le projet utilise `application.properties` ; les valeurs réelles y sont déjà.
 l'équivalent YAML si vous basculez un jour :
 
 ```yaml
-libertyshop:
+liberoshop:
   license:
     # Interrupteur principal. Doit rester true sur une installation client.
     enabled: true
 
     # Emplacement du fichier signé (relatif au répertoire de lancement).
-    path: ./license/liberty-shop.lic
+    path: ./license/libero-shop.lic
 
     # Mémorise la date la plus avancée jamais vue : reculer l'horloge ne prolonge rien.
     clock-guard:
@@ -355,7 +355,7 @@ libertyshop:
 
 En développement, désactivez le contrôle **dans le fichier du classpath** —
 `src/main/resources/application.properties`, ou `src/test/resources` où c'est déjà fait.
-Passer `--libertyshop.license.enabled=false` en argument de lancement ne fonctionne plus :
+Passer `--liberoshop.license.enabled=false` en argument de lancement ne fonctionne plus :
 c'est précisément ce que le garde-fou annule.
 
 ---
@@ -545,6 +545,30 @@ caractère faux, d'un code tronqué, d'une date hors de portée du format, et lo
 > racine d'une classe qui contient aussi des `@Nested` **ne sont pas exécutés** (ils passent
 > pourtant en sélection directe). `LicenseVerifierTest` place donc tous ses tests dans des
 > classes `@Nested`. À garder en tête pour les futurs tests du projet.
+
+---
+
+## 9 bis. Héritage du nom « Liberty Shop »
+
+Le produit s'appelait Liberty Shop. Le renommage en Libero Shop est **volontairement
+incomplet** : trois choses gardent l'ancien nom, et les changer casserait des installations
+déjà payées ou rendrait des protections inopérantes.
+
+| Ce qui garde l'ancien nom | Où | Conséquence si on le renommait |
+|---|---|---|
+| Contextes de dérivation HMAC `liberty-shop/{clock-guard,trial,renewal-code}/v1` | `ClockGuard`, `TrialRegistry`, `RenewalCode` + `RenewalCodeReader` côté éditeur | Tous les fichiers d'état et d'essai déjà écrits échouent à leur contrôle d'intégrité et sont ignorés : la protection anti-recul d'horloge repart de zéro et **un nouvel essai de 90 jours est accordé** à une machine qui a consommé le sien |
+| Répertoires et clé de registre `LibertyShop` | `TrialRegistry` (profil utilisateur, données machine, `HKCU\Software\LibertyShop`) | Les marqueurs existants ne sont plus trouvés : même effet, un essai qui recommence |
+| Discriminant `"format": "liberty-shop-license"` | `LicenseFile.LEGACY_FORMAT` | **Accepté en lecture**, jamais écrit. Une licence vendue sous l'ancien nom reste valable ; le générateur n'émet plus que `libero-shop-license` |
+
+Deux compatibilités s'ajoutent, elles aussi en lecture seule :
+
+- **Nom du fichier** : si `libero-shop.lic` est absent, `LicenseService` lit
+  `liberty-shop.lic` dans le même répertoire et le journalise. Le prochain renouvellement est
+  écrit sous le nouveau nom, donc la reprise se fait d'elle-même.
+- **Préfixe des propriétés** : `liberoshop.*` a remplacé `libertyshop.*`. Un
+  `application.properties` externe qui utilisait encore l'ancien préfixe n'est plus lu — sans
+  effet sur la licence, dont les interrupteurs ne viennent que du jar (§5), mais pensez au
+  `liberoshop.security.jwt.secret` d'une installation client.
 
 ---
 

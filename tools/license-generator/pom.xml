@@ -16,7 +16,7 @@
     <artifactId>license-generator</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    <name>Liberty Shop License Generator</name>
+    <name>Libero Shop License Generator</name>
     <description>Publisher-only CLI: key generation and license signing. Never ship this.</description>
 
     <properties>
@@ -34,7 +34,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.houssen.libertyshop.tools.LicenseGeneratorCli</mainClass>
+                            <mainClass>com.houssen.liberoshop.tools.LicenseGeneratorCli</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

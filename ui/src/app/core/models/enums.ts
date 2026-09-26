@@ -1,5 +1,5 @@
 /**
- * Mirrors com.houssen.libertyshop.entity.Enums and RoleApp.
+ * Mirrors com.houssen.liberoshop.entity.Enums and RoleApp.
  * Values are the strings persisted by @Enumerated(EnumType.STRING).
  */
 
@@ -44,6 +44,23 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.BANK_TRANSFER]: 'Virement bancaire',
   [PaymentMethod.OTHER]: 'Autre',
 };
+
+/**
+ * Order the roles are listed in everywhere, mirroring RolePolicy.PRECEDENCE on the server:
+ * the counter first, because whoever holds every role in a small grocery opens the day by
+ * selling, not by reading a report.
+ */
+export const ROLE_PRECEDENCE: readonly RoleApp[] = [
+  RoleApp.CASHIER,
+  RoleApp.DEPOT_AGENT,
+  RoleApp.DEPOT_MANAGER,
+  RoleApp.SUPER_ADMIN,
+];
+
+/** The given roles in that order, so every list of them reads the same way. */
+export function orderRoles(roles: readonly RoleApp[]): RoleApp[] {
+  return ROLE_PRECEDENCE.filter((role) => roles.includes(role));
+}
 
 export const ROLE_LABELS: Record<RoleApp, string> = {
   [RoleApp.CASHIER]: 'Responsable de caisse',

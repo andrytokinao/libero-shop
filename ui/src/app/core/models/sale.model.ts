@@ -2,7 +2,7 @@ import { PaymentStatus } from './enums';
 import { Product } from './product.model';
 import { UserApp } from './user-app.model';
 
-/** Mirrors com.houssen.libertyshop.entity.SaleLine (table sale_line). */
+/** Mirrors com.houssen.liberoshop.entity.SaleLine (table sale_line). */
 export interface SaleLine {
   id: number;
   quantity: number;
@@ -11,7 +11,7 @@ export interface SaleLine {
   product: Product;
 }
 
-/** Mirrors com.houssen.libertyshop.entity.Sale (table sale). */
+/** Mirrors com.houssen.liberoshop.entity.Sale (table sale). */
 export interface Sale {
   id: number;
   /** LocalDateTime serialized as ISO-8601. */

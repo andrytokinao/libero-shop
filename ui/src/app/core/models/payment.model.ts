@@ -3,7 +3,7 @@ import { InvoiceRef } from './invoice.model';
 import { UserApp } from './user-app.model';
 
 /**
- * Mirrors com.houssen.libertyshop.entity.Payment (table payment), as served by
+ * Mirrors com.houssen.liberoshop.entity.Payment (table payment), as served by
  * PaymentResponse.
  */
 export interface Payment {
