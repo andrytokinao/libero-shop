@@ -630,24 +630,51 @@ select.field {
   color: inherit;
 }
 
+/* A labelled field. Every dialog and filter bar in the application is built out of these, so
+   it lives here rather than being redeclared in each of their component styles. */
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  label {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+}
+
 .form-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   align-items: end;
   margin-bottom: 14px;
+}
 
-  .fld {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+/* Under a dialog's own margins rather than a filter bar's. */
+.modal-body .fld {
+  margin-bottom: 14px;
 
-    label {
-      font-size: 11.5px;
-      color: var(--ink-soft);
-      font-weight: 600;
-    }
+  input,
+  select {
+    width: 100%;
   }
+}
+
+/* The one-line explanation that follows a field: what the rule is, and why. */
+.hint-line {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+/* What is wrong with the form, stated once, above the buttons that are disabled by it. */
+.dialog-problem {
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-radius: 7px;
+  padding: 9px 11px;
+  font-size: 12.5px;
 }
 
 .qtybtn {

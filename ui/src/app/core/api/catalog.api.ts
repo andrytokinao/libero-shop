@@ -12,6 +12,10 @@ import {
   ProductImportPreview,
   ProductImportRequest,
   ProductImportResult,
+  SimpleImportKind,
+  SimpleImportPreview,
+  SimpleImportRequest,
+  SimpleImportResult,
   Supplier,
   UpdateCategoryRequest,
 } from '../models';
@@ -99,5 +103,33 @@ export class CatalogApi {
   /** Writes the ticked lines. The only call here that changes the catalogue. */
   importApply(request: ProductImportRequest): Observable<ProductImportResult> {
     return this.http.post<ProductImportResult>(`${API_BASE_URL}/products/import/apply`, request);
+  }
+
+  // ------------------------------------------------------- categories & suppliers
+
+  /**
+   * The two imports that are only a few text columns wide, behind one pair of methods.
+   *
+   * <p>Keyed by the same `resource` the preview answers with, so a caller passes the kind around
+   * as data rather than picking a method — which is what lets one dialog component serve both
+   * without knowing which it is looking at.
+   */
+  simpleImportPreview(
+    resource: SimpleImportKind['resource'],
+    content: string,
+  ): Observable<SimpleImportPreview> {
+    return this.http.post<SimpleImportPreview>(`${API_BASE_URL}/${resource}/import/preview`, {
+      content,
+    });
+  }
+
+  simpleImportApply(
+    resource: SimpleImportKind['resource'],
+    request: SimpleImportRequest,
+  ): Observable<SimpleImportResult> {
+    return this.http.post<SimpleImportResult>(
+      `${API_BASE_URL}/${resource}/import/apply`,
+      request,
+    );
   }
 }

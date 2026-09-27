@@ -1,7 +1,7 @@
 package com.houssen.liberoshop.web.dto;
 
-import com.houssen.liberoshop.service.ProductImportAction;
-import com.houssen.liberoshop.service.ProductImportOutcome;
+import com.houssen.liberoshop.service.ImportAction;
+import com.houssen.liberoshop.service.ImportOutcome;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -37,8 +37,8 @@ public record ProductImportLineResponse(int line,
                                         String barcode,
                                         String categoryPath,
                                         Long categoryId,
-                                        ProductImportOutcome outcome,
-                                        ProductImportAction action,
+                                        ImportOutcome outcome,
+                                        ImportAction action,
                                         ProductRefResponse existing,
                                         String matchedOn,
                                         String suggestedName,

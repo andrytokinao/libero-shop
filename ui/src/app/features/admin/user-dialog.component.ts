@@ -125,22 +125,8 @@ import { RolePickerComponent } from './role-picker.component';
     </div>
   `,
   styles: `
-    .fld {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 14px;
-
-      label {
-        font-size: 11.5px;
-        color: var(--ink-soft);
-        font-weight: 600;
-      }
-
-      input {
-        width: 100%;
-      }
-    }
+    /* .fld, .hint-line and .dialog-problem are in the global stylesheet: every dialog is built
+       out of them. Only what is peculiar to this form stays here. */
 
     /* The password field and its reveal button share the line, the field taking the slack. */
     .pwd {
@@ -150,19 +136,6 @@ import { RolePickerComponent } from './role-picker.component';
       input {
         flex: 1;
       }
-    }
-
-    .hint-line {
-      font-size: 11.5px;
-      color: var(--ink-soft);
-    }
-
-    .dialog-problem {
-      background: var(--amber-soft);
-      color: var(--amber);
-      border-radius: 7px;
-      padding: 9px 11px;
-      font-size: 12.5px;
     }
   `,
 })

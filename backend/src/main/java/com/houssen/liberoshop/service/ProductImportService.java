@@ -2,12 +2,18 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.Supplier;
+import com.houssen.liberoshop.entity.Supply;
+import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.StockMovementRepository;
+import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.ProductImportColumns.Column;
 import com.houssen.liberoshop.service.ProductImportColumns.Mapping;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
+import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.ProductImportLineRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineResponse;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
@@ -19,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,13 +51,12 @@ import java.util.Set;
  * couple of hash lookups, and the benefit is that a shop can leave the dialog open through
  * lunch without an expiry surprising them.
  *
- * <p><b>A deliberate gap.</b> An import writes no {@code StockMovement}. Merging 12 units into
- * a product raises the stock with nothing in the ledger explaining the rise, where a delivery
- * booked through {@code StockService.registerSupply} leaves a {@code Supply} naming a supplier
- * and an agent. That is on purpose for now: {@code Supply} requires a supplier, and an import
- * is usually an opening stock count rather than a receipt from one wholesaler. It does mean the
- * import must be read as setting the shelf, not as recording a delivery -- and it is why the
- * dialog says so before applying.
+ * <p><b>Every unit is accounted for.</b> Each line that raises a quantity writes a {@code Supply}
+ * naming the account that ran the import, so a stock that went up can always be traced to
+ * somebody and a moment -- the same guarantee a delivery booked at the depot gives. The supplier
+ * is optional and is the one thing that differs: a file from a wholesaler names them, an
+ * inventory count leaves them null. Nothing is ever written in an operator's name from the
+ * payload; the actor is read from the session by the controller and passed in here.
  */
 @Service
 @Transactional(readOnly = true)
@@ -64,13 +70,20 @@ public class ProductImportService {
 
     private final ProductRepository products;
     private final CategoryRepository categories;
+    private final SupplierRepository suppliers;
+    private final StockMovementRepository movements;
     private final CategoryService categoryService;
+    private final BusinessCalendar calendar;
 
     public ProductImportService(ProductRepository products, CategoryRepository categories,
-                                CategoryService categoryService) {
+                                SupplierRepository suppliers, StockMovementRepository movements,
+                                CategoryService categoryService, BusinessCalendar calendar) {
         this.products = products;
         this.categories = categories;
+        this.suppliers = suppliers;
+        this.movements = movements;
         this.categoryService = categoryService;
+        this.calendar = calendar;
     }
 
     // --------------------------------------------------------------------- preview
@@ -145,19 +158,29 @@ public class ProductImportService {
      */
     @RequiresActiveLicense
     @Transactional
-    public ProductImportResultResponse apply(ProductImportRequest request) {
+    public ProductImportResultResponse apply(ProductImportRequest request, UserApp operator) {
         Catalogue index = Catalogue.of(products.findAllWithCategory());
         RayonResolver rayons = new RayonResolver();
+        Supplier supplier = request.supplierId() == null ? null
+                : suppliers.findById(request.supplierId())
+                        .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur",
+                                request.supplierId()));
+        // One timestamp for the whole file, not one per line: the entries are a single act, and
+        // spreading them over the seconds the loop takes would make the supplies list look like
+        // a trickle of deliveries.
+        LocalDateTime enteredAt = calendar.now();
+
         List<ProductImportResultResponse.Line> lines = new ArrayList<>();
         int created = 0;
         int merged = 0;
         int skipped = 0;
         int unitsAdded = 0;
+        int written = 0;
 
         for (ProductImportLineRequest line : request.lines()) {
             String name = line.name().trim();
 
-            if (line.action() == ProductImportAction.MERGE) {
+            if (line.action() == ImportAction.MERGE) {
                 Optional<Product> target = line.mergeIntoId() == null
                         ? Optional.empty()
                         : products.findByIdForUpdate(line.mergeIntoId());
@@ -177,8 +200,9 @@ public class ProductImportService {
                 }
                 merged++;
                 unitsAdded += line.quantity();
+                written += book(product, line.quantity(), supplier, operator, enteredAt);
                 lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
-                        ProductImportOutcome.MERGED, product.getId(), ""));
+                        ImportOutcome.MERGED, product.getId(), ""));
                 continue;
             }
 
@@ -217,13 +241,39 @@ public class ProductImportService {
 
             created++;
             unitsAdded += line.quantity();
+            written += book(product, line.quantity(), supplier, operator, enteredAt);
             lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
-                    free.equals(name) ? ProductImportOutcome.CREATED : ProductImportOutcome.RENAMED,
+                    free.equals(name) ? ImportOutcome.CREATED : ImportOutcome.RENAMED,
                     product.getId(), String.join(" ", notes)));
         }
 
-        return new ProductImportResultResponse(created, merged, skipped, unitsAdded,
+        return new ProductImportResultResponse(created, merged, skipped, unitsAdded, written,
+                supplier == null ? null : supplier.getName(),
                 rayons.created(), List.copyOf(lines));
+    }
+
+    /**
+     * Records why a product's stock went up, and returns 1 if it wrote anything.
+     *
+     * <p>A line at quantity zero writes nothing. Those are common -- a catalogue file listing
+     * references the shop does not hold yet -- and a movement of zero units would be noise in
+     * the one list a manager reads to find out what came in.
+     *
+     * @param supplier null for an inventory count; see {@link com.houssen.liberoshop.entity.Supply}
+     */
+    private int book(Product product, int quantity, Supplier supplier, UserApp operator,
+                     LocalDateTime enteredAt) {
+        if (quantity <= 0) {
+            return 0;
+        }
+        movements.save(Supply.builder()
+                .quantity(quantity)
+                .movementDate(enteredAt)
+                .product(product)
+                .performedBy(operator)
+                .supplier(supplier)
+                .build());
+        return 1;
     }
 
     /**
@@ -268,7 +318,7 @@ public class ProductImportService {
     private static ProductImportResultResponse.Line refused(ProductImportLineRequest line,
                                                             String name, String why) {
         return new ProductImportResultResponse.Line(line.line(), name,
-                ProductImportOutcome.SKIPPED, null, why);
+                ImportOutcome.SKIPPED, null, why);
     }
 
     // ------------------------------------------------------------- reading one row
@@ -283,8 +333,8 @@ public class ProductImportService {
         String barcode;
         String categoryPath = "";
         Long categoryId;
-        ProductImportOutcome outcome = ProductImportOutcome.CREATED;
-        ProductImportAction action = ProductImportAction.CREATE;
+        ImportOutcome outcome = ImportOutcome.CREATED;
+        ImportAction action = ImportAction.CREATE;
         Product existing;
         String matchedOn;
         String suggestedName;
@@ -300,7 +350,7 @@ public class ProductImportService {
                     + "ont ete additionnees ici.");
             duplicate.folded = this;
             duplicate.selected = false;
-            duplicate.outcome = ProductImportOutcome.SKIPPED;
+            duplicate.outcome = ImportOutcome.SKIPPED;
             duplicate.notes.add("Doublon dans le fichier : la quantite a ete ajoutee a la ligne "
                     + line + ".");
         }
@@ -315,7 +365,7 @@ public class ProductImportService {
         draft.categoryPath = mapping.cell(row, Column.CATEGORY).trim();
 
         if (draft.name.isEmpty()) {
-            draft.outcome = ProductImportOutcome.SKIPPED;
+            draft.outcome = ImportOutcome.SKIPPED;
             draft.selected = false;
             draft.notes.add("Ligne sans nom de produit : rien a importer.");
             return draft;
@@ -383,7 +433,7 @@ public class ProductImportService {
                 .map(Category::getId)
                 .orElse(null);
 
-        if (draft.outcome == ProductImportOutcome.SKIPPED) {
+        if (draft.outcome == ImportOutcome.SKIPPED) {
             return;
         }
         if (draft.price == null) {
@@ -394,8 +444,8 @@ public class ProductImportService {
         if (byBarcode != null) {
             draft.existing = byBarcode;
             draft.matchedOn = "barcode";
-            draft.action = ProductImportAction.MERGE;
-            draft.outcome = ProductImportOutcome.MERGED;
+            draft.action = ImportAction.MERGE;
+            draft.outcome = ImportOutcome.MERGED;
             return;
         }
 
@@ -411,8 +461,8 @@ public class ProductImportService {
                 && !isBlank(byName.getBarcode())
                 && !draft.barcode.equals(byName.getBarcode());
         if (conflictingBarcode) {
-            draft.outcome = ProductImportOutcome.RENAMED;
-            draft.action = ProductImportAction.CREATE;
+            draft.outcome = ImportOutcome.RENAMED;
+            draft.action = ImportAction.CREATE;
             draft.suggestedName = freeName(draft.name, reserved);
             reserved.add(CsvTable.normalise(draft.suggestedName));
             draft.notes.add("Meme nom que \"" + byName.getName() + "\" mais un autre code-barres"
@@ -420,8 +470,8 @@ public class ProductImportService {
                     + "meme article.");
             return;
         }
-        draft.action = ProductImportAction.MERGE;
-        draft.outcome = ProductImportOutcome.MERGED;
+        draft.action = ImportAction.MERGE;
+        draft.outcome = ImportOutcome.MERGED;
         draft.suggestedName = freeName(draft.name, reserved);
     }
 
@@ -476,7 +526,7 @@ public class ProductImportService {
         // promise a rayon the apply will not create.
         List<String> createdRayons = drafts.stream()
                 .filter(draft -> draft.selected
-                        && draft.action == ProductImportAction.CREATE
+                        && draft.action == ImportAction.CREATE
                         && draft.categoryId == null)
                 .map(draft -> draft.categoryPath)
                 .filter(path -> !path.isBlank())
@@ -488,13 +538,13 @@ public class ProductImportService {
         return new ProductImportPreviewResponse(
                 String.valueOf(table.separator()),
                 lines.size(),
-                (int) count(drafts, ProductImportOutcome.CREATED),
-                (int) count(drafts, ProductImportOutcome.MERGED),
-                (int) count(drafts, ProductImportOutcome.RENAMED),
-                (int) count(drafts, ProductImportOutcome.SKIPPED),
+                (int) count(drafts, ImportOutcome.CREATED),
+                (int) count(drafts, ImportOutcome.MERGED),
+                (int) count(drafts, ImportOutcome.RENAMED),
+                (int) count(drafts, ImportOutcome.SKIPPED),
                 (int) drafts.stream()
                         .filter(draft -> draft.selected
-                                && draft.action == ProductImportAction.CREATE
+                                && draft.action == ImportAction.CREATE
                                 && draft.categoryId == null
                                 && draft.categoryPath.isBlank())
                         .count(),
@@ -507,7 +557,7 @@ public class ProductImportService {
                 lines);
     }
 
-    private static long count(List<Draft> drafts, ProductImportOutcome outcome) {
+    private static long count(List<Draft> drafts, ImportOutcome outcome) {
         return drafts.stream().filter(draft -> draft.outcome == outcome).count();
     }
 

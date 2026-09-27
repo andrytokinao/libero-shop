@@ -2,10 +2,11 @@ import { Component, EventEmitter, Input, Output, computed, signal } from '@angul
 import { FormsModule } from '@angular/forms';
 import {
   CategoryNode,
-  ProductImportAction,
+  ImportAction,
+  ImportOutcome,
   ProductImportLine,
-  ProductImportOutcome,
   ProductImportPreview,
+  Supplier,
   UNIT_SUGGESTIONS,
 } from '../../core/models';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -33,7 +34,7 @@ export interface ProductImportRow {
   barcode: string | null;
   categoryId: number | null;
   categoryPath: string;
-  action: ProductImportAction;
+  action: ImportAction;
   existing: ProductImportLine['existing'];
   matchedOn: string | null;
   suggestedName: string | null;
@@ -321,12 +322,32 @@ export interface ProductImportRow {
           }
         </div>
 
-        <div class="modal-foot">
+        <div class="modal-foot imp-foot">
+          <!-- Asked once for the whole file, because a file is one delivery or one count — never
+               a mixture. Optional: leaving it blank is an inventory, which is the honest answer
+               for a catalogue export and is what the note beside it says. -->
+          <div class="imp-supplier">
+            <label for="imp-supplier">Fournisseur</label>
+            <select
+              id="imp-supplier"
+              class="field"
+              [ngModel]="supplierId"
+              (ngModelChange)="supplierIdChange.emit($event)"
+            >
+              <option [ngValue]="null">Aucun — inventaire</option>
+              @for (supplier of suppliers; track supplier.id) {
+                <option [ngValue]="supplier.id">{{ supplier.name }}</option>
+              }
+            </select>
+          </div>
+
           <div class="imp-foot-note muted">
             @if (blocker(); as message) {
               {{ message }}
+            } @else if (supplierId === null) {
+              Chaque ligne laissera une entrée de stock à votre nom, sans fournisseur.
             } @else {
-              L'import fixe le stock ; il n'enregistre pas de mouvement d'approvisionnement.
+              Chaque ligne laissera une entrée de stock à votre nom, au nom de ce fournisseur.
             }
           </div>
           <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
@@ -462,8 +483,28 @@ export interface ProductImportRow {
       font-weight: 600;
     }
 
+    /* The supplier belongs in the footer rather than at the top: it is part of deciding to
+       apply, not part of reading the file. */
+    .imp-foot {
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .imp-supplier {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+
+      label {
+        font-size: 11.5px;
+        color: var(--ink-soft);
+        font-weight: 600;
+      }
+    }
+
     .imp-foot-note {
       flex: 1;
+      min-width: 220px;
       font-size: 11.5px;
       text-align: left;
       align-self: center;
@@ -488,13 +529,18 @@ export class ProductImportDialogComponent {
 
   /** The rayon tree, for naming the category a line already resolved to. */
   @Input({ required: true }) categories: readonly CategoryNode[] = [];
+  /** Who may have delivered this file's goods. Empty until a supplier has been recorded. */
+  @Input() suppliers: readonly Supplier[] = [];
+  /** Bound two-way by the parent, which owns it until the write. */
+  @Input() supplierId: number | null = null;
+  @Output() readonly supplierIdChange = new EventEmitter<number | null>();
   @Input() busy = false;
   /** The ticked lines, as edited. The parent decides whether a rayon still has to be asked for. */
   @Output() readonly confirmed = new EventEmitter<readonly ProductImportRow[]>();
   @Output() readonly closed = new EventEmitter<void>();
 
   protected readonly units = UNIT_SUGGESTIONS;
-  protected readonly merge = ProductImportAction.MERGE;
+  protected readonly merge = ImportAction.MERGE;
 
   protected readonly rows = signal<ProductImportRow[]>([]);
   protected readonly lens = signal<Lens>('all');
@@ -502,10 +548,10 @@ export class ProductImportDialogComponent {
   private readonly pageIndex = signal(0);
 
   private static toRow(line: ProductImportLine): ProductImportRow {
-    const unusable = line.outcome === ProductImportOutcome.SKIPPED;
+    const unusable = line.outcome === ImportOutcome.SKIPPED;
     return {
       line: line.line,
-      name: line.outcome === ProductImportOutcome.RENAMED && line.suggestedName
+      name: line.outcome === ImportOutcome.RENAMED && line.suggestedName
         ? line.suggestedName
         : line.name,
       quantity: line.quantity,
@@ -528,10 +574,10 @@ export class ProductImportDialogComponent {
   // ------------------------------------------------------------------- the counts
 
   protected readonly createCount = computed(
-    () => this.ticked().filter((row) => row.action === ProductImportAction.CREATE).length,
+    () => this.ticked().filter((row) => row.action === ImportAction.CREATE).length,
   );
   protected readonly mergeCount = computed(
-    () => this.ticked().filter((row) => row.action === ProductImportAction.MERGE).length,
+    () => this.ticked().filter((row) => row.action === ImportAction.MERGE).length,
   );
   protected readonly untickedCount = computed(
     () => this.rows().filter((row) => !row.selected && !row.unusable).length,
@@ -546,11 +592,11 @@ export class ProductImportDialogComponent {
   /** Usable lines by action, whether ticked or not — what the view filter counts. */
   protected readonly toCreateCount = computed(
     () =>
-      this.rows().filter((row) => !row.unusable && row.action === ProductImportAction.CREATE).length,
+      this.rows().filter((row) => !row.unusable && row.action === ImportAction.CREATE).length,
   );
   protected readonly toMergeCount = computed(
     () =>
-      this.rows().filter((row) => !row.unusable && row.action === ProductImportAction.MERGE).length,
+      this.rows().filter((row) => !row.unusable && row.action === ImportAction.MERGE).length,
   );
 
   private readonly ticked = computed(() => this.rows().filter((row) => row.selected));
@@ -559,7 +605,7 @@ export class ProductImportDialogComponent {
   private readonly needCategory = computed(() =>
     this.ticked().filter(
       (row) =>
-        row.action === ProductImportAction.CREATE && row.categoryId === null && !row.categoryPath,
+        row.action === ImportAction.CREATE && row.categoryId === null && !row.categoryPath,
     ),
   );
 
@@ -578,9 +624,9 @@ export class ProductImportDialogComponent {
     const rows = this.rows();
     switch (this.lens()) {
       case 'create':
-        return rows.filter((row) => !row.unusable && row.action === ProductImportAction.CREATE);
+        return rows.filter((row) => !row.unusable && row.action === ImportAction.CREATE);
       case 'merge':
-        return rows.filter((row) => !row.unusable && row.action === ProductImportAction.MERGE);
+        return rows.filter((row) => !row.unusable && row.action === ImportAction.MERGE);
       case 'skipped':
         return rows.filter((row) => row.unusable);
       case 'problem':
@@ -623,7 +669,7 @@ export class ProductImportDialogComponent {
     if (!row.name.trim()) {
       return 'Donnez un nom au produit, ou décochez la ligne.';
     }
-    if (row.action === ProductImportAction.CREATE && (row.price === null || row.price < 0)) {
+    if (row.action === ImportAction.CREATE && (row.price === null || row.price < 0)) {
       return 'Saisissez le prix de vente : un nouveau produit ne peut pas être enregistré sans prix.';
     }
     if (row.quantity < 0) {
@@ -680,7 +726,7 @@ export class ProductImportDialogComponent {
   /** Turns a merge into a second reference, under the free name the server suggested. */
   protected rename(row: ProductImportRow): void {
     this.patch(row, {
-      action: ProductImportAction.CREATE,
+      action: ImportAction.CREATE,
       name: row.suggestedName ?? row.name,
       // The price cell was showing the catalogue's, read-only, and is now an empty required
       // field. Seeding it from the look-alike gives a figure to correct rather than a blank to
@@ -692,7 +738,7 @@ export class ProductImportDialogComponent {
   /** Back to topping up the existing product, under the catalogue's own name. */
   protected mergeBack(row: ProductImportRow): void {
     this.patch(row, {
-      action: ProductImportAction.MERGE,
+      action: ImportAction.MERGE,
       name: row.existing?.name ?? row.fileName,
     });
   }
@@ -715,7 +761,7 @@ export class ProductImportDialogComponent {
     if (!row.selected) {
       return { label: 'Non cochée', tone: 'grey' };
     }
-    if (row.action === ProductImportAction.MERGE) {
+    if (row.action === ImportAction.MERGE) {
       return {
         label: row.matchedOn === 'barcode' ? 'Complète (code-barres)' : 'Complète (nom)',
         tone: 'amber',

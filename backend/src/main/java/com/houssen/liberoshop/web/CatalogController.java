@@ -3,7 +3,6 @@ package com.houssen.liberoshop.web;
 import com.houssen.liberoshop.service.CatalogService;
 import com.houssen.liberoshop.web.dto.CategoryStockResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
-import com.houssen.liberoshop.web.dto.SupplierResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,10 +34,8 @@ public class CatalogController {
     // Categories are served by CategoryController: they are a tree now, with writes beside the
     // read, and two handlers on /api/categories would not even start.
 
-    @GetMapping("/suppliers")
-    public List<SupplierResponse> suppliers() {
-        return catalogService.findSuppliers();
-    }
+    // Suppliers are served by SupplierController, beside the import that is the only way to
+    // write one today.
 
     @GetMapping("/stock/by-category")
     public List<CategoryStockResponse> stockByCategory() {

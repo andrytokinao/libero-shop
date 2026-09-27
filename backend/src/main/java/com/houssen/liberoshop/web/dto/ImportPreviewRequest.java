@@ -13,5 +13,5 @@ import jakarta.validation.constraints.NotBlank;
  *
  * @param content the file's whole text, header line included
  */
-public record ProductImportPreviewRequest(@NotBlank String content) {
+public record ImportPreviewRequest(@NotBlank String content) {
 }

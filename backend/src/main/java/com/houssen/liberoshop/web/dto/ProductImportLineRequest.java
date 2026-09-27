@@ -1,7 +1,7 @@
 package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
-import com.houssen.liberoshop.service.ProductImportAction;
+import com.houssen.liberoshop.service.ImportAction;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -50,7 +50,7 @@ public record ProductImportLineRequest(
 
         String categoryPath,
 
-        @NotNull ProductImportAction action,
+        @NotNull ImportAction action,
 
         Long mergeIntoId) {
 }

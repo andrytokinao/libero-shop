@@ -1,8 +1,13 @@
 package com.houssen.liberoshop.web;
 
+import com.houssen.liberoshop.service.CategoryImportService;
 import com.houssen.liberoshop.service.CategoryService;
 import com.houssen.liberoshop.web.dto.CategoryNodeResponse;
 import com.houssen.liberoshop.web.dto.CreateCategoryRequest;
+import com.houssen.liberoshop.web.dto.ImportPreviewRequest;
+import com.houssen.liberoshop.web.dto.SimpleImportPreviewResponse;
+import com.houssen.liberoshop.web.dto.SimpleImportRequest;
+import com.houssen.liberoshop.web.dto.SimpleImportResultResponse;
 import com.houssen.liberoshop.web.dto.UpdateCategoryRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -36,9 +41,12 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CategoryImportService categoryImportService;
 
-    public CategoryController(CategoryService categoryService) {
+    public CategoryController(CategoryService categoryService,
+                              CategoryImportService categoryImportService) {
         this.categoryService = categoryService;
+        this.categoryImportService = categoryImportService;
     }
 
     /** The whole tree, depth-first, each row carrying its depth -- see CategoryNodeResponse. */
@@ -79,5 +87,25 @@ public class CategoryController {
 
     /** @param productsMoved how many references changed rayon on the way out */
     public record DeletedCategory(Long id, int productsMoved) {
+    }
+
+    // ---------------------------------------------------------------------- import
+
+    /**
+     * Reads a file of rayons and says what it would build. Writes nothing.
+     *
+     * <p>Two calls rather than one, like every other import here: a file that grows the tree the
+     * wrong way is tedious to undo one rayon at a time, so it is shown first.
+     */
+    @PostMapping("/import/preview")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public SimpleImportPreviewResponse previewImport(@Valid @RequestBody ImportPreviewRequest request) {
+        return categoryImportService.preview(request.content());
+    }
+
+    @PostMapping("/import/apply")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public SimpleImportResultResponse applyImport(@Valid @RequestBody SimpleImportRequest request) {
+        return categoryImportService.apply(request);
     }
 }

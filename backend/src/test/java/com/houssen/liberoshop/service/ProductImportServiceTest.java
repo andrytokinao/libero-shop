@@ -2,9 +2,15 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.Supplier;
+import com.houssen.liberoshop.entity.Supply;
+import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.StockMovementRepository;
+import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
+import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.ProductImportLineRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineResponse;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
@@ -22,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,19 +58,49 @@ class ProductImportServiceTest {
     private ProductRepository products;
     @Mock
     private CategoryRepository categories;
+    @Mock
+    private SupplierRepository suppliers;
+    @Mock
+    private StockMovementRepository movements;
+    @Mock
+    private BusinessCalendar calendar;
 
     private ProductImportService service;
 
     private final List<Product> shelf = new ArrayList<>();
     private final List<Category> rayons = new ArrayList<>();
+    private final List<Supplier> wholesalers = new ArrayList<>();
+    /** Every stock entry the import wrote, in order. */
+    private final List<Supply> ledger = new ArrayList<>();
     private final AtomicLong nextId = new AtomicLong(1);
+
+    /** Who is signed in. The actor never travels in the payload, so it is passed to apply. */
+    private final UserApp operator = UserApp.builder()
+            .id(99L)
+            .fullName("Nadia Rasolofo")
+            .username("nadia")
+            .enabled(true)
+            .build();
 
     @BeforeEach
     void setUp() {
         // A real CategoryService on the same mocked table: the path handling is half of what
         // an import does with a category column, and stubbing it would assert the stub.
         CategoryService categoryService = new CategoryService(categories, products);
-        service = new ProductImportService(products, categories, categoryService);
+        service = new ProductImportService(products, categories, suppliers, movements,
+                categoryService, calendar);
+
+        Mockito.when(calendar.now()).thenReturn(LocalDateTime.of(2026, 9, 26, 9, 0));
+        Mockito.when(movements.save(ArgumentMatchers.any(Supply.class))).thenAnswer(call -> {
+            Supply entry = call.getArgument(0);
+            entry.setId(nextId.getAndIncrement());
+            ledger.add(entry);
+            return entry;
+        });
+        Mockito.when(suppliers.findById(ArgumentMatchers.anyLong()))
+                .thenAnswer(call -> wholesalers.stream()
+                        .filter(supplier -> supplier.getId().equals(call.getArgument(0)))
+                        .findFirst());
 
         Mockito.when(products.findAllWithCategory()).thenAnswer(call -> List.copyOf(shelf));
         Mockito.when(products.findByIdForUpdate(ArgumentMatchers.anyLong()))
@@ -114,16 +151,32 @@ class ProductImportServiceTest {
         return product;
     }
 
+    private Supplier wholesaler(String name) {
+        Supplier supplier = Supplier.builder().name(name).build();
+        supplier.setId(nextId.getAndIncrement());
+        wholesalers.add(supplier);
+        return supplier;
+    }
+
     private static ProductImportLineResponse line(ProductImportPreviewResponse preview, int index) {
         return preview.lines().get(index);
+    }
+
+    /** An inventory count: nobody delivered these goods, so no supplier is named. */
+    private static ProductImportRequest request(List<ProductImportLineRequest> lines) {
+        return new ProductImportRequest(lines, null);
+    }
+
+    private ProductImportResultResponse run(ProductImportRequest request) {
+        return service.apply(request, operator);
     }
 
     /** The request a browser would send back for one previewed line, unchanged. */
     private static ProductImportLineRequest asSent(ProductImportLineResponse line) {
         return new ProductImportLineRequest(
                 line.line(),
-                line.suggestedName() != null && line.action() == ProductImportAction.CREATE
-                        && line.outcome() == ProductImportOutcome.RENAMED
+                line.suggestedName() != null && line.action() == ImportAction.CREATE
+                        && line.outcome() == ImportOutcome.RENAMED
                         ? line.suggestedName() : line.name(),
                 line.quantity(),
                 line.unit(),
@@ -217,9 +270,9 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview =
                 service.preview("nom;quantite\n;40\nRiz 5kg;10\n");
 
-        assertEquals(ProductImportOutcome.SKIPPED, line(preview, 0).outcome());
+        assertEquals(ImportOutcome.SKIPPED, line(preview, 0).outcome());
         assertFalse(line(preview, 0).selected());
-        assertEquals(ProductImportOutcome.CREATED, line(preview, 1).outcome());
+        assertEquals(ImportOutcome.CREATED, line(preview, 1).outcome());
         assertEquals(1, preview.skipped());
     }
 
@@ -239,8 +292,8 @@ class ProductImportServiceTest {
     void newProductIsACreation() {
         ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nSel 1kg;30;900\n");
 
-        assertEquals(ProductImportOutcome.CREATED, line(preview, 0).outcome());
-        assertEquals(ProductImportAction.CREATE, line(preview, 0).action());
+        assertEquals(ImportOutcome.CREATED, line(preview, 0).outcome());
+        assertEquals(ImportAction.CREATE, line(preview, 0).action());
         assertNull(line(preview, 0).existing());
         assertEquals(1, preview.created());
     }
@@ -253,8 +306,8 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nriz 5 KG;12;12500\n");
 
         ProductImportLineResponse row = line(preview, 0);
-        assertEquals(ProductImportOutcome.MERGED, row.outcome());
-        assertEquals(ProductImportAction.MERGE, row.action());
+        assertEquals(ImportOutcome.MERGED, row.outcome());
+        assertEquals(ImportAction.MERGE, row.action());
         assertEquals("name", row.matchedOn());
         assertEquals(riz.getId(), row.existing().id());
         assertEquals(40, row.existing().stockQuantity(), "the row must be able to show 40 + 12");
@@ -270,7 +323,7 @@ class ProductImportServiceTest {
                 "nom;quantite;prix;code barres\nRiz de luxe;12;12500;6001001000015\n");
 
         ProductImportLineResponse row = line(preview, 0);
-        assertEquals(ProductImportOutcome.MERGED, row.outcome());
+        assertEquals(ImportOutcome.MERGED, row.outcome());
         assertEquals("barcode", row.matchedOn());
         assertEquals(riz.getId(), row.existing().id());
     }
@@ -284,8 +337,8 @@ class ProductImportServiceTest {
                 "nom;quantite;prix;code barres\nLait 1L;20;4800;6009999999999\n");
 
         ProductImportLineResponse row = line(preview, 0);
-        assertEquals(ProductImportOutcome.RENAMED, row.outcome());
-        assertEquals(ProductImportAction.CREATE, row.action());
+        assertEquals(ImportOutcome.RENAMED, row.outcome());
+        assertEquals(ImportAction.CREATE, row.action());
         assertEquals("Lait 1L (2)", row.suggestedName());
         assertNotNull(row.existing(), "the operator has to see which product it looked like");
         assertTrue(row.notes().stream().anyMatch(note -> note.contains("code-barres")));
@@ -299,7 +352,7 @@ class ProductImportServiceTest {
 
         ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nRiz 5kg;12;12500\n");
 
-        assertEquals(ProductImportAction.MERGE, line(preview, 0).action());
+        assertEquals(ImportAction.MERGE, line(preview, 0).action());
         assertEquals("Riz 5kg (2)", line(preview, 0).suggestedName());
     }
 
@@ -311,7 +364,7 @@ class ProductImportServiceTest {
 
         assertEquals(50, line(preview, 0).quantity(), "the two lines' quantities add up");
         assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("ligne 4")));
-        assertEquals(ProductImportOutcome.SKIPPED, line(preview, 2).outcome());
+        assertEquals(ImportOutcome.SKIPPED, line(preview, 2).outcome());
         assertFalse(line(preview, 2).selected());
         assertTrue(line(preview, 2).notes().stream().anyMatch(note -> note.contains("Doublon")));
     }
@@ -323,7 +376,7 @@ class ProductImportServiceTest {
                 "nom;quantite;prix;ean\nEau 1.5L;10;1200;600400\nEau minerale 1,5 L;6;1200;600400\n");
 
         assertEquals(16, line(preview, 0).quantity());
-        assertEquals(ProductImportOutcome.SKIPPED, line(preview, 1).outcome());
+        assertEquals(ImportOutcome.SKIPPED, line(preview, 1).outcome());
     }
 
     @Test
@@ -377,7 +430,7 @@ class ProductImportServiceTest {
                 "announcing a rayon the apply will not create would be a false promise");
 
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(asSent(line(preview, 0)))));
+                run(request(List.of(asSent(line(preview, 0)))));
 
         assertTrue(result.rayonsCreated().isEmpty());
         assertEquals(1, rayons.size(), "no rayon may have been grown for a line that uses none");
@@ -406,7 +459,7 @@ class ProductImportServiceTest {
 
         ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nRiz 5kg;12;99999\n");
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(asSent(line(preview, 0)))));
+                run(request(List.of(asSent(line(preview, 0)))));
 
         assertEquals(1, result.merged());
         assertEquals(12, result.unitsAdded());
@@ -425,7 +478,7 @@ class ProductImportServiceTest {
 
         ProductImportPreviewResponse preview =
                 service.preview("nom;quantite;prix;unite\nRiz 5kg;12;12500;sac\nHuile 1L;5;6800;carton\n");
-        service.apply(new ProductImportRequest(
+        run(request(
                 List.of(asSent(line(preview, 0)), asSent(line(preview, 1)))));
 
         assertEquals("sac", riz.getUnit(), "a blank was filled");
@@ -439,7 +492,7 @@ class ProductImportServiceTest {
                 "nom;quantite;prix;unite;categorie\nSel 1kg;30;900;sachet;Epicerie > Condiments\n");
 
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(asSent(line(preview, 0)))));
+                run(request(List.of(asSent(line(preview, 0)))));
 
         assertEquals(1, result.created());
         assertEquals(List.of("Epicerie > Condiments"), result.rayonsCreated());
@@ -457,7 +510,7 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview = service.preview(
                 "nom;prix;categorie\nSel;900;Epicerie\nSucre;3200;Epicerie\nPoivre;1200;Epicerie\n");
 
-        ProductImportResultResponse result = service.apply(new ProductImportRequest(
+        ProductImportResultResponse result = run(request(
                 preview.lines().stream().map(ProductImportServiceTest::asSent).toList()));
 
         assertEquals(List.of("Epicerie"), result.rayonsCreated());
@@ -472,10 +525,10 @@ class ProductImportServiceTest {
         inCatalogue("Sel 1kg", 5, null, null);
 
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(asSent(line(preview, 0)))));
+                run(request(List.of(asSent(line(preview, 0)))));
 
         assertEquals(1, result.created());
-        assertEquals(ProductImportOutcome.RENAMED, result.lines().getFirst().outcome());
+        assertEquals(ImportOutcome.RENAMED, result.lines().getFirst().outcome());
         assertEquals("Sel 1kg (2)", shelf.getLast().getName());
         assertTrue(result.lines().getFirst().note().contains("Sel 1kg (2)"));
     }
@@ -491,10 +544,10 @@ class ProductImportServiceTest {
         // reference, which is the case this covers.
         ProductImportLineRequest insisted = new ProductImportLineRequest(
                 2, "Lait entier 1L", 20, null, BigDecimal.valueOf(4800), "6001002000053",
-                null, null, ProductImportAction.CREATE, null);
+                null, null, ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(insisted)));
+                run(request(List.of(insisted)));
 
         assertEquals(1, result.created());
         assertNull(shelf.getLast().getBarcode());
@@ -507,18 +560,87 @@ class ProductImportServiceTest {
     void reportsAVanishedMergeTarget() {
         ProductImportLineRequest orphan = new ProductImportLineRequest(
                 2, "Riz 5kg", 12, null, BigDecimal.valueOf(12500), null, null, null,
-                ProductImportAction.MERGE, 404L);
+                ImportAction.MERGE, 404L);
         ProductImportLineRequest fine = new ProductImportLineRequest(
                 3, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null, null,
-                ProductImportAction.CREATE, null);
+                ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
-                service.apply(new ProductImportRequest(List.of(orphan, fine)));
+                run(request(List.of(orphan, fine)));
 
         assertEquals(1, result.skipped());
         assertEquals(1, result.created(), "one refused line must not fail the other 299");
-        assertEquals(ProductImportOutcome.SKIPPED, result.lines().getFirst().outcome());
+        assertEquals(ImportOutcome.SKIPPED, result.lines().getFirst().outcome());
         assertNull(result.lines().getFirst().productId());
+    }
+
+    // -------------------------------------------------------------------- the ledger
+
+    @Test
+    @DisplayName("every line that raises a stock leaves an entry signed by whoever imported")
+    void writesAStockEntryPerLine() {
+        inCatalogue("Riz 5kg", 40, null, null);
+
+        ProductImportPreviewResponse preview =
+                service.preview("nom;quantite;prix\nRiz 5kg;12;12500\nSel 1kg;30;900\n");
+        ProductImportResultResponse result = run(request(
+                preview.lines().stream().map(ProductImportServiceTest::asSent).toList()));
+
+        assertEquals(2, result.movements());
+        assertEquals(2, ledger.size());
+        assertEquals(List.of(12, 30), ledger.stream().map(Supply::getQuantity).toList());
+        assertTrue(ledger.stream().allMatch(entry -> entry.getPerformedBy() == operator),
+                "a stock that went up must always name somebody");
+        assertTrue(ledger.stream().allMatch(Supply::isFromImport));
+        assertNull(result.supplierName());
+    }
+
+    @Test
+    @DisplayName("names the supplier on every entry when the file came from one")
+    void namesTheSupplierWhenThereIsOne() {
+        Supplier grossiste = wholesaler("Grossiste Analakely");
+
+        ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nSel 1kg;30;900\n");
+        ProductImportResultResponse result = run(new ProductImportRequest(
+                List.of(asSent(line(preview, 0))), grossiste.getId()));
+
+        assertEquals("Grossiste Analakely", result.supplierName());
+        assertEquals(1, ledger.size());
+        assertSame(grossiste, ledger.getFirst().getSupplier());
+        assertFalse(ledger.getFirst().isFromImport());
+    }
+
+    @Test
+    @DisplayName("refuses the whole import rather than booking it against a supplier that is gone")
+    void refusesAnUnknownSupplier() {
+        ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nSel 1kg;30;900\n");
+        ProductImportRequest orphaned =
+                new ProductImportRequest(List.of(asSent(line(preview, 0))), 404L);
+
+        assertThrows(ResourceNotFoundException.class, () -> run(orphaned));
+        assertTrue(ledger.isEmpty());
+    }
+
+    @Test
+    @DisplayName("a line at quantity zero adds a reference without inventing a movement")
+    void doesNotBookAnEmptyEntry() {
+        ProductImportPreviewResponse preview = service.preview("nom;quantite;prix\nSel 1kg;0;900\n");
+        ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+
+        assertEquals(1, result.created());
+        assertEquals(0, result.movements());
+        assertTrue(ledger.isEmpty(), "a movement of nothing would be noise in the supplies list");
+    }
+
+    @Test
+    @DisplayName("stamps one moment on the whole file, not one per line")
+    void stampsTheFileOnce() {
+        ProductImportPreviewResponse preview =
+                service.preview("nom;quantite;prix\nSel 1kg;30;900\nPoivre;8;3200\n");
+        run(request(preview.lines().stream().map(ProductImportServiceTest::asSent).toList()));
+
+        assertEquals(1, ledger.stream().map(Supply::getMovementDate).distinct().count(),
+                "one act, one timestamp -- otherwise the supplies list reads as a trickle");
     }
 
     @Test
@@ -528,9 +650,9 @@ class ProductImportServiceTest {
 
         ProductImportLineRequest sent = new ProductImportLineRequest(
                 2, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null,
-                alimentaire.getId(), "Un autre rayon", ProductImportAction.CREATE, null);
+                alimentaire.getId(), "Un autre rayon", ImportAction.CREATE, null);
 
-        service.apply(new ProductImportRequest(List.of(sent)));
+        run(request(List.of(sent)));
 
         assertSame(alimentaire, shelf.getLast().getCategory());
         assertEquals(1, rayons.size(), "the path must not have created a rayon");

@@ -13,20 +13,23 @@ export interface CategoryAssignment {
 /**
  * The second import dialog: the rayon of each product that has none.
  *
- * <p>Only the products that need it are listed. A line topping up an existing reference keeps
- * that reference's rayon, and a line whose file named a rayon already has one — so what is left
- * is exactly the new products whose file had no category column, or an empty cell in it. On a
- * file exported with a rayon column this dialog never opens at all.
+ * <p>Only the products that need it are listed. A line topping up an existing reference keeps that
+ * reference's rayon, and a line whose file named a rayon already has one — so what is left is
+ * exactly the new products whose file had no category column, or an empty cell in it. On a file
+ * exported with a rayon column this dialog never opens at all.
  *
  * <p>Asked here rather than left blank on purpose. A product in no rayon is invisible in every
  * filtered list in the application, including the ones the depot uses to count the stock, and
- * nothing later would remind anybody. Asking once, at the moment the products arrive, is the only
- * point at which the answer is cheap.
+ * nothing later would remind anybody. Asking once, as the products arrive, is the only moment at
+ * which the answer is cheap.
  *
- * <p>Two shortcuts, because the honest version of this dialog is fifty selects. "Appliquer à
- * toutes les lignes" fills the empty ones from the row being set — most of a file lands in two
- * or three rayons — and a rayon absent from the tree can be created here without leaving, since
- * discovering it is missing halfway through is exactly when it is needed.
+ * <p><b>Two panes, not fifty drop-downs.</b> Products on the left with a box each, the rayon tree
+ * on the right with a box each: tick the products, tick a rayon, they are filed and the left
+ * clears for the next batch. The honest alternative — one select per row — is the same number of
+ * clicks for two products and ten times as many for eighty, because a file of eighty lands in
+ * three or four rayons and the left pane lets each of those be one click. The tree stays visible
+ * throughout, which also makes it obvious when the rayon wanted does not exist yet; creating it is
+ * in the same pane.
  */
 @Component({
   selector: 'app-category-assign-dialog',
@@ -35,135 +38,189 @@ export interface CategoryAssignment {
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
-      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+      <div class="modal widest" role="dialog" aria-modal="true" aria-labelledby="assign-title">
         <div class="modal-head">
           <div>
             <h2 id="assign-title">Catégorie des nouveaux produits</h2>
             <div class="sub muted">
-              {{ rows.length }} produit(s) sans catégorie. Un produit sans catégorie n'apparaît
-              dans aucune liste filtrée par rayon.
+              Cochez des produits à gauche, puis la catégorie à droite. Un produit sans catégorie
+              n'apparaît dans aucune liste filtrée par rayon.
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 
         <div class="modal-body">
-          <div class="asg-tools">
-            <div class="fld">
-              <label for="asg-bulk">Remplir les lignes vides avec</label>
-              <app-category-picker
-                fieldId="asg-bulk"
-                [categories]="categories"
-                [allowNone]="true"
-                noneLabel="—"
-                [value]="bulk()"
-                (valueChange)="bulk.set($event)"
-              />
-            </div>
-            <button
-              class="btn small ghost"
-              type="button"
-              [disabled]="bulk() === null || !emptyCount()"
-              (click)="applyToEmpty()"
-            >
-              Appliquer aux {{ emptyCount() }} restantes
-            </button>
-          </div>
-
-          @if (creating()) {
-            <div class="asg-new">
-              <div class="fld">
-                <label for="asg-new-name">Nouvelle catégorie</label>
-                <input
-                  id="asg-new-name"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="Boissons fraîches"
-                  [ngModel]="newName()"
-                  (ngModelChange)="newName.set($event)"
-                />
-              </div>
-              <div class="fld">
-                <label for="asg-new-parent">À l'intérieur de</label>
-                <app-category-picker
-                  fieldId="asg-new-parent"
-                  [categories]="categories"
-                  [allowNone]="true"
-                  noneLabel="Aucune — catégorie principale"
-                  [blocked]="tooDeepToHoldAChild()"
-                  [value]="newParent()"
-                  (valueChange)="newParent.set($event)"
-                />
-              </div>
-              <div class="asg-new-actions">
-                <button
-                  class="btn small"
-                  type="button"
-                  [disabled]="busy || !newName().trim()"
-                  (click)="emitCreate()"
-                >
-                  Créer
-                </button>
-                <button class="btn small ghost" type="button" (click)="creating.set(false)">
-                  Annuler
-                </button>
-              </div>
-            </div>
-          } @else {
-            <button class="btn small ghost" type="button" (click)="creating.set(true)">
-              ＋ Créer une catégorie
-            </button>
+          @if (lastAssigned(); as done) {
+            <div class="asg-done">{{ done }}</div>
           }
 
-          <table style="margin-top:14px;">
-            <thead>
-              <tr>
-                <th class="num col-line">Ligne</th>
-                <th>Produit</th>
-                <th class="num">Quantité</th>
-                <th class="col-pick">Catégorie</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of rows; track row.line) {
-                <tr [class.bad]="chosenFor(row.line) === null">
-                  <td class="num col-line muted">{{ row.line }}</td>
-                  <td>{{ row.name }}</td>
-                  <td class="num">{{ row.quantity }} {{ row.unit ?? '' }}</td>
-                  <td class="col-pick">
+          <div class="asg-panes">
+            <!-- ------------------------------------------------ left: the products -->
+            <section class="asg-pane">
+              <header class="asg-pane-head">
+                <label class="asg-all">
+                  <input
+                    type="checkbox"
+                    [checked]="allPicked()"
+                    [indeterminate]="somePicked() && !allPicked()"
+                    (change)="pickAll($event)"
+                  />
+                  <span>
+                    @if (picked().size) {
+                      {{ picked().size }} produit(s) coché(s) sur {{ rows.length }}
+                    } @else {
+                      Aucun produit coché sur {{ rows.length }}
+                    }
+                  </span>
+                </label>
+                @if (waitingCount()) {
+                  <button class="btn small ghost" type="button" (click)="pickWaiting()">
+                    Cocher les {{ waitingCount() }} sans catégorie
+                  </button>
+                }
+              </header>
+
+              <ul class="asg-list">
+                @for (row of rows; track row.line) {
+                  <li [class.on]="picked().has(row.line)" [class.done]="!!chosenFor(row.line)">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="picked().has(row.line)"
+                        (change)="pick(row.line, $event)"
+                      />
+                      <span class="asg-name">{{ row.name }}</span>
+                      <span class="asg-qty muted">{{ row.quantity }} {{ row.unit ?? '' }}</span>
+                    </label>
+                    @if (chosenFor(row.line); as categoryId) {
+                      <button
+                        class="asg-tag"
+                        type="button"
+                        title="Retirer cette catégorie"
+                        (click)="clear(row.line)"
+                      >
+                        {{ pathOf(categoryId) }} ✕
+                      </button>
+                    } @else {
+                      <span class="asg-tag empty">sans catégorie</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
+
+            <!-- ---------------------------------------------- right: the rayon tree -->
+            <section class="asg-pane">
+              <header class="asg-pane-head">
+                <span class="asg-pane-title">Catégories</span>
+                @if (!creating()) {
+                  <button class="btn small ghost" type="button" (click)="creating.set(true)">
+                    ＋ Nouvelle
+                  </button>
+                }
+              </header>
+
+              @if (creating()) {
+                <div class="asg-new">
+                  <div class="fld">
+                    <label for="asg-new-name">Nom</label>
+                    <input
+                      id="asg-new-name"
+                      type="text"
+                      autocomplete="off"
+                      maxlength="60"
+                      placeholder="Boissons fraîches"
+                      [ngModel]="newName()"
+                      (ngModelChange)="newName.set($event)"
+                    />
+                  </div>
+                  <div class="fld">
+                    <label for="asg-new-parent">À l'intérieur de</label>
                     <app-category-picker
+                      fieldId="asg-new-parent"
                       [categories]="categories"
                       [allowNone]="true"
-                      noneLabel="— à choisir"
-                      [value]="chosenFor(row.line)"
-                      (valueChange)="choose(row.line, $event)"
+                      noneLabel="Aucune — catégorie principale"
+                      [blocked]="tooDeepToHoldAChild()"
+                      [value]="newParent()"
+                      (valueChange)="newParent.set($event)"
                     />
-                  </td>
-                </tr>
+                  </div>
+                  <div class="asg-new-actions">
+                    <button
+                      class="btn small"
+                      type="button"
+                      [disabled]="busy || !newName().trim()"
+                      (click)="emitCreate()"
+                    >
+                      Créer
+                    </button>
+                    <button class="btn small ghost" type="button" (click)="creating.set(false)">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
               }
-            </tbody>
-          </table>
+
+              @if (categories.length) {
+                <ul class="asg-list asg-tree">
+                  @for (node of categories; track node.id) {
+                    <li [class.on]="lastUsed() === node.id">
+                      <label [attr.title]="node.path">
+                        <input
+                          type="checkbox"
+                          [checked]="lastUsed() === node.id"
+                          [disabled]="!picked().size"
+                          (change)="assign(node)"
+                        />
+                        <span class="asg-indent" [style.width.px]="node.depth * 16"></span>
+                        @if (node.depth) {
+                          <span class="muted">└</span>
+                        }
+                        <span class="asg-name" [class.asg-root]="!node.depth">{{ node.name }}</span>
+                      </label>
+                      <span class="asg-tag empty">{{ countIn(node.id) || '' }}</span>
+                    </li>
+                  }
+                </ul>
+                @if (!picked().size) {
+                  <div class="asg-hint">Cochez d'abord un ou plusieurs produits à gauche.</div>
+                }
+              } @else {
+                <div class="empty">
+                  Aucune catégorie n'existe encore. Créez-en une ci-dessus, ou importez les produits
+                  sans catégorie et rangez-les plus tard.
+                </div>
+              }
+            </section>
+          </div>
         </div>
 
         <div class="modal-foot">
           <div class="asg-foot muted">
-            @if (emptyCount()) {
-              {{ emptyCount() }} produit(s) sans catégorie.
+            @if (waitingCount()) {
+              {{ waitingCount() }} produit(s) encore sans catégorie.
             } @else {
-              Toutes les lignes ont une catégorie.
+              Tous les produits ont une catégorie.
             }
           </div>
           <button class="btn ghost" type="button" (click)="closed.emit()">Retour</button>
           <button
             class="btn ghost"
             type="button"
-            [disabled]="busy || !emptyCount()"
+            [disabled]="busy || !waitingCount()"
             title="Les produits restants seront enregistrés sans catégorie"
             (click)="confirmed.emit(assignments())"
           >
             Importer sans catégorie
           </button>
-          <button class="btn" type="button" [disabled]="busy || !!emptyCount()" (click)="confirmed.emit(assignments())">
+          <button
+            class="btn"
+            type="button"
+            [disabled]="busy || !!waitingCount()"
+            (click)="confirmed.emit(assignments())"
+          >
             {{ busy ? 'Enregistrement...' : 'Importer' }}
           </button>
         </div>
@@ -171,27 +228,154 @@ export interface CategoryAssignment {
     </div>
   `,
   styles: `
-    .asg-tools {
-      display: flex;
-      gap: 10px;
-      align-items: end;
-      flex-wrap: wrap;
-      padding-bottom: 12px;
+    .asg-done {
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      border-radius: 7px;
+      padding: 8px 11px;
+      font-size: 12.5px;
       margin-bottom: 12px;
-      border-bottom: 1px solid var(--line);
+    }
 
-      .fld {
-        display: flex;
+    /* Side by side above the breakpoint, stacked below it — a phone cannot hold two lists
+       wide enough to read, and stacking keeps both usable with a thumb. */
+    .asg-panes {
+      display: flex;
+      gap: 14px;
+
+      @media (max-width: 900px) {
         flex-direction: column;
-        gap: 5px;
-        min-width: 220px;
+      }
+    }
 
-        label {
-          font-size: 11.5px;
+    .asg-pane {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      overflow: hidden;
+    }
+
+    .asg-pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 11px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+      font-size: 12.5px;
+    }
+
+    .asg-pane-title {
+      font-weight: 700;
+    }
+
+    .asg-all {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .asg-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      /* Both panes scroll on their own so the footer buttons never leave the screen. */
+      max-height: 46vh;
+      overflow-y: auto;
+
+      li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 11px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12.5px;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &.on {
+          background: var(--brand-soft);
+        }
+
+        /* A product already filed reads as settled without disappearing: it can be re-filed. */
+        &.done .asg-name {
           color: var(--ink-soft);
-          font-weight: 600;
         }
       }
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex: 1;
+        min-width: 0;
+        cursor: pointer;
+      }
+
+      input {
+        margin: 0;
+        flex: 0 0 auto;
+        cursor: pointer;
+      }
+    }
+
+    .asg-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .asg-root {
+      font-weight: 600;
+    }
+
+    .asg-qty {
+      flex: 0 0 auto;
+      font-size: 11.5px;
+    }
+
+    .asg-indent {
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .asg-tag {
+      flex: 0 0 auto;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      border-radius: 20px;
+      padding: 3px 9px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-family: inherit;
+      cursor: pointer;
+
+      &.empty {
+        background: none;
+        color: var(--amber);
+        cursor: default;
+      }
+    }
+
+    .asg-hint {
+      padding: 9px 11px;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      border-top: 1px solid var(--line);
     }
 
     .asg-new {
@@ -199,41 +383,19 @@ export interface CategoryAssignment {
       gap: 10px;
       align-items: end;
       flex-wrap: wrap;
-      background: var(--bg);
-      border-radius: 8px;
       padding: 11px;
+      border-bottom: 1px solid var(--line);
 
       .fld {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        min-width: 200px;
-
-        label {
-          font-size: 11.5px;
-          color: var(--ink-soft);
-          font-weight: 600;
-        }
+        flex: 1;
+        min-width: 150px;
+        margin-bottom: 0;
       }
 
       .asg-new-actions {
         display: flex;
         gap: 7px;
       }
-    }
-
-    .col-line {
-      width: 1%;
-      white-space: nowrap;
-    }
-
-    .col-pick {
-      width: 230px;
-    }
-
-    /* A row still waiting is tinted rather than badged: the whole dialog is the complaint. */
-    tr.bad td {
-      background: var(--amber-soft);
     }
 
     .asg-foot {
@@ -255,29 +417,37 @@ export class CategoryAssignDialogComponent {
   @Output() readonly closed = new EventEmitter<void>();
 
   /**
-   * Line number to chosen rayon. A line absent from here has not been answered — a `Map` rather
-   * than an object so that "absent" is `undefined` in the type system too, not just at runtime.
+   * Line number to chosen rayon. A `Map` rather than an object so that "not answered" is
+   * `undefined` in the type system too, not only at runtime.
    */
-  protected readonly chosen = signal<ReadonlyMap<number, number>>(new Map());
-  protected readonly bulk = signal<number | null>(null);
+  private readonly chosen = signal<ReadonlyMap<number, number>>(new Map());
+  /** Which products the next rayon tick will file. */
+  protected readonly picked = signal<ReadonlySet<number>>(new Set());
+  /** The rayon last used, kept ticked as a reminder of where the previous batch went. */
+  protected readonly lastUsed = signal<number | null>(null);
+  protected readonly lastAssigned = signal<string | null>(null);
 
   protected readonly creating = signal(false);
   protected readonly newName = signal('');
   protected readonly newParent = signal<number | null>(null);
 
-  protected readonly emptyCount = computed(() => {
+  protected readonly waitingCount = computed(() => {
     const chosen = this.chosen();
     return this.rows.filter((row) => !chosen.has(row.line)).length;
   });
 
+  protected readonly allPicked = computed(
+    () => this.rows.length > 0 && this.picked().size === this.rows.length,
+  );
+  protected readonly somePicked = computed(() => this.picked().size > 0);
+
   /**
    * Rayons already at the last allowed level, which therefore cannot take a child. Greyed in the
-   * parent picker rather than hidden, so the cap reads as a rule and not as a missing row.
+   * parent picker rather than hidden: a disappearing option reads as a bug, a greyed one reads as
+   * "not that one".
    */
   protected readonly tooDeepToHoldAChild = computed(() =>
-    this.categories
-      .filter((node) => node.depth >= MAX_CATEGORY_DEPTH - 1)
-      .map((node) => node.id),
+    this.categories.filter((node) => node.depth >= MAX_CATEGORY_DEPTH - 1).map((node) => node.id),
   );
 
   protected readonly assignments = computed<CategoryAssignment[]>(() => {
@@ -292,33 +462,75 @@ export class CategoryAssignDialogComponent {
     return this.chosen().get(line) ?? null;
   }
 
-  protected choose(line: number, categoryId: number | null): void {
-    this.chosen.update((chosen) => {
-      const next = new Map(chosen);
-      if (categoryId === null) {
-        next.delete(line);
+  protected pathOf(categoryId: number): string {
+    return this.categories.find((node) => node.id === categoryId)?.name ?? '—';
+  }
+
+  /** How many of the listed products are already filed in this rayon. */
+  protected countIn(categoryId: number): number {
+    const chosen = this.chosen();
+    return this.rows.filter((row) => chosen.get(row.line) === categoryId).length;
+  }
+
+  // --------------------------------------------------------------------- picking
+
+  protected pick(line: number, event: Event): void {
+    const on = (event.target as HTMLInputElement).checked;
+    this.picked.update((picked) => {
+      const next = new Set(picked);
+      if (on) {
+        next.add(line);
       } else {
-        next.set(line, categoryId);
+        next.delete(line);
       }
       return next;
     });
   }
 
-  /** Fills only the lines still unanswered, so a deliberate choice is never overwritten. */
-  protected applyToEmpty(): void {
-    const categoryId = this.bulk();
-    if (categoryId === null) {
+  protected pickAll(event: Event): void {
+    const on = (event.target as HTMLInputElement).checked;
+    this.picked.set(on ? new Set(this.rows.map((row) => row.line)) : new Set());
+  }
+
+  /** The common next move once a batch has been filed: take everything still waiting. */
+  protected pickWaiting(): void {
+    const chosen = this.chosen();
+    this.picked.set(
+      new Set(this.rows.filter((row) => !chosen.has(row.line)).map((row) => row.line)),
+    );
+  }
+
+  // -------------------------------------------------------------------- assigning
+
+  /**
+   * Files every ticked product in this rayon, then clears the left pane.
+   *
+   * <p>Clearing is what makes the two panes a loop rather than a form: the products just filed
+   * stop being in the way, and the next tick starts a new batch. Their rayon stays visible on
+   * each row, and the tag is a button, so a mistake costs one click to undo.
+   */
+  protected assign(node: CategoryNode): void {
+    const batch = this.picked();
+    if (!batch.size) {
       return;
     }
     this.chosen.update((chosen) => {
       const next = new Map(chosen);
-      for (const row of this.rows) {
-        if (!next.has(row.line)) {
-          next.set(row.line, categoryId);
-        }
-      }
+      batch.forEach((line) => next.set(line, node.id));
       return next;
     });
+    this.lastUsed.set(node.id);
+    this.lastAssigned.set(`${batch.size} produit(s) rangé(s) dans « ${node.path} ».`);
+    this.picked.set(new Set());
+  }
+
+  protected clear(line: number): void {
+    this.chosen.update((chosen) => {
+      const next = new Map(chosen);
+      next.delete(line);
+      return next;
+    });
+    this.lastAssigned.set(null);
   }
 
   protected emitCreate(): void {

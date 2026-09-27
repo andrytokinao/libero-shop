@@ -1,12 +1,22 @@
 package com.houssen.liberoshop.service;
 
-/** What became of one line of an import file. */
-public enum ProductImportOutcome {
+/**
+ * What became of one line of an import file, whatever the file was about.
+ *
+ * <p>Shared by the product, rayon and supplier imports, because the four answers are the same
+ * four every time: it was added, it was folded into something already there, it was added under
+ * a freed name, or it was refused.
+ */
+public enum ImportOutcome {
 
-    /** No product carried that name: a new reference was added. */
+    /** Nothing already recorded matched: a new row was added. */
     CREATED,
 
-    /** The name was already in the catalogue: the quantities were added to it. */
+    /**
+     * Something already recorded matched, and the line completed it rather than duplicating it.
+     * For a product that means its stock rose; for a supplier, that a field the shop had left
+     * blank was filled in. In neither case is anything the shop already wrote overwritten.
+     */
     MERGED,
 
     /**

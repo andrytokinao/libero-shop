@@ -106,7 +106,17 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 <tr>
                   <td>{{ supply.product.name }}</td>
                   <td class="num">+{{ supply.quantity }}</td>
-                  <td>{{ supply.supplier.name }}</td>
+                  <td>
+                    @if (supply.supplier; as supplier) {
+                      {{ supplier.name }}
+                    } @else {
+                      <!-- An import entry. Named rather than left blank: the stock did rise,
+                           and an empty cell would read as a supplier gone missing. -->
+                      <span class="badge grey" title="Stock saisi par import de produits">
+                        Import
+                      </span>
+                    }
+                  </td>
                   <td class="muted">{{ supply.movementDate | date: 'dd/MM HH:mm' }}</td>
                   <td>{{ supply.performedBy.fullName }}</td>
                 </tr>
@@ -184,7 +194,7 @@ export class SupplyComponent {
           this.supplierResource.reload();
           this.toasts.show(
             `${supply.quantity} × ${supply.product.name} ajouté(s) au stock ` +
-              `(${supply.supplier.name}).`,
+              `(${supply.supplier?.name ?? 'sans fournisseur'}).`,
           );
         },
         error: () => this.busy.set(false),

@@ -233,9 +233,14 @@ public class CategoryService {
      * only has "Boissons" creates "Eau" inside it; against an empty catalogue it creates
      * both.
      *
-     * <p>Segments past {@link #MAX_DEPTH} are dropped rather than refused -- the deepest
-     * rayon that fits is used. A refusal here would fail a whole import over one over-precise
-     * cell, and the operator can still move the product afterwards.
+     * <p>Segments that would go past {@link #MAX_DEPTH} are dropped rather than refused -- the
+     * deepest rayon that fits is used. A refusal here would fail a whole import over one
+     * over-precise cell, and the operator can still move the product afterwards.
+     *
+     * <p>The cap is measured on the resulting depth, not on how many segments the path has.
+     * Those are different numbers whenever the path starts from a rayon that already sits deep:
+     * {@code "Niveau 3 > Trop profond"} is two segments and would still land at the fifth level.
+     * Counting segments alone is how a tree quietly grows past its own limit.
      */
     @Transactional
     public Optional<Category> ensurePath(String path) {
@@ -246,7 +251,7 @@ public class CategoryService {
         List<Category> all = new ArrayList<>(categories.findAllWithParent());
         Category parent = null;
         Category current = null;
-        for (String segment : segments.subList(0, Math.min(segments.size(), MAX_DEPTH))) {
+        for (String segment : segments) {
             String name = normaliseName(segment);
             String folded = CsvTable.normalise(name);
             Optional<Category> existing = all.stream()
@@ -255,6 +260,11 @@ public class CategoryService {
             if (existing.isPresent()) {
                 current = existing.get();
             } else {
+                if (depthOf(parent) + 1 > MAX_DEPTH - 1) {
+                    // No room below. The deepest rayon reached so far is the answer, and the
+                    // product lands there rather than nowhere.
+                    break;
+                }
                 current = categories.save(Category.builder().name(name).parent(parent).build());
                 all.add(current);
             }

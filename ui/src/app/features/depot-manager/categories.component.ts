@@ -2,9 +2,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { CategoryNode, CategoryStock, MAX_CATEGORY_DEPTH } from '../../core/models';
+import {
+  CATEGORY_IMPORT,
+  CategoryNode,
+  CategoryStock,
+  MAX_CATEGORY_DEPTH,
+} from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
+import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -27,7 +33,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [FormsModule, CategoryPickerComponent, AriaryPipe],
+  imports: [FormsModule, CategoryPickerComponent, SimpleImportComponent, AriaryPipe],
   template: `
     <div class="card">
       <div class="head-row">
@@ -38,7 +44,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             {{ maxDepth }} niveaux
           </small>
         </h2>
-        <button class="btn small" type="button" (click)="openCreate()">＋ Nouvelle catégorie</button>
+        <div class="actions">
+          <app-simple-import [kind]="importKind" (imported)="reload()" />
+          <button class="btn small" type="button" (click)="openCreate()">
+            ＋ Nouvelle catégorie
+          </button>
+        </div>
       </div>
 
       @if (tree().length) {
@@ -246,36 +257,6 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       gap: 6px;
     }
 
-    .fld {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 14px;
-
-      label {
-        font-size: 11.5px;
-        color: var(--ink-soft);
-        font-weight: 600;
-      }
-
-      input {
-        width: 100%;
-      }
-    }
-
-    .hint-line {
-      font-size: 11.5px;
-      color: var(--ink-soft);
-    }
-
-    .dialog-problem {
-      background: var(--amber-soft);
-      color: var(--amber);
-      border-radius: 7px;
-      padding: 9px 11px;
-      font-size: 12.5px;
-    }
-
     .btn.danger {
       color: var(--red);
       border-color: var(--red-soft);
@@ -296,6 +277,7 @@ export class CategoriesComponent {
   private readonly toasts = inject(ToastService);
 
   protected readonly maxDepth = MAX_CATEGORY_DEPTH;
+  protected readonly importKind = CATEGORY_IMPORT;
 
   private readonly treeResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   // What each rayon holds. From the same endpoint the stock screens use, so the figures agree.
@@ -454,7 +436,7 @@ export class CategoriesComponent {
   }
 
   /** Both resources: a move changes the tree, and a delete changes what each rayon holds. */
-  private reload(): void {
+  protected reload(): void {
     this.treeResource.reload();
     this.statResource.reload();
   }

@@ -12,12 +12,13 @@ import { CatalogApi } from '../../core/api/catalog.api';
 import {
   CategoryNode,
   CreateCategoryRequest,
-  ProductImportAction,
+  ImportAction,
+  ImportOutcome,
   ProductImportLineRequest,
-  ProductImportOutcome,
   ProductImportPreview,
   ProductImportResult,
   ProductImportResultLine,
+  Supplier,
 } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { TEXT_FILE_ACCEPT, readTextFile } from '../../core/utils/text-file.util';
@@ -66,6 +67,9 @@ import {
       <app-product-import-dialog
         [preview]="loaded"
         [categories]="categories()"
+        [suppliers]="suppliers()"
+        [supplierId]="supplierId()"
+        (supplierIdChange)="supplierId.set($event)"
         [busy]="saving()"
         (confirmed)="onPreviewConfirmed($event)"
         (closed)="reset()"
@@ -95,6 +99,15 @@ import {
               <li><strong>{{ report.created }}</strong> nouveau(x) produit(s) créé(s)</li>
               <li><strong>{{ report.merged }}</strong> produit(s) existant(s) complété(s)</li>
               <li><strong>{{ report.unitsAdded }}</strong> unité(s) ajoutée(s) au stock</li>
+              <li>
+                <strong>{{ report.movements }}</strong> entrée(s) de stock à votre nom
+                @if (report.supplierName) {
+                  <span>— fournisseur : {{ report.supplierName }}.</span>
+                } @else {
+                  <span>— sans fournisseur, inventaire.</span>
+                }
+                Visibles dans Approvisionnement.
+              </li>
               @if (report.rayonsCreated.length) {
                 <li>
                   Catégories créées : {{ report.rayonsCreated.join(' · ') }}
@@ -193,6 +206,17 @@ export class ProductImportComponent {
 
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   protected readonly categories = this.categoryResource.value;
+  private readonly supplierResource = apiResource<Supplier[]>([], () => this.api.suppliers());
+  protected readonly suppliers = this.supplierResource.value;
+
+  /**
+   * Who delivered this file's goods, or null for an inventory count.
+   *
+   * <p>Lives here rather than in the dialog because it survives the second dialog: the operator
+   * picks it in the preview and it must still be there when the write finally happens, two
+   * screens later.
+   */
+  protected readonly supplierId = signal<number | null>(null);
 
   protected readonly reading = signal(false);
   protected readonly saving = signal(false);
@@ -248,7 +272,7 @@ export class ProductImportComponent {
     this.ticked = rows;
     const waiting = rows.filter(
       (row) =>
-        row.action === ProductImportAction.CREATE && row.categoryId === null && !row.categoryPath,
+        row.action === ImportAction.CREATE && row.categoryId === null && !row.categoryPath,
     );
     if (waiting.length) {
       this.assigning.set(waiting);
@@ -280,16 +304,21 @@ export class ProductImportComponent {
   /** The one call that changes the catalogue. */
   private write(rows: readonly ProductImportRow[]): void {
     this.saving.set(true);
-    this.api.importApply({ lines: rows.map(ProductImportComponent.toRequest) }).subscribe({
-      next: (report) => {
-        this.saving.set(false);
-        this.preview.set(null);
-        this.assigning.set(null);
-        this.result.set(report);
-        this.imported.emit(report);
-      },
-      error: () => this.saving.set(false),
-    });
+    this.api
+      .importApply({
+        lines: rows.map(ProductImportComponent.toRequest),
+        supplierId: this.supplierId(),
+      })
+      .subscribe({
+        next: (report) => {
+          this.saving.set(false);
+          this.preview.set(null);
+          this.assigning.set(null);
+          this.result.set(report);
+          this.imported.emit(report);
+        },
+        error: () => this.saving.set(false),
+      });
   }
 
   private static toRequest(row: ProductImportRow): ProductImportLineRequest {
@@ -300,24 +329,24 @@ export class ProductImportComponent {
       unit: row.unit?.trim() || null,
       // The dialog refuses to submit a merge-less row without a price, so the fallback is only
       // there to keep the payload well typed.
-      price: row.action === ProductImportAction.MERGE ? (row.existing?.price ?? 0) : (row.price ?? 0),
+      price: row.action === ImportAction.MERGE ? (row.existing?.price ?? 0) : (row.price ?? 0),
       barcode: row.barcode?.trim() || null,
       categoryId: row.categoryId,
       categoryPath: row.categoryPath || null,
       action: row.action,
-      mergeIntoId: row.action === ProductImportAction.MERGE ? (row.existing?.id ?? null) : null,
+      mergeIntoId: row.action === ImportAction.MERGE ? (row.existing?.id ?? null) : null,
     };
   }
 
   /** Lines the server refused after the preview — a barcode taken in between, usually. */
   protected refused(report: ProductImportResult): ProductImportResultLine[] {
-    return report.lines.filter((line) => line.outcome === ProductImportOutcome.SKIPPED);
+    return report.lines.filter((line) => line.outcome === ImportOutcome.SKIPPED);
   }
 
   /** Names the server had to free. Told plainly: the operator will look for the name they typed. */
   protected renamed(report: ProductImportResult): ProductImportResultLine[] {
     return report.lines.filter(
-      (line) => line.outcome === ProductImportOutcome.RENAMED && !!line.note,
+      (line) => line.outcome === ImportOutcome.RENAMED && !!line.note,
     );
   }
 
@@ -325,6 +354,8 @@ export class ProductImportComponent {
     this.preview.set(null);
     this.assigning.set(null);
     this.ticked = [];
+    // Not the supplier: a second file from the same wholesaler is the common case, and having
+    // to pick them again every time would be the kind of small friction nobody reports.
   }
 
   protected finish(): void {

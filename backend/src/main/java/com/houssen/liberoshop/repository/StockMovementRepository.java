@@ -17,10 +17,15 @@ import java.util.List;
  */
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
 
+    /**
+     * The supplier is joined with a LEFT join and must stay that way: an entry written by a
+     * product import has none, and an inner join would drop those rows from the supplies screen
+     * while their units still showed up in the stock.
+     */
     @Query("""
             select s from Supply s
               join fetch s.product
-              join fetch s.supplier
+              left join fetch s.supplier
               join fetch s.performedBy
             order by s.movementDate desc, s.id desc
             """)
@@ -41,9 +46,14 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     @Query("select coalesce(sum(s.quantity), 0) from Supply s where s.movementDate >= :from")
     long sumSuppliedUnitsSince(@Param("from") LocalDateTime from);
 
+    /**
+     * Deliveries and units per supplier. Supplier-less entries -- the ones an import writes --
+     * are excluded rather than grouped: they belong to no supplier, and a nameless bucket in a
+     * list of suppliers would be read as a supplier whose name went missing.
+     */
     @Query("""
             select o.supplier.id, count(o), coalesce(sum(o.quantity), 0)
-            from Supply o group by o.supplier.id
+            from Supply o where o.supplier is not null group by o.supplier.id
             """)
     List<Object[]> aggregateSuppliesBySupplier();
 }

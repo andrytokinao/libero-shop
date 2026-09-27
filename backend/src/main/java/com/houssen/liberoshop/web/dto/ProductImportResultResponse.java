@@ -1,6 +1,6 @@
 package com.houssen.liberoshop.web.dto;
 
-import com.houssen.liberoshop.service.ProductImportOutcome;
+import com.houssen.liberoshop.service.ImportOutcome;
 
 import java.util.List;
 
@@ -13,11 +13,16 @@ import java.util.List;
  * and {@code lines} is where that is said.
  *
  * @param rayonsCreated rayons the file named and the import had to create
+ * @param movements     stock entries written, one per line that actually raised a quantity --
+ *                      so the figure can be checked against the supplies screen
+ * @param supplierName  who the entries name as having delivered, or null for an inventory count
  */
 public record ProductImportResultResponse(int created,
                                           int merged,
                                           int skipped,
                                           int unitsAdded,
+                                          int movements,
+                                          String supplierName,
                                           List<String> rayonsCreated,
                                           List<Line> lines) {
 
@@ -27,7 +32,7 @@ public record ProductImportResultResponse(int created,
      */
     public record Line(int line,
                        String name,
-                       ProductImportOutcome outcome,
+                       ImportOutcome outcome,
                        Long productId,
                        String note) {
     }

@@ -16,9 +16,18 @@ interface StockMovementBase {
   performedBy: UserApp;
 }
 
-/** Mirrors com.houssen.liberoshop.entity.Supply — goods coming in. */
+/**
+ * Mirrors com.houssen.liberoshop.entity.Supply — goods coming in.
+ *
+ * <p>`supplier` is null exactly when the entry came from a product import: nobody delivered
+ * those goods, they were counted in. A receipt booked at the depot always names one. Screens
+ * label that case rather than showing a blank — "nobody delivered this" is information, an
+ * empty cell looks like missing data.
+ */
 export interface Supply extends StockMovementBase {
-  supplier: { id: number; name: string };
+  supplier: { id: number; name: string } | null;
+  /** Said outright by the server so a screen does not have to infer it from the null. */
+  fromImport: boolean;
 }
 
 /** Mirrors com.houssen.liberoshop.entity.StockOutput — goods leaving against an invoice. */

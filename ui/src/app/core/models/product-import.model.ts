@@ -8,8 +8,8 @@
  * value of a line travels twice — the preview is a proposal, not a draft the server remembers.
  */
 
-/** What would happen, or did happen, to one line. Mirrors ProductImportOutcome. */
-export enum ProductImportOutcome {
+/** What would happen, or did happen, to one line. Mirrors ImportOutcome. */
+export enum ImportOutcome {
   /** No product carried that name: a new reference. */
   CREATED = 'CREATED',
   /** The name or the barcode is already in the catalogue: the quantities add up. */
@@ -20,8 +20,8 @@ export enum ProductImportOutcome {
   SKIPPED = 'SKIPPED',
 }
 
-/** The decision a row carries. Mirrors ProductImportAction. */
-export enum ProductImportAction {
+/** The decision a row carries. Mirrors ImportAction. */
+export enum ImportAction {
   /** Add this quantity to an existing product, keeping its name, price and rayon. */
   MERGE = 'MERGE',
   /** Add a separate reference — what the row's "Renommer" button produces. */
@@ -54,8 +54,8 @@ export interface ProductImportLine {
   categoryPath: string;
   /** The rayon that path resolved to. Null with a non-blank path means it would be created. */
   categoryId: number | null;
-  outcome: ProductImportOutcome;
-  action: ProductImportAction;
+  outcome: ImportOutcome;
+  action: ImportAction;
   existing: ProductImportMatch | null;
   /** `'barcode'` or `'name'` — a barcode is an identity, a name is a guess. */
   matchedOn: string | null;
@@ -67,7 +67,7 @@ export interface ProductImportLine {
 }
 
 /** POST /api/products/import/preview — the file's text, decoded by the browser. */
-export interface ProductImportPreviewRequest {
+export interface ImportPreviewRequest {
   content: string;
 }
 
@@ -103,19 +103,28 @@ export interface ProductImportLineRequest {
   categoryId: number | null;
   /** A rayon by name, created if missing. Only read when `categoryId` is null. */
   categoryPath: string | null;
-  action: ProductImportAction;
+  action: ImportAction;
   /** Required by MERGE, ignored otherwise. */
   mergeIntoId: number | null;
 }
 
 export interface ProductImportRequest {
   lines: ProductImportLineRequest[];
+  /**
+   * Who delivered the goods, or null when the file is an inventory count rather than a delivery
+   * note.
+   *
+   * <p>Either way every line that raises a stock writes a movement signed by the account running
+   * the import — the actor is read from the session server-side and never travels here. The
+   * supplier only says whether anybody handed the goods over.
+   */
+  supplierId: number | null;
 }
 
 export interface ProductImportResultLine {
   line: number;
   name: string;
-  outcome: ProductImportOutcome;
+  outcome: ImportOutcome;
   /** The reference created or added to; null when the line was refused. */
   productId: number | null;
   /** Why, in French, for the refused and the renamed ones. Empty for the rest. */
@@ -127,6 +136,10 @@ export interface ProductImportResult {
   merged: number;
   skipped: number;
   unitsAdded: number;
+  /** Stock entries written, one per line that actually raised a quantity. */
+  movements: number;
+  /** Who the entries name as having delivered, or null for an inventory count. */
+  supplierName: string | null;
   rayonsCreated: string[];
   lines: ProductImportResultLine[];
 }

@@ -1,9 +1,10 @@
 package com.houssen.liberoshop.web;
 
+import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.CsvTable;
 import com.houssen.liberoshop.service.ProductImportColumns;
 import com.houssen.liberoshop.service.ProductImportService;
-import com.houssen.liberoshop.web.dto.ProductImportPreviewRequest;
+import com.houssen.liberoshop.web.dto.ImportPreviewRequest;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
 import com.houssen.liberoshop.web.dto.ProductImportRequest;
 import com.houssen.liberoshop.web.dto.ProductImportResultResponse;
@@ -35,23 +36,31 @@ import java.util.List;
 public class ProductImportController {
 
     private final ProductImportService importService;
+    private final CurrentUser currentUser;
 
-    public ProductImportController(ProductImportService importService) {
+    public ProductImportController(ProductImportService importService, CurrentUser currentUser) {
         this.importService = importService;
+        this.currentUser = currentUser;
     }
 
     /**
      * What the file says, and what applying it would do to the catalogue. Nothing is written.
      */
     @PostMapping("/preview")
-    public ProductImportPreviewResponse preview(@Valid @RequestBody ProductImportPreviewRequest request) {
+    public ProductImportPreviewResponse preview(@Valid @RequestBody ImportPreviewRequest request) {
         return importService.preview(request.content());
     }
 
-    /** Writes the ticked lines. The only call here that touches the catalogue. */
+    /**
+     * Writes the ticked lines. The only call here that touches the catalogue.
+     *
+     * <p>The actor comes from the session, never from the payload -- the same rule the sales and
+     * hand-over endpoints follow. It is what lets every stock entry this writes name somebody who
+     * was really signed in at the time.
+     */
     @PostMapping("/apply")
     public ProductImportResultResponse apply(@Valid @RequestBody ProductImportRequest request) {
-        return importService.apply(request);
+        return importService.apply(request, currentUser.require());
     }
 
     /**
