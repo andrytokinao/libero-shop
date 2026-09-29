@@ -165,7 +165,7 @@ export const routes: Routes = [
       },
       {
         path: 'marges',
-        title: 'Marges',
+        title: 'Bénéfices & stock',
         loadComponent: () =>
           import('./features/admin/margin.component').then((m) => m.MarginComponent),
       },

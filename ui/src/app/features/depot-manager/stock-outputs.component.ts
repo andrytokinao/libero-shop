@@ -3,7 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
-import { StockOutput } from '../../core/models';
+import { NotificationType, StockOutput } from '../../core/models';
+import { reloadOn } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { DeliveryStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -76,6 +77,10 @@ export class StockOutputsComponent {
 
   private readonly resource = apiResource<StockOutput[]>([], () => this.api.outputs(this.search()));
   protected readonly outputs = this.resource.value;
+
+  constructor() {
+    reloadOn(this.resource, NotificationType.SALE_CREATED);
+  }
 
   protected readonly units = computed(() =>
     this.outputs().reduce((total, output) => total + output.quantity, 0),

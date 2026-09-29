@@ -38,7 +38,7 @@ public class CurrentUser {
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt token)) {
             throw new AuthenticationCredentialsNotFoundException("Aucun utilisateur authentifie.");
         }
-        UserApp user = users.findById(userIdOf(token))
+        UserApp user = users.findById(JwtService.userIdOf(token))
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
                         "Le compte connecte n'existe plus."));
         if (!user.isEnabled()) {
@@ -56,17 +56,5 @@ public class CurrentUser {
         String authority = "ROLE_" + role.name();
         return authentication.getAuthorities().stream()
                 .anyMatch(granted -> authority.equals(granted.getAuthority()));
-    }
-
-    /**
-     * JSON has one number type, so the claim comes back as whatever width the parser
-     * chose; reading it as a {@link Number} avoids a cast that depends on that choice.
-     */
-    private static long userIdOf(Jwt token) {
-        if (token.getClaim(JwtService.CLAIM_USER_ID) instanceof Number id) {
-            return id.longValue();
-        }
-        throw new AuthenticationCredentialsNotFoundException(
-                "Jeton sans identifiant de compte : reconnectez-vous.");
     }
 }

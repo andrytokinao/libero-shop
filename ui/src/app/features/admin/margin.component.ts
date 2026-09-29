@@ -1,10 +1,11 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { EMPTY, catchError, switchMap } from 'rxjs';
+import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
-import { MarginReport } from '../../core/models';
+import { MarginReport, StockValuation } from '../../core/models';
 import { isoDate } from '../../core/utils/date.util';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -38,19 +39,28 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
 }
 
 /**
- * Gross margin over a period: sold, cost, earned.
+ * The money side of the shop, in two halves that answer two different questions.
  *
- * <p>Every figure comes from the server, which froze each sale's cost at checkout — so the page
- * shows what the shop really earned on the day, not a re-computation at today's prices. Sales of
- * goods whose cost was never recorded are shown apart as "non valorisé", never folded into the
- * margin as if they had cost nothing.
+ * <p>"What did we earn?" — the period half: turnover, what the goods sold had cost, and the
+ * profit made. The costs are the ones the server froze on each sale at checkout, so the page shows
+ * what the shop really earned on the day, not a re-computation at today's prices.
+ *
+ * <p>"What is on the shelves?" — the stock half: the money tied up in the stock at its average
+ * cost, what it would bring if it all sold, and the profit still waiting in it. A snapshot, so it
+ * does not follow the dates chosen above.
+ *
+ * <p>In both halves, goods whose cost was never recorded are shown apart and never folded into a
+ * profit as if they had cost nothing.
  */
 @Component({
   selector: 'app-margin',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, KpiCardComponent, AriaryPipe],
+  imports: [FormsModule, DatePipe, KpiCardComponent, AriaryPipe],
   template: `
+    <!-- ================================================= what the period earned -->
     <div class="card period">
+      <h2>Ventes et bénéfice</h2>
+      <div class="spacer"></div>
       <label for="margin-preset">Période</label>
       <select
         id="margin-preset"
@@ -84,39 +94,46 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
     @if (report(); as r) {
       <div class="grid g4" style="margin-top:16px;">
         <app-kpi-card
-          label="Ventes"
+          label="Chiffre d'affaires"
           [value]="r.revenue | ariary"
+          [hint]="'dont encaissé ' + (r.paidRevenue | ariary) + ' · reste dû ' + (r.revenue - r.paidRevenue | ariary)"
+        />
+        <app-kpi-card
+          label="Coût d'achat des ventes"
+          [value]="r.costOfGoodsSold | ariary"
+          hint="au coût moyen du jour de chaque vente"
+        />
+        <app-kpi-card
+          label="Bénéfice réalisé"
+          [value]="r.grossMargin | ariary"
           [hint]="'du ' + (r.from | date: 'dd/MM') + ' au ' + (r.to | date: 'dd/MM')"
         />
-        <app-kpi-card label="Coût des ventes" [value]="r.costOfGoodsSold | ariary" hint="au coût moyen du jour de vente" />
-        <app-kpi-card label="Marge brute" [value]="r.grossMargin | ariary" />
         <app-kpi-card
           label="Taux de marge"
-          [value]="r.marginRate === null ? '—' : (r.marginRate | number: '1.1-1') + ' %'"
-          hint="marge / prix de vente"
+          [value]="percent(r.marginRate)"
+          hint="bénéfice / prix de vente"
         />
       </div>
 
       @if (r.coveragePercent < 100) {
         <div class="card coverage">
-          La marge couvre {{ r.coveragePercent }} % des ventes.
-          {{ r.uncostedRevenue | ariary }} ont été vendus sans prix d'achat connu : ils ne sont pas
-          comptés dans la marge. Saisissez le prix d'achat à chaque approvisionnement pour
-          compléter le calcul.
+          Le bénéfice couvre {{ r.coveragePercent }} % du chiffre d'affaires.
+          {{ r.uncostedRevenue | ariary }} ont été vendus sans prix d'achat connu et ne sont pas
+          comptés. Saisissez le prix d'achat à chaque approvisionnement pour compléter le calcul.
         </div>
       }
 
       <div class="card" style="margin-top:16px;">
-        <h2>Marge par produit <small>de la plus forte à la plus faible</small></h2>
+        <h2>Bénéfice par produit <small>du plus fort au plus faible</small></h2>
         @if (r.byProduct.length) {
           <table>
             <thead>
               <tr>
                 <th>Produit</th>
                 <th class="num">Unités</th>
-                <th class="num">Ventes</th>
-                <th class="num">Coût</th>
-                <th class="num">Marge</th>
+                <th class="num">Chiffre d'affaires</th>
+                <th class="num">Coût d'achat</th>
+                <th class="num">Bénéfice</th>
                 <th class="num">Taux</th>
               </tr>
             </thead>
@@ -135,9 +152,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
                   <td class="num">{{ row.revenue | ariary }}</td>
                   <td class="num">{{ row.costOfGoodsSold | ariary }}</td>
                   <td class="num" [class.loss]="row.grossMargin < 0">{{ row.grossMargin | ariary }}</td>
-                  <td class="num">
-                    {{ row.marginRate === null ? '—' : (row.marginRate | number: '1.1-1') + ' %' }}
-                  </td>
+                  <td class="num">{{ percent(row.marginRate) }}</td>
                 </tr>
               }
             </tbody>
@@ -149,6 +164,88 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
     } @else {
       <div class="empty" style="margin-top:16px;">Chargement...</div>
     }
+
+    <!-- ================================================= what the shelves hold -->
+    @if (valuation(); as v) {
+      <div class="card" style="margin-top:24px;">
+        <h2>
+          Valeur du stock
+          <small>
+            aujourd'hui · {{ v.units }} unité(s), {{ v.references }} référence(s) — ne dépend pas
+            de la période
+          </small>
+        </h2>
+        <div class="grid g3">
+          <app-kpi-card
+            [flat]="true"
+            label="Valeur d'achat du stock"
+            [value]="v.costValue | ariary"
+            hint="ce que le stock a coûté, au coût moyen"
+          />
+          <app-kpi-card
+            [flat]="true"
+            label="Valeur de vente du stock"
+            [value]="v.saleValue | ariary"
+            hint="ce qu'il rapporterait vendu au prix actuel"
+          />
+          <app-kpi-card
+            [flat]="true"
+            label="Bénéfice potentiel"
+            [value]="v.potentialMargin | ariary"
+            [hint]="'taux ' + percent(v.potentialMarginRate) + ' · réalisé une fois vendu'"
+          />
+        </div>
+
+        @if (v.coveragePercent < 100) {
+          <div class="coverage-inline">
+            {{ v.uncostedUnits }} unité(s) n'ont jamais eu de prix d'achat : elles comptent dans la
+            valeur de vente mais pas dans la valeur d'achat ni dans le bénéfice potentiel (couverture
+            {{ v.coveragePercent }} %).
+          </div>
+        }
+
+        @if (v.byCategory.length) {
+          <table style="margin-top:12px;">
+            <thead>
+              <tr>
+                <th>Catégorie</th>
+                <th class="num">Unités</th>
+                <th class="num">Valeur d'achat</th>
+                <th class="num">Valeur de vente</th>
+                <th class="num">Bénéfice potentiel</th>
+                <th class="num">Taux</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of v.byCategory; track row.categoryId) {
+                <tr>
+                  <td>
+                    {{ row.path }}
+                    @if (row.uncostedUnits > 0) {
+                      <span
+                        class="badge amber"
+                        [title]="row.uncostedUnits + ' unité(s) sans prix d’achat'"
+                      >
+                        partiel
+                      </span>
+                    }
+                  </td>
+                  <td class="num">{{ row.units }}</td>
+                  <td class="num">{{ row.costValue | ariary }}</td>
+                  <td class="num">{{ row.saleValue | ariary }}</td>
+                  <td class="num" [class.loss]="row.potentialMargin < 0">
+                    {{ row.potentialMargin | ariary }}
+                  </td>
+                  <td class="num">{{ percent(row.potentialMarginRate) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <div class="empty">Aucun produit en stock.</div>
+        }
+      </div>
+    }
   `,
   styles: `
     .period {
@@ -156,6 +253,14 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
+
+      h2 {
+        margin: 0;
+      }
+
+      .spacer {
+        flex: 1;
+      }
 
       label {
         font-size: 11.5px;
@@ -166,6 +271,12 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
 
     .coverage {
       margin-top: 16px;
+      font-size: 12.5px;
+      color: var(--amber);
+    }
+
+    .coverage-inline {
+      margin-top: 10px;
       font-size: 12.5px;
       color: var(--amber);
     }
@@ -194,6 +305,11 @@ export class MarginComponent {
     { initialValue: null },
   );
 
+  /** Loaded once: the stock does not depend on the period chosen. */
+  protected readonly valuation = apiResource<StockValuation | null>(null, () =>
+    this.costing.stockValuation(),
+  ).value;
+
   protected choose(preset: Preset): void {
     this.preset.set(preset);
     if (preset !== 'custom') {
@@ -207,5 +323,12 @@ export class MarginComponent {
     }
     this.preset.set('custom');
     this.period.set({ from, to });
+  }
+
+  /** "18,4 %", or a dash when there is no rate — nothing sold, or nothing costed. */
+  protected percent(rate: number | null): string {
+    return rate === null
+      ? '—'
+      : `${rate.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
   }
 }

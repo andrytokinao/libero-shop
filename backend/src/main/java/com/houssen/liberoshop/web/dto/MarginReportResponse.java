@@ -13,7 +13,8 @@ import java.util.List;
  *
  * @param from            first day, inclusive
  * @param to              last day, inclusive
- * @param revenue         everything sold in the period, paid or not
+ * @param revenue         everything sold in the period, paid or not -- the turnover
+ * @param paidRevenue     the part of {@code revenue} already settled; the rest is owed
  * @param costedRevenue   the part of {@code revenue} whose cost is known
  * @param costOfGoodsSold what the costed lines cost the shop
  * @param grossMargin     {@code costedRevenue - costOfGoodsSold}
@@ -25,6 +26,7 @@ import java.util.List;
 public record MarginReportResponse(LocalDate from,
                                    LocalDate to,
                                    BigDecimal revenue,
+                                   BigDecimal paidRevenue,
                                    BigDecimal costedRevenue,
                                    BigDecimal costOfGoodsSold,
                                    BigDecimal grossMargin,

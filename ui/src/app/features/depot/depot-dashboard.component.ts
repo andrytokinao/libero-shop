@@ -2,7 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { InvoiceApi } from '../../core/api/invoice.api';
-import { DepotDashboard, Invoice } from '../../core/models';
+import { DepotDashboard, Invoice, NotificationType } from '../../core/models';
+import { reloadOn } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
@@ -68,6 +69,10 @@ export class DepotDashboardComponent {
 
   private readonly resource = apiResource(EMPTY, () => this.dashboardApi.depot());
   protected readonly data = this.resource.value;
+
+  constructor() {
+    reloadOn(this.resource, NotificationType.SALE_CREATED);
+  }
 
   protected deliver(invoice: Invoice): void {
     this.busy.set(true);

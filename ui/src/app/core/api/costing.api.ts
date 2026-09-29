@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api.config';
-import { MarginReport, ProductCost, SupplierPrice } from '../models';
+import { MarginReport, ProductCost, StockValuation, SupplierPrice } from '../models';
 
 /** Purchase costs and margins. The server refuses these to the counter roles. */
 @Injectable({ providedIn: 'root' })
@@ -16,6 +16,10 @@ export class CostingApi {
   /** What each supplier has charged for one product, cheapest on average first. */
   supplierPrices(productId: number): Observable<SupplierPrice[]> {
     return this.http.get<SupplierPrice[]>(`${API_BASE_URL}/costing/products/${productId}/suppliers`);
+  }
+
+  stockValuation(): Observable<StockValuation> {
+    return this.http.get<StockValuation>(`${API_BASE_URL}/costing/stock-valuation`);
   }
 
   /** @param from, to ISO dates (yyyy-MM-dd), both inclusive; the server defaults to this month */

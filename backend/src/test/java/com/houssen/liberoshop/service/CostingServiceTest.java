@@ -8,8 +8,12 @@ import com.houssen.liberoshop.entity.SaleLine;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
+import com.houssen.liberoshop.entity.Category;
+import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.SaleLineRepository;
+import com.houssen.liberoshop.repository.SaleRepository;
+import com.houssen.liberoshop.web.dto.StockValuationResponse;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.web.dto.MarginReportResponse;
@@ -65,6 +69,10 @@ class CostingServiceTest {
     private StockMovementRepository movements;
     @Autowired
     private SaleLineRepository saleLines;
+    @Autowired
+    private SaleRepository sales;
+    @Autowired
+    private CategoryRepository categories;
 
     private CostingService service;
     private UserApp nadia;
@@ -75,7 +83,8 @@ class CostingServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(TODAY.atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant(),
                 ZoneId.systemDefault());
-        service = new CostingService(products, movements, saleLines, new BusinessCalendar(clock));
+        service = new CostingService(products, categories, movements, sales, saleLines,
+                new BusinessCalendar(clock));
 
         nadia = db.persist(UserApp.builder()
                 .fullName("Nadia Rasolofo")
@@ -146,6 +155,8 @@ class CostingServiceTest {
         assertEquals(new BigDecimal("19.5"), report.marginRate());
         assertEquals(100, report.coveragePercent());
         assertEquals(3, report.byProduct().getFirst().unitsSold());
+        assertEquals(0, new BigDecimal("25000").compareTo(report.paidRevenue()),
+                "the unpaid sale is turnover, not cash");
     }
 
     @Test
@@ -186,6 +197,36 @@ class CostingServiceTest {
     void invertedPeriod() {
         assertThrows(BusinessRuleException.class,
                 () -> service.marginReport(TODAY, TODAY.minusDays(1)));
+    }
+
+    // ----------------------------------------------------------------- valuation
+
+    @Test
+    @DisplayName("values the shelves at cost and at sale price, the difference being the profit waiting")
+    void stockValuation() {
+        Category epicerie = db.persist(Category.builder().name("Epicerie").build());
+        riz.setCategory(epicerie);
+        db.persist(Product.builder().name("Vide").price(new BigDecimal("500"))
+                .stockQuantity(0).averageCost(new BigDecimal("400")).category(epicerie).build());
+        db.flush();
+
+        StockValuationResponse valuation = service.stockValuation();
+
+        // riz: 50 × 10 200 at cost, 50 × 12 500 at sale price; sel: 30 × 900, never costed.
+        assertEquals(0, new BigDecimal("510000").compareTo(valuation.costValue()));
+        assertEquals(0, new BigDecimal("652000").compareTo(valuation.saleValue()));
+        assertEquals(0, new BigDecimal("115000").compareTo(valuation.potentialMargin()));
+        assertEquals(new BigDecimal("18.4"), valuation.potentialMarginRate());
+        assertEquals(30, valuation.uncostedUnits());
+        assertEquals(95, valuation.coveragePercent());
+        assertEquals(2, valuation.references(), "an empty shelf is not stock");
+
+        StockValuationResponse.CategoryValuation first = valuation.byCategory().getFirst();
+        assertEquals("Epicerie", first.path());
+        assertEquals(0, first.uncostedUnits());
+        StockValuationResponse.CategoryValuation loose = valuation.byCategory().getLast();
+        assertEquals(CostingService.NO_CATEGORY_LABEL, loose.path());
+        assertEquals(30, loose.uncostedUnits());
     }
 
     // ------------------------------------------------------------------ products

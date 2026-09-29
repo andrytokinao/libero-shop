@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.security;
 
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -79,6 +80,20 @@ public class JwtService {
     public Authentication authenticationOf(String token) {
         Jwt decoded = decoder.decode(token);
         return authenticationConverter.convert(decoded);
+    }
+
+    /**
+     * The account a decoded token speaks for.
+     *
+     * <p>JSON has one number type, so the claim comes back as whatever width the parser
+     * chose; reading it as a {@link Number} avoids a cast that depends on that choice.
+     */
+    public static long userIdOf(Jwt token) {
+        if (token.getClaim(CLAIM_USER_ID) instanceof Number id) {
+            return id.longValue();
+        }
+        throw new AuthenticationCredentialsNotFoundException(
+                "Jeton sans identifiant de compte : reconnectez-vous.");
     }
 
     private static List<String> authoritiesOf(AppUserDetails user) {

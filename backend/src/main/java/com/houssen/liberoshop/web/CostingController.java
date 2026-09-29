@@ -3,6 +3,7 @@ package com.houssen.liberoshop.web;
 import com.houssen.liberoshop.service.CostingService;
 import com.houssen.liberoshop.web.dto.MarginReportResponse;
 import com.houssen.liberoshop.web.dto.ProductCostResponse;
+import com.houssen.liberoshop.web.dto.StockValuationResponse;
 import com.houssen.liberoshop.web.dto.SupplierPriceResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,6 +40,13 @@ public class CostingController {
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<SupplierPriceResponse> supplierPrices(@PathVariable Long productId) {
         return costingService.supplierPricesOf(productId);
+    }
+
+    /** The stock on hand at cost and at sale price: the money tied up, and the profit waiting. */
+    @GetMapping("/stock-valuation")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public StockValuationResponse stockValuation() {
+        return costingService.stockValuation();
     }
 
     /** @param from first day, inclusive, ISO format; defaults to the first of the month */

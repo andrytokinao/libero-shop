@@ -6,6 +6,7 @@ import { filter } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
+import { NotificationBellComponent } from './shared/components/notification-bell.component';
 import { ToastComponent } from './shared/components/toast.component';
 
 /** Application shell: role sidebar, licence bar, top bar, routed page and toast host. */
@@ -18,6 +19,7 @@ import { ToastComponent } from './shared/components/toast.component';
     RouterLinkActive,
     DatePipe,
     LicenseBannerComponent,
+    NotificationBellComponent,
     ToastComponent,
   ],
   templateUrl: './app.component.html',

@@ -2,7 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
-import { DeliveryStatus, Invoice } from '../../core/models';
+import { DeliveryStatus, Invoice, NotificationType } from '../../core/models';
+import { reloadOn } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { deliveryActionLabel } from './delivery.util';
@@ -71,6 +72,11 @@ export class OrderDeliveryComponent {
     }),
   );
   protected readonly invoices = this.resource.value;
+
+  constructor() {
+    // A sale made at the counter appears in the queue without anyone pressing F5.
+    reloadOn(this.resource, NotificationType.SALE_CREATED);
+  }
 
   protected onSearch(value: string): void {
     this.search.set(value);

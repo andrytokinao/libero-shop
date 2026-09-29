@@ -67,9 +67,12 @@
       <app-license-banner />
       <div class="topbar">
         <h1>{{ pageTitle() }}</h1>
-        <div class="meta">
-          {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que
-          {{ auth.currentUser()?.fullName }}
+        <div class="topbar-end">
+          <div class="meta">
+            {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que
+            {{ auth.currentUser()?.fullName }}
+          </div>
+          <app-notification-bell />
         </div>
       </div>
       <div class="content">

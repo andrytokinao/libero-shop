@@ -21,6 +21,7 @@ import com.houssen.liberoshop.service.exception.InsufficientStockException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,9 @@ import java.util.Map;
  * stock output per line, and the payment when the customer settles immediately. Either all
  * of it lands or none does -- a sale that decremented stock without producing an invoice
  * would be a stock discrepancy nobody could explain afterwards.
+ *
+ * <p>What happens because of a sale, beyond that aggregate, is not written here: the checkout
+ * publishes a {@link SaleRecordedEvent} and whoever cares listens for it.
  */
 @Service
 public class SaleService {
@@ -48,16 +52,18 @@ public class SaleService {
     private final PaymentRepository payments;
     private final StockMovementRepository movements;
     private final BusinessCalendar calendar;
+    private final ApplicationEventPublisher events;
 
     public SaleService(SaleRepository sales, InvoiceRepository invoices, ProductRepository products,
                        PaymentRepository payments, StockMovementRepository movements,
-                       BusinessCalendar calendar) {
+                       BusinessCalendar calendar, ApplicationEventPublisher events) {
         this.sales = sales;
         this.invoices = invoices;
         this.products = products;
         this.payments = payments;
         this.movements = movements;
         this.calendar = calendar;
+        this.events = events;
     }
 
     /**
@@ -138,6 +144,18 @@ public class SaleService {
                     .cashRemittance(null)
                     .build());
         }
+
+        // Heard after the commit, not now: a sale rolled back must not reach any screen.
+        events.publishEvent(new SaleRecordedEvent(
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                invoice.getClientName(),
+                savedSale.getTotalAmount(),
+                request.paymentStatus(),
+                savedSale.getLines().size(),
+                savedSale.getLines().stream().mapToInt(SaleLine::getQuantity).sum(),
+                seller.getId(),
+                seller.getFullName()));
 
         return InvoiceResponse.of(invoice);
     }

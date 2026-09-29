@@ -80,6 +80,10 @@ public class SecurityConfiguration {
                         // Installing or renewing a license is an administrative act.
                         .requestMatchers("/api/license/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()
+                        // The WebSocket handshake cannot carry a bearer header, so it is open
+                        // here and the token is checked on the STOMP CONNECT frame instead --
+                        // see StompAuthenticationInterceptor. No frame is served before that.
+                        .requestMatchers("/ws").permitAll()
                         // Anything else is the packaged SPA: index.html, JS, CSS, icons.
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2

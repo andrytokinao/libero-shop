@@ -1,6 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { NEVER } from 'rxjs';
+import { RealtimeService } from './core/realtime/realtime.service';
 import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
@@ -59,7 +62,17 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // The shell's bell listens for pushed notifications; a test of the shell must not
+        // open a real socket to the test runner's server.
+        {
+          provide: RealtimeService,
+          useValue: { notifications$: NEVER, state: signal('offline') },
+        },
+      ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });

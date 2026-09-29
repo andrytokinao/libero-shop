@@ -40,6 +40,41 @@ export interface SupplierPrice {
   lastPurchaseDate: string;
 }
 
+/** One rayon's stock, valued. */
+export interface CategoryValuation {
+  /** Null for the products filed under no rayon. */
+  categoryId: number | null;
+  path: string;
+  references: number;
+  units: number;
+  costValue: number;
+  saleValue: number;
+  potentialMargin: number;
+  potentialMarginRate: number | null;
+  /** Units never costed; while above zero the margin covers only the others. */
+  uncostedUnits: number;
+}
+
+/**
+ * GET /api/costing/stock-valuation — the shelves now, at cost and at sale price. A snapshot,
+ * not a period.
+ */
+export interface StockValuation {
+  references: number;
+  units: number;
+  /** Units × weighted average cost: the money tied up in the stock. */
+  costValue: number;
+  /** Units × sale price: what the stock would bring if it all sold. */
+  saleValue: number;
+  costedSaleValue: number;
+  /** costedSaleValue − costValue: the profit still on the shelves. */
+  potentialMargin: number;
+  potentialMarginRate: number | null;
+  uncostedUnits: number;
+  coveragePercent: number;
+  byCategory: CategoryValuation[];
+}
+
 /** One product's line of a margin report. */
 export interface ProductMargin {
   productId: number;
@@ -58,8 +93,10 @@ export interface MarginReport {
   /** ISO dates, both inclusive. */
   from: string;
   to: string;
-  /** Everything sold in the period, paid or not. */
+  /** Everything sold in the period, paid or not — the turnover. */
   revenue: number;
+  /** The part of revenue already settled; the rest is still owed. */
+  paidRevenue: number;
   /** The part of revenue whose cost is known. */
   costedRevenue: number;
   costOfGoodsSold: number;
