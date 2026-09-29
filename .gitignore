@@ -4,6 +4,10 @@
 # H2 database written at runtime by spring.datasource.url
 /backend/data/
 /backend/target/
+
+# Angular build copied in by the Maven build (see backend/pom.xml), and the Node it installs
+/backend/src/main/resources/static/
+/ui/node/
 *.stackdump
 
 # Local experiments and verification artefacts
