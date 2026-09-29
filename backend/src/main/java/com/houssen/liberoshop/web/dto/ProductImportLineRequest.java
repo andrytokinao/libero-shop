@@ -25,6 +25,8 @@ import java.math.BigDecimal;
  * @param categoryId  the chosen rayon, or null
  * @param categoryPath a rayon by name, created if missing -- how a file's own rayons land.
  *                    Only read when {@code categoryId} is null.
+ * @param cost        purchase price of one unit, or null. Read for merges as well as
+ *                    creations: unlike the sale price, it describes these goods, not the product.
  */
 public record ProductImportLineRequest(
         int line,
@@ -42,6 +44,9 @@ public record ProductImportLineRequest(
         @NotNull
         @PositiveOrZero(message = "le prix ne peut pas etre negatif")
         BigDecimal price,
+
+        @PositiveOrZero(message = "le prix d'achat ne peut pas etre negatif")
+        BigDecimal cost,
 
         @Size(max = 64)
         String barcode,

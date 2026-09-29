@@ -28,6 +28,10 @@ export interface Supply extends StockMovementBase {
   supplier: { id: number; name: string } | null;
   /** Said outright by the server so a screen does not have to infer it from the null. */
   fromImport: boolean;
+  /** Purchase price of one unit of this receipt; null when it was not given. */
+  unitCost: number | null;
+  /** unitCost × quantity, or null with it. */
+  totalCost: number | null;
 }
 
 /** Mirrors com.houssen.liberoshop.entity.StockOutput — goods leaving against an invoice. */

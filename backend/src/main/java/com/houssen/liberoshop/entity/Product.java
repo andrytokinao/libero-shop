@@ -31,6 +31,14 @@ public class Product {
     private int stockQuantity;
 
     /**
+     * Weighted average purchase cost of one unit of the stock on hand -- the "coût moyen
+     * pondéré". Moved only by {@code PurchaseCosting}, on every receipt that states a cost.
+     * Null while no receipt of this product has ever carried one.
+     */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal averageCost;
+
+    /**
      * How the shelf counts it: "kg", "L", "sachet", "carton de 12". Kept exactly as the
      * operator wrote it -- an import file says "Kilo" where another says "kg", and folding
      * those into a vocabulary this application invented would relabel the shop's own goods.

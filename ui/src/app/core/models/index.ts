@@ -9,5 +9,6 @@ export * from './invoice.model';
 export * from './payment.model';
 export * from './cash-remittance.model';
 export * from './stock-movement.model';
+export * from './costing.model';
 export * from './license.model';
 export * from './api.model';

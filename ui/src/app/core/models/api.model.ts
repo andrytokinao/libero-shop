@@ -51,6 +51,11 @@ export interface CreateSupplyRequest {
   productId: number;
   supplierId: number;
   quantity: number;
+  /**
+   * What one unit cost on this delivery. Null is accepted — the supplier's invoice sometimes
+   * comes later — but such a receipt teaches the average cost nothing.
+   */
+  unitCost: number | null;
 }
 
 /**

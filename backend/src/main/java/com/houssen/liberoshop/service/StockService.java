@@ -15,6 +15,7 @@ import com.houssen.liberoshop.web.dto.SupplyResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,7 +59,10 @@ public class StockService {
                 .toList();
     }
 
-    /** Receives goods: raises the stock and records the movement that explains the rise. */
+    /**
+     * Receives goods: raises the stock, blends their cost into the product's average, and
+     * records the movement that explains both.
+     */
     @RequiresActiveLicense
     @Transactional
     public SupplyResponse registerSupply(CreateSupplyRequest request, UserApp receiver) {
@@ -66,8 +70,9 @@ public class StockService {
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", request.productId()));
         Supplier supplier = suppliers.findById(request.supplierId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
+        BigDecimal unitCost = PurchaseCosting.scaled(request.unitCost());
 
-        product.adjustStock(request.quantity());
+        PurchaseCosting.receive(product, request.quantity(), unitCost);
 
         Supply supply = movements.save(Supply.builder()
                 .quantity(request.quantity())
@@ -75,6 +80,7 @@ public class StockService {
                 .product(product)
                 .performedBy(receiver)
                 .supplier(supplier)
+                .unitCost(unitCost)
                 .build());
 
         return SupplyResponse.of(supply);

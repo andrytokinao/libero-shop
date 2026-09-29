@@ -40,6 +40,28 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             """)
     List<StockOutput> findOutputs();
 
+    /**
+     * The last receipt of each product that stated a cost -- "the last price I paid". Last in
+     * booking order, which is the identifier's: a whole import file shares one timestamp.
+     */
+    @Query("""
+            select s from Supply s
+              left join fetch s.supplier
+            where s.unitCost is not null
+              and s.id = (select max(t.id) from Supply t
+                          where t.product = s.product and t.unitCost is not null)
+            """)
+    List<Supply> findLatestCostedSupplyPerProduct();
+
+    /** Every receipt of one product that stated a cost, newest first. */
+    @Query("""
+            select s from Supply s
+              left join fetch s.supplier
+            where s.product.id = :productId and s.unitCost is not null
+            order by s.movementDate desc, s.id desc
+            """)
+    List<Supply> findCostedSuppliesOf(@Param("productId") Long productId);
+
     @Query("select count(s) from Supply s where s.movementDate >= :from")
     long countSuppliesSince(@Param("from") LocalDateTime from);
 

@@ -198,7 +198,8 @@ public class ProductImportService {
                     continue;
                 }
                 Product product = target.get();
-                product.adjustStock(line.quantity());
+                BigDecimal unitCost = PurchaseCosting.scaled(line.cost());
+                PurchaseCosting.receive(product, line.quantity(), unitCost);
                 // The file is read as a delivery note, so the shop's own name, price and rayon
                 // stand. A unit it never had is the exception: filling a blank is not a change
                 // of description, and it is the field a first import most often supplies.
@@ -207,7 +208,7 @@ public class ProductImportService {
                 }
                 merged++;
                 unitsAdded += line.quantity();
-                written += book(product, line.quantity(), supplier, operator, enteredAt);
+                written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
                 lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
                         ImportOutcome.MERGED, product.getId(), ""));
                 continue;
@@ -236,19 +237,23 @@ public class ProductImportService {
                 barcode = null;
             }
 
-            Product product = products.save(Product.builder()
+            Product fresh = Product.builder()
                     .name(free)
                     .price(line.price())
-                    .stockQuantity(line.quantity())
+                    .stockQuantity(0)
                     .unit(trimmedUnit(line.unit()))
                     .barcode(barcode)
                     .category(rayon)
-                    .build());
+                    .build();
+            // Received like any delivery, so a new reference starts with its cost as average.
+            BigDecimal unitCost = PurchaseCosting.scaled(line.cost());
+            PurchaseCosting.receive(fresh, line.quantity(), unitCost);
+            Product product = products.save(fresh);
             index.add(product);
 
             created++;
             unitsAdded += line.quantity();
-            written += book(product, line.quantity(), supplier, operator, enteredAt);
+            written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
             lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
                     free.equals(name) ? ImportOutcome.CREATED : ImportOutcome.RENAMED,
                     product.getId(), String.join(" ", notes)));
@@ -266,10 +271,11 @@ public class ProductImportService {
      * references the shop does not hold yet -- and a movement of zero units would be noise in
      * the one list a manager reads to find out what came in.
      *
+     * @param unitCost what one unit cost, or null when the file did not say
      * @param supplier null for an inventory count; see {@link com.houssen.liberoshop.entity.Supply}
      */
-    private int book(Product product, int quantity, Supplier supplier, UserApp operator,
-                     LocalDateTime enteredAt) {
+    private int book(Product product, int quantity, BigDecimal unitCost, Supplier supplier,
+                     UserApp operator, LocalDateTime enteredAt) {
         if (quantity <= 0) {
             return 0;
         }
@@ -279,6 +285,7 @@ public class ProductImportService {
                 .product(product)
                 .performedBy(operator)
                 .supplier(supplier)
+                .unitCost(unitCost)
                 .build());
         return 1;
     }
@@ -337,6 +344,8 @@ public class ProductImportService {
         int quantity;
         String unit;
         BigDecimal price;
+        /** Purchase price of one unit, or null: optional, so never a reason to refuse the line. */
+        BigDecimal cost;
         String barcode;
         String categoryPath = "";
         Long categoryId;
@@ -350,8 +359,13 @@ public class ProductImportService {
         Draft folded;
         final List<String> notes = new ArrayList<>();
 
-        /** Takes over a duplicate line's quantity, and says on both rows what happened. */
+        /**
+         * Takes over a duplicate line's quantity, and says on both rows what happened. Two costs
+         * are blended the way two deliveries would be, since that is what the lines describe.
+         */
         void absorb(Draft duplicate) {
+            cost = PurchaseCosting.averageAfterReceipt(quantity, cost, duplicate.quantity,
+                    duplicate.cost);
             quantity += duplicate.quantity;
             notes.add("La ligne " + duplicate.line + " porte le meme produit : les quantites "
                     + "ont ete additionnees ici.");
@@ -404,6 +418,16 @@ public class ProductImportService {
             draft.notes.add("Prix illisible (\"" + rawPrice + "\") : a saisir avant d'importer.");
         }
         draft.price = price == null ? null : price.setScale(2, RoundingMode.HALF_UP);
+
+        String rawCost = mapping.cell(row, Column.COST);
+        BigDecimal cost = ProductImportColumns.number(rawCost);
+        if (cost != null && cost.signum() < 0) {
+            draft.notes.add("Prix d'achat negatif (\"" + rawCost + "\") : ignore.");
+            cost = null;
+        } else if (!rawCost.isBlank() && cost == null) {
+            draft.notes.add("Prix d'achat illisible (\"" + rawCost + "\") : ignore.");
+        }
+        draft.cost = PurchaseCosting.scaled(cost);
 
         if (draft.unit != null && draft.unit.length() > Product.MAX_UNIT_LENGTH) {
             draft.notes.add("Unite \"" + draft.unit + "\" trop longue : raccourcie a "
@@ -511,6 +535,7 @@ public class ProductImportService {
                         draft.quantity,
                         draft.unit,
                         draft.price,
+                        draft.cost,
                         draft.barcode,
                         draft.categoryPath,
                         draft.categoryId,

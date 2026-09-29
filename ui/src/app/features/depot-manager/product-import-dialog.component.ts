@@ -31,6 +31,8 @@ export interface ProductImportRow {
   quantity: number;
   unit: string | null;
   price: number | null;
+  /** Optional, and editable on a merge too: it describes these goods, not the product. */
+  cost: number | null;
   barcode: string | null;
   categoryId: number | null;
   categoryPath: string;
@@ -158,6 +160,9 @@ export interface ProductImportRow {
                     <th class="num col-qty">Quantité</th>
                     <th class="col-unit">Unité</th>
                     <th class="num col-price">Prix</th>
+                    <th class="num col-price" title="Prix d'achat unitaire, facultatif">
+                      Prix d'achat
+                    </th>
                     <th>Catégorie</th>
                     <th>État</th>
                     <th class="col-actions"></th>
@@ -226,6 +231,17 @@ export interface ProductImportRow {
                           />
                         }
                       </td>
+                      <td class="num col-price">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="—"
+                          [attr.aria-label]="'Prix d’achat, ligne ' + row.line"
+                          [ngModel]="row.cost"
+                          (ngModelChange)="patch(row, { cost: asAmount($event) })"
+                        />
+                      </td>
                       <td>
                         @if (row.action === merge) {
                           <span class="muted">{{ row.existing?.categoryPath ?? '—' }}</span>
@@ -277,12 +293,12 @@ export interface ProductImportRow {
                     @if (problemOf(row); as problem) {
                       <tr class="imp-note bad">
                         <td></td>
-                        <td colspan="8">{{ problem }}</td>
+                        <td colspan="9">{{ problem }}</td>
                       </tr>
                     } @else if (row.notes.length) {
                       <tr class="imp-note">
                         <td></td>
-                        <td colspan="8">{{ row.notes.join(' ') }}</td>
+                        <td colspan="9">{{ row.notes.join(' ') }}</td>
                       </tr>
                     }
                   }
@@ -557,6 +573,7 @@ export class ProductImportDialogComponent {
       quantity: line.quantity,
       unit: line.unit,
       price: line.price,
+      cost: line.cost,
       barcode: line.barcode,
       categoryId: line.categoryId,
       categoryPath: line.categoryPath,
@@ -674,6 +691,9 @@ export class ProductImportDialogComponent {
     }
     if (row.quantity < 0) {
       return 'La quantité ne peut pas être négative.';
+    }
+    if (row.cost !== null && row.cost < 0) {
+      return "Le prix d'achat ne peut pas être négatif : corrigez-le ou videz la case.";
     }
     return null;
   }

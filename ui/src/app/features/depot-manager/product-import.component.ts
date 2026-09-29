@@ -373,6 +373,7 @@ export class ProductImportComponent {
       // The dialog refuses to submit a merge-less row without a price, so the fallback is only
       // there to keep the payload well typed.
       price: row.action === ImportAction.MERGE ? (row.existing?.price ?? 0) : (row.price ?? 0),
+      cost: row.cost,
       barcode: row.barcode?.trim() || null,
       categoryId: row.categoryId,
       categoryPath: row.categoryPath || null,

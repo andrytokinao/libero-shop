@@ -30,7 +30,12 @@ public class StockController {
         this.currentUser = currentUser;
     }
 
+    /**
+     * The receipts, with what each cost. Restricted since receipts carry purchase prices: the
+     * margin a shop makes is not the counter's business, and only the stock screens read this.
+     */
     @GetMapping("/supplies")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<SupplyResponse> supplies() {
         return stockService.findSupplies();
     }

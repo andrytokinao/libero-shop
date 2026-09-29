@@ -49,6 +49,8 @@ export interface ProductImportLine {
   unit: string | null;
   /** Null when the file carried no readable price — the row then asks for one. */
   price: number | null;
+  /** Purchase price of one unit, or null. Optional: never a reason to refuse the line. */
+  cost: number | null;
   barcode: string | null;
   /** The rayon as the file wrote it, verbatim. */
   categoryPath: string;
@@ -99,6 +101,8 @@ export interface ProductImportLineRequest {
   quantity: number;
   unit: string | null;
   price: number;
+  /** Read for merges too: it describes these goods, not the product. */
+  cost: number | null;
   barcode: string | null;
   categoryId: number | null;
   /** A rayon by name, created if missing. Only read when `categoryId` is null. */

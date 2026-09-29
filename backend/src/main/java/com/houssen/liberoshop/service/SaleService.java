@@ -93,8 +93,10 @@ public class SaleService {
             sale.getLines().add(SaleLine.builder()
                     .sale(sale)
                     .product(product)
-                    // Frozen here: a later price change must not rewrite past receipts.
+                    // Both frozen here: a later price change must not rewrite past receipts,
+                    // and a later delivery at another cost must not rewrite past margins.
                     .unitPrice(product.getPrice())
+                    .unitCost(PurchaseCosting.costOfSale(product))
                     .quantity(quantity)
                     .build());
 

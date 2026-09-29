@@ -56,6 +56,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
     items: [
       { icon: '◧', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
       { icon: '↗', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
+      { icon: '%', label: 'Marges', path: '/admin/marges' },
       { icon: '▢', label: 'Stock global', path: '/admin/stock-global' },
       { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },

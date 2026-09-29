@@ -8,6 +8,11 @@ function toLocalIso(date: Date): string {
   );
 }
 
+/** A local calendar day as `yyyy-MM-dd`, the wire format of LocalDate. */
+export function isoDate(date: Date): string {
+  return toLocalIso(date).slice(0, 10);
+}
+
 export function nowIso(): string {
   return toLocalIso(new Date());
 }

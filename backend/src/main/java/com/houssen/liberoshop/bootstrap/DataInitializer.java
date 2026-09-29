@@ -27,6 +27,7 @@ import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.BusinessCalendar;
 import com.houssen.liberoshop.service.InvoiceNumbering;
+import com.houssen.liberoshop.service.PurchaseCosting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -166,10 +167,15 @@ public class DataInitializer implements ApplicationRunner {
         return categories.save(Category.builder().name(name).build());
     }
 
+    /**
+     * A reference bought at about three quarters of its shelf price, rounded to the hundred
+     * Ariary -- a grocery's usual mark-up, so the margin screens have plausible figures.
+     */
     private Product product(String name, long price, int stock, String barcode, Category category) {
         return products.save(Product.builder()
                 .name(name)
                 .price(BigDecimal.valueOf(price))
+                .averageCost(PurchaseCosting.scaled(BigDecimal.valueOf(Math.round(price * 0.75 / 100) * 100)))
                 .stockQuantity(stock)
                 .barcode(barcode)
                 .category(category)
@@ -201,6 +207,7 @@ public class DataInitializer implements ApplicationRunner {
                 .product(product)
                 .performedBy(by)
                 .supplier(supplier)
+                .unitCost(product.getAverageCost())
                 .build());
     }
 
@@ -298,6 +305,7 @@ public class DataInitializer implements ApplicationRunner {
                     .sale(sale)
                     .product(seedLine.product())
                     .unitPrice(seedLine.product().getPrice())
+                    .unitCost(PurchaseCosting.costOfSale(seedLine.product()))
                     .quantity(seedLine.quantity())
                     .build());
             seedLine.product().adjustStock(-seedLine.quantity());

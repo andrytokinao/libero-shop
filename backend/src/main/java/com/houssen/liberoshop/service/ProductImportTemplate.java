@@ -32,6 +32,7 @@ public final class ProductImportTemplate {
             Column.QUANTITY, "Quantité",
             Column.UNIT, "Unité",
             Column.PRICE, "Prix",
+            Column.COST, "Prix d'achat",
             Column.BARCODE, "Code barres",
             Column.CATEGORY, "Catégorie");
 
@@ -40,6 +41,8 @@ public final class ProductImportTemplate {
             Column.QUANTITY, "Quantité à ajouter au stock. Vide = 0.",
             Column.UNIT, "Unité de vente : pièce, kg, L, sac, bouteille... Facultatif.",
             Column.PRICE, "Prix de vente unitaire en Ariary. S'il manque, il sera demandé avant l'import.",
+            Column.COST, "Prix d'achat unitaire en Ariary, chez le fournisseur. Facultatif, mais "
+                    + "sans lui la marge de ces unités ne peut pas être calculée.",
             Column.BARCODE, "Code EAN du produit. Facultatif. La colonne est en format texte : "
                     + "ne la changez pas, sinon les codes longs sont abîmés.",
             Column.CATEGORY, "Rayon, avec ses niveaux séparés par « > » : Épicerie > Riz. "
@@ -51,12 +54,14 @@ public final class ProductImportTemplate {
                     Column.QUANTITY, 50,
                     Column.UNIT, "sac",
                     Column.PRICE, 4500,
+                    Column.COST, 3600,
                     Column.BARCODE, "6111234567890",
                     Column.CATEGORY, "Épicerie > Riz"),
             Map.of(Column.NAME, "Eau Vive 1,5L",
                     Column.QUANTITY, 24,
                     Column.UNIT, "bouteille",
                     Column.PRICE, 2000,
+                    Column.COST, 1500,
                     Column.CATEGORY, "Boissons > Eau"));
 
     private ProductImportTemplate() {

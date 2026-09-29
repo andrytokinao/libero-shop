@@ -181,6 +181,7 @@ class ProductImportServiceTest {
                 line.quantity(),
                 line.unit(),
                 line.price() == null ? BigDecimal.ZERO : line.price(),
+                line.cost(),
                 line.barcode(),
                 line.categoryId(),
                 line.categoryPath(),
@@ -204,17 +205,18 @@ class ProductImportServiceTest {
     @DisplayName("finds the recommended columns under the headers the shop actually wrote")
     void mapsColumnsByAnySpelling() {
         ProductImportPreviewResponse preview = service.preview(
-                "Désignation;Qte stock;Unité;Prix de vente;Code-Barres;Rayon\n"
-                        + "Riz parfumé 5kg;40;sac;12 500 Ar;6001001000015;Alimentaire\n");
+                "Désignation;Qte stock;Unité;Prix de vente;Coût unitaire;Code-Barres;Rayon\n"
+                        + "Riz parfumé 5kg;40;sac;12 500 Ar;10 200 Ar;6001001000015;Alimentaire\n");
 
         ProductImportLineResponse row = line(preview, 0);
         assertEquals("Riz parfumé 5kg", row.name());
         assertEquals(40, row.quantity());
         assertEquals("sac", row.unit());
         assertEquals(0, new BigDecimal("12500.00").compareTo(row.price()));
+        assertEquals(0, new BigDecimal("10200.00").compareTo(row.cost()));
         assertEquals("6001001000015", row.barcode());
         assertEquals("Alimentaire", row.categoryPath());
-        assertTrue(preview.missing().isEmpty(), "all six columns were found");
+        assertTrue(preview.missing().isEmpty(), "all seven columns were found");
     }
 
     @Test
@@ -543,7 +545,7 @@ class ProductImportServiceTest {
         // The preview would have matched on the barcode; the operator insists on a new
         // reference, which is the case this covers.
         ProductImportLineRequest insisted = new ProductImportLineRequest(
-                2, "Lait entier 1L", 20, null, BigDecimal.valueOf(4800), "6001002000053",
+                2, "Lait entier 1L", 20, null, BigDecimal.valueOf(4800), null, "6001002000053",
                 null, null, ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
@@ -559,10 +561,10 @@ class ProductImportServiceTest {
     @DisplayName("reports a merge target that no longer exists instead of failing the import")
     void reportsAVanishedMergeTarget() {
         ProductImportLineRequest orphan = new ProductImportLineRequest(
-                2, "Riz 5kg", 12, null, BigDecimal.valueOf(12500), null, null, null,
+                2, "Riz 5kg", 12, null, BigDecimal.valueOf(12500), null, null, null, null,
                 ImportAction.MERGE, 404L);
         ProductImportLineRequest fine = new ProductImportLineRequest(
-                3, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null, null,
+                3, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null, null, null,
                 ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
@@ -649,12 +651,86 @@ class ProductImportServiceTest {
         Category alimentaire = rayon("Alimentaire", null);
 
         ProductImportLineRequest sent = new ProductImportLineRequest(
-                2, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null,
+                2, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null,
                 alimentaire.getId(), "Un autre rayon", ImportAction.CREATE, null);
 
         run(request(List.of(sent)));
 
         assertSame(alimentaire, shelf.getLast().getCategory());
         assertEquals(1, rayons.size(), "the path must not have created a rayon");
+    }
+
+    // --------------------------------------------------------------- purchase cost
+
+    @Test
+    @DisplayName("reads a purchase price apart from the sale price, whatever its spelling")
+    void readsThePurchasePrice() {
+        ProductImportPreviewResponse preview = service.preview(
+                "Désignation;Prix de vente;Prix d'achat\nSel 1kg;900;650\n");
+
+        assertEquals(0, BigDecimal.valueOf(900).compareTo(line(preview, 0).price()));
+        assertEquals(0, BigDecimal.valueOf(650).compareTo(line(preview, 0).cost()));
+    }
+
+    @Test
+    @DisplayName("an unreadable purchase price is noted and dropped, never a reason to refuse")
+    void unreadableCostIsOptional() {
+        ProductImportPreviewResponse preview =
+                service.preview("nom;prix;cout\nSel 1kg;900;beaucoup\n");
+
+        assertNull(line(preview, 0).cost());
+        assertTrue(line(preview, 0).selected());
+        assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("achat")));
+    }
+
+    @Test
+    @DisplayName("a new reference starts with its purchase price as average cost")
+    void createSeedsTheAverageCost() {
+        ProductImportPreviewResponse preview =
+                service.preview("nom;quantite;prix;prix achat\nSel 1kg;30;900;650\n");
+        run(request(List.of(asSent(line(preview, 0)))));
+
+        Product created = shelf.getLast();
+        assertEquals(30, created.getStockQuantity());
+        assertEquals(new BigDecimal("650.00"), created.getAverageCost());
+        assertEquals(new BigDecimal("650.00"), ledger.getFirst().getUnitCost());
+    }
+
+    @Test
+    @DisplayName("a merge blends the file's cost into the average, weighted by the units")
+    void mergeBlendsTheAverageCost() {
+        Product riz = inCatalogue("Riz 5kg", 40, null, null);
+        riz.setAverageCost(new BigDecimal("10000.00"));
+
+        ProductImportPreviewResponse preview =
+                service.preview("nom;quantite;prix;prix achat\nRiz 5kg;10;12500;11000\n");
+        run(request(List.of(asSent(line(preview, 0)))));
+
+        // (40 × 10 000 + 10 × 11 000) / 50
+        assertEquals(new BigDecimal("10200.00"), riz.getAverageCost());
+        assertEquals(50, riz.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("a merge without a cost leaves the average alone")
+    void mergeWithoutCostKeepsTheAverage() {
+        Product riz = inCatalogue("Riz 5kg", 40, null, null);
+        riz.setAverageCost(new BigDecimal("10000.00"));
+
+        ProductImportPreviewResponse preview = service.preview("nom;quantite\nRiz 5kg;10\n");
+        run(request(List.of(asSent(line(preview, 0)))));
+
+        assertEquals(new BigDecimal("10000.00"), riz.getAverageCost());
+        assertNull(ledger.getFirst().getUnitCost());
+    }
+
+    @Test
+    @DisplayName("two lines of one product at two costs fold into their weighted average")
+    void foldedLinesBlendTheirCosts() {
+        ProductImportPreviewResponse preview = service.preview(
+                "nom;quantite;prix;prix achat\nSel 1kg;10;900;600\nSel 1kg;30;900;700\n");
+
+        assertEquals(40, line(preview, 0).quantity());
+        assertEquals(new BigDecimal("675.00"), line(preview, 0).cost());
     }
 }

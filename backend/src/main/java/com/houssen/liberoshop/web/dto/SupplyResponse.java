@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Supply;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -11,6 +12,8 @@ import java.time.LocalDateTime;
  *                 labels that case rather than showing a blank, since "nobody delivered this"
  *                 is information and an empty cell looks like missing data.
  * @param fromImport said outright so a screen does not have to infer it from a null
+ * @param unitCost what one unit of this receipt cost, or null when it was not given
+ * @param totalCost {@code unitCost × quantity}, or null with it
  */
 public record SupplyResponse(Long id,
                              int quantity,
@@ -18,7 +21,9 @@ public record SupplyResponse(Long id,
                              ProductResponse product,
                              UserResponse performedBy,
                              SupplierRefResponse supplier,
-                             boolean fromImport) {
+                             boolean fromImport,
+                             BigDecimal unitCost,
+                             BigDecimal totalCost) {
 
     public static SupplyResponse of(Supply supply) {
         return new SupplyResponse(
@@ -30,7 +35,10 @@ public record SupplyResponse(Long id,
                 supply.getSupplier() == null ? null
                         : new SupplierRefResponse(supply.getSupplier().getId(),
                                 supply.getSupplier().getName()),
-                supply.isFromImport());
+                supply.isFromImport(),
+                supply.getUnitCost(),
+                supply.getUnitCost() == null ? null
+                        : supply.getUnitCost().multiply(BigDecimal.valueOf(supply.getQuantity())));
     }
 
     /** Just enough of the supplier to label the row. */

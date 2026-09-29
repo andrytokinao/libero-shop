@@ -26,6 +26,7 @@ import java.util.List;
  * @param categoryPath the rayon as the file wrote it, kept verbatim for display
  * @param categoryId  the rayon that path resolved to, or null -- null with a non-blank
  *                    {@code categoryPath} means the rayon would be created on apply
+ * @param cost        the purchase price of one unit as the file gave it, or null
  * @param selected    whether the row starts ticked; a refused line does not
  * @param notes       what the operator needs to know about this line, in French, ready to show
  */
@@ -34,6 +35,7 @@ public record ProductImportLineResponse(int line,
                                         int quantity,
                                         String unit,
                                         BigDecimal price,
+                                        BigDecimal cost,
                                         String barcode,
                                         String categoryPath,
                                         Long categoryId,

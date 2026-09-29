@@ -164,6 +164,12 @@ export const routes: Routes = [
           import('./features/admin/revenue.component').then((m) => m.RevenueComponent),
       },
       {
+        path: 'marges',
+        title: 'Marges',
+        loadComponent: () =>
+          import('./features/admin/margin.component').then((m) => m.MarginComponent),
+      },
+      {
         path: 'stock-global',
         title: 'Stock global',
         loadComponent: () =>

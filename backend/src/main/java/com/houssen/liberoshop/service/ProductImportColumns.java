@@ -40,6 +40,14 @@ public final class ProductImportColumns {
         PRICE("prix", "prix unitaire", "pu", "prix de vente", "prix vente", "pv",
                 "price", "unit price", "tarif"),
 
+        /**
+         * What one unit cost the shop. Spelled apart from {@link #PRICE} on purpose: headers are
+         * matched whole, so "prix d'achat" can never be taken for "prix" and the reverse.
+         */
+        COST("prix d achat", "prix achat", "pa", "cout", "cout unitaire", "cout d achat",
+                "cout achat", "prix de revient", "prix revient", "purchase price", "cost",
+                "unit cost"),
+
         BARCODE("code barres", "code barre", "codes barres", "barcode", "ean", "ean13",
                 "code ean", "gencod", "gencode"),
 
