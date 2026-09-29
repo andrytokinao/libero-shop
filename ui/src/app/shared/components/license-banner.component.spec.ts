@@ -88,8 +88,19 @@ describe('LicenseBannerComponent', () => {
     expect(bar.textContent).toContain('12 jour(s)');
   });
 
-  it('fetches the renewal code when the dialog is opened', () => {
+  it('says nothing more than 15 days before expiry, even inside the renewal window', () => {
+    expect(render(statusOf({ daysUntilExpiry: 20 })).querySelector('.lic-banner')).toBeNull();
+  });
+
+  it('says nothing about a trial with more than 15 days left', () => {
     const banner = render(statusOf({ state: LicenseState.TRIAL, licensed: false }));
+    expect(banner.querySelector('.lic-banner')).toBeNull();
+  });
+
+  it('fetches the renewal code when the dialog is opened', () => {
+    const banner = render(
+      statusOf({ state: LicenseState.TRIAL, licensed: false, daysUntilExpiry: 10 }),
+    );
 
     (banner.querySelector('.lic-banner .lnk') as HTMLButtonElement).click();
     fixture.detectChanges();

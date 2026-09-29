@@ -2,6 +2,7 @@ import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { LicenseApi } from '../api/license.api';
 import {
+  LICENSE_BANNER_DAYS,
   LICENSE_STATE_LABELS,
   LicenseSeverity,
   LicenseState,
@@ -89,12 +90,18 @@ export class LicenseService {
   /**
    * Whether the shell shows its bar.
    *
-   * <p>A blocked installation cannot dismiss it: that bar is the explanation for every
-   * sale the screen is about to refuse.
+   * <p>Silent until {@link LICENSE_BANNER_DAYS} days before expiry, whatever the state:
+   * once expired (grace or read-only) it always shows. A blocked installation cannot
+   * dismiss it: that bar is the explanation for every sale the screen is about to refuse.
    */
   readonly bannerVisible = computed(() => {
     const status = this.state();
     if (!status || this.severity() === 'ok') {
+      return false;
+    }
+    const expiringSoon =
+      status.expiresOn === null || status.daysUntilExpiry <= LICENSE_BANNER_DAYS;
+    if (status.writesAllowed && status.state !== LicenseState.GRACE && !expiringSoon) {
       return false;
     }
     return !status.writesAllowed || !this.dismissedBanner();

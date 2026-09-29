@@ -59,7 +59,8 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: '▢', label: 'Stock global', path: '/admin/stock-global' },
       { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },
-      { icon: '⚿', label: 'Licence', path: '/admin/licence' },
+      // No 'Licence' entry: the page stays reachable at /admin/licence, and the licence
+      // bar links to it once expiry is within LICENSE_BANNER_DAYS.
     ],
   },
 };

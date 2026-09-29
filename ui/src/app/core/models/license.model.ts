@@ -80,6 +80,14 @@ export type LicenseSeverity = 'ok' | 'warn' | 'danger';
  */
 export const RENEWAL_WARNING_DAYS = 30;
 
+/**
+ * Days before expiry at which the licence first shows up on screen at all.
+ *
+ * <p>Until then nothing about the licence is displayed — no bar, no menu entry — and the
+ * administration page is only reached by typing `/admin/licence`.
+ */
+export const LICENSE_BANNER_DAYS = 15;
+
 export const LICENSE_STATE_LABELS: Record<LicenseState, string> = {
   [LicenseState.ACTIVE]: 'Licence active',
   [LicenseState.GRACE]: 'Expirée — période de tolérance',

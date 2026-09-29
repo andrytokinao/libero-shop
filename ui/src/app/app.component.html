@@ -62,10 +62,9 @@
     </aside>
 
     <main>
-      <!-- Above the title so an expiring licence is read before the day's figures are. -->
-<!--
+      <!-- Above the title so an expiring licence is read before the day's figures are.
+           Only appears from 15 days before expiry (see LicenseService.bannerVisible). -->
       <app-license-banner />
--->
       <div class="topbar">
         <h1>{{ pageTitle() }}</h1>
         <div class="meta">
