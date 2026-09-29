@@ -33,6 +33,9 @@ public final class CsvTable {
 
     private static final char[] CANDIDATE_SEPARATORS = {';', ',', '\t', '|'};
 
+    /** What {@link #separator()} answers for a table read out of an Excel workbook. */
+    public static final char NO_SEPARATOR = '\0';
+
     private final List<String> headers;
     /** Normalised header to column index, first occurrence winning. */
     private final Map<String, Integer> byHeader;
@@ -56,8 +59,17 @@ public final class CsvTable {
     public static CsvTable parse(String content) {
         String text = stripBom(content == null ? "" : content);
         char separator = detectSeparator(text);
-        List<Row> records = split(text, separator);
+        return of(split(text, separator), separator);
+    }
 
+    /**
+     * A table whose cells were already split -- read out of a spreadsheet rather than text.
+     *
+     * @param records the header row first, blank rows already left out
+     * @param separator {@link #NO_SEPARATOR} when the source had none
+     * @throws BusinessRuleException under the same two conditions as {@link #parse(String)}
+     */
+    static CsvTable of(List<Row> records, char separator) {
         if (records.isEmpty()) {
             throw new BusinessRuleException("IMPORT_EMPTY_FILE",
                     "Le fichier est vide : il faut au moins une ligne d'en-tete et une ligne de produit.");

@@ -100,6 +100,18 @@ export class CatalogApi {
     });
   }
 
+  /** The same preview for an Excel workbook, sent as the file itself: its text is not ours to decode. */
+  importPreviewSpreadsheet(file: File): Observable<ProductImportPreview> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.post<ProductImportPreview>(`${API_BASE_URL}/products/import/preview`, body);
+  }
+
+  /** The model workbook to fill in: recommended headers, two example lines, a help sheet. */
+  importTemplate(): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/products/import/template`, { responseType: 'blob' });
+  }
+
   /** Writes the ticked lines. The only call here that changes the catalogue. */
   importApply(request: ProductImportRequest): Observable<ProductImportResult> {
     return this.http.post<ProductImportResult>(`${API_BASE_URL}/products/import/apply`, request);

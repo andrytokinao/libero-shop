@@ -4,18 +4,28 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.CsvTable;
 import com.houssen.liberoshop.service.ProductImportColumns;
 import com.houssen.liberoshop.service.ProductImportService;
+import com.houssen.liberoshop.service.ProductImportTemplate;
+import com.houssen.liberoshop.service.SpreadsheetReader;
 import com.houssen.liberoshop.web.dto.ImportPreviewRequest;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
 import com.houssen.liberoshop.web.dto.ProductImportRequest;
 import com.houssen.liberoshop.web.dto.ProductImportResultResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -49,6 +59,30 @@ public class ProductImportController {
     @PostMapping("/preview")
     public ProductImportPreviewResponse preview(@Valid @RequestBody ImportPreviewRequest request) {
         return importService.preview(request.content());
+    }
+
+    /**
+     * The same preview for an Excel workbook (.xlsx or .xls), sent as the file itself.
+     *
+     * <p>A workbook is binary, so the text route's reasoning -- decode in the browser, where
+     * the encoding can be tried -- does not apply: its strings are stored as Unicode.
+     */
+    @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ProductImportPreviewResponse previewSpreadsheet(@RequestParam("file") MultipartFile file)
+            throws IOException {
+        try (InputStream in = file.getInputStream()) {
+            return importService.preview(SpreadsheetReader.read(in));
+        }
+    }
+
+    /** The model workbook: recommended headers, two example lines and a help sheet. */
+    @GetMapping("/template")
+    public ResponseEntity<byte[]> template() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(ProductImportTemplate.CONTENT_TYPE))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(ProductImportTemplate.FILE_NAME).build().toString())
+                .body(ProductImportTemplate.xlsx());
     }
 
     /**

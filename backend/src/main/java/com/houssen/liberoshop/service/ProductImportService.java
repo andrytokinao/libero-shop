@@ -97,7 +97,14 @@ public class ProductImportService {
      *                               is nothing to preview rather than something to correct
      */
     public ProductImportPreviewResponse preview(String content) {
-        CsvTable table = CsvTable.parse(content);
+        return preview(CsvTable.parse(content));
+    }
+
+    /**
+     * The same preview over a table already read -- from an Excel workbook, see
+     * {@link SpreadsheetReader}.
+     */
+    public ProductImportPreviewResponse preview(CsvTable table) {
         Mapping mapping = ProductImportColumns.map(table);
         if (!mapping.has(Column.NAME)) {
             throw new BusinessRuleException("IMPORT_NO_NAME_COLUMN",
@@ -536,7 +543,7 @@ public class ProductImportService {
                 .toList();
 
         return new ProductImportPreviewResponse(
-                String.valueOf(table.separator()),
+                table.separator() == CsvTable.NO_SEPARATOR ? "" : String.valueOf(table.separator()),
                 lines.size(),
                 (int) count(drafts, ImportOutcome.CREATED),
                 (int) count(drafts, ImportOutcome.MERGED),

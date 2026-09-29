@@ -77,7 +77,7 @@ export interface ProductImportRow {
           <div>
             <h2 id="import-title">Importer des produits — vérification</h2>
             <div class="sub muted">
-              {{ head.total }} ligne(s) lues, séparateur « {{ head.separator }} ».
+              {{ head.total }} ligne(s) lues{{ head.separator ? ', séparateur « ' + head.separator + ' »' : ' (fichier Excel)' }}.
               Rien n'est encore enregistré.
             </div>
           </div>

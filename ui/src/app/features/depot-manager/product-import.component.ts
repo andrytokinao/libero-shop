@@ -7,6 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { Observable } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import {
@@ -27,6 +28,13 @@ import {
   ProductImportDialogComponent,
   ProductImportRow,
 } from './product-import-dialog.component';
+
+/** Excel workbooks, read by the server rather than decoded here. */
+const SPREADSHEET_ACCEPT =
+  '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+
+/** Mirrors ProductImportTemplate.FILE_NAME; a blob download does not read Content-Disposition. */
+const TEMPLATE_FILE_NAME = 'modele-import-produits.xlsx';
 
 /**
  * The whole import, from the button to the report.
@@ -50,6 +58,15 @@ import {
   template: `
     <button class="btn small" type="button" [disabled]="reading()" (click)="pick()">
       {{ reading() ? 'Lecture du fichier...' : '⇩ Importer des produits' }}
+    </button>
+    <button
+      class="btn small ghost"
+      type="button"
+      [disabled]="downloading()"
+      title="Fichier Excel à remplir puis à importer"
+      (click)="downloadTemplate()"
+    >
+      ⇣ Modèle Excel
     </button>
 
     <!-- Outside the button so that re-rendering the label never resets the picker. -->
@@ -202,7 +219,7 @@ export class ProductImportComponent {
   /** Raised once the catalogue has actually changed, so the host screen re-reads its list. */
   @Output() readonly imported = new EventEmitter<ProductImportResult>();
 
-  protected readonly accept = TEXT_FILE_ACCEPT;
+  protected readonly accept = `${TEXT_FILE_ACCEPT},${SPREADSHEET_ACCEPT}`;
 
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   protected readonly categories = this.categoryResource.value;
@@ -219,6 +236,7 @@ export class ProductImportComponent {
   protected readonly supplierId = signal<number | null>(null);
 
   protected readonly reading = signal(false);
+  protected readonly downloading = signal(false);
   protected readonly saving = signal(false);
   protected readonly preview = signal<ProductImportPreview | null>(null);
   /** The rows still waiting on a rayon; non-null exactly while the second dialog is open. */
@@ -247,16 +265,20 @@ export class ProductImportComponent {
     }
 
     this.reading.set(true);
-    let content: string;
-    try {
-      content = await readTextFile(file);
-    } catch (error) {
-      this.reading.set(false);
-      this.toasts.show(error instanceof Error ? error.message : 'Fichier illisible.');
-      return;
+    let request: Observable<ProductImportPreview>;
+    if (/\.xlsx?$/i.test(file.name)) {
+      request = this.api.importPreviewSpreadsheet(file);
+    } else {
+      try {
+        request = this.api.importPreview(await readTextFile(file));
+      } catch (error) {
+        this.reading.set(false);
+        this.toasts.show(error instanceof Error ? error.message : 'Fichier illisible.');
+        return;
+      }
     }
 
-    this.api.importPreview(content).subscribe({
+    request.subscribe({
       next: (preview) => {
         this.reading.set(false);
         this.preview.set(preview);
@@ -264,6 +286,27 @@ export class ProductImportComponent {
       // The error interceptor has already shown the server's own message, which for an import
       // is the one that says what is wrong with the file.
       error: () => this.reading.set(false),
+    });
+  }
+
+  /**
+   * Saves the model workbook. Fetched through the API client rather than a plain link, because
+   * the endpoint wants the session's token and a link would not carry it.
+   */
+  protected downloadTemplate(): void {
+    this.downloading.set(true);
+    this.api.importTemplate().subscribe({
+      next: (blob) => {
+        this.downloading.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = TEMPLATE_FILE_NAME;
+        link.click();
+        // Next tick: some browsers start the download asynchronously.
+        setTimeout(() => URL.revokeObjectURL(url));
+      },
+      error: () => this.downloading.set(false),
     });
   }
 
