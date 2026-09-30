@@ -38,6 +38,9 @@
              keeps whatever the last build left there. -->
         <frontend.dir>${project.basedir}/../ui</frontend.dir>
         <frontend.static.dir>${project.basedir}/src/main/resources/static</frontend.static.dir>
+        <!-- The same app built for the phones, which download it from the server to update
+             themselves without a new APK (MobileBundle). Git-ignored, like static/. -->
+        <frontend.mobile.dir>${project.basedir}/src/main/resources/mobile-web</frontend.mobile.dir>
         <skipFrontend>false</skipFrontend>
     </properties>
     <dependencies>
@@ -176,6 +179,12 @@
                                         <include>**/*</include>
                                     </includes>
                                 </fileset>
+                                <fileset>
+                                    <directory>${frontend.mobile.dir}</directory>
+                                    <includes>
+                                        <include>**/*</include>
+                                    </includes>
+                                </fileset>
                             </filesets>
                         </configuration>
                     </execution>
@@ -223,6 +232,16 @@
                             <arguments>run build</arguments>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>npm-build-mobile</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build:mobile</arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -244,6 +263,23 @@
                             <resources>
                                 <resource>
                                     <directory>${frontend.dir}/dist/ui/browser</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-frontend-mobile</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipFrontend}</skip>
+                            <outputDirectory>${frontend.mobile.dir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${frontend.dir}/dist/ui-mobile/browser</directory>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>

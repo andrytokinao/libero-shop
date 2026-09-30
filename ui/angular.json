@@ -55,6 +55,17 @@
             },
             "mobile": {
               "outputPath": "dist/ui-mobile",
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                },
+                {
+                  "glob": "mobile-native.json",
+                  "input": "src/mobile",
+                  "output": "/"
+                }
+              ],
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

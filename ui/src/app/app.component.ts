@@ -1,8 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { LiveUpdateService } from './core/config/live-update.service';
 import { ServerConfig } from './core/config/server-config.service';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
@@ -29,6 +30,7 @@ import { ToastComponent } from './shared/components/toast.component';
 export class AppComponent {
   protected readonly auth = inject(AuthService);
   protected readonly server = inject(ServerConfig);
+  protected readonly liveUpdate = inject(LiveUpdateService);
   private readonly router = inject(Router);
   protected readonly pageTitle = inject(PageTitleStrategy).pageTitle;
   protected readonly today = new Date();
@@ -40,6 +42,15 @@ export class AppComponent {
   protected readonly navOpen = signal(false);
 
   constructor() {
+    // On a phone: pages kept up to date from the server, checked again whenever the app comes
+    // back to the foreground or is pointed at another server.
+    this.liveUpdate.start();
+    effect(() => {
+      if (this.server.serverUrl() !== null) {
+        untracked(() => void this.liveUpdate.check());
+      }
+    });
+
     // A tap on a menu entry should leave the page visible, not the menu that led to it.
     this.router.events
       .pipe(

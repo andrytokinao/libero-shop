@@ -1,3 +1,11 @@
+<!-- Phone only: the server's pages need a newer APK than this one. The app keeps working as it
+     is; this is the way to the new APK, opened in the phone's browser. -->
+@if (liveUpdate.apkRequired()) {
+  <a class="apk-required" [href]="server.serverUrl() + '/application-mobile'" target="_blank">
+    Nouvelle version de l'application disponible : touchez ici pour l'installer.
+  </a>
+}
+
 @if (auth.isAuthenticated()) {
   <div class="app" [class.nav-open]="navOpen()">
     <!-- Phone-only bar: on a small screen the sidebar is off-canvas, so the menu

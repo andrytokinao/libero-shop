@@ -8,8 +8,11 @@ import { ApiError } from '../models';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 
-/** The session probe answers 401 by design; it must not trigger a redirect of its own. */
-const SILENT_PATHS = ['/api/auth/session', '/api/auth/login'];
+/**
+ * The session probe answers 401 by design; it must not trigger a redirect of its own. The
+ * mobile update check runs in the background: its failures are nobody's business but its own.
+ */
+const SILENT_PATHS = ['/api/auth/session', '/api/auth/login', '/api/mobile/update'];
 
 /**
  * Turns an HTTP failure into something the user can act on.

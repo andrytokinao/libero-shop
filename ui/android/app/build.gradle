@@ -7,8 +7,11 @@ android {
         applicationId "com.houssen.liberoshop"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // 2: the first APK that updates its own pages from the server (capacitor-updater).
+        // Raise it for every APK published, and set ui/src/mobile/mobile-native.json to it
+        // when the pages of that release need this APK.
+        versionCode 2
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

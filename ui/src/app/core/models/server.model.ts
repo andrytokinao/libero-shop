@@ -17,6 +17,20 @@ export interface PublishedApk {
   updatedAt: string;
 }
 
+/** GET /api/mobile/update — mirrors MobileUpdateController.UpdateInfo. */
+export interface MobileUpdateInfo {
+  /** False when the server carries no mobile pages: the app keeps its own. */
+  available: boolean;
+  version: string | null;
+  /** SHA-256 of the zip, checked by the phone after download. */
+  checksum: string | null;
+  /** Relative to the server, e.g. /api/mobile/bundle/1a2b3c.zip */
+  url: string | null;
+  sizeBytes: number;
+  /** The oldest APK versionCode these pages run in. */
+  minNativeBuild: number;
+}
+
 /** GET /api/server/connection — mirrors ServerConnectionResponse. */
 export interface ServerConnection {
   scheme: string;

@@ -235,13 +235,43 @@ ou la variable d'environnement `LIBEROSHOP_PUBLIC_URL`. Redémarrage nécessaire
 | Changement | Nouvelle APK ? |
 |---|---|
 | Backend seul (Java) | Non |
-| Écrans Angular | **Oui, pour l'instant** : le bundle web est dans l'APK |
-| Plugin Capacitor, permission, icône, nom | Oui |
+| Écrans Angular (caisse, dépôt, versements…) | **Non** : mise à jour automatique (§ 7.1), à partir de l'APK `versionCode 2` |
+| Plugin Capacitor, permission, icône, nom | Oui, et monter `minNativeBuild` (§ 7.2) |
 | Adresse du serveur | Non — se change dans l'app (*Serveur*) |
 
-> Étape suivante prévue : la **mise à jour automatique du contenu web** (le serveur publie le
-> bundle Angular à chaque build du jar, l'app le télécharge et bascule au démarrage). Une fois
-> en place, seule la ligne « plugin / permission / icône » demandera une nouvelle APK.
+### 7.1 Mise à jour automatique et silencieuse des écrans
+
+Chaque jar contient les écrans mobiles (le build Maven lance aussi `npm run build:mobile`).
+Déployer le jar **suffit** à mettre à jour les téléphones :
+
+1. Au lancement et à chaque retour au premier plan, l'app demande au serveur
+   `GET /api/mobile/update` quelle version il porte (version = empreinte SHA-256 du zip).
+2. Si elle diffère, elle télécharge le zip en arrière-plan (`/api/mobile/bundle/<version>.zip`)
+   et vérifie son empreinte.
+3. La nouvelle version prend la place **la prochaine fois que l'app passe en arrière-plan** :
+   jamais au milieu d'une vente. À la réouverture, c'est la nouvelle version.
+4. Si la nouvelle version ne démarre pas (15 s), le téléphone **revient tout seul** à la
+   précédente et ne retente plus cette version.
+
+Aucun message à l'utilisateur, aucune donnée envoyée ailleurs qu'au serveur de la boutique
+(plugin `@capgo/capacitor-updater`, cloud Capgo et statistiques désactivés dans
+`capacitor.config.ts`). Le code : `ui/src/app/core/config/live-update.service.ts`,
+`backend/.../server/MobileBundle.java`.
+
+### 7.2 Quand les écrans ont besoin d'une nouvelle APK
+
+`ui/src/mobile/mobile-native.json` indique le `versionCode` minimum de l'APK pour ces écrans.
+Quand une version ajoute un plugin ou touche `android/` :
+
+1. monter `versionCode` dans `ui/android/app/build.gradle` ;
+2. mettre la même valeur dans `mobile-native.json` ;
+3. publier la nouvelle APK (§ 5) **et** déployer le jar.
+
+Les téléphones à l'ancienne APK gardent leurs écrans actuels (rien ne casse) et affichent un
+bandeau « Nouvelle version de l'application disponible », qui ouvre la page de téléchargement.
+
+> La **première** APK avec la mise à jour automatique (`versionCode 2`) doit être installée à la
+> main sur chaque téléphone : les APK `versionCode 1` ne savent pas se mettre à jour.
 
 ---
 

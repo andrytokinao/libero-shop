@@ -1,0 +1,4 @@
+{
+  "minNativeBuild": 2,
+  "why": "versionCode of the oldest APK these pages can run in. Raise it to the new APK's versionCode whenever a change needs that APK: a Capacitor plugin added or upgraded, a permission, anything in android/. Phones on an older APK then keep their pages and are asked to install the new APK. See docs/mobile-android.md."
+}

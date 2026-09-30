@@ -7,6 +7,7 @@
 
 # Angular build copied in by the Maven build (see backend/pom.xml), and the Node it installs
 /backend/src/main/resources/static/
+/backend/src/main/resources/mobile-web/
 /ui/node/
 *.stackdump
 
@@ -49,3 +50,4 @@
 *.iml
 # The SDK path of one machine:
 /ui/android/local.properties
+/.gradle/

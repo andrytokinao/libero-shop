@@ -77,6 +77,15 @@ class ServerControllerTest {
     }
 
     @Test
+    @DisplayName("tells the app about its pages before sign-in, and never serves a stale version")
+    void mobileUpdateIsPublic() throws Exception {
+        mvc.perform(get("/api/mobile/update"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").isBoolean());
+        mvc.perform(get("/api/mobile/bundle/0000000000000000.zip")).andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("an APK not published yet is a 404, never the Angular page saved as an .apk")
     void missingApkIsNotFound() throws Exception {
         mvc.perform(get("/downloads/libero-shop-absent.apk")).andExpect(status().isNotFound());

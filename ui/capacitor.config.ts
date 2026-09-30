@@ -20,6 +20,20 @@ const config: CapacitorConfig = {
     androidScheme: 'http',
     cleartext: true,
   },
+  plugins: {
+    // Live updates of the pages, driven by LiveUpdateService against the shop's own server.
+    // Everything that would talk to Capgo's cloud is off: no automatic check against their
+    // servers, no statistics sent -- the phones only ever talk to the shop's server.
+    CapacitorUpdater: {
+      autoUpdate: false,
+      statsUrl: '',
+      // A downloaded version that has not started within this time is rolled back to the
+      // previous one (the pages call notifyAppReady first thing, see main.ts).
+      appReadyTimeout: 15000,
+      // A new APK brings newer pages than any downloaded: start again from those.
+      resetWhenUpdate: true,
+    },
+  },
 };
 
 export default config;
