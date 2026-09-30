@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ServerConfig } from '../config/server-config.service';
 import { ApiError } from '../models';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
@@ -23,6 +24,7 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
   const toasts = inject(ToastService);
   const auth = inject(AuthService);
   const router = inject(Router);
+  const server = inject(ServerConfig);
 
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -35,7 +37,13 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
 
       switch (error.status) {
         case 0:
-          toasts.show('Serveur injoignable. Verifiez que le backend est demarre.');
+          // On a phone the usual cause is the address, not the server: the Wi-Fi changed, or
+          // the server's IP moved. Said where it can be fixed.
+          toasts.show(
+            server.isMobile
+              ? `Serveur ${server.host() ?? ''} injoignable. Vérifiez le Wi-Fi, ou changez l'adresse dans Paramètres › Serveur.`
+              : 'Serveur injoignable. Verifiez que le backend est demarre.',
+          );
           break;
         case 401:
           auth.clear();

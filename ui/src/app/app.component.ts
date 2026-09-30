@@ -3,6 +3,7 @@ import { Component, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { ServerConfig } from './core/config/server-config.service';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
@@ -27,6 +28,7 @@ import { ToastComponent } from './shared/components/toast.component';
 })
 export class AppComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly server = inject(ServerConfig);
   private readonly router = inject(Router);
   protected readonly pageTitle = inject(PageTitleStrategy).pageTitle;
   protected readonly today = new Date();

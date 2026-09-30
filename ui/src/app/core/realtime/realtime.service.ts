@@ -1,6 +1,7 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { Observable, Subject, filter } from 'rxjs';
+import { ServerConfig } from '../config/server-config.service';
 import { AppNotification, NotificationType } from '../models';
 import { AuthService } from '../services/auth.service';
 import { TokenStorage } from '../services/token-storage.service';
@@ -46,6 +47,7 @@ interface TopicEntry {
 export class RealtimeService {
   private readonly auth = inject(AuthService);
   private readonly tokens = inject(TokenStorage);
+  private readonly server = inject(ServerConfig);
 
   private readonly incoming = new Subject<AppNotification>();
   private readonly topics = new Map<string, TopicEntry>();
@@ -58,7 +60,6 @@ export class RealtimeService {
   readonly notifications$: Observable<AppNotification> = this.incoming.asObservable();
 
   private readonly client = new Client({
-    brokerURL: socketUrl(),
     reconnectDelay: RECONNECT_DELAY_MS,
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
@@ -70,6 +71,9 @@ export class RealtimeService {
         return;
       }
       this.connection.set('connecting');
+      // Read at each attempt, like the token: the mobile app may have been pointed at another
+      // server since the last one.
+      client.brokerURL = this.server.socketUrl(ENDPOINT);
       client.connectHeaders = { Authorization: `Bearer ${token}` };
     },
     onConnect: () => {
@@ -160,12 +164,6 @@ export class RealtimeService {
       this.incoming.next(notification);
     }
   }
-}
-
-/** Same host and port as the page, so the dev proxy and the packaged jar both just work. */
-function socketUrl(): string {
-  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${scheme}://${location.host}${ENDPOINT}`;
 }
 
 /** A frame body as JSON, or undefined — one malformed message must not end the stream. */

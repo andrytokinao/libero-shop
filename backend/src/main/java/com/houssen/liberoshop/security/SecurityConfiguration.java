@@ -77,6 +77,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()
+                        // Asked by the mobile app to test an address before anyone signs in.
+                        .requestMatchers(HttpMethod.GET, "/api/server/info").permitAll()
                         // Installing or renewing a license is an administrative act.
                         .requestMatchers("/api/license/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()
@@ -123,9 +125,9 @@ public class SecurityConfiguration {
     }
 
     /**
-     * Only needed while the UI is served by {@code ng serve} on another port. In
-     * production the SPA is packaged with the jar, the origin list is empty, and no
-     * cross-origin call is allowed at all.
+     * Two kinds of cross-origin callers, and only two: {@code ng serve} on another port during
+     * development, and the mobile app, whose pages are bundled in the phone rather than served
+     * from here. The SPA packaged with the jar is same-origin and needs none of this.
      *
      * <p>Credentials are not allowed: with the token in a header there is no cookie left
      * for the browser to attach, and asking for credentialed CORS would forbid the
@@ -134,14 +136,14 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource(SecurityProperties properties) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(properties.allowedOrigins());
+        configuration.setAllowedOrigins(properties.crossOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        if (!properties.allowedOrigins().isEmpty()) {
+        if (!properties.crossOrigins().isEmpty()) {
             source.registerCorsConfiguration("/api/**", configuration);
         }
         return source;

@@ -1,14 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ServerConfig } from '../../core/config/server-config.service';
 import { ApiError } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <div class="login-page">
       <form class="card login-card" (ngSubmit)="submit()">
@@ -50,6 +51,15 @@ import { AuthService } from '../../core/services/auth.service';
         <button class="btn block" type="submit" [disabled]="!canSubmit()">
           {{ submitting() ? 'Connexion...' : 'Se connecter' }}
         </button>
+
+        <!-- On a phone the server is a setting, and the login page is where a moved server
+             shows up first: the way to fix it sits right here. -->
+        @if (server.isMobile || server.serverUrl()) {
+          <div class="login-server muted">
+            Serveur : {{ server.host() ?? 'non configuré' }} ·
+            <a routerLink="/serveur">Modifier</a>
+          </div>
+        }
       </form>
     </div>
   `,
@@ -92,6 +102,12 @@ import { AuthService } from '../../core/services/auth.service';
       width: 100%;
     }
 
+    .login-server {
+      margin-top: 14px;
+      font-size: 12px;
+      text-align: center;
+    }
+
     .login-error {
       background: var(--red-soft);
       color: var(--red);
@@ -103,6 +119,7 @@ import { AuthService } from '../../core/services/auth.service';
   `,
 })
 export class LoginComponent {
+  protected readonly server = inject(ServerConfig);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -135,7 +152,9 @@ export class LoginComponent {
         const body = failure.error as ApiError | null;
         this.error.set(
           failure.status === 0
-            ? 'Serveur injoignable. Verifiez que le backend est demarre.'
+            ? this.server.isMobile
+              ? `Serveur ${this.server.host() ?? ''} injoignable : vérifiez le Wi-Fi ou modifiez l'adresse ci-dessous.`
+              : 'Serveur injoignable. Verifiez que le backend est demarre.'
             : (body?.message ?? 'Identifiant ou mot de passe incorrect.'),
         );
       },

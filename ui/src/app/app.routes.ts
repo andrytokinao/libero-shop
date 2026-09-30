@@ -1,15 +1,30 @@
 import { Routes } from '@angular/router';
 import { anonymousOnlyGuard, homeRedirectGuard, roleGuard } from './core/guards/auth.guard';
+import { serverConfiguredGuard } from './core/guards/server.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', canActivate: [homeRedirectGuard], children: [] },
+  {
+    path: '',
+    pathMatch: 'full',
+    canActivate: [serverConfiguredGuard, homeRedirectGuard],
+    children: [],
+  },
 
   {
     path: 'login',
     title: 'Connexion',
-    canActivate: [anonymousOnlyGuard],
+    canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
     loadComponent: () =>
       import('./features/auth/login.component').then((m) => m.LoginComponent),
+  },
+
+  // Which server the mobile app talks to. Open to everyone, signed in or not: it is the first
+  // screen of a fresh install, and the one to reach when the server's address has moved.
+  {
+    path: 'serveur',
+    title: 'Serveur',
+    loadComponent: () =>
+      import('./features/settings/server-setup.component').then((m) => m.ServerSetupComponent),
   },
 
   // ------------------------------------------------------------ cash desk
@@ -162,6 +177,12 @@ export const routes: Routes = [
         title: "Chiffre d'affaires",
         loadComponent: () =>
           import('./features/admin/revenue.component').then((m) => m.RevenueComponent),
+      },
+      {
+        path: 'application-mobile',
+        title: 'Application mobile',
+        loadComponent: () =>
+          import('./features/admin/mobile-app.component').then((m) => m.MobileAppComponent),
       },
       {
         path: 'marges',

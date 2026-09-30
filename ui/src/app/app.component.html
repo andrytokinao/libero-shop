@@ -55,6 +55,11 @@
             <div class="role">{{ auth.roleLabel() }}</div>
           </div>
         </div>
+        @if (server.isMobile) {
+          <a class="btn ghost block" routerLink="/serveur" style="margin-top:12px;">
+            Serveur : {{ server.host() }}
+          </a>
+        }
         <button class="btn ghost block" type="button" style="margin-top:12px;" (click)="logout()">
           Se déconnecter
         </button>

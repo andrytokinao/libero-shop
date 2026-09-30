@@ -21,8 +21,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * <p>No SockJS fallback. Every browser this application supports speaks WebSocket, and the
  * fallback would add a second transport to secure for none of them.
  *
- * <p>Origins: the same ones the REST API accepts. In production that list is empty and only the
- * application's own origin may open a socket; in development it lets {@code ng serve} in.
+ * <p>Origins: the same ones the REST API accepts -- the application's own, the mobile app's web
+ * view, and {@code ng serve} in development.
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -58,7 +58,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint(ENDPOINT)
-                .setAllowedOriginPatterns(security.allowedOrigins().toArray(String[]::new));
+                .setAllowedOriginPatterns(security.crossOrigins().toArray(String[]::new));
     }
 
     @Override

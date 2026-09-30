@@ -16,3 +16,11 @@
 /license/.license-state
 /license/.license-trial
 /data/libertyshop.mv.db
+
+# Mobile app: the signing key and its passwords never enter the repository (see
+# docs/mobile-android.md), nor do the APKs published beside the server.
+*.jks
+*.keystore
+/ui/android/keystore.properties
+/downloads/
+/backend/downloads/

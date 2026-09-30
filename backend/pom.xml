@@ -143,6 +143,16 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- Writes META-INF/build-info.properties, so the server can say which
+                         version it is: the mobile app shows it when connecting, and will
+                         compare it to its own bundle to decide whether to update. -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- 1. Empties static/ so hashed bundles of an older build do not pile up. -->

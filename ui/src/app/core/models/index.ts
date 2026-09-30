@@ -11,5 +11,6 @@ export * from './cash-remittance.model';
 export * from './stock-movement.model';
 export * from './costing.model';
 export * from './notification.model';
+export * from './server.model';
 export * from './license.model';
 export * from './api.model';
