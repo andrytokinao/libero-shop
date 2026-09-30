@@ -60,6 +60,11 @@ import { AuthService } from '../../core/services/auth.service';
             <a routerLink="/serveur">Modifier</a>
           </div>
         }
+        @if (!server.isMobile) {
+          <div class="login-server muted">
+            <a routerLink="/application-mobile">Télécharger l'application mobile Android</a>
+          </div>
+        }
       </form>
     </div>
   `,

@@ -2,6 +2,7 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.CashRemittance;
 import com.houssen.liberoshop.entity.Payment;
+import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.RemittanceStatus;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
@@ -11,11 +12,14 @@ import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.CashRemittanceResponse;
 import com.houssen.liberoshop.web.dto.PaymentResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The depot cash trail: what an agent holds, what they hand over, what the desk confirms.
@@ -31,12 +35,14 @@ public class RemittanceService {
     private final CashRemittanceRepository remittances;
     private final PaymentRepository payments;
     private final BusinessCalendar calendar;
+    private final ApplicationEventPublisher events;
 
     public RemittanceService(CashRemittanceRepository remittances, PaymentRepository payments,
-                             BusinessCalendar calendar) {
+                             BusinessCalendar calendar, ApplicationEventPublisher events) {
         this.remittances = remittances;
         this.payments = payments;
         this.calendar = calendar;
+        this.events = events;
     }
 
     /** Collections the given agent has not handed over yet. */
@@ -66,16 +72,24 @@ public class RemittanceService {
     }
 
     /**
-     * Bundles everything the agent currently holds into one slip, marked PENDING until the
-     * desk confirms the money physically arrived.
+     * Puts cash the agent holds into one slip, marked PENDING until the desk confirms the money
+     * physically arrived. Its orders become {@link PaymentStatus#REMITTED}.
+     *
+     * @param invoiceIds the orders whose cash is brought -- one, from the button on that order --
+     *                   or empty for everything the agent holds
      */
     @RequiresActiveLicense
     @Transactional
-    public CashRemittanceResponse submit(UserApp agent) {
+    public CashRemittanceResponse submit(UserApp agent, Collection<Long> invoiceIds) {
         List<Payment> held = payments.findUnremittedByCollector(agent.getId());
+        if (invoiceIds != null && !invoiceIds.isEmpty()) {
+            Set<Long> wanted = Set.copyOf(invoiceIds);
+            held = held.stream().filter(payment -> wanted.contains(payment.getInvoice().getId())).toList();
+        }
         if (held.isEmpty()) {
-            throw new BusinessRuleException("NOTHING_TO_REMIT",
-                    "Vous n'avez aucune espece en main a verser.");
+            throw new BusinessRuleException("NOTHING_TO_REMIT", invoiceIds == null || invoiceIds.isEmpty()
+                    ? "Vous n'avez aucune espece en main a verser."
+                    : "Aucune espece a verser pour cette commande : deja versee, ou encaissee par un autre agent.");
         }
 
         CashRemittance remittance = remittances.save(CashRemittance.builder()
@@ -87,12 +101,19 @@ public class RemittanceService {
                 .build());
 
         // Attaching the payments is what makes the slip auditable down to the invoice.
-        held.forEach(payment -> payment.setCashRemittance(remittance));
+        held.forEach(payment -> {
+            payment.setCashRemittance(remittance);
+            settle(payment, PaymentStatus.REMITTED);
+        });
 
-        return CashRemittanceResponse.of(remittance, held.size());
+        events.publishEvent(eventOf(remittance, held));
+        return CashRemittanceResponse.of(remittance, held);
     }
 
-    /** The cash desk acknowledges receipt. */
+    /**
+     * The cash desk acknowledges receipt: only now are the orders {@link PaymentStatus#PAID}, and
+     * only now does their money count as revenue.
+     */
     @RequiresActiveLicense
     @Transactional
     public CashRemittanceResponse confirm(Long remittanceId, UserApp cashier) {
@@ -110,7 +131,11 @@ public class RemittanceService {
 
         remittance.setStatus(RemittanceStatus.CONFIRMED);
         remittance.setConfirmedBy(cashier);
-        return toResponse(remittance);
+        List<Payment> carried = payments.findByCashRemittanceId(remittance.getId());
+        carried.forEach(payment -> settle(payment, PaymentStatus.PAID));
+
+        events.publishEvent(eventOf(remittance, carried));
+        return CashRemittanceResponse.of(remittance, carried);
     }
 
     public BigDecimal pendingTotal() {
@@ -127,8 +152,22 @@ public class RemittanceService {
     }
 
     private CashRemittanceResponse toResponse(CashRemittance remittance) {
-        return CashRemittanceResponse.of(remittance,
-                payments.findByCashRemittanceId(remittance.getId()).size());
+        return CashRemittanceResponse.of(remittance, payments.findByCashRemittanceId(remittance.getId()));
+    }
+
+    /** The invoice and its sale carry the same status; they move together. */
+    private static void settle(Payment payment, PaymentStatus status) {
+        payment.getInvoice().setPaymentStatus(status);
+        payment.getInvoice().getSale().setPaymentStatus(status);
+    }
+
+    private static RemittanceRecordedEvent eventOf(CashRemittance remittance, List<Payment> carried) {
+        UserApp cashier = remittance.getConfirmedBy();
+        return new RemittanceRecordedEvent(remittance.getId(), remittance.getAmount(),
+                carried.stream().map(payment -> payment.getInvoice().getInvoiceNumber()).toList(),
+                remittance.getSubmittedBy().getId(), remittance.getSubmittedBy().getFullName(),
+                remittance.getStatus() == RemittanceStatus.CONFIRMED,
+                cashier == null ? null : cashier.getId(), cashier == null ? null : cashier.getFullName());
     }
 
     private static BigDecimal sum(List<Payment> list) {

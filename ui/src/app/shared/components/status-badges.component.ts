@@ -1,20 +1,30 @@
 import { Component, Input } from '@angular/core';
-import { DeliveryStatus, PaymentStatus, RemittanceStatus, UserApp } from '../../core/models';
+import {
+  DeliveryStatus,
+  PAYMENT_STATUS_LABELS,
+  PaymentStatus,
+  RemittanceStatus,
+  UserApp,
+} from '../../core/models';
 
+/**
+ * The money's whereabouts, in words a cashier reads at a glance: green once it is in the till,
+ * amber while nobody has paid, blue while it is on its way from the depot.
+ */
 @Component({
   selector: 'app-payment-status-badge',
   standalone: true,
-  template: `
-    @if (status === PaymentStatus.PAID) {
-      <span class="badge green">Payée</span>
-    } @else {
-      <span class="badge amber">Non payée</span>
-    }
-  `,
+  template: `<span [class]="'badge ' + COLOURS[status]">{{ LABELS[status] }}</span>`,
 })
 export class PaymentStatusBadgeComponent {
   @Input({ required: true }) status!: PaymentStatus;
-  protected readonly PaymentStatus = PaymentStatus;
+  protected readonly LABELS = PAYMENT_STATUS_LABELS;
+  protected readonly COLOURS: Record<PaymentStatus, string> = {
+    [PaymentStatus.PAID]: 'green',
+    [PaymentStatus.UNPAID]: 'amber',
+    [PaymentStatus.COLLECTED]: 'blue',
+    [PaymentStatus.REMITTED]: 'blue',
+  };
 }
 
 @Component({

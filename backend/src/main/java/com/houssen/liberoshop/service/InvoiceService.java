@@ -12,6 +12,7 @@ import com.houssen.liberoshop.repository.PaymentRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +25,10 @@ import java.util.Locale;
  * Invoice lookup and the depot hand-over.
  *
  * <p>Handing an unpaid order over is the moment the money changes hands, so it is also the
- * moment a {@link Payment} is written, collected by the agent doing the hand-over. That
- * payment stays un-remitted until the agent takes the cash to the desk, which is what makes
- * the whole depot-cash trail auditable.
+ * moment a {@link Payment} is written, collected by the agent doing the hand-over, and the order
+ * becomes {@link PaymentStatus#COLLECTED}. That payment stays un-remitted until the agent takes
+ * the cash to the desk ({@link RemittanceService}), which is what makes the whole depot-cash
+ * trail auditable.
  */
 @Service
 @Transactional(readOnly = true)
@@ -35,11 +37,14 @@ public class InvoiceService {
     private final InvoiceRepository invoices;
     private final PaymentRepository payments;
     private final BusinessCalendar calendar;
+    private final ApplicationEventPublisher events;
 
-    public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar) {
+    public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
+                          ApplicationEventPublisher events) {
         this.invoices = invoices;
         this.payments = payments;
         this.calendar = calendar;
+        this.events = events;
     }
 
     /**
@@ -94,11 +99,17 @@ public class InvoiceService {
                     // Left null: the agent holds the cash until they remit it.
                     .cashRemittance(null)
                     .build());
-            invoice.setPaymentStatus(PaymentStatus.PAID);
-            invoice.getSale().setPaymentStatus(PaymentStatus.PAID);
+            // Not PAID yet: the cash is in the agent's hands until a cashier confirms receiving it.
+            invoice.setPaymentStatus(PaymentStatus.COLLECTED);
+            invoice.getSale().setPaymentStatus(PaymentStatus.COLLECTED);
         }
 
         invoice.setDeliveryStatus(DeliveryStatus.DELIVERED);
+        // Heard after the commit: the other depot screens drop the order from their queue, and
+        // the seller's screens show it handed over.
+        events.publishEvent(new OrderDeliveredEvent(invoice.getId(), invoice.getInvoiceNumber(),
+                invoice.getClientName(), invoice.getSale().getSeller().getId(),
+                agent.getId(), agent.getFullName(), collected));
         return new DeliveryResult(InvoiceResponse.of(invoice), collected);
     }
 

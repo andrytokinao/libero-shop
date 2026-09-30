@@ -20,7 +20,10 @@ export interface PublishedApk {
 /** GET /api/server/connection — mirrors ServerConnectionResponse. */
 export interface ServerConnection {
   scheme: string;
+  /** On the shop's network. Empty when the caller is not on a local network itself. */
   addresses: ServerAddress[];
+  /** For phones away from the shop; null when the server is not published on the Internet. */
+  internet: ServerAddress | null;
   /** Null until an APK has been copied to the downloads folder. */
   apk: PublishedApk | null;
 }

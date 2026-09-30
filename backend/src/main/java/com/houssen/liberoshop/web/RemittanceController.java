@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -50,11 +51,19 @@ public class RemittanceController {
         return remittanceService.cashInHand(currentUser.require());
     }
 
+    /**
+     * Brings cash to the desk: the orders listed, or everything the agent holds when the body is
+     * absent or lists none.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('DEPOT_AGENT')")
-    public CashRemittanceResponse submit() {
-        return remittanceService.submit(currentUser.require());
+    public CashRemittanceResponse submit(@RequestBody(required = false) SubmitRemittanceRequest request) {
+        return remittanceService.submit(currentUser.require(), request == null ? null : request.invoiceIds());
+    }
+
+    /** @param invoiceIds the orders whose cash is brought; empty or null for all of it */
+    public record SubmitRemittanceRequest(List<Long> invoiceIds) {
     }
 
     @PostMapping("/{id}/confirm")

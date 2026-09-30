@@ -9,6 +9,8 @@ import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.security.AppUserDetails;
 import com.houssen.liberoshop.security.JwtService;
+import com.houssen.liberoshop.service.InvoiceService;
+import com.houssen.liberoshop.service.RemittanceService;
 import com.houssen.liberoshop.service.SaleService;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
@@ -71,6 +73,10 @@ class SaleNotificationWebSocketTest {
     @Autowired
     private SaleService saleService;
     @Autowired
+    private InvoiceService invoiceService;
+    @Autowired
+    private RemittanceService remittanceService;
+    @Autowired
     private NotificationService notifications;
     @Autowired
     private SimpUserRegistry registry;
@@ -124,11 +130,18 @@ class SaleNotificationWebSocketTest {
      * knows. The in-memory broker sends no receipt for a subscription, so its own registry is
      * asked instead -- which is also exactly the condition for a message to be routed.
      */
-    @SuppressWarnings("unchecked")
     private BlockingQueue<Map<String, Object>> listen(UserApp user) throws Exception {
+        return subscribe(user, NotificationService.USER_PREFIX + NotificationService.USER_QUEUE);
+    }
+
+    private BlockingQueue<Map<String, Object>> listenTopic(UserApp user, String topic) throws Exception {
+        return subscribe(user, NotificationService.TOPIC_PREFIX + "/" + topic);
+    }
+
+    @SuppressWarnings("unchecked")
+    private BlockingQueue<Map<String, Object>> subscribe(UserApp user, String destination) throws Exception {
         StompSession session = connect(tokenOf(user));
         BlockingQueue<Map<String, Object>> received = new LinkedBlockingQueue<>();
-        String destination = NotificationService.USER_PREFIX + NotificationService.USER_QUEUE;
         session.subscribe(destination, new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
@@ -180,6 +193,85 @@ class SaleNotificationWebSocketTest {
 
         assertNull(seller.poll(1, TimeUnit.SECONDS), "the seller is not told about their own sale");
         assertNull(counter.poll(1, TimeUnit.SECONDS), "the counter is not the depot's audience");
+    }
+
+    @Test
+    @DisplayName("the depot queue follows a sale and its hand-over, on the seller's own screen too")
+    void deliveryQueueFollowsSaleAndHandOver() throws Exception {
+        // Seller and storekeeper in one: the phone open on the queue belongs to the seller.
+        UserApp allRounder = account(RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
+        Product oil = products.save(Product.builder().name("Huile " + UUID.randomUUID())
+                .price(new BigDecimal("9000")).stockQuantity(10).build());
+        BlockingQueue<Map<String, Object>> queue = listenTopic(allRounder, OrderChangePublisher.TOPIC);
+
+        InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Rina",
+                PaymentStatus.PAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(oil.getId(), 1))), allRounder);
+
+        Map<String, Object> added = queue.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(added, "the queue never heard of the sale");
+        assertEquals(OrderChangePublisher.Change.ADDED, added.get("change"));
+        assertEquals(List.of(invoice.invoiceNumber()), added.get("invoiceNumbers"));
+
+        invoiceService.deliver(invoice.id(), allRounder);
+
+        Map<String, Object> delivered = queue.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(delivered, "the queue never heard of the hand-over");
+        assertEquals(OrderChangePublisher.Change.DELIVERED, delivered.get("change"));
+        assertEquals(List.of(invoice.invoiceNumber()), delivered.get("invoiceNumbers"));
+    }
+
+    @Test
+    @DisplayName("the seller hears when the depot hands their order over, cash included")
+    void handOverReachesTheSeller() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
+        Product sugar = products.save(Product.builder().name("Sucre " + UUID.randomUUID())
+                .price(new BigDecimal("4000")).stockQuantity(10).build());
+        InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Hery",
+                PaymentStatus.UNPAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(sugar.getId(), 2))), cashier);
+
+        BlockingQueue<Map<String, Object>> seller = listen(cashier);
+        BlockingQueue<Map<String, Object>> depot = listen(storekeeper);
+
+        invoiceService.deliver(invoice.id(), storekeeper);
+
+        Map<String, Object> notification = seller.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(notification, "the seller was never told");
+        assertEquals("ORDER_DELIVERED", notification.get("type"));
+        assertTrue(((String) notification.get("message")).contains("8000 Ar encaisses"));
+        assertEquals(invoice.invoiceNumber(), ((Map<?, ?>) notification.get("data")).get("invoiceNumber"));
+        assertNull(depot.poll(1, TimeUnit.SECONDS), "the storekeeper is not told about their own hand-over");
+    }
+
+    @Test
+    @DisplayName("the desk hears of cash brought by the depot, and the storekeeper of its confirmation")
+    void remittanceReachesBothEnds() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
+        Product salt = products.save(Product.builder().name("Sel " + UUID.randomUUID())
+                .price(new BigDecimal("1500")).stockQuantity(10).build());
+        InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Lova",
+                PaymentStatus.UNPAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(salt.getId(), 2))), cashier);
+        invoiceService.deliver(invoice.id(), storekeeper);
+
+        BlockingQueue<Map<String, Object>> desk = listen(cashier);
+        BlockingQueue<Map<String, Object>> depot = listen(storekeeper);
+        desk.clear();
+
+        Long slipId = remittanceService.submit(storekeeper, List.of(invoice.id())).id();
+        Map<String, Object> submitted = desk.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(submitted, "the desk was never told");
+        assertEquals("REMITTANCE_SUBMITTED", submitted.get("type"));
+        assertTrue(((String) submitted.get("message")).contains("3000 Ar"));
+
+        remittanceService.confirm(slipId, cashier);
+        Map<String, Object> confirmed = depot.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(confirmed, "the storekeeper was never told");
+        assertEquals("REMITTANCE_CONFIRMED", confirmed.get("type"));
+        assertEquals(List.of(invoice.invoiceNumber()), ((Map<?, ?>) confirmed.get("data")).get("invoiceNumbers"));
     }
 
     @Test

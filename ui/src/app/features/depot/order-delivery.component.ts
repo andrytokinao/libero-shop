@@ -1,17 +1,19 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
-import { DeliveryStatus, Invoice, NotificationType } from '../../core/models';
-import { reloadOn } from '../../core/realtime/reload-on';
+import { DeliveryStatus, Invoice, RoleApp } from '../../core/models';
+import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
+import { HasRoleDirective } from '../../shared/directives/has-role.directive';
+import { CashInHandComponent } from './cash-in-hand.component';
 import { deliveryActionLabel } from './delivery.util';
 
 @Component({
   selector: 'app-order-delivery',
   standalone: true,
-  imports: [FormsModule, InvoiceTableComponent],
+  imports: [FormsModule, InvoiceTableComponent, CashInHandComponent, HasRoleDirective],
   template: `
     <div class="card">
       <h2>
@@ -54,6 +56,12 @@ import { deliveryActionLabel } from './delivery.util';
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
     </div>
+
+    <!-- Where an unpaid order lands once handed over: its cash, with the button to bring it
+         to the desk. Only a storekeeper holds cash; a manager browsing here has none. -->
+    <div *appHasRole="RoleApp.DEPOT_AGENT" style="margin-top:16px;">
+      <app-cash-in-hand />
+    </div>
   `,
 })
 export class OrderDeliveryComponent {
@@ -64,6 +72,10 @@ export class OrderDeliveryComponent {
   protected readonly onlyPending = signal(true);
   protected readonly busy = signal(false);
   protected readonly actionLabel = deliveryActionLabel;
+  protected readonly RoleApp = RoleApp;
+
+  /** Refreshed right after a hand-over, without waiting for the socket to echo it. */
+  private readonly cashInHand = viewChild(CashInHandComponent);
 
   private readonly resource = apiResource<Invoice[]>([], () =>
     this.api.search({
@@ -74,8 +86,9 @@ export class OrderDeliveryComponent {
   protected readonly invoices = this.resource.value;
 
   constructor() {
-    // A sale made at the counter appears in the queue without anyone pressing F5.
-    reloadOn(this.resource, NotificationType.SALE_CREATED);
+    // A sale made at the counter appears in the queue, and an order handed over by another
+    // storekeeper leaves it, without anyone pressing F5.
+    reloadOnTopic(this.resource, ORDERS_TOPIC);
   }
 
   protected onSearch(value: string): void {
@@ -94,6 +107,7 @@ export class OrderDeliveryComponent {
       next: (result) => {
         this.busy.set(false);
         this.resource.reload();
+        this.cashInHand()?.reload();
         this.toasts.show(result.message);
       },
       error: () => {

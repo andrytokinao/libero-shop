@@ -199,17 +199,34 @@ dépose dans `downloads/`.
 
 ## 6. Équiper un téléphone
 
-Sur le poste administrateur : **Admin › Application mobile**.
+Page **Application mobile** : `http://<serveur>/application-mobile`. Elle est **publique** —
+lien sous le formulaire de connexion, et bouton dans la barre latérale pour tous les rôles —
+car un nouvel employé équipe son téléphone avant d'avoir un compte.
 
-1. Choisir l'adresse du serveur **sur le Wi-Fi de la boutique** (la liste montre toutes les
-   cartes réseau de la machine ; les adaptateurs virtuels sont en bas).
-2. **QR code 1 — Installer** : le scanner avec l'appareil photo du téléphone, ouvrir le fichier
-   téléchargé, autoriser l'installation depuis le navigateur quand Android le demande.
+1. **Où sera le téléphone ?**
+   - *Dans la boutique (Wi-Fi)* : adresse du serveur sur le réseau local. Le lien « Changer
+     d'adresse » liste toutes les cartes réseau de la machine (adaptateurs virtuels en bas).
+     Ces adresses ne sont montrées qu'aux appareils eux-mêmes sur un réseau local.
+   - *Partout (Internet)* : adresse publique du serveur, à configurer (§ 6.1). Sans elle, ce
+     choix indique que le serveur n'est pas accessible depuis Internet.
+2. **QR code 1 — Installer** : le scanner avec l'appareil photo du téléphone (ou toucher
+   *Télécharger l'application* si la page est ouverte sur le téléphone), ouvrir le fichier,
+   autoriser l'installation depuis le navigateur quand Android le demande.
 3. **QR code 2 — Connecter** : ouvrir l'application ; au premier lancement elle affiche l'écran
    *Serveur* → *Scanner le QR code*. L'adresse est vérifiée puis enregistrée, et la page de
    connexion apparaît.
 
-Le téléphone doit être **sur le même réseau** que le serveur.
+### 6.1 Accès par Internet
+
+Le serveur ne peut pas deviner son adresse publique. Une fois qu'il est joignable depuis
+Internet (redirection de port sur la box vers cette machine, ou reverse proxy — de préférence
+en HTTPS), renseignez-la :
+
+```properties
+liberoshop.mobile.public-url=https://boutique.example.com
+```
+
+ou la variable d'environnement `LIBEROSHOP_PUBLIC_URL`. Redémarrage nécessaire.
 
 ---
 

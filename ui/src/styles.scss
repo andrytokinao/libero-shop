@@ -581,6 +581,12 @@ tr:last-child td {
     background: #eceeec;
     color: var(--ink-soft);
   }
+
+  /* Money on its way from the depot to the till: neither owed nor in hand. */
+  &.blue {
+    background: #e3eefb;
+    color: #1f5c99;
+  }
 }
 
 /* ----------------------------------------------------------------- controls */

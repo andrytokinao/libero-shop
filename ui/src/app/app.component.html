@@ -59,6 +59,12 @@
           <a class="btn ghost block" routerLink="/serveur" style="margin-top:12px;">
             Serveur : {{ server.host() }}
           </a>
+        } @else {
+          <!-- Every role, rather than one menu entry per role section: the same page
+               would otherwise appear up to four times for an account holding them all. -->
+          <a class="btn ghost block" routerLink="/application-mobile" style="margin-top:12px;">
+            ▯ Application mobile
+          </a>
         }
         <button class="btn ghost block" type="button" style="margin-top:12px;" (click)="logout()">
           Se déconnecter

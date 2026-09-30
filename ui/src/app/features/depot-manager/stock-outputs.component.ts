@@ -3,8 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
-import { NotificationType, StockOutput } from '../../core/models';
-import { reloadOn } from '../../core/realtime/reload-on';
+import { StockOutput } from '../../core/models';
+import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { DeliveryStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -79,7 +79,8 @@ export class StockOutputsComponent {
   protected readonly outputs = this.resource.value;
 
   constructor() {
-    reloadOn(this.resource, NotificationType.SALE_CREATED);
+    // Each output shows its order's hand-over status, which the depot changes.
+    reloadOnTopic(this.resource, ORDERS_TOPIC);
   }
 
   protected readonly units = computed(() =>

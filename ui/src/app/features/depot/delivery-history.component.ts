@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { DeliveryStatus, Invoice } from '../../core/models';
+import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -36,6 +37,11 @@ export class DeliveryHistoryComponent {
   private readonly today = apiResource<Invoice[]>([], () =>
     this.api.search({ deliveryStatus: DeliveryStatus.DELIVERED, todayOnly: true }),
   );
+
+  constructor() {
+    reloadOnTopic(this.all, ORDERS_TOPIC);
+    reloadOnTopic(this.today, ORDERS_TOPIC);
+  }
 
   protected readonly delivered = this.all.value;
   protected readonly deliveredToday = this.today.value;

@@ -79,6 +79,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()
                         // Asked by the mobile app to test an address before anyone signs in.
                         .requestMatchers(HttpMethod.GET, "/api/server/info").permitAll()
+                        // The download page: a phone is equipped before its owner has an account.
+                        .requestMatchers(HttpMethod.GET, "/api/server/connection").permitAll()
                         // Installing or renewing a license is an administrative act.
                         .requestMatchers("/api/license/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()

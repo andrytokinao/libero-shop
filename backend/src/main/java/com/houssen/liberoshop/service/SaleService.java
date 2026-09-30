@@ -75,6 +75,10 @@ public class SaleService {
     @RequiresActiveLicense
     @Transactional
     public InvoiceResponse checkout(CreateSaleRequest request, UserApp seller) {
+        if (!request.paymentStatus().isCheckoutStatus()) {
+            throw new BusinessRuleException("INVALID_PAYMENT_STATUS",
+                    "Une vente est payee ou non payee a la caisse : les autres statuts viennent du depot.");
+        }
         Map<Long, Integer> quantities = mergeLines(request.lines());
         LocalDateTime now = calendar.now();
 

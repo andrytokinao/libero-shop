@@ -66,7 +66,7 @@ public class InvoiceController {
         String number = result.invoice().invoiceNumber();
         if (result.collected().compareTo(BigDecimal.ZERO) > 0) {
             return number + " remise. " + result.collected().toPlainString()
-                    + " Ar encaisses en especes - a verser a la caisse.";
+                    + " Ar encaisses en especes : touchez \"Remettre a la caisse\" en apportant l'argent.";
         }
         return "Commande " + number + " remise a " + result.invoice().clientName() + ".";
     }

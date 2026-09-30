@@ -19,11 +19,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         [value]="invoices().length"
         [hint]="auth.currentUser()?.fullName ?? ''"
       />
-      <app-kpi-card label="Total encaissé" [value]="collected() | ariary" />
+      <app-kpi-card label="Total en caisse" [value]="collected() | ariary" />
       <app-kpi-card
         label="Pas encore en caisse"
         [value]="outstanding() | ariary"
-        [hint]="unpaid().length + ' facture(s) : non payée(s) ou argent au dépôt'"
+        [hint]="unpaid().length + ' facture(s) : non payées, ou argent encore au dépôt'"
       />
     </div>
 

@@ -269,13 +269,13 @@ public class DataInitializer implements ApplicationRunner {
 
         // --- today: settled at the depot, cash still in Joseph's hands
         Invoice collectedAtDepot = record(accounts.hary(), today.plusHours(9).plusMinutes(50), "Solo Andriamana",
-                PaymentStatus.PAID, DeliveryStatus.DELIVERED, false,
+                PaymentStatus.COLLECTED, DeliveryStatus.DELIVERED, false,
                 line(catalog.product(2), 2));
         pay(collectedAtDepot, PaymentMethod.CASH, accounts.joseph(), today.plusHours(11).plusMinutes(45));
 
         // --- today: settled at the depot and already handed over, slip pending
         Invoice submittedSlip = record(accounts.fatima(), today.plusHours(8).plusMinutes(10), "Gargote Anosy",
-                PaymentStatus.PAID, DeliveryStatus.DELIVERED, false,
+                PaymentStatus.REMITTED, DeliveryStatus.DELIVERED, false,
                 line(catalog.product(11), 2));
         Payment awaiting = pay(submittedSlip, PaymentMethod.CASH, accounts.joseph(), today.plusHours(10).plusMinutes(30));
 

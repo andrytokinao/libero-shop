@@ -24,8 +24,9 @@ export class RemittanceApi {
     return this.http.get<Payment[]>(`${API_BASE_URL}/remittances/cash-in-hand`);
   }
 
-  submit(): Observable<CashRemittance> {
-    return this.http.post<CashRemittance>(`${API_BASE_URL}/remittances`, {});
+  /** Brings cash to the desk: these orders' only, or everything held when none is given. */
+  submit(invoiceIds: number[] = []): Observable<CashRemittance> {
+    return this.http.post<CashRemittance>(`${API_BASE_URL}/remittances`, { invoiceIds });
   }
 
   confirm(remittanceId: number): Observable<CashRemittance> {

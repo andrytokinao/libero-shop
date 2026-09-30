@@ -63,6 +63,12 @@ export class NotificationCenterService {
           return '/depot/remise';
         }
         return this.auth.hasRole(RoleApp.DEPOT_MANAGER) ? '/gestion-depot/sorties' : null;
+      case NotificationType.ORDER_DELIVERED:
+        return this.auth.hasRole(RoleApp.CASHIER) ? '/caisse/factures' : null;
+      case NotificationType.REMITTANCE_SUBMITTED:
+        return this.auth.hasRole(RoleApp.CASHIER) ? '/caisse/versements' : null;
+      case NotificationType.REMITTANCE_CONFIRMED:
+        return this.auth.hasRole(RoleApp.DEPOT_AGENT) ? '/depot/caisse' : null;
       default:
         return null;
     }

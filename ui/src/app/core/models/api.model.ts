@@ -158,6 +158,9 @@ export interface CashierDashboard {
   averageBasket: number;
   outstandingToday: number;
   lowStockCount: number;
+  /** Slips brought by the depot and not confirmed yet, every agent's. */
+  remittancesToConfirm: number;
+  remittancesToConfirmAmount: number;
   latestInvoices: Invoice[];
 }
 

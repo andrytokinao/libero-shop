@@ -3,10 +3,25 @@
  * Values are the strings persisted by @Enumerated(EnumType.STRING).
  */
 
+/**
+ * Where the money for a sale is. Unpaid at the desk, it walks UNPAID → COLLECTED (paid to the
+ * storekeeper) → REMITTED (brought to the desk) → PAID (counted and confirmed by a cashier).
+ */
 export enum PaymentStatus {
   PAID = 'PAID',
   UNPAID = 'UNPAID',
+  /** Paid to the storekeeper on hand-over; the cash is still with them. */
+  COLLECTED = 'COLLECTED',
+  /** Brought to the desk; a cashier has yet to confirm receiving it. */
+  REMITTED = 'REMITTED',
 }
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  [PaymentStatus.PAID]: 'Payée',
+  [PaymentStatus.UNPAID]: 'Non payée',
+  [PaymentStatus.COLLECTED]: 'Encaissée au dépôt',
+  [PaymentStatus.REMITTED]: 'Versée, à confirmer',
+};
 
 export enum DeliveryStatus {
   PENDING = 'PENDING',

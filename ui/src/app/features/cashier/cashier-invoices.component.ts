@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { Invoice } from '../../core/models';
+import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 
@@ -49,6 +50,10 @@ export class CashierInvoicesComponent {
     this.api.search({ mine: true, search: this.search() }),
   );
   protected readonly invoices = this.resource.value;
+
+  constructor() {
+    reloadOnTopic(this.resource, ORDERS_TOPIC);
+  }
 
   protected onSearch(value: string): void {
     this.search.set(value);

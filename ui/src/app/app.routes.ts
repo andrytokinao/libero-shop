@@ -27,6 +27,15 @@ export const routes: Routes = [
       import('./features/settings/server-setup.component').then((m) => m.ServerSetupComponent),
   },
 
+  // Getting the Android app. Open to everyone too: a phone is equipped before its owner has an
+  // account, and the link to this page is what gets passed around.
+  {
+    path: 'application-mobile',
+    title: 'Application mobile',
+    loadComponent: () =>
+      import('./features/mobile/mobile-download.component').then((m) => m.MobileDownloadComponent),
+  },
+
   // ------------------------------------------------------------ cash desk
   {
     path: 'caisse',
@@ -178,12 +187,8 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/revenue.component').then((m) => m.RevenueComponent),
       },
-      {
-        path: 'application-mobile',
-        title: 'Application mobile',
-        loadComponent: () =>
-          import('./features/admin/mobile-app.component').then((m) => m.MobileAppComponent),
-      },
+      // Moved out of admin when it opened to everyone; kept for bookmarks.
+      { path: 'application-mobile', redirectTo: '/application-mobile' },
       {
         path: 'marges',
         title: 'Bénéfices & stock',

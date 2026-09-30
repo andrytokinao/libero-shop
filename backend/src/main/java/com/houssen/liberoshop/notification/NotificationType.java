@@ -9,5 +9,14 @@ package com.houssen.liberoshop.notification;
 public enum NotificationType {
 
     /** A sale was recorded at the counter: goods are waiting to leave the depot. */
-    SALE_CREATED
+    SALE_CREATED,
+
+    /** An order was handed over at the depot: its seller learns the customer has the goods. */
+    ORDER_DELIVERED,
+
+    /** A storekeeper brought cash to the desk: a cashier has to count it and confirm. */
+    REMITTANCE_SUBMITTED,
+
+    /** A cashier confirmed receiving a storekeeper's cash: the orders are paid. */
+    REMITTANCE_CONFIRMED
 }

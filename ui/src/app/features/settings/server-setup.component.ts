@@ -35,8 +35,8 @@ import { ToastService } from '../../core/services/toast.service';
 
         <p class="muted intro">
           @if (config.isMobile) {
-            Scannez le QR code affiché sur l'écran « Application mobile » de l'administrateur, ou
-            saisissez l'adresse du serveur. Le téléphone doit être sur le même réseau Wi-Fi.
+            Scannez le QR code « Connecter » de la page « Application mobile » (sur un ordinateur
+            de la boutique), ou saisissez l'adresse du serveur.
           } @else {
             Cette version web est servie par le serveur lui-même : elle n'a normalement rien à
             configurer. Cet écran sert à l'application mobile.

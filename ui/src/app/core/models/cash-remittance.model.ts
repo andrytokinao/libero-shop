@@ -15,4 +15,14 @@ export interface CashRemittance {
   confirmedBy: UserApp | null;
   /** How many collections the slip bundles. */
   paymentCount: number;
+  /** The orders whose cash the slip carries, to count against before confirming. */
+  invoices: RemittedInvoice[];
+}
+
+/** One order in a slip — mirrors CashRemittanceResponse.RemittedInvoice. */
+export interface RemittedInvoice {
+  invoiceId: number;
+  invoiceNumber: string;
+  clientName: string;
+  amount: number;
 }

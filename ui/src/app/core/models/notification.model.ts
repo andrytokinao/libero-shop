@@ -4,6 +4,12 @@ import { PaymentStatus } from './enums';
 export enum NotificationType {
   /** A sale was recorded at the counter: goods are waiting to leave the depot. */
   SALE_CREATED = 'SALE_CREATED',
+  /** An order was handed over at the depot: its seller learns the customer has the goods. */
+  ORDER_DELIVERED = 'ORDER_DELIVERED',
+  /** A storekeeper brought cash to the desk: a cashier has to count it and confirm. */
+  REMITTANCE_SUBMITTED = 'REMITTANCE_SUBMITTED',
+  /** A cashier confirmed receiving a storekeeper's cash: the orders are paid. */
+  REMITTANCE_CONFIRMED = 'REMITTANCE_CONFIRMED',
 }
 
 /**
@@ -34,4 +40,24 @@ export interface SaleCreatedData {
   paymentStatus: PaymentStatus;
   units: number;
   sellerName: string;
+}
+
+/** `data` of an ORDER_DELIVERED notification — mirrors DeliveryNotifier.OrderDelivered. */
+export interface OrderDeliveredData {
+  invoiceId: number;
+  invoiceNumber: string;
+  clientName: string;
+  agentName: string;
+  /** Cash taken at hand-over; 0 when the order was paid at the desk. */
+  collected: number;
+}
+
+/** `data` of the REMITTANCE_* notifications — mirrors RemittanceNotifier.RemittanceData. */
+export interface RemittanceData {
+  remittanceId: number;
+  amount: number;
+  invoiceNumbers: string[];
+  agentName: string;
+  /** Null until a cashier has confirmed. */
+  cashierName: string | null;
 }

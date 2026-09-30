@@ -1,7 +1,9 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { apiResource } from '../../core/api/api-resource';
 import { CashierDashboard } from '../../core/models';
+import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -14,13 +16,27 @@ const EMPTY: CashierDashboard = {
   averageBasket: 0,
   outstandingToday: 0,
   lowStockCount: 0,
+  remittancesToConfirm: 0,
+  remittancesToConfirmAmount: 0,
   latestInvoices: [],
 };
 
 @Component({
   selector: 'app-cashier-dashboard',
   standalone: true,
-  imports: [KpiCardComponent, InvoiceTableComponent, AriaryPipe],
+  imports: [RouterLink, KpiCardComponent, InvoiceTableComponent, AriaryPipe],
+  styles: `
+    .to-confirm {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 16px;
+      border-left: 4px solid #1f5c99;
+      color: inherit;
+      text-decoration: none;
+    }
+  `,
   template: `
     <div class="grid g4">
       <app-kpi-card
@@ -45,6 +61,17 @@ const EMPTY: CashierDashboard = {
       />
     </div>
 
+    <!-- Cash waiting at the desk is what a cashier must act on: shown only when there is some. -->
+    @if (data().remittancesToConfirm) {
+      <a class="card to-confirm" routerLink="/caisse/versements">
+        <strong>
+          {{ data().remittancesToConfirm }} versement(s) du dépôt à confirmer :
+          {{ data().remittancesToConfirmAmount | ariary }}
+        </strong>
+        <span class="muted">Comptez l'argent reçu puis confirmez la réception ›</span>
+      </a>
+    }
+
     <div class="card" style="margin-top:16px;">
       <h2>Mes dernières factures</h2>
       <app-invoice-table
@@ -60,4 +87,9 @@ export class CashierDashboardComponent {
   private readonly api = inject(DashboardApi);
   private readonly dashboard = apiResource(EMPTY, () => this.api.cashier());
   protected readonly data = this.dashboard.value;
+
+  constructor() {
+    // An order handed over at the depot changes what is still to be collected.
+    reloadOnTopic(this.dashboard, ORDERS_TOPIC);
+  }
 }

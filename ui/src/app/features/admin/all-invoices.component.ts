@@ -7,7 +7,14 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
-type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
+type InvoiceFilter = 'ALL' | 'UNPAID' | 'COLLECTED' | 'REMITTED' | 'PENDING_DELIVERY' | 'DELIVERED';
+
+/** The filters that are a payment status, and which one. */
+const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
+  UNPAID: PaymentStatus.UNPAID,
+  COLLECTED: PaymentStatus.COLLECTED,
+  REMITTED: PaymentStatus.REMITTED,
+};
 
 @Component({
   selector: 'app-all-invoices',
@@ -47,6 +54,8 @@ type InvoiceFilter = 'ALL' | 'UNPAID' | 'PENDING_DELIVERY' | 'DELIVERED';
           >
             <option value="ALL">Toutes</option>
             <option value="UNPAID">Non payées</option>
+            <option value="COLLECTED">Encaissées au dépôt (argent chez l'agent)</option>
+            <option value="REMITTED">Versées, à confirmer par la caisse</option>
             <option value="PENDING_DELIVERY">En attente de remise</option>
             <option value="DELIVERED">Remises</option>
           </select>
@@ -71,7 +80,7 @@ export class AllInvoicesComponent {
   private readonly resource = apiResource<Invoice[]>([], () =>
     this.api.search({
       search: this.search(),
-      paymentStatus: this.filter() === 'UNPAID' ? PaymentStatus.UNPAID : undefined,
+      paymentStatus: PAYMENT_FILTERS[this.filter()],
       deliveryStatus:
         this.filter() === 'PENDING_DELIVERY'
           ? DeliveryStatus.PENDING

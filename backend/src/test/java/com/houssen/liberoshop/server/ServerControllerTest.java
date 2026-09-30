@@ -17,9 +17,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * What a phone meets before it has an account: the server says who it is to anyone, lists its
- * addresses only to an administrator, and admits the mobile web view across origins.
+ * local addresses only to callers on a local network, and admits the mobile web view across
+ * origins.
  */
-@SpringBootTest(properties = "liberoshop.security.mobile-origins=https://localhost")
+@SpringBootTest(properties = {
+        "liberoshop.security.mobile-origins=https://localhost",
+        "liberoshop.mobile.public-url=https://boutique.example.com/"
+})
 @AutoConfigureMockMvc
 class ServerControllerTest {
 
@@ -35,9 +39,26 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("keeps its network addresses for signed-in administrators")
-    void connectionNeedsAnAccount() throws Exception {
-        mvc.perform(get("/api/server/connection")).andExpect(status().isUnauthorized());
+    @DisplayName("shows the download page's addresses without a token, the Internet one included")
+    void connectionIsPublic() throws Exception {
+        mvc.perform(get("/api/server/connection"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.internet.url").value("https://boutique.example.com"))
+                .andExpect(jsonPath("$.internet.connectionCode")
+                        .value(ConnectionCode.of("https://boutique.example.com")));
+    }
+
+    @Test
+    @DisplayName("keeps the shop's network addresses from a caller on the Internet")
+    void localAddressesStayLocal() throws Exception {
+        mvc.perform(get("/api/server/connection").with(request -> {
+                    request.setRemoteAddr("203.0.113.7");
+                    request.setServerName("boutique.example.com");
+                    return request;
+                }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addresses").isEmpty())
+                .andExpect(jsonPath("$.internet.url").value("https://boutique.example.com"));
     }
 
     @Test

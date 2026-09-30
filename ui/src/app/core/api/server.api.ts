@@ -9,7 +9,7 @@ import { ServerConnection } from '../models';
 export class ServerApi {
   private readonly http = inject(HttpClient);
 
-  /** Administrators only: the server's local addresses and the published APK. */
+  /** Public: the server's addresses (shop network, Internet) and the published APK. */
   connection(): Observable<ServerConnection> {
     return this.http.get<ServerConnection>(`${API_BASE_URL}/server/connection`);
   }

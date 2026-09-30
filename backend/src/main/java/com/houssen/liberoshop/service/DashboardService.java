@@ -62,8 +62,9 @@ public class DashboardService {
         List<InvoiceResponse> paid = mine.stream()
                 .filter(invoice -> invoice.paymentStatus() == PaymentStatus.PAID)
                 .toList();
+        // Not in the till yet: unpaid, or paid to a storekeeper whose cash has not been confirmed.
         List<InvoiceResponse> unpaid = mine.stream()
-                .filter(invoice -> invoice.paymentStatus() == PaymentStatus.UNPAID)
+                .filter(invoice -> invoice.paymentStatus() != PaymentStatus.PAID)
                 .toList();
 
         BigDecimal revenue = totalOf(paid);
@@ -75,6 +76,8 @@ public class DashboardService {
                 average(revenue, paid.size()),
                 totalOf(unpaid),
                 catalogService.countLowStock(),
+                remittanceService.pendingCount(),
+                remittanceService.pendingTotal(),
                 mine.stream().limit(LATEST_INVOICES).toList());
     }
 
