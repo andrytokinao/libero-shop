@@ -1,18 +1,21 @@
 import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { Observable } from 'rxjs';
+import { Invoice, PaymentMethod } from '../../core/models';
+import { asksHowToPay } from '../../core/orders/delivery.util';
+import { InvoiceActionRunner } from '../../core/orders/invoice-action-runner.service';
 import {
-  CancelInvoiceRequest,
-  DeliveryStatus,
-  Invoice,
-  PaymentStatus,
-  RoleApp,
-} from '../../core/models';
+  InvoiceAction,
+  InvoiceActionKind,
+  availableActions,
+} from '../../core/orders/invoice-actions';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { CancelOrderDialogComponent } from './cancel-order-dialog.component';
+import { HandOverDialogComponent } from './hand-over-dialog.component';
 import { InvoiceDetailDialogComponent } from './invoice-detail-dialog.component';
+import { PayDialogComponent } from './pay-dialog.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 
 /**
@@ -33,6 +36,8 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
     DeliveryStatusBadgeComponent,
     InvoiceDetailDialogComponent,
     CancelOrderDialogComponent,
+    PayDialogComponent,
+    HandOverDialogComponent,
   ],
   template: `
     @if (invoices.length) {
@@ -151,21 +156,50 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
       </ul>
 
       @if (detail(); as invoice) {
-        @if (cancelling()) {
-          <app-cancel-order-dialog
-            [invoice]="invoice"
-            [busy]="cancelBusy()"
-            (confirmed)="cancel(invoice, $event)"
-            (closed)="cancelling.set(false)"
-          />
-        } @else {
-          <app-invoice-detail-dialog
-            [invoice]="invoice"
-            [showSeller]="showSeller"
-            [canCancel]="allowCancel && mayCancel(invoice)"
-            (cancelRequested)="cancelling.set(true)"
-            (closed)="closeDetail()"
-          />
+        @switch (step()) {
+          @case ('cancel') {
+            <app-cancel-order-dialog
+              [invoice]="invoice"
+              [busy]="running()"
+              (confirmed)="run(runner.cancel(invoice, $event))"
+              (closed)="step.set(null)"
+            />
+          }
+          @case ('pay') {
+            <app-pay-dialog
+              [invoice]="invoice"
+              [busy]="running()"
+              (paid)="run(runner.pay(invoice, $event))"
+              (closed)="step.set(null)"
+            />
+          }
+          @case ('collect') {
+            <app-pay-dialog
+              [invoice]="invoice"
+              [busy]="running()"
+              [methods]="cashOnly"
+              (paid)="run(runner.collect(invoice))"
+              (closed)="step.set(null)"
+            />
+          }
+          @case ('handOver') {
+            <app-hand-over-dialog
+              [invoice]="invoice"
+              [busy]="running()"
+              (chosen)="run(runner.handOver(invoice, $event))"
+              (closed)="step.set(null)"
+            />
+          }
+          @default {
+            <app-invoice-detail-dialog
+              [invoice]="invoice"
+              [showSeller]="showSeller"
+              [actions]="actionsFor(invoice)"
+              [busy]="running()"
+              (act)="act(invoice, $event)"
+              (closed)="closeDetail()"
+            />
+          }
         }
       }
     } @else {
@@ -190,54 +224,67 @@ export class InvoiceTableComponent {
    */
   @Input() allowCancel = false;
   @Output() readonly action = new EventEmitter<Invoice>();
-  /** An order was cancelled from here: the screen reloads its list. */
-  @Output() readonly changed = new EventEmitter<Invoice>();
+  /**
+   * An order moved from its detail — paid, handed over, its cash remitted, cancelled: the screen
+   * reloads its list. The order screens also hear it over the socket.
+   */
+  @Output() readonly changed = new EventEmitter<void>();
 
   private readonly auth = inject(AuthService);
-  private readonly api = inject(InvoiceApi);
   private readonly toasts = inject(ToastService);
+  protected readonly runner = inject(InvoiceActionRunner);
 
-  protected readonly cancelling = signal(false);
-  protected readonly cancelBusy = signal(false);
+  /** The dialog an action opens over the detail to ask what it needs, or null for the detail. */
+  protected readonly step = signal<'pay' | 'collect' | 'handOver' | 'cancel' | null>(null);
+  protected readonly running = signal(false);
+  protected readonly cashOnly = [PaymentMethod.CASH];
 
-  /**
-   * Mirrors InvoiceService.cancel: unpaid only; handed over only when the shop allows it; the
-   * account's own orders, or any for a till or the administrator. The server checks it again.
-   */
-  protected mayCancel(invoice: Invoice): boolean {
-    if (invoice.paymentStatus !== PaymentStatus.UNPAID) {
-      return false;
-    }
-    if (
-      invoice.deliveryStatus === DeliveryStatus.DELIVERED &&
-      !this.auth.settings().cancelAfterDelivery
-    ) {
-      return false;
-    }
-    return (
-      this.auth.hasRole(RoleApp.CASHIER, RoleApp.SUPER_ADMIN) ||
-      invoice.sale.seller.id === this.auth.currentUser()?.id
-    );
+  /** The detail's buttons for this person — see `availableActions` for the rules. */
+  protected actionsFor(invoice: Invoice): InvoiceAction[] {
+    const settings = this.auth.settings();
+    return availableActions(invoice, {
+      userId: this.auth.currentUser()?.id ?? null,
+      roles: this.auth.roles(),
+      features: settings,
+      handOverLabel: this.auth.words().handOverAction,
+    }).filter((action) => action.kind !== InvoiceActionKind.CANCEL || this.allowCancel);
   }
 
-  protected cancel(invoice: Invoice, request: CancelInvoiceRequest): void {
-    this.cancelBusy.set(true);
-    this.api.cancel(invoice.id, request).subscribe({
-      next: (cancelled) => {
-        this.cancelBusy.set(false);
-        this.cancelling.set(false);
-        this.detailId.set(null);
-        this.changed.emit(cancelled);
-        this.toasts.show(
-          cancelled.deliveryStatus === DeliveryStatus.CANCELLED
-            ? `Commande ${cancelled.invoiceNumber} annulée : articles remis en stock.`
-            : `Commande ${cancelled.invoiceNumber} annulée (déjà remise, pas de retour en stock).`,
-        );
+  /** A button of the detail: straight to the server, or through the dialog that asks first. */
+  protected act(invoice: Invoice, action: InvoiceAction): void {
+    switch (action.kind) {
+      case InvoiceActionKind.PAY:
+        return this.step.set('pay');
+      case InvoiceActionKind.COLLECT:
+        return this.step.set('collect');
+      case InvoiceActionKind.CANCEL:
+        return this.step.set('cancel');
+      case InvoiceActionKind.HAND_OVER:
+        return asksHowToPay(invoice, this.auth.settings().payAtDepot)
+          ? this.step.set('handOver')
+          : this.run(this.runner.handOver(invoice, true));
+      case InvoiceActionKind.REMIT_CASH:
+        return this.run(this.runner.remitCash(invoice));
+      case InvoiceActionKind.CONFIRM_REMITTANCE:
+        return this.run(this.runner.confirmRemittance(invoice));
+    }
+  }
+
+  /**
+   * Runs one action, says what happened, and lets the screen reload. The detail stays open on
+   * the order, now in its new state — or closes by itself when the reloaded list no longer
+   * holds it. A refusal is told by the error interceptor; the person stays where they were.
+   */
+  protected run(work: Observable<string>): void {
+    this.running.set(true);
+    work.subscribe({
+      next: (message) => {
+        this.running.set(false);
+        this.step.set(null);
+        this.toasts.show(message);
+        this.changed.emit();
       },
-      error: () => {
-        this.cancelBusy.set(false);
-        this.cancelling.set(false);
-      },
+      error: () => this.running.set(false),
     });
   }
 
@@ -256,6 +303,6 @@ export class InvoiceTableComponent {
 
   protected closeDetail(): void {
     this.detailId.set(null);
-    this.cancelling.set(false);
+    this.step.set(null);
   }
 }

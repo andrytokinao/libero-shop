@@ -9,8 +9,8 @@ import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { CashInHandComponent } from './cash-in-hand.component';
-import { asksHowToPay, deliveryActionLabel } from './delivery.util';
-import { HandOverDialogComponent } from './hand-over-dialog.component';
+import { asksHowToPay, deliveryActionLabel } from '../../core/orders/delivery.util';
+import { HandOverDialogComponent } from '../../shared/components/hand-over-dialog.component';
 
 @Component({
   selector: 'app-order-delivery',

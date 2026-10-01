@@ -7,7 +7,7 @@ import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
-import { PayDialogComponent } from './pay-dialog.component';
+import { PayDialogComponent } from '../../shared/components/pay-dialog.component';
 
 /**
  * Every unpaid order, whoever took it: the restaurant's bills, the customer who comes back to

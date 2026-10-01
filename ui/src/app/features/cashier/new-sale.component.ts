@@ -239,18 +239,22 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
         </div>
 
         <div class="form-row">
-          <div class="fld" style="flex:1; min-width:180px;">
-            <label for="payment-status">Statut du paiement</label>
-            <select
-              id="payment-status"
-              class="field"
-              [ngModel]="paymentStatus()"
-              (ngModelChange)="paymentStatus.set($event)"
-            >
-              <option [ngValue]="PaymentStatus.PAID">Payée à la caisse</option>
-              <option [ngValue]="PaymentStatus.UNPAID">{{ unpaidLabel() }}</option>
-            </select>
-          </div>
+          @if (mayLeaveUnpaid()) {
+            <div class="fld" style="flex:1; min-width:180px;">
+              <label for="payment-status">Statut du paiement</label>
+              <select
+                id="payment-status"
+                class="field"
+                [ngModel]="chosenStatus()"
+                (ngModelChange)="chosenStatus.set($event)"
+              >
+                <option [ngValue]="PaymentStatus.PAID">Payée à la caisse</option>
+                <option [ngValue]="PaymentStatus.UNPAID">
+                  Non payée (à régler à la remise — {{ auth.words().depot.toLowerCase() }})
+                </option>
+              </select>
+            </div>
+          }
           @if (paymentStatus() === PaymentStatus.PAID) {
             <div class="fld" style="flex:1; min-width:160px;">
               <label for="payment-method">Mode de paiement</label>
@@ -297,17 +301,23 @@ export class NewSaleComponent {
 
   protected readonly PaymentStatus = PaymentStatus;
 
-  /** Where an unpaid order will be settled, which the shop's configuration decides. */
-  protected readonly unpaidLabel = computed(() =>
-    this.auth.settings().payAtDepot
-      ? `Non payée (à régler à la remise — ${this.auth.words().depot.toLowerCase()})`
-      : 'Non payée (à encaisser plus tard)',
-  );
   protected readonly paymentMethods = Object.values(PaymentMethod);
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 
+  /**
+   * A till leaves a sale unpaid only for the depot to collect on hand-over. With no money taken
+   * there, the choice is not offered: what the till sells, it is paid for. (Order takers still
+   * send unpaid orders, settled at the till under "À encaisser".)
+   */
+  protected readonly mayLeaveUnpaid = computed(() => this.auth.settings().payAtDepot);
+
   protected readonly clientName = signal('');
-  protected readonly paymentStatus = signal<PaymentStatus>(PaymentStatus.PAID);
+  /** What the cashier picked — only read while the choice is offered. */
+  protected readonly chosenStatus = signal<PaymentStatus>(PaymentStatus.PAID);
+  /** What the sale is sent as: the pick, or paid when there is nothing to pick. */
+  protected readonly paymentStatus = computed(() =>
+    this.mayLeaveUnpaid() ? this.chosenStatus() : PaymentStatus.PAID,
+  );
   protected readonly paymentMethod = signal<PaymentMethod>(PaymentMethod.CASH);
   protected readonly submitting = signal(false);
 

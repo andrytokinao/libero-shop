@@ -1,4 +1,4 @@
-import { DeliveryStatus, Invoice, PaymentStatus } from '../../core/models';
+import { DeliveryStatus, Invoice, PaymentStatus } from '../models';
 
 /**
  * Label of the hand-over button. An unpaid order, where the shop takes money on hand-over, then

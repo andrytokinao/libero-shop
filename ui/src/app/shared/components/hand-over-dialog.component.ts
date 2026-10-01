@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Invoice } from '../../core/models';
-import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { AriaryPipe } from '../pipes/ariary.pipe';
 
 /**
  * Handing an unpaid order over: does the customer pay now, to whoever serves, or later at the

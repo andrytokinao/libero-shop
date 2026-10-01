@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CANCEL_REASON_LABELS, Invoice } from '../../core/models';
+import { InvoiceAction } from '../../core/orders/invoice-actions';
 import { InvoiceLinesComponent } from './invoice-lines.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 
@@ -58,16 +59,44 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
               }
             </p>
           }
+          @if (invoice.cashTrail; as cash) {
+            <p class="cash-trail">
+              @if (cash.remittanceId === null) {
+                Argent encaissé, détenu par <strong>{{ cash.holderName }}</strong> — à remettre à
+                la caisse.
+              } @else {
+                Argent versé par <strong>{{ cash.holderName }}</strong> (versement V-{{
+                  cash.remittanceId
+                }}) — à confirmer par la caisse.
+              }
+            </p>
+          }
           <app-invoice-lines [invoice]="invoice" />
         </div>
 
         <div class="modal-foot">
-          @if (canCancel) {
-            <button class="btn ghost danger-text" type="button" (click)="cancelRequested.emit()">
-              Annuler la commande
+          @if (pending(); as action) {
+            <span class="confirm-question">{{ action.confirm }}</span>
+            <button class="btn ghost" type="button" [disabled]="busy" (click)="pending.set(null)">
+              Non
             </button>
+            <button class="btn" type="button" [disabled]="busy" (click)="press(action, true)">
+              Oui
+            </button>
+          } @else {
+            <!-- What undoes the order sits apart on the left, away from the step it waits for. -->
+            @for (action of leftFirst(); track action.kind) {
+              <button
+                type="button"
+                [class]="classOf(action)"
+                [disabled]="busy"
+                (click)="press(action)"
+              >
+                {{ action.label }}
+              </button>
+            }
+            <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
           }
-          <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
         </div>
       </div>
     </div>
@@ -81,9 +110,26 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
       color: var(--red);
     }
 
+    .cash-trail {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .modal-foot {
+      flex-wrap: wrap;
+    }
+
     .danger-text {
       color: var(--red);
       margin-right: auto;
+    }
+
+    .confirm-question {
+      margin-right: auto;
+      font-weight: 600;
     }
   `,
 })
@@ -91,12 +137,44 @@ export class InvoiceDetailDialogComponent {
   @Input({ required: true }) invoice!: Invoice;
   /** The cash-desk screens show one seller's own invoices; naming them there says nothing. */
   @Input() showSeller = true;
-  /** Offers "Annuler la commande"; the list decides, knowing who is looking and the settings. */
-  @Input() canCancel = false;
+  /**
+   * The buttons for this order and this person — decided by the list, from the rules of
+   * `availableActions`; this dialog only shows them and says which was pressed.
+   */
+  @Input() actions: readonly InvoiceAction[] = [];
+  /** An action is under way: every button waits. */
+  @Input() busy = false;
   @Output() readonly closed = new EventEmitter<void>();
-  @Output() readonly cancelRequested = new EventEmitter<void>();
+  @Output() readonly act = new EventEmitter<InvoiceAction>();
 
   protected readonly reasonLabels = CANCEL_REASON_LABELS;
+
+  /** The action waiting for its "Oui", when it asks one. */
+  protected readonly pending = signal<InvoiceAction | null>(null);
+
+  protected press(action: InvoiceAction, confirmed = false): void {
+    if (action.confirm && !confirmed) {
+      this.pending.set(action);
+      return;
+    }
+    this.pending.set(null);
+    this.act.emit(action);
+  }
+
+  protected leftFirst(): InvoiceAction[] {
+    return [...this.actions].sort((a, b) => Number(b.tone === 'danger') - Number(a.tone === 'danger'));
+  }
+
+  protected classOf(action: InvoiceAction): string {
+    switch (action.tone) {
+      case 'primary':
+        return 'btn';
+      case 'danger':
+        return 'btn ghost danger-text';
+      default:
+        return 'btn ghost';
+    }
+  }
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {

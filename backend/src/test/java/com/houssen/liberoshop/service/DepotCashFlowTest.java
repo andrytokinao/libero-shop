@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,6 +83,30 @@ class DepotCashFlowTest {
 
         remittanceService.confirm(slip.id(), cashier);
         assertEquals(PaymentStatus.PAID, statusOf(order), "counted and confirmed: now it is paid");
+    }
+
+    @Test
+    @DisplayName("the order says who holds its cash, then which slip carries it, then nothing once paid")
+    void cashTrailFollowsTheMoney() {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
+        InvoiceResponse order = unpaidSale(cashier, "4000");
+        assertNull(invoiceService.findById(order.id()).cashTrail(), "unpaid: no cash anywhere yet");
+
+        invoiceService.deliver(order.id(), storekeeper);
+        InvoiceResponse.CashTrail inHand = invoiceService.findById(order.id()).cashTrail();
+        assertEquals(storekeeper.getId(), inHand.holderId());
+        assertEquals(storekeeper.getFullName(), inHand.holderName());
+        assertNull(inHand.remittanceId());
+
+        CashRemittanceResponse slip = remittanceService.submit(storekeeper, List.of(order.id()));
+        InvoiceResponse listed = invoiceService.search(null, PaymentStatus.REMITTED, null, false, order.invoiceNumber())
+                .getFirst();
+        assertEquals(slip.id(), listed.cashTrail().remittanceId(), "the list carries it too");
+        assertEquals(storekeeper.getId(), listed.cashTrail().holderId());
+
+        remittanceService.confirm(slip.id(), cashier);
+        assertNull(invoiceService.findById(order.id()).cashTrail(), "in the till: nothing left to follow");
     }
 
     @Test

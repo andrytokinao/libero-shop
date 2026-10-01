@@ -28,6 +28,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Invoice lookup and the depot hand-over.
@@ -77,14 +79,33 @@ public class InvoiceService {
         LocalDateTime to = todayOnly ? calendar.startOfTomorrow() : null;
         String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
 
-        return invoices.search(sellerId, paymentStatus, deliveryStatus, from, to).stream()
+        return withCashTrail(invoices.search(sellerId, paymentStatus, deliveryStatus, from, to).stream()
                 .filter(invoice -> needle.isEmpty() || matches(invoice, needle))
-                .map(InvoiceResponse::of)
-                .toList();
+                .toList());
     }
 
     public InvoiceResponse findById(Long id) {
-        return InvoiceResponse.of(load(id));
+        return withCashTrail(List.of(load(id))).getFirst();
+    }
+
+    /**
+     * The invoices as responses, each carrying where its cash is if it is not in the till yet.
+     * One payment query for the whole list, made only when some row has cash on its way.
+     */
+    private List<InvoiceResponse> withCashTrail(List<Invoice> found) {
+        List<Long> cashOnItsWay = found.stream()
+                .filter(invoice -> invoice.getPaymentStatus() == PaymentStatus.COLLECTED
+                        || invoice.getPaymentStatus() == PaymentStatus.REMITTED)
+                .map(Invoice::getId)
+                .toList();
+        Map<Long, InvoiceResponse.CashTrail> trails = cashOnItsWay.isEmpty()
+                ? Map.of()
+                : payments.findCashOutsideTill(cashOnItsWay).stream()
+                        .collect(Collectors.toMap(payment -> payment.getInvoice().getId(),
+                                InvoiceResponse.CashTrail::of, (first, second) -> first));
+        return found.stream()
+                .map(invoice -> InvoiceResponse.of(invoice, trails.get(invoice.getId())))
+                .toList();
     }
 
     /**

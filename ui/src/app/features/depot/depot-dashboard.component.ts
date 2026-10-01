@@ -9,8 +9,8 @@ import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
-import { asksHowToPay, deliveryActionLabel } from './delivery.util';
-import { HandOverDialogComponent } from './hand-over-dialog.component';
+import { asksHowToPay, deliveryActionLabel } from '../../core/orders/delivery.util';
+import { HandOverDialogComponent } from '../../shared/components/hand-over-dialog.component';
 
 const EMPTY: DepotDashboard = {
   pendingDeliveries: 0,

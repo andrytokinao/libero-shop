@@ -21,6 +21,21 @@ export interface Invoice {
   sale: Sale;
   /** Who cancelled the order, when and why; null for an order that stands. */
   cancellation: InvoiceCancellation | null;
+  /**
+   * Where the money is while it is not in the till: in someone's hand (COLLECTED), or on a slip
+   * awaiting the cashier (REMITTED). Null otherwise. Absent from the responses that only
+   * confirm an action — the lists and the detail always carry it.
+   */
+  cashTrail?: CashTrail | null;
+}
+
+/** Mirrors InvoiceResponse.CashTrail. */
+export interface CashTrail {
+  /** Who took the money from the customer — and handed the slip in, once remitted. */
+  holderId: number;
+  holderName: string;
+  /** The slip awaiting the cashier's count; null while the cash is still in hand. */
+  remittanceId: number | null;
 }
 
 export interface InvoiceCancellation {

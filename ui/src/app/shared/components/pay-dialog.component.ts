@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Invoice, PAYMENT_METHOD_LABELS, PaymentMethod } from '../../core/models';
-import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { AriaryPipe } from '../pipes/ariary.pipe';
 
 /**
  * Settling an order at the till: the amount in large, then one button per way of paying.

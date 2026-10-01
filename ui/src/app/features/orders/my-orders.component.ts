@@ -6,7 +6,7 @@ import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
-import { PayDialogComponent } from '../cashier/pay-dialog.component';
+import { PayDialogComponent } from '../../shared/components/pay-dialog.component';
 
 /**
  * The orders this person took today, with where each one is: served or waiting, paid or not.
