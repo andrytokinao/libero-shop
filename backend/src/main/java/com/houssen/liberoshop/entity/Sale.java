@@ -26,6 +26,8 @@ public class Sale {
     @Column(nullable = false)
     private LocalDateTime saleDate;
 
+    /** A copy of its invoice's, for the revenue queries: moved only by {@link Invoice}. */
+    @Setter(AccessLevel.NONE)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentStatus paymentStatus;
@@ -40,6 +42,11 @@ public class Sale {
     @Builder.Default
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SaleLine> lines = new ArrayList<>();
+
+    /** Package-private: only its invoice decides where the money is. */
+    void follow(PaymentStatus status) {
+        this.paymentStatus = status;
+    }
 
     public BigDecimal calculateTotal() {
         this.totalAmount = lines.stream()

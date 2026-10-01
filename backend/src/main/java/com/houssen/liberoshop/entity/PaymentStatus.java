@@ -25,7 +25,10 @@ public enum PaymentStatus {
     /** Cancelled while unpaid: nothing is owed. Never counted as revenue, never to collect. */
     CANCELLED;
 
-    /** What a checkout may ask for: the other two are reached through the depot, never posted. */
+    /**
+     * What a checkout may ask for. The others are only reached through a {@link PaymentTransition},
+     * never posted.
+     */
     public boolean isCheckoutStatus() {
         return this == PAID || this == UNPAID;
     }

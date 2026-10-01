@@ -3,6 +3,7 @@ package com.houssen.liberoshop.service;
 import com.houssen.liberoshop.entity.CashRemittance;
 import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentStatus;
+import com.houssen.liberoshop.entity.PaymentTransition;
 import com.houssen.liberoshop.entity.RemittanceStatus;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
@@ -106,7 +107,7 @@ public class RemittanceService {
         // Attaching the payments is what makes the slip auditable down to the invoice.
         held.forEach(payment -> {
             payment.setCashRemittance(remittance);
-            settle(payment, PaymentStatus.REMITTED);
+            payment.getInvoice().apply(PaymentTransition.REMIT);
         });
 
         events.publishEvent(eventOf(remittance, held));
@@ -137,7 +138,7 @@ public class RemittanceService {
         remittance.setStatus(RemittanceStatus.CONFIRMED);
         remittance.setConfirmedBy(cashier);
         List<Payment> carried = payments.findByCashRemittanceId(remittance.getId());
-        carried.forEach(payment -> settle(payment, PaymentStatus.PAID));
+        carried.forEach(payment -> payment.getInvoice().apply(PaymentTransition.CONFIRM_REMITTANCE));
 
         events.publishEvent(eventOf(remittance, carried));
         return CashRemittanceResponse.of(remittance, carried);
@@ -158,12 +159,6 @@ public class RemittanceService {
 
     private CashRemittanceResponse toResponse(CashRemittance remittance) {
         return CashRemittanceResponse.of(remittance, payments.findByCashRemittanceId(remittance.getId()));
-    }
-
-    /** The invoice and its sale carry the same status; they move together. */
-    private static void settle(Payment payment, PaymentStatus status) {
-        payment.getInvoice().setPaymentStatus(status);
-        payment.getInvoice().getSale().setPaymentStatus(status);
     }
 
     private static RemittanceRecordedEvent eventOf(CashRemittance remittance, List<Payment> carried) {

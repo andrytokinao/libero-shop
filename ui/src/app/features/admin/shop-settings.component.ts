@@ -258,8 +258,9 @@ export class ShopSettingsComponent {
         key: 'onlineOrdering',
         label: 'Commande en ligne par QR code',
         hint:
-          'Le client scanne le QR code de sa table et commande depuis son téléphone. Les tables ' +
-          'et leurs QR codes se gèrent dans « Tables & QR codes ».',
+          'Le client, connecté au Wi-Fi de l’établissement, scanne le QR code de sa table et ' +
+          'commande depuis son téléphone. Refusé depuis Internet. Les tables et leurs QR codes ' +
+          'se gèrent dans « Tables & QR codes ».',
         dependsOn: (f) => f.separateDelivery,
       },
       {

@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { LiveUpdateService } from './core/config/live-update.service';
+import { LiveUpdateService } from './core/config/live-update/live-update.service';
 import { moduleMenuPath, sectionOfUrl } from './core/config/navigation';
 import { ServerConfig } from './core/config/server-config.service';
 import { RoleApp } from './core/models';

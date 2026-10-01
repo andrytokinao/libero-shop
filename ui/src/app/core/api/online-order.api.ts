@@ -11,8 +11,11 @@ export class OnlineOrderApi {
 
   // ------------------------------------------------------------ the customer (no account)
 
+  /** Silent: the page explains a refusal itself (off the Wi-Fi, code withdrawn). */
   menu(token: string): Observable<PublicMenu> {
-    return this.http.get<PublicMenu>(`${API_BASE_URL}/public/tables/${token}/menu`);
+    return this.http.get<PublicMenu>(`${API_BASE_URL}/public/tables/${token}/menu`, {
+      context: new HttpContext().set(SILENT_ERRORS, true),
+    });
   }
 
   order(token: string, request: PublicOrderRequest): Observable<PublicOrder> {

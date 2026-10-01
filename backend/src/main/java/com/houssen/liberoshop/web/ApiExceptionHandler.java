@@ -1,6 +1,8 @@
 package com.houssen.liberoshop.web;
 
+import com.houssen.liberoshop.entity.StatusTransitionException;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
+import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +36,25 @@ public class ApiExceptionHandler {
                 .body(new ApiError("NOT_FOUND", e.getMessage(), List.of(), Instant.now()));
     }
 
+    @ExceptionHandler(OutsideLocalNetworkException.class)
+    public ResponseEntity<ApiError> handleOutsideLocalNetwork(OutsideLocalNetworkException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiError("LOCAL_NETWORK_ONLY", e.getMessage(), List.of(), Instant.now()));
+    }
+
     /**
      * 409 rather than 400: the payload was understood, the shop's rules refuse it. The UI
      * shows the message as is, so these are written for a cashier, not for a developer.
      */
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError(e.code(), e.getMessage(), List.of(), Instant.now()));
+    }
+
+    /** The domain refusing a status change: a business rule like the others, same 409. */
+    @ExceptionHandler(StatusTransitionException.class)
+    public ResponseEntity<ApiError> handleStatusTransition(StatusTransitionException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError(e.code(), e.getMessage(), List.of(), Instant.now()));
     }

@@ -1,4 +1,6 @@
 import { provideHttpClient, withInterceptors, withNoXsrfProtection } from '@angular/common/http';
+import { BundleStore } from './core/config/live-update/bundle-store';
+import { CapgoBundleStore } from './core/config/live-update/capgo-bundle-store';
 import {
   APP_INITIALIZER,
   ApplicationConfig,
@@ -18,6 +20,8 @@ import { PageTitleStrategy } from './core/services/page-title.strategy';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
+    // The phone's page versions, on the Capgo plugin: the one place that names it.
+    { provide: BundleStore, useClass: CapgoBundleStore },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(
       // The token travels in a header the app sets itself, never in a cookie, so there is no

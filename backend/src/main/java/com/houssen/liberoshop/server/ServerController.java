@@ -68,7 +68,7 @@ public class ServerController {
         String publicUrl = mobile.publicUrl();
         List<ServerConnectionResponse.Address> result = new ArrayList<>();
 
-        if (isOnLocalNetwork(request.getRemoteAddr())) {
+        if (LocalNetwork.isLocalAddress(request.getRemoteAddr())) {
             String browsedHost = request.getServerName();
             String browsedUrl = urlOf(scheme, browsedHost, request.getServerPort());
             if (!isLocal(browsedHost) && !browsedUrl.equals(publicUrl)) {
@@ -105,27 +105,6 @@ public class ServerController {
     private static String urlOf(String scheme, String host, int port) {
         boolean defaultPort = ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
         return scheme + "://" + host + (defaultPort ? "" : ":" + port);
-    }
-
-    /**
-     * Whether the caller's IP is loopback or private. Behind a reverse proxy on the shop's network
-     * every caller looks local, so Internet visitors would see the private addresses too: private
-     * IPs are no secret worth breaking the page for, but that is the limit of this guard.
-     */
-    private static boolean isOnLocalNetwork(String remoteAddress) {
-        if (remoteAddress == null || remoteAddress.isBlank()) {
-            return false;
-        }
-        try {
-            // An IP literal: parsed, never looked up.
-            InetAddress address = InetAddress.getByName(remoteAddress);
-            byte[] bytes = address.getAddress();
-            boolean uniqueLocalV6 = bytes.length == 16 && (bytes[0] & 0xfe) == 0xfc;
-            return address.isLoopbackAddress() || address.isSiteLocalAddress()
-                    || address.isLinkLocalAddress() || uniqueLocalV6;
-        } catch (UnknownHostException e) {
-            return false;
-        }
     }
 
     private static boolean isLocal(String host) {

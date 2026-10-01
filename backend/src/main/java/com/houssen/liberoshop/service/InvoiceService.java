@@ -2,10 +2,12 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.CancelReason;
 import com.houssen.liberoshop.entity.DeliveryStatus;
+import com.houssen.liberoshop.entity.DeliveryTransition;
 import com.houssen.liberoshop.entity.Invoice;
 import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
+import com.houssen.liberoshop.entity.PaymentTransition;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.StockOutput;
@@ -107,22 +109,17 @@ public class InvoiceService {
     @Transactional
     public DeliveryResult deliver(Long invoiceId, UserApp agent, boolean collect) {
         Invoice invoice = load(invoiceId);
-        if (invoice.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
-            throw new BusinessRuleException("ALREADY_DELIVERED",
-                    "La commande " + invoice.getInvoiceNumber() + " a deja ete remise.");
-        }
-        if (invoice.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
-            throw new BusinessRuleException("CANCELLED",
-                    "La commande " + invoice.getInvoiceNumber() + " a ete annulee : rien a remettre.");
-        }
+        // Refused before any payment is written for it.
+        invoice.check(DeliveryTransition.HAND_OVER);
 
         BigDecimal collected = BigDecimal.ZERO;
         // When the depot takes no money, an unpaid order leaves unpaid: the bill is settled at the till.
-        if (collect && invoice.getPaymentStatus() == PaymentStatus.UNPAID && settings.features().payAtDepot()) {
+        if (collect && PaymentTransition.COLLECT.appliesTo(invoice.getPaymentStatus())
+                && settings.features().payAtDepot()) {
             collected = collectInHand(invoice, agent);
         }
 
-        invoice.setDeliveryStatus(DeliveryStatus.DELIVERED);
+        invoice.apply(DeliveryTransition.HAND_OVER);
         // Heard after the commit: the other depot screens drop the order from their queue, and
         // the seller's screens show it handed over.
         events.publishEvent(new OrderDeliveredEvent(invoice.getId(), invoice.getInvoiceNumber(),
@@ -144,10 +141,6 @@ public class InvoiceService {
                     "La prise de commande n'encaisse pas dans cette boutique : le client paie a la caisse.");
         }
         Invoice invoice = load(invoiceId);
-        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
-            throw new BusinessRuleException("ALREADY_SETTLED",
-                    "La commande " + invoice.getInvoiceNumber() + " est deja reglee ou annulee.");
-        }
         collectInHand(invoice, orderTaker);
         events.publishEvent(new OrderPaidEvent(invoice.getId(), invoice.getInvoiceNumber()));
         return InvoiceResponse.of(invoice);
@@ -160,6 +153,7 @@ public class InvoiceService {
      * @return the amount taken
      */
     private BigDecimal collectInHand(Invoice invoice, UserApp collector) {
+        invoice.check(PaymentTransition.COLLECT);
         BigDecimal amount = invoice.getSale().getTotalAmount();
         payments.save(Payment.builder()
                 .amount(amount)
@@ -170,8 +164,7 @@ public class InvoiceService {
                 // Left null: the collector holds the cash until they remit it.
                 .cashRemittance(null)
                 .build());
-        invoice.setPaymentStatus(PaymentStatus.COLLECTED);
-        invoice.getSale().setPaymentStatus(PaymentStatus.COLLECTED);
+        invoice.apply(PaymentTransition.COLLECT);
         return amount;
     }
 
@@ -184,10 +177,7 @@ public class InvoiceService {
     @Transactional
     public InvoiceResponse pay(Long invoiceId, PaymentMethod method, UserApp cashier) {
         Invoice invoice = load(invoiceId);
-        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
-            throw new BusinessRuleException("ALREADY_SETTLED",
-                    "La commande " + invoice.getInvoiceNumber() + " est deja reglee.");
-        }
+        invoice.check(PaymentTransition.PAY_AT_TILL);
         payments.save(Payment.builder()
                 .amount(invoice.getSale().getTotalAmount())
                 .paymentMethod(method == null ? PaymentMethod.CASH : method)
@@ -196,8 +186,7 @@ public class InvoiceService {
                 .collectedBy(cashier)
                 .cashRemittance(null)
                 .build());
-        invoice.setPaymentStatus(PaymentStatus.PAID);
-        invoice.getSale().setPaymentStatus(PaymentStatus.PAID);
+        invoice.apply(PaymentTransition.PAY_AT_TILL);
 
         events.publishEvent(new OrderPaidEvent(invoice.getId(), invoice.getInvoiceNumber()));
         return InvoiceResponse.of(invoice);
@@ -222,13 +211,8 @@ public class InvoiceService {
         String number = invoice.getInvoiceNumber();
         String note = comment == null || comment.isBlank() ? null : comment.trim();
 
-        if (invoice.getPaymentStatus() == PaymentStatus.CANCELLED) {
-            throw new BusinessRuleException("ALREADY_CANCELLED", "La commande " + number + " est deja annulee.");
-        }
-        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
-            throw new BusinessRuleException("ALREADY_SETTLED",
-                    "La commande " + number + " est deja reglee : elle ne peut plus etre annulee.");
-        }
+        // The domain's rule first (only an unpaid order), then the shop's policies.
+        invoice.check(PaymentTransition.CANCEL);
         boolean mayCancelAny = actor.hasRole(RoleApp.CASHIER) || actor.hasRole(RoleApp.SUPER_ADMIN);
         if (!mayCancelAny && !invoice.getSale().getSeller().getId().equals(actor.getId())) {
             throw new BusinessRuleException("NOT_YOUR_ORDER",
@@ -238,10 +222,10 @@ public class InvoiceService {
             throw new BusinessRuleException("COMMENT_REQUIRED", "Precisez le motif de l'annulation.");
         }
 
-        if (invoice.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
+        if (invoice.isHandedOver()) {
             if (!settings.features().cancelAfterDelivery()) {
-                throw new BusinessRuleException("ALREADY_DELIVERED",
-                        "La commande " + number + " a deja ete remise : elle ne peut plus etre annulee.");
+                // The goods' rule refuses it, in its own words.
+                invoice.check(DeliveryTransition.CANCEL);
             }
             if (note == null) {
                 throw new BusinessRuleException("COMMENT_REQUIRED",
@@ -249,15 +233,9 @@ public class InvoiceService {
             }
         } else {
             giveBackStock(invoice);
-            invoice.setDeliveryStatus(DeliveryStatus.CANCELLED);
         }
 
-        invoice.setPaymentStatus(PaymentStatus.CANCELLED);
-        invoice.getSale().setPaymentStatus(PaymentStatus.CANCELLED);
-        invoice.setCancelledAt(calendar.now());
-        invoice.setCancelledBy(actor);
-        invoice.setCancelReason(reason);
-        invoice.setCancelComment(note);
+        invoice.cancel(actor, reason, note, calendar.now());
 
         events.publishEvent(new OrderCancelledEvent(invoice.getId(), number));
         return InvoiceResponse.of(invoice);

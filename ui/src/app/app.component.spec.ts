@@ -8,6 +8,7 @@ import { Router, provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api.config';
+import { BundleStore } from './core/config/live-update/bundle-store';
 import {
   BusinessType,
   DEFAULT_SHOP_SETTINGS,
@@ -75,6 +76,8 @@ describe('AppComponent', () => {
         provideRouter(routes),
         provideHttpClient(),
         provideHttpClientTesting(),
+        // A browser: no page versions to store, so the shell never checks for updates.
+        { provide: BundleStore, useValue: { available: false } },
         // The shell's bell listens for pushed notifications; a test of the shell must not
         // open a real socket to the test runner's server.
         {

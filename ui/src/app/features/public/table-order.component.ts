@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -25,6 +26,9 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
  * The page a table's QR code opens, on the customer's phone: the menu, a basket, and the orders
  * sent from this table so far with where each one is.
  *
+ * <p>Answered on the shop's Wi-Fi only (the server refuses the Internet): a phone outside is
+ * told to join the Wi-Fi rather than shown an error.
+ *
  * <p>No account and no shell: the table is in the link, the name is optional, nothing is paid
  * here — the waiter takes the money when serving, or the customer pays at the till. The orders
  * sent are remembered for the browser tab, so a reload does not lose track of them. Their status
@@ -43,7 +47,15 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
     </header>
 
     <main class="public-content">
-      @if (failed()) {
+      @if (failed() === 'outside') {
+        <div class="card empty-state">
+          <h2>Connectez-vous au Wi-Fi</h2>
+          <p>
+            La commande se fait sur place : connectez votre téléphone au Wi-Fi de l'établissement,
+            puis scannez à nouveau le QR code de votre table.
+          </p>
+        </div>
+      } @else if (failed()) {
         <div class="card empty-state">
           <h2>Commande indisponible</h2>
           <p>Ce QR code n'est plus valable, ou la commande en ligne est fermée. Demandez au serveur.</p>
@@ -311,7 +323,8 @@ export class TableOrderComponent implements OnInit {
 
   protected readonly maxUnits = MAX_ONLINE_UNITS_PER_LINE;
   protected readonly menu = signal<PublicMenu | null>(null);
-  protected readonly failed = signal(false);
+  /** Why the menu could not be shown: off the shop's Wi-Fi, or a code that no longer works. */
+  protected readonly failed = signal<'outside' | 'closed' | null>(null);
   protected readonly search = signal('');
   protected readonly category = signal<string | null>(null);
   protected readonly customerName = signal('');
@@ -350,7 +363,7 @@ export class TableOrderComponent implements OnInit {
   ngOnInit(): void {
     this.api.menu(this.token).subscribe({
       next: (menu) => this.menu.set(menu),
-      error: () => this.failed.set(true),
+      error: (error: HttpErrorResponse) => this.failed.set(error.status === 403 ? 'outside' : 'closed'),
     });
     this.restoreSent();
     const timer = setInterval(() => this.refreshSent(), POLL_MS);

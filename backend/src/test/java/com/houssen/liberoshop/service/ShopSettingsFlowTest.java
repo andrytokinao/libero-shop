@@ -8,6 +8,7 @@ import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.ShopFeatures;
+import com.houssen.liberoshop.entity.StatusTransitionException;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
@@ -122,7 +123,7 @@ class ShopSettingsFlowTest {
         InvoiceResponse paid = invoiceService.pay(order.id(), PaymentMethod.MOBILE_MONEY, cashier);
         assertEquals(PaymentStatus.PAID, paid.paymentStatus());
 
-        BusinessRuleException twice = assertThrows(BusinessRuleException.class,
+        StatusTransitionException twice = assertThrows(StatusTransitionException.class,
                 () -> invoiceService.pay(order.id(), PaymentMethod.CASH, cashier));
         assertTrue(twice.getMessage().contains("deja reglee"));
     }
@@ -176,9 +177,10 @@ class ShopSettingsFlowTest {
         assertEquals(CancelReason.INPUT_ERROR, cancelled.cancellation().reason());
         assertEquals(10, products.findById(product.getId()).orElseThrow().getStockQuantity(), "back on the shelf");
 
-        assertThrows(BusinessRuleException.class, () -> invoiceService.deliver(order.id(), storekeeper));
-        assertThrows(BusinessRuleException.class,
-                () -> invoiceService.pay(order.id(), PaymentMethod.CASH, account(RoleApp.CASHIER)));
+        assertEquals("CANCELLED", assertThrows(StatusTransitionException.class,
+                () -> invoiceService.deliver(order.id(), storekeeper)).code());
+        assertEquals("ALREADY_CANCELLED", assertThrows(StatusTransitionException.class,
+                () -> invoiceService.pay(order.id(), PaymentMethod.CASH, account(RoleApp.CASHIER))).code());
     }
 
     @Test
@@ -208,7 +210,7 @@ class ShopSettingsFlowTest {
                 PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), 2))), cashier);
         invoiceService.deliver(order.id(), account(RoleApp.DEPOT_AGENT));
 
-        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+        StatusTransitionException refused = assertThrows(StatusTransitionException.class,
                 () -> invoiceService.cancel(order.id(), CancelReason.CUSTOMER_GAVE_UP, "parti", cashier));
         assertEquals("ALREADY_DELIVERED", refused.code());
 

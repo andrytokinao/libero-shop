@@ -16,9 +16,10 @@ interface BaseAddress {
 /**
  * The tables customers order from, each with its QR code to print and put on the table.
  *
- * <p>The code points at one of the server's addresses: the shop's Wi-Fi by default — the
- * customer joins the guest network, then scans — or the Internet address when the server is
- * published there. Printing hides everything but the codes.
+ * <p>The code points at one of the server's addresses on the shop's Wi-Fi — the customer joins
+ * the guest network, then scans. Never the Internet address: the server refuses table orders
+ * from outside, so a photo of the code is useless from home. Printing hides everything but the
+ * codes.
  *
  * <p>"Nouveau code" withdraws a code that went around: the printed one stops working at once,
  * so the button asks twice.
@@ -65,8 +66,8 @@ interface BaseAddress {
         }
       </div>
       <p class="muted small" style="margin:6px 0 0;">
-        Les clients doivent pouvoir joindre cette adresse : Wi-Fi de l'établissement, ou adresse
-        Internet si le serveur est publié.
+        La commande se fait sur place uniquement : le client se connecte d'abord au Wi-Fi de
+        l'établissement, puis scanne. Depuis Internet (4G, à distance), le serveur refuse.
       </p>
       @if (tables().length) {
         <button class="btn ghost" type="button" style="margin-top:12px;" (click)="print()">
@@ -195,13 +196,13 @@ export class DiningTablesComponent {
     this.serverApi.connection(),
   );
 
-  /** Where the customer's phone can reach the server: the Internet one first when published. */
+  /**
+   * The server's addresses on the shop's network, the real Wi-Fi card first. Never the Internet
+   * one: the server answers table orders from the shop's own network only.
+   */
   protected readonly bases = computed<BaseAddress[]>(() => {
     const c = this.connection.value();
     const list: BaseAddress[] = [];
-    if (c?.internet) {
-      list.push({ url: c.internet.url, label: 'Internet' });
-    }
     for (const a of [...(c?.addresses ?? [])].sort((x, y) => Number(x.likelyVirtual) - Number(y.likelyVirtual))) {
       list.push({ url: a.url, label: a.label });
     }
