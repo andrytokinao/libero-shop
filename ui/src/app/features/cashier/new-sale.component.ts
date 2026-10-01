@@ -22,6 +22,12 @@ import { CameraScanButtonComponent } from '../../shared/components/camera-scan-b
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
+ * Where the till goes to one column, products above the basket — the `.g2` breakpoint of
+ * styles.scss, which the key hints and the total bar below follow too.
+ */
+const COMPACT_LAYOUT = '(max-width: 980px)';
+
+/**
  * The till: scan or type, check the basket, take the money.
  *
  * <p>Made to be worked from the keyboard and a barcode scanner without touching the mouse — the
@@ -33,7 +39,31 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   standalone: true,
   imports: [FormsModule, AriaryPipe, DatePipe, CameraScanButtonComponent],
   host: { '(document:keydown)': 'keys.handle($event)' },
+  styles: `
+    :host {
+      display: block;
+    }
+
+    div.key-hint {
+      display: flex;
+    }
+
+    /* Function keys mean nothing on a phone: their hints go with the one-column layout
+       (COMPACT_LAYOUT). The keys stay bound — a tablet may have a keyboard. */
+    @media (max-width: 980px) {
+      .key-hint {
+        display: none !important;
+      }
+    }
+  `,
   template: `
+    <!-- Phone only: the basket's card falls below the products, so its total is repeated here,
+         pinned at the top while the products scroll. A tap goes down to the checkout. -->
+    <button type="button" class="sale-summary" (click)="goToCheckout()">
+      <span>{{ cart.units() }} article(s)</span>
+      <strong>{{ cart.total() | ariary }}</strong>
+    </button>
+
     <div class="grid g2">
       <div class="card">
         <h2>Produits <small>scannez, tapez un code puis Entrée, ou cliquez</small></h2>
@@ -53,7 +83,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           </div>
           <app-camera-scan-button (scanned)="entry.submit($event)" />
         </div>
-        <div class="muted" style="font-size:12px; margin:0 0 8px; display:flex; flex-wrap:wrap; gap:4px 12px;">
+        <div class="muted key-hint" style="font-size:12px; margin:0 0 8px; flex-wrap:wrap; gap:4px 12px;">
           @for (shortcut of keys.shortcuts; track shortcut.key) {
             <span [style.opacity]="isEnabled(shortcut) ? 1 : 0.45">
               <kbd>{{ shortcut.key }}</kbd> {{ shortcut.label }}
@@ -68,18 +98,36 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
         <div class="prod-grid">
           @for (product of finder.products(); track product.id) {
-            <button
-              type="button"
-              class="prod-card"
-              [class.low]="product.lowStock"
-              [disabled]="cart.remainingStock(product) <= 0"
-              (click)="pick(product)"
-            >
-              <div class="pname">{{ product.name }}</div>
-              <div class="pcat">{{ product.category?.name ?? 'Sans catégorie' }}</div>
-              <div class="pprice">{{ product.price | ariary }}</div>
-              <div class="pstock">Disponible : {{ cart.remainingStock(product) }}</div>
-            </button>
+            <!-- The count and the minus sit beside the card, not in it: a button cannot hold
+                 another, and a tap on "−" must never also count as a tap on the product. -->
+            <div class="prod-item">
+              <button
+                type="button"
+                class="prod-card"
+                [class.low]="product.lowStock"
+                [class.picked]="cart.quantityOf(product) > 0"
+                [disabled]="cart.remainingStock(product) <= 0"
+                (click)="pick(product)"
+              >
+                <div class="pname">{{ product.name }}</div>
+                <div class="pcat">{{ product.category?.name ?? 'Sans catégorie' }}</div>
+                <div class="pprice">{{ product.price | ariary }}</div>
+                <div class="pstock">Disponible : {{ cart.remainingStock(product) }}</div>
+              </button>
+              @if (cart.quantityOf(product) > 0) {
+                <span class="prod-count" aria-label="Quantité dans le panier">
+                  {{ cart.quantityOf(product) }}
+                </span>
+                <button
+                  type="button"
+                  class="prod-minus"
+                  [attr.aria-label]="'Retirer un ' + product.name"
+                  (click)="unpick(product)"
+                >
+                  −
+                </button>
+              }
+            </div>
           } @empty {
             @if (!finder.pending()) {
               <div class="empty">
@@ -90,7 +138,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" #checkout>
         <h2>
           Panier
           <button
@@ -100,7 +148,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             [disabled]="!canHold()"
             (click)="holdSale()"
           >
-            Mettre en attente (F4)
+            Mettre en attente <span class="key-hint">(F4)</span>
           </button>
         </h2>
         @if (held.count()) {
@@ -113,7 +161,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 [title]="'En attente depuis ' + (sale.heldAt | date: 'HH:mm') + ' — cliquer pour reprendre'"
                 (click)="resume(sale.id)"
               >
-                ⏸ {{ sale.clientName || 'Client' }} · {{ unitsOf(sale) }} art. · {{ totalOf(sale) | ariary }}
+                ⏸ {{ sale.clientName || auth.words().client }} · {{ unitsOf(sale) }} art. · {{ totalOf(sale) | ariary }}
               </button>
             }
           </div>
@@ -209,7 +257,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           [disabled]="!canValidate()"
           (click)="validateSale()"
         >
-          {{ submitting() ? 'Enregistrement...' : 'Valider la vente et générer la facture (F10)' }}
+          @if (submitting()) {
+            Enregistrement...
+          } @else {
+            Valider la vente et générer la facture <span class="key-hint">(F10)</span>
+          }
         </button>
       </div>
     </div>
@@ -250,6 +302,7 @@ export class NewSaleComponent {
    * a till that must always be here.
    */
   private readonly productField = viewChild.required<ElementRef<HTMLInputElement>>('productField');
+  private readonly checkout = viewChild.required<ElementRef<HTMLElement>>('checkout');
 
   protected readonly canValidate = computed(() => !this.cart.isEmpty() && !this.submitting());
 
@@ -301,6 +354,15 @@ export class NewSaleComponent {
     this.focusProductField();
   }
 
+  /** The tile's "−": one unit back on the shelf, the line gone at zero. */
+  protected unpick(product: Product): void {
+    this.cart.change(product, -1);
+  }
+
+  protected goToCheckout(): void {
+    this.checkout().nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   /** Sets this customer aside, with their name, and frees the till for the next one. */
   protected holdSale(): void {
     if (!this.canHold()) {
@@ -310,7 +372,9 @@ export class NewSaleComponent {
     if (held) {
       this.clientName.set('');
       this.entry.clear();
-      this.toasts.show(`Vente mise en attente — ${held.clientName || 'client sans nom'}.`);
+      this.toasts.show(
+        `Vente mise en attente — ${held.clientName || this.auth.words().client.toLowerCase() + ' non précisé(e)'}.`,
+      );
     }
     this.focusProductField();
   }
@@ -358,7 +422,16 @@ export class NewSaleComponent {
     }
   }
 
+  /**
+   * Not on a phone: there, focusing the field after each tap on a product would pop the
+   * keyboard up over the products being tapped. Decided on the layout rather than on the
+   * pointer, because a touch-screen till with a barcode scanner is a till all the same: its
+   * scanner needs the field focused.
+   */
   private focusProductField(): void {
+    if (matchMedia(COMPACT_LAYOUT).matches) {
+      return;
+    }
     const field = this.productField().nativeElement;
     field.focus();
     field.select();

@@ -860,6 +860,101 @@ select.field {
     color: var(--red);
     font-weight: 600;
   }
+
+  &.picked {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+}
+
+/* A product tile with what the basket holds of it: a count in the corner, like the
+   notification bell's, and a "−" under the thumb. Siblings of the card, not inside it. */
+.prod-item {
+  position: relative;
+  display: grid;
+
+  .prod-card {
+    padding-right: 34px;
+  }
+}
+
+.prod-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none;
+}
+
+.prod-minus {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--brand);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--brand-dark);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--brand-soft);
+  }
+}
+
+/* The basket's total, repeated at the top of the till on a phone only -- see new-sale. */
+.sale-summary {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .sale-summary {
+    position: sticky;
+    top: var(--sale-summary-top, 0);
+    z-index: 20;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--brand-dark);
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    strong {
+      font-size: 17px;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  /* Under the app's own bar, which is sticky too at this width. */
+  .sale-summary {
+    --sale-summary-top: var(--mobile-bar-h);
+  }
 }
 
 /* ------------------------------------------------------------ misc widgets */
