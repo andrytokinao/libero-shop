@@ -95,6 +95,17 @@ public class InvoiceService {
     @RequiresActiveLicense
     @Transactional
     public DeliveryResult deliver(Long invoiceId, UserApp agent) {
+        return deliver(invoiceId, agent, true);
+    }
+
+    /**
+     * @param collect false when the customer will pay at the till instead: the waiter serves and
+     *                leaves the bill to the cash desk. Ignored when the shop takes no money on
+     *                hand-over, where nothing is ever collected.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public DeliveryResult deliver(Long invoiceId, UserApp agent, boolean collect) {
         Invoice invoice = load(invoiceId);
         if (invoice.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
             throw new BusinessRuleException("ALREADY_DELIVERED",
@@ -107,7 +118,7 @@ public class InvoiceService {
 
         BigDecimal collected = BigDecimal.ZERO;
         // When the depot takes no money, an unpaid order leaves unpaid: the bill is settled at the till.
-        if (invoice.getPaymentStatus() == PaymentStatus.UNPAID && settings.features().payAtDepot()) {
+        if (collect && invoice.getPaymentStatus() == PaymentStatus.UNPAID && settings.features().payAtDepot()) {
             collected = collectInHand(invoice, agent);
         }
 

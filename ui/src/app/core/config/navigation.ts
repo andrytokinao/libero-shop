@@ -100,6 +100,12 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },
       { icon: '⚙', label: 'Configuration', path: '/admin/configuration' },
+      {
+        icon: '▦',
+        label: 'Tables & QR codes',
+        path: '/admin/tables',
+        requires: (f) => f.onlineOrdering,
+      },
       // No 'Licence' entry: the page stays reachable at /admin/licence, and the licence
       // bar links to it once expiry is within LICENSE_BANNER_DAYS.
     ],

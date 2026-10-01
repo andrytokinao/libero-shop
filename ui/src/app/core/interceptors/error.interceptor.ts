@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { throwError } from 'rxjs';
@@ -13,6 +13,12 @@ import { ToastService } from '../services/toast.service';
  * mobile update check runs in the background: its failures are nobody's business but its own.
  */
 const SILENT_PATHS = ['/api/auth/session', '/api/auth/login', '/api/mobile/update'];
+
+/**
+ * Set on a request whose failure is handled where it was made — a background poll, for one:
+ * a toast every few seconds would say nothing the screen does not already show.
+ */
+export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
 
 /**
  * Turns an HTTP failure into something the user can act on.
@@ -31,7 +37,10 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (SILENT_PATHS.some((path) => request.url.startsWith(path))) {
+      if (
+        request.context.get(SILENT_ERRORS) ||
+        SILENT_PATHS.some((path) => request.url.startsWith(path))
+      ) {
         return throwError(() => error);
       }
 

@@ -36,6 +36,15 @@ export const routes: Routes = [
       import('./features/mobile/mobile-download.component').then((m) => m.MobileDownloadComponent),
   },
 
+  // A table's QR code. Open to everyone, signed in or not: it is the customer's page, and the
+  // token in the link is all the server asks for.
+  {
+    path: 'commander/:token',
+    title: 'Commander',
+    loadComponent: () =>
+      import('./features/public/table-order.component').then((m) => m.TableOrderComponent),
+  },
+
   // ------------------------------------------------------------ cash desk
   {
     path: 'caisse',
@@ -284,6 +293,12 @@ export const routes: Routes = [
         title: 'Configuration de la boutique',
         loadComponent: () =>
           import('./features/admin/shop-settings.component').then((m) => m.ShopSettingsComponent),
+      },
+      {
+        path: 'tables',
+        title: 'Tables & QR codes',
+        loadComponent: () =>
+          import('./features/admin/dining-tables.component').then((m) => m.DiningTablesComponent),
       },
       {
         path: 'licence',

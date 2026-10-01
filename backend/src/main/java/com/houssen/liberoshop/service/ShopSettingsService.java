@@ -51,6 +51,7 @@ public class ShopSettingsService {
         settings.setDualControlRemittance(features.dualControlRemittance());
         settings.setCancelAfterDelivery(features.cancelAfterDelivery());
         settings.setOrderTakerCollects(features.orderTakerCollects());
+        settings.setOnlineOrdering(features.onlineOrdering());
         repository.save(settings);
         return ShopSettingsResponse.of(settings.getBusinessType(), features);
     }

@@ -12,16 +12,17 @@ public record ShopSettingsResponse(BusinessType businessType,
                                    boolean payAtDepot,
                                    boolean dualControlRemittance,
                                    boolean cancelAfterDelivery,
-                                   boolean orderTakerCollects) {
+                                   boolean orderTakerCollects,
+                                   boolean onlineOrdering) {
 
     public static ShopSettingsResponse of(BusinessType type, ShopFeatures features) {
         return new ShopSettingsResponse(type, features.separateDelivery(), features.payAtDepot(),
                 features.dualControlRemittance(), features.cancelAfterDelivery(),
-                features.orderTakerCollects());
+                features.orderTakerCollects(), features.onlineOrdering());
     }
 
     public ShopFeatures features() {
         return new ShopFeatures(separateDelivery, payAtDepot, dualControlRemittance, cancelAfterDelivery,
-                orderTakerCollects);
+                orderTakerCollects, onlineOrdering);
     }
 }

@@ -52,11 +52,15 @@ public class InvoiceController {
         return invoiceService.findById(id);
     }
 
-    /** Hand-over at the depot; settles an unpaid order in cash on the spot. */
+    /**
+     * Hand-over at the depot; settles an unpaid order in cash on the spot, unless {@code collect}
+     * is false -- the customer pays at the till.
+     */
     @PostMapping("/{id}/deliver")
     @PreAuthorize("hasRole('DEPOT_AGENT')")
-    public DeliveryResponse deliver(@PathVariable Long id) {
-        InvoiceService.DeliveryResult result = invoiceService.deliver(id, currentUser.require());
+    public DeliveryResponse deliver(@PathVariable Long id,
+                                    @RequestParam(defaultValue = "true") boolean collect) {
+        InvoiceService.DeliveryResult result = invoiceService.deliver(id, currentUser.require(), collect);
         return new DeliveryResponse(result.invoice(), result.collected(), messageOf(result));
     }
 

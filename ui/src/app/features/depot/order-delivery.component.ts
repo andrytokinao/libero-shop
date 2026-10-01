@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
@@ -9,12 +9,19 @@ import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { CashInHandComponent } from './cash-in-hand.component';
-import { deliveryActionLabel } from './delivery.util';
+import { asksHowToPay, deliveryActionLabel } from './delivery.util';
+import { HandOverDialogComponent } from './hand-over-dialog.component';
 
 @Component({
   selector: 'app-order-delivery',
   standalone: true,
-  imports: [FormsModule, InvoiceTableComponent, CashInHandComponent, HasRoleDirective],
+  imports: [
+    FormsModule,
+    InvoiceTableComponent,
+    CashInHandComponent,
+    HasRoleDirective,
+    HandOverDialogComponent,
+  ],
   template: `
     <div class="card">
       <h2>
@@ -52,11 +59,20 @@ import { deliveryActionLabel } from './delivery.util';
         [invoices]="invoices()"
         [showDate]="true"
         [busy]="busy()"
-        [actionLabel]="actionLabel()"
-        (action)="deliver($event)"
+        [actionLabel]="actionLabel"
+        (action)="handOver($event)"
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
     </div>
+
+    @if (askingFor(); as invoice) {
+      <app-hand-over-dialog
+        [invoice]="invoice"
+        [busy]="busy()"
+        (chosen)="deliver(invoice, $event)"
+        (closed)="askingFor.set(null)"
+      />
+    }
 
     <!-- Where an unpaid order lands once handed over: its cash, with the button to bring it
          to the desk. Only a storekeeper holds cash; a manager browsing here has none, and
@@ -76,8 +92,10 @@ export class OrderDeliveryComponent {
   protected readonly onlyPending = signal(true);
   protected readonly busy = signal(false);
   protected readonly auth = inject(AuthService);
-  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.settings().payAtDepot));
+  protected readonly actionLabel = deliveryActionLabel;
   protected readonly RoleApp = RoleApp;
+  /** The unpaid order whose "pays now or at the till?" question is open. */
+  protected readonly askingFor = signal<Invoice | null>(null);
 
   /** Refreshed right after a hand-over, without waiting for the socket to echo it. */
   private readonly cashInHand = viewChild(CashInHandComponent);
@@ -106,17 +124,28 @@ export class OrderDeliveryComponent {
     this.resource.reload();
   }
 
-  protected deliver(invoice: Invoice): void {
+  protected handOver(invoice: Invoice): void {
+    if (asksHowToPay(invoice, this.auth.settings().payAtDepot)) {
+      this.askingFor.set(invoice);
+    } else {
+      this.deliver(invoice, true);
+    }
+  }
+
+  /** @param collect the customer pays now; false: served, the bill is left to the till */
+  protected deliver(invoice: Invoice, collect: boolean): void {
     this.busy.set(true);
-    this.api.deliver(invoice.id).subscribe({
+    this.api.deliver(invoice.id, collect).subscribe({
       next: (result) => {
         this.busy.set(false);
+        this.askingFor.set(null);
         this.resource.reload();
         this.cashInHand()?.reload();
         this.toasts.show(result.message);
       },
       error: () => {
         this.busy.set(false);
+        this.askingFor.set(null);
         this.resource.reload();
       },
     });

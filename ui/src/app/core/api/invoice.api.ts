@@ -54,8 +54,11 @@ export class InvoiceApi {
     return this.http.post<Invoice>(`${API_BASE_URL}/sales`, request);
   }
 
-  deliver(invoiceId: number): Observable<DeliveryResult> {
-    return this.http.post<DeliveryResult>(`${API_BASE_URL}/invoices/${invoiceId}/deliver`, {});
+  /** @param collect false: served, the customer pays at the till */
+  deliver(invoiceId: number, collect = true): Observable<DeliveryResult> {
+    return this.http.post<DeliveryResult>(`${API_BASE_URL}/invoices/${invoiceId}/deliver`, {}, {
+      params: { collect },
+    });
   }
 
   /** An order taker takes the cash of an unpaid order, to bring to the till later. */

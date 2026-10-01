@@ -83,6 +83,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/server/connection").permitAll()
                         // The app's own pages, checked for updates at launch, before sign-in.
                         .requestMatchers(HttpMethod.GET, "/api/mobile/update", "/api/mobile/bundle/*").permitAll()
+                        // Ordering from a table's QR code: the customer has no account, the
+                        // table's token is the credential (see OnlineOrderService).
+                        .requestMatchers("/api/public/**").permitAll()
                         // Installing or renewing a license is an administrative act.
                         .requestMatchers("/api/license/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/**").authenticated()

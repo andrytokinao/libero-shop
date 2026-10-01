@@ -62,7 +62,7 @@ class ShopSettingsFlowTest {
     private ShopSettingsResponse configure(BusinessType type, ShopFeatures features) {
         return settingsService.update(new UpdateShopSettingsRequest(type, features.separateDelivery(),
                 features.payAtDepot(), features.dualControlRemittance(), features.cancelAfterDelivery(),
-                features.orderTakerCollects()));
+                features.orderTakerCollects(), features.onlineOrdering()));
     }
 
     private UserApp account(RoleApp... roles) {
@@ -91,7 +91,7 @@ class ShopSettingsFlowTest {
     @Test
     @DisplayName("switches that depend on a switched-off one are switched off with it")
     void contradictoryFeaturesAreReconciled() {
-        ShopSettingsResponse saved = configure(BusinessType.COUNTER, new ShopFeatures(false, true, true, false, false));
+        ShopSettingsResponse saved = configure(BusinessType.COUNTER, new ShopFeatures(false, true, true, false, false, false));
         assertFalse(saved.payAtDepot(), "no depot, so nothing to pay there");
         assertFalse(saved.dualControlRemittance(), "no depot cash, so nothing to confirm");
         assertEquals(saved, settingsService.current());
@@ -212,7 +212,7 @@ class ShopSettingsFlowTest {
                 () -> invoiceService.cancel(order.id(), CancelReason.CUSTOMER_GAVE_UP, "parti", cashier));
         assertEquals("ALREADY_DELIVERED", refused.code());
 
-        configure(BusinessType.RESTAURANT, new ShopFeatures(true, false, false, true, false));
+        configure(BusinessType.RESTAURANT, new ShopFeatures(true, false, false, true, false, false));
         assertEquals("COMMENT_REQUIRED", assertThrows(BusinessRuleException.class,
                 () -> invoiceService.cancel(order.id(), CancelReason.CUSTOMER_GAVE_UP, null, cashier)).code());
 

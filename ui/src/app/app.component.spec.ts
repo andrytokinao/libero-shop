@@ -162,6 +162,7 @@ describe('AppComponent', () => {
         dualControlRemittance: false,
         cancelAfterDelivery: false,
         orderTakerCollects: false,
+        onlineOrdering: false,
       },
     });
 
@@ -197,6 +198,7 @@ describe('AppComponent', () => {
         dualControlRemittance: false,
         cancelAfterDelivery: false,
         orderTakerCollects: true,
+        onlineOrdering: false,
       },
     });
 

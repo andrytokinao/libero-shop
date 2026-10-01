@@ -49,8 +49,11 @@ public class ShopSettings {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean orderTakerCollects;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean onlineOrdering;
+
     public ShopFeatures features() {
         return new ShopFeatures(separateDelivery, payAtDepot, dualControlRemittance, cancelAfterDelivery,
-                orderTakerCollects);
+                orderTakerCollects, onlineOrdering);
     }
 }

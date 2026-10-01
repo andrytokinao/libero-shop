@@ -24,6 +24,8 @@ export interface ShopFeatures {
   cancelAfterDelivery: boolean;
   /** Whoever takes orders may take the customer's cash too, and brings it to the till. */
   orderTakerCollects: boolean;
+  /** Customers order from their phone by scanning their table's QR code. */
+  onlineOrdering: boolean;
 }
 
 /** GET /api/settings, and the `settings` of the session. */
@@ -76,6 +78,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: false,
       cancelAfterDelivery: false,
       orderTakerCollects: false,
+      onlineOrdering: false,
     },
     vocabulary: SHOP_WORDS,
   },
@@ -91,6 +94,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: false,
       cancelAfterDelivery: false,
       orderTakerCollects: false,
+      onlineOrdering: false,
     },
     vocabulary: SHOP_WORDS,
   },
@@ -106,6 +110,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: true,
       cancelAfterDelivery: false,
       orderTakerCollects: false,
+      onlineOrdering: false,
     },
     vocabulary: SHOP_WORDS,
   },
@@ -120,6 +125,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: false,
       cancelAfterDelivery: false,
       orderTakerCollects: false,
+      onlineOrdering: false,
     },
     vocabulary: {
       depot: 'Cuisine',
@@ -139,6 +145,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: false,
       cancelAfterDelivery: false,
       orderTakerCollects: false,
+      onlineOrdering: false,
     },
     vocabulary: {
       depot: 'Bar',
@@ -158,6 +165,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       dualControlRemittance: false,
       cancelAfterDelivery: false,
       orderTakerCollects: true,
+      onlineOrdering: false,
     },
     vocabulary: {
       depot: 'Service',
@@ -176,6 +184,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   dualControlRemittance: true,
   cancelAfterDelivery: false,
   orderTakerCollects: false,
+  onlineOrdering: false,
 };
 
 export function businessTypeInfo(type: BusinessType): BusinessTypeInfo {
@@ -191,6 +200,7 @@ export function normalizeFeatures(features: ShopFeatures): ShopFeatures {
     dualControlRemittance: hasCashTrail(features) && features.dualControlRemittance,
     cancelAfterDelivery: features.cancelAfterDelivery,
     orderTakerCollects: features.orderTakerCollects,
+    onlineOrdering: features.onlineOrdering,
   };
 }
 

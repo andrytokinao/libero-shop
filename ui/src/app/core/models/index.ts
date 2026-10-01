@@ -14,4 +14,5 @@ export * from './notification.model';
 export * from './server.model';
 export * from './license.model';
 export * from './shop-settings.model';
+export * from './online-order.model';
 export * from './api.model';

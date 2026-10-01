@@ -1,4 +1,13 @@
-import { Directive, Input, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
+import {
+  Directive,
+  Input,
+  TemplateRef,
+  ViewContainerRef,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -32,13 +41,17 @@ export class HasRoleDirective {
     // without the component having to know about it.
     effect(() => {
       const allowed = this.auth.hasRole(...this.roles());
-      if (allowed && !this.rendered) {
-        this.viewContainer.createEmbeddedView(this.templateRef);
-        this.rendered = true;
-      } else if (!allowed && this.rendered) {
-        this.viewContainer.clear();
-        this.rendered = false;
-      }
+      // Untracked: creating the view updates the host's signal queries (a viewChild on what is
+      // rendered here), and a signal written from inside an effect is refused (NG0600).
+      untracked(() => {
+        if (allowed && !this.rendered) {
+          this.viewContainer.createEmbeddedView(this.templateRef);
+          this.rendered = true;
+        } else if (!allowed && this.rendered) {
+          this.viewContainer.clear();
+          this.rendered = false;
+        }
+      });
     });
   }
 }

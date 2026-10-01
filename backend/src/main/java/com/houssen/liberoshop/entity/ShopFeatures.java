@@ -14,12 +14,14 @@ package com.houssen.liberoshop.entity;
  *                              are gone, so nothing returns to stock
  * @param orderTakerCollects    whoever takes orders (receptionist, waiter) may also take the
  *                              customer's cash, and brings it to the till like the depot does
+ * @param onlineOrdering        customers order from their phone by scanning their table's QR code
  */
 public record ShopFeatures(boolean separateDelivery,
                            boolean payAtDepot,
                            boolean dualControlRemittance,
                            boolean cancelAfterDelivery,
-                           boolean orderTakerCollects) {
+                           boolean orderTakerCollects,
+                           boolean onlineOrdering) {
 
     /**
      * Drops the switches that mean nothing without the one they depend on: with no separate
@@ -30,6 +32,6 @@ public record ShopFeatures(boolean separateDelivery,
         boolean depotCash = separateDelivery && payAtDepot;
         boolean cashTrail = depotCash || orderTakerCollects;
         return new ShopFeatures(separateDelivery, depotCash, cashTrail && dualControlRemittance,
-                cancelAfterDelivery, orderTakerCollects);
+                cancelAfterDelivery, orderTakerCollects, onlineOrdering);
     }
 }

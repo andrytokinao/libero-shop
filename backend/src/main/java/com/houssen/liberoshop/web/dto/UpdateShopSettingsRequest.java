@@ -13,10 +13,11 @@ public record UpdateShopSettingsRequest(@NotNull BusinessType businessType,
                                         boolean payAtDepot,
                                         boolean dualControlRemittance,
                                         boolean cancelAfterDelivery,
-                                        boolean orderTakerCollects) {
+                                        boolean orderTakerCollects,
+                                        boolean onlineOrdering) {
 
     public ShopFeatures features() {
         return new ShopFeatures(separateDelivery, payAtDepot, dualControlRemittance, cancelAfterDelivery,
-                orderTakerCollects);
+                orderTakerCollects, onlineOrdering);
     }
 }
