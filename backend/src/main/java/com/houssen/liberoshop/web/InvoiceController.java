@@ -4,9 +4,13 @@ import com.houssen.liberoshop.entity.DeliveryStatus;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.InvoiceService;
+import com.houssen.liberoshop.web.dto.CancelInvoiceRequest;
 import com.houssen.liberoshop.web.dto.DeliveryResponse;
+import jakarta.validation.Valid;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
+import com.houssen.liberoshop.web.dto.PayInvoiceRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -56,6 +60,27 @@ public class InvoiceController {
         return new DeliveryResponse(result.invoice(), result.collected(), messageOf(result));
     }
 
+    /** An order taker takes the cash of an unpaid order, to bring to the till later. */
+    @PostMapping("/{id}/collect")
+    @PreAuthorize("hasRole('ORDER_TAKER')")
+    public InvoiceResponse collect(@PathVariable Long id) {
+        return invoiceService.collect(id, currentUser.require());
+    }
+
+    /** Settles an unpaid order at the till. */
+    @PostMapping("/{id}/pay")
+    @PreAuthorize("hasRole('CASHIER')")
+    public InvoiceResponse pay(@PathVariable Long id, @RequestBody(required = false) PayInvoiceRequest request) {
+        return invoiceService.pay(id, request == null ? null : request.paymentMethod(), currentUser.require());
+    }
+
+    /** Cancels an unpaid order; the service decides whose and whether its goods return to stock. */
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('CASHIER', 'ORDER_TAKER', 'SUPER_ADMIN')")
+    public InvoiceResponse cancel(@PathVariable Long id, @Valid @RequestBody CancelInvoiceRequest request) {
+        return invoiceService.cancel(id, request.reason(), request.comment(), currentUser.require());
+    }
+
     @PostMapping("/{id}/print")
     @PreAuthorize("hasAnyRole('CASHIER', 'SUPER_ADMIN')")
     public InvoiceResponse print(@PathVariable Long id) {
@@ -67,6 +92,10 @@ public class InvoiceController {
         if (result.collected().compareTo(BigDecimal.ZERO) > 0) {
             return number + " remise. " + result.collected().toPlainString()
                     + " Ar encaisses en especes : touchez \"Remettre a la caisse\" en apportant l'argent.";
+        }
+        if (result.invoice().paymentStatus() == PaymentStatus.UNPAID) {
+            return "Commande " + number + " remise a " + result.invoice().clientName()
+                    + ". Le paiement se regle a la caisse.";
         }
         return "Commande " + number + " remise a " + result.invoice().clientName() + ".";
     }

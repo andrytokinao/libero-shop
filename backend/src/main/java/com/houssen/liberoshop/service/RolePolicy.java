@@ -27,8 +27,8 @@ public final class RolePolicy {
      * role, and sending them to the administration overview every morning would put a report
      * between them and their first customer.
      */
-    private static final List<RoleApp> PRECEDENCE =
-            List.of(RoleApp.CASHIER, RoleApp.DEPOT_AGENT, RoleApp.DEPOT_MANAGER, RoleApp.SUPER_ADMIN);
+    private static final List<RoleApp> PRECEDENCE = List.of(RoleApp.CASHIER, RoleApp.ORDER_TAKER,
+            RoleApp.DEPOT_AGENT, RoleApp.DEPOT_MANAGER, RoleApp.SUPER_ADMIN);
 
     private RolePolicy() {
     }
@@ -37,6 +37,7 @@ public final class RolePolicy {
     public static String labelOf(RoleApp role) {
         return switch (role) {
             case CASHIER -> "Responsable de caisse";
+            case ORDER_TAKER -> "Prise de commande";
             case DEPOT_AGENT -> "Agent de depot";
             case DEPOT_MANAGER -> "Responsable entree-sortie depot";
             case SUPER_ADMIN -> "Super admin";
@@ -52,6 +53,7 @@ public final class RolePolicy {
     public static String shortLabelOf(RoleApp role) {
         return switch (role) {
             case CASHIER -> "Caisse";
+            case ORDER_TAKER -> "Commandes";
             case DEPOT_AGENT -> "Depot";
             case DEPOT_MANAGER -> "Stock";
             case SUPER_ADMIN -> "Admin";
@@ -70,6 +72,8 @@ public final class RolePolicy {
     public static String homePathOf(RoleApp role) {
         return switch (role) {
             case CASHIER -> "/caisse/tableau-de-bord";
+            // Straight onto the products: an order taker has a customer waiting, not a report.
+            case ORDER_TAKER -> "/commandes/nouvelle";
             case DEPOT_AGENT -> "/depot/tableau-de-bord";
             case DEPOT_MANAGER -> "/gestion-depot/tableau-de-bord";
             case SUPER_ADMIN -> "/admin/vue-ensemble";

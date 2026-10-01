@@ -119,6 +119,7 @@ public class DataInitializer implements ApplicationRunner {
         UserApp nadia = user("Nadia Rasolofo", "nadia", hash, RoleApp.DEPOT_MANAGER);
         UserApp mparany = user("Mparany Solofo", "mparany", hash, RoleApp.SUPER_ADMIN);
         user("Soa Ravelo", "soa", hash, RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
+        user("Lova Rabe", "lova", hash, RoleApp.ORDER_TAKER);
         return new Accounts(fatima, hary, joseph, nadia, mparany);
     }
 

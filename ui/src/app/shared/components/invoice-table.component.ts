@@ -1,7 +1,17 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
-import { Invoice } from '../../core/models';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { InvoiceApi } from '../../core/api/invoice.api';
+import {
+  CancelInvoiceRequest,
+  DeliveryStatus,
+  Invoice,
+  PaymentStatus,
+  RoleApp,
+} from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { CancelOrderDialogComponent } from './cancel-order-dialog.component';
 import { InvoiceDetailDialogComponent } from './invoice-detail-dialog.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 
@@ -22,6 +32,7 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
     PaymentStatusBadgeComponent,
     DeliveryStatusBadgeComponent,
     InvoiceDetailDialogComponent,
+    CancelOrderDialogComponent,
   ],
   template: `
     @if (invoices.length) {
@@ -140,11 +151,22 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
       </ul>
 
       @if (detail(); as invoice) {
-        <app-invoice-detail-dialog
-          [invoice]="invoice"
-          [showSeller]="showSeller"
-          (closed)="closeDetail()"
-        />
+        @if (cancelling()) {
+          <app-cancel-order-dialog
+            [invoice]="invoice"
+            [busy]="cancelBusy()"
+            (confirmed)="cancel(invoice, $event)"
+            (closed)="cancelling.set(false)"
+          />
+        } @else {
+          <app-invoice-detail-dialog
+            [invoice]="invoice"
+            [showSeller]="showSeller"
+            [canCancel]="allowCancel && mayCancel(invoice)"
+            (cancelRequested)="cancelling.set(true)"
+            (closed)="closeDetail()"
+          />
+        }
       }
     } @else {
       <div class="empty">{{ emptyMessage }}</div>
@@ -162,7 +184,62 @@ export class InvoiceTableComponent {
   @Input() actionLabel?: (invoice: Invoice) => string | null;
   /** Lets a row open its articles in a dialog. On by default: every screen benefits from it. */
   @Input() showDetail = true;
+  /**
+   * Offers "Annuler la commande" in the detail dialog, on the orders this account may cancel.
+   * Off by default: the depot and stock screens hand goods over, they do not undo orders.
+   */
+  @Input() allowCancel = false;
   @Output() readonly action = new EventEmitter<Invoice>();
+  /** An order was cancelled from here: the screen reloads its list. */
+  @Output() readonly changed = new EventEmitter<Invoice>();
+
+  private readonly auth = inject(AuthService);
+  private readonly api = inject(InvoiceApi);
+  private readonly toasts = inject(ToastService);
+
+  protected readonly cancelling = signal(false);
+  protected readonly cancelBusy = signal(false);
+
+  /**
+   * Mirrors InvoiceService.cancel: unpaid only; handed over only when the shop allows it; the
+   * account's own orders, or any for a till or the administrator. The server checks it again.
+   */
+  protected mayCancel(invoice: Invoice): boolean {
+    if (invoice.paymentStatus !== PaymentStatus.UNPAID) {
+      return false;
+    }
+    if (
+      invoice.deliveryStatus === DeliveryStatus.DELIVERED &&
+      !this.auth.settings().cancelAfterDelivery
+    ) {
+      return false;
+    }
+    return (
+      this.auth.hasRole(RoleApp.CASHIER, RoleApp.SUPER_ADMIN) ||
+      invoice.sale.seller.id === this.auth.currentUser()?.id
+    );
+  }
+
+  protected cancel(invoice: Invoice, request: CancelInvoiceRequest): void {
+    this.cancelBusy.set(true);
+    this.api.cancel(invoice.id, request).subscribe({
+      next: (cancelled) => {
+        this.cancelBusy.set(false);
+        this.cancelling.set(false);
+        this.detailId.set(null);
+        this.changed.emit(cancelled);
+        this.toasts.show(
+          cancelled.deliveryStatus === DeliveryStatus.CANCELLED
+            ? `Commande ${cancelled.invoiceNumber} annulée : articles remis en stock.`
+            : `Commande ${cancelled.invoiceNumber} annulée (déjà remise, pas de retour en stock).`,
+        );
+      },
+      error: () => {
+        this.cancelBusy.set(false);
+        this.cancelling.set(false);
+      },
+    });
+  }
 
   /** The invoice whose articles are on screen, kept by id rather than by reference. */
   private readonly detailId = signal<number | null>(null);
@@ -179,5 +256,6 @@ export class InvoiceTableComponent {
 
   protected closeDetail(): void {
     this.detailId.set(null);
+    this.cancelling.set(false);
   }
 }

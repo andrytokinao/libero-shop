@@ -7,13 +7,21 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
-type InvoiceFilter = 'ALL' | 'UNPAID' | 'COLLECTED' | 'REMITTED' | 'PENDING_DELIVERY' | 'DELIVERED';
+type InvoiceFilter =
+  | 'ALL'
+  | 'UNPAID'
+  | 'COLLECTED'
+  | 'REMITTED'
+  | 'PENDING_DELIVERY'
+  | 'DELIVERED'
+  | 'CANCELLED';
 
 /** The filters that are a payment status, and which one. */
 const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
   UNPAID: PaymentStatus.UNPAID,
   COLLECTED: PaymentStatus.COLLECTED,
   REMITTED: PaymentStatus.REMITTED,
+  CANCELLED: PaymentStatus.CANCELLED,
 };
 
 @Component({
@@ -54,16 +62,19 @@ const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
           >
             <option value="ALL">Toutes</option>
             <option value="UNPAID">Non payées</option>
-            <option value="COLLECTED">Encaissées au dépôt (argent chez l'agent)</option>
+            <option value="COLLECTED">Encaissées, argent pas encore remis à la caisse</option>
             <option value="REMITTED">Versées, à confirmer par la caisse</option>
             <option value="PENDING_DELIVERY">En attente de remise</option>
             <option value="DELIVERED">Remises</option>
+            <option value="CANCELLED">Annulées</option>
           </select>
         </div>
       </div>
       <app-invoice-table
         [invoices]="invoices()"
         [showDate]="true"
+        [allowCancel]="true"
+        (changed)="resource.reload()"
         emptyMessage="Aucune facture ne correspond aux critères."
       />
     </div>
@@ -77,7 +88,7 @@ export class AllInvoicesComponent {
 
   // Search and filter are both server-side; the UI only maps its labels onto the
   // paymentStatus / deliveryStatus the API already understands.
-  private readonly resource = apiResource<Invoice[]>([], () =>
+  protected readonly resource = apiResource<Invoice[]>([], () =>
     this.api.search({
       search: this.search(),
       paymentStatus: PAYMENT_FILTERS[this.filter()],

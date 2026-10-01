@@ -1,4 +1,7 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { DeliveryStatus, Invoice, PaymentStatus, RoleApp } from '../../core/models';
 import { InvoiceTableComponent } from './invoice-table.component';
 
@@ -58,11 +61,16 @@ const INVOICE: Invoice = {
       },
     ],
   },
+  cancellation: null,
 };
 
 describe('InvoiceTableComponent', () => {
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [InvoiceTableComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [InvoiceTableComponent],
+      // Who is looking decides whether "Annuler" is offered, hence the session behind it.
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
   });
 
   function render(invoices: Invoice[] = [INVOICE]) {
@@ -100,6 +108,18 @@ describe('InvoiceTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.modal-backdrop')).toBeNull();
+  });
+
+  it('offers no cancellation unless the screen asks for it', () => {
+    const fixture = render();
+
+    (fixture.nativeElement.querySelector('.lnk-detail') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    // The depot and stock screens hand goods over; undoing an order is not theirs to do.
+    expect(fixture.nativeElement.querySelector('.modal-backdrop')?.textContent).not.toContain(
+      'Annuler la commande',
+    );
   });
 
   it('offers no detail when the dialog is turned off', () => {

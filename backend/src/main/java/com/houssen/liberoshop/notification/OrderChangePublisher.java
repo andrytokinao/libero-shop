@@ -1,6 +1,8 @@
 package com.houssen.liberoshop.notification;
 
+import com.houssen.liberoshop.service.OrderCancelledEvent;
 import com.houssen.liberoshop.service.OrderDeliveredEvent;
+import com.houssen.liberoshop.service.OrderPaidEvent;
 import com.houssen.liberoshop.service.RemittanceRecordedEvent;
 import com.houssen.liberoshop.service.SaleRecordedEvent;
 import org.springframework.stereotype.Component;
@@ -45,6 +47,16 @@ public class OrderChangePublisher {
         notifications.publish(TOPIC, new Change(Change.DELIVERED, List.of(delivery.invoiceNumber())));
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOrderPaid(OrderPaidEvent payment) {
+        notifications.publish(TOPIC, new Change(Change.PAID, List.of(payment.invoiceNumber())));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOrderCancelled(OrderCancelledEvent cancellation) {
+        notifications.publish(TOPIC, new Change(Change.CANCELLED, List.of(cancellation.invoiceNumber())));
+    }
+
     /** One message per slip, however many orders it carries: each screen reloads once. */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRemittance(RemittanceRecordedEvent remittance) {
@@ -65,5 +77,9 @@ public class OrderChangePublisher {
         public static final String CASH_REMITTED = "CASH_REMITTED";
         /** Its cash confirmed in the till: the order is paid. */
         public static final String CASH_CONFIRMED = "CASH_CONFIRMED";
+        /** Settled at the till. */
+        public static final String PAID = "PAID";
+        /** Cancelled while unpaid. */
+        public static final String CANCELLED = "CANCELLED";
     }
 }

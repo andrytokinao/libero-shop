@@ -33,6 +33,8 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
         [busy]="printing()"
         [actionLabel]="printLabel"
         (action)="print($event)"
+        [allowCancel]="true"
+        (changed)="resource.reload()"
         emptyMessage="Aucune facture ne correspond à la recherche."
       />
     </div>
@@ -46,7 +48,7 @@ export class CashierInvoicesComponent {
   protected readonly printing = signal(false);
 
   // Filtering happens on the server, so a long history never has to reach the browser.
-  private readonly resource = apiResource<Invoice[]>([], () =>
+  protected readonly resource = apiResource<Invoice[]>([], () =>
     this.api.search({ mine: true, search: this.search() }),
   );
   protected readonly invoices = this.resource.value;

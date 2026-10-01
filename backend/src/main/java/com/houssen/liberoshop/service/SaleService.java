@@ -6,6 +6,7 @@ import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.Sale;
 import com.houssen.liberoshop.entity.SaleLine;
 import com.houssen.liberoshop.entity.StockOutput;
@@ -53,10 +54,12 @@ public class SaleService {
     private final StockMovementRepository movements;
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
+    private final ShopSettingsService settings;
 
     public SaleService(SaleRepository sales, InvoiceRepository invoices, ProductRepository products,
                        PaymentRepository payments, StockMovementRepository movements,
-                       BusinessCalendar calendar, ApplicationEventPublisher events) {
+                       BusinessCalendar calendar, ApplicationEventPublisher events,
+                       ShopSettingsService settings) {
         this.sales = sales;
         this.invoices = invoices;
         this.products = products;
@@ -64,6 +67,7 @@ public class SaleService {
         this.movements = movements;
         this.calendar = calendar;
         this.events = events;
+        this.settings = settings;
     }
 
     /**
@@ -79,12 +83,13 @@ public class SaleService {
             throw new BusinessRuleException("INVALID_PAYMENT_STATUS",
                     "Une vente est payee ou non payee a la caisse : les autres statuts viennent du depot.");
         }
+        PaymentStatus status = settledStatusOf(request, seller);
         Map<Long, Integer> quantities = mergeLines(request.lines());
         LocalDateTime now = calendar.now();
 
         Sale sale = Sale.builder()
                 .saleDate(now)
-                .paymentStatus(request.paymentStatus())
+                .paymentStatus(status)
                 .seller(seller)
                 .lines(new ArrayList<>())
                 .totalAmount(BigDecimal.ZERO)
@@ -121,8 +126,10 @@ public class SaleService {
                 .invoiceNumber(InvoiceNumbering.forSale(savedSale.getId()))
                 .invoiceDate(now)
                 .clientName(clientNameOf(request))
-                .paymentStatus(request.paymentStatus())
-                .deliveryStatus(DeliveryStatus.PENDING)
+                .paymentStatus(status)
+                // With no depot or kitchen in between, the customer leaves with the goods.
+                .deliveryStatus(settings.features().separateDelivery()
+                        ? DeliveryStatus.PENDING : DeliveryStatus.DELIVERED)
                 .printed(false)
                 .sale(savedSale)
                 .build());
@@ -137,14 +144,16 @@ public class SaleService {
                     .build());
         }
 
-        if (request.paymentStatus() == PaymentStatus.PAID) {
+        if (status != PaymentStatus.UNPAID) {
             payments.save(Payment.builder()
                     .amount(savedSale.getTotalAmount())
-                    .paymentMethod(methodOf(request))
+                    // Cash in hand is counted at the till later: it can only be cash.
+                    .paymentMethod(status == PaymentStatus.COLLECTED ? PaymentMethod.CASH : methodOf(request))
                     .paymentDate(now)
                     .invoice(invoice)
                     .collectedBy(seller)
-                    // Collected at the desk: there is no depot cash to hand over.
+                    // PAID at the desk: already in the till. COLLECTED: the order taker's cash in
+                    // hand, until they bring it to the till (RemittanceService).
                     .cashRemittance(null)
                     .build());
         }
@@ -155,7 +164,7 @@ public class SaleService {
                 invoice.getInvoiceNumber(),
                 invoice.getClientName(),
                 savedSale.getTotalAmount(),
-                request.paymentStatus(),
+                status,
                 savedSale.getLines().size(),
                 savedSale.getLines().stream().mapToInt(SaleLine::getQuantity).sum(),
                 seller.getId(),
@@ -177,6 +186,22 @@ public class SaleService {
             throw new BusinessRuleException("EMPTY_CART", "Le panier est vide.");
         }
         return merged;
+    }
+
+    /**
+     * What a sale "paid" by its seller really is. At a till it is paid. Taken by someone who only
+     * takes orders, it is their cash in hand -- {@link PaymentStatus#COLLECTED}, on its way to the
+     * till like the depot's -- and only when the shop lets order takers take money at all.
+     */
+    private PaymentStatus settledStatusOf(CreateSaleRequest request, UserApp seller) {
+        if (request.paymentStatus() == PaymentStatus.UNPAID || seller.hasRole(RoleApp.CASHIER)) {
+            return request.paymentStatus();
+        }
+        if (!settings.features().orderTakerCollects()) {
+            throw new BusinessRuleException("ORDER_TAKER_CANNOT_COLLECT",
+                    "Une prise de commande ne peut pas encaisser : la commande est enregistree non payee.");
+        }
+        return PaymentStatus.COLLECTED;
     }
 
     private static String clientNameOf(CreateSaleRequest request) {

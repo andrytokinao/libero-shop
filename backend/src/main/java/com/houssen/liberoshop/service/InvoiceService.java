@@ -1,14 +1,20 @@
 package com.houssen.liberoshop.service;
 
+import com.houssen.liberoshop.entity.CancelReason;
 import com.houssen.liberoshop.entity.DeliveryStatus;
 import com.houssen.liberoshop.entity.Invoice;
 import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
+import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.RoleApp;
+import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.InvoiceRepository;
 import com.houssen.liberoshop.repository.PaymentRepository;
+import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
@@ -38,13 +44,20 @@ public class InvoiceService {
     private final PaymentRepository payments;
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
+    private final ShopSettingsService settings;
+    private final ProductRepository products;
+    private final StockMovementRepository movements;
 
     public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
-                          ApplicationEventPublisher events) {
+                          ApplicationEventPublisher events, ShopSettingsService settings,
+                          ProductRepository products, StockMovementRepository movements) {
         this.invoices = invoices;
         this.payments = payments;
         this.calendar = calendar;
         this.events = events;
+        this.settings = settings;
+        this.products = products;
+        this.movements = movements;
     }
 
     /**
@@ -74,7 +87,8 @@ public class InvoiceService {
 
     /**
      * Hands the order to the customer. Settles it in cash first when it was left unpaid at
-     * the desk.
+     * the desk -- unless the shop has the depot take no money, in which case it stays unpaid
+     * for the till to {@link #pay settle}.
      *
      * @return the updated invoice; {@code collected} tells the UI how much was taken in
      */
@@ -86,22 +100,15 @@ public class InvoiceService {
             throw new BusinessRuleException("ALREADY_DELIVERED",
                     "La commande " + invoice.getInvoiceNumber() + " a deja ete remise.");
         }
+        if (invoice.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
+            throw new BusinessRuleException("CANCELLED",
+                    "La commande " + invoice.getInvoiceNumber() + " a ete annulee : rien a remettre.");
+        }
 
         BigDecimal collected = BigDecimal.ZERO;
-        if (invoice.getPaymentStatus() == PaymentStatus.UNPAID) {
-            collected = invoice.getSale().getTotalAmount();
-            payments.save(Payment.builder()
-                    .amount(collected)
-                    .paymentMethod(PaymentMethod.CASH)
-                    .paymentDate(calendar.now())
-                    .invoice(invoice)
-                    .collectedBy(agent)
-                    // Left null: the agent holds the cash until they remit it.
-                    .cashRemittance(null)
-                    .build());
-            // Not PAID yet: the cash is in the agent's hands until a cashier confirms receiving it.
-            invoice.setPaymentStatus(PaymentStatus.COLLECTED);
-            invoice.getSale().setPaymentStatus(PaymentStatus.COLLECTED);
+        // When the depot takes no money, an unpaid order leaves unpaid: the bill is settled at the till.
+        if (invoice.getPaymentStatus() == PaymentStatus.UNPAID && settings.features().payAtDepot()) {
+            collected = collectInHand(invoice, agent);
         }
 
         invoice.setDeliveryStatus(DeliveryStatus.DELIVERED);
@@ -111,6 +118,149 @@ public class InvoiceService {
                 invoice.getClientName(), invoice.getSale().getSeller().getId(),
                 agent.getId(), agent.getFullName(), collected));
         return new DeliveryResult(InvoiceResponse.of(invoice), collected);
+    }
+
+    /**
+     * An order taker takes the customer's cash for an unpaid order -- the guest paying at the
+     * reception. Their cash in hand, brought to the till like the depot's; only when the shop lets
+     * order takers take money.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public InvoiceResponse collect(Long invoiceId, UserApp orderTaker) {
+        if (!settings.features().orderTakerCollects()) {
+            throw new BusinessRuleException("ORDER_TAKER_CANNOT_COLLECT",
+                    "La prise de commande n'encaisse pas dans cette boutique : le client paie a la caisse.");
+        }
+        Invoice invoice = load(invoiceId);
+        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
+            throw new BusinessRuleException("ALREADY_SETTLED",
+                    "La commande " + invoice.getInvoiceNumber() + " est deja reglee ou annulee.");
+        }
+        collectInHand(invoice, orderTaker);
+        events.publishEvent(new OrderPaidEvent(invoice.getId(), invoice.getInvoiceNumber()));
+        return InvoiceResponse.of(invoice);
+    }
+
+    /**
+     * Writes the cash payment held by {@code collector}: the order becomes
+     * {@link PaymentStatus#COLLECTED}, not PAID, until a cashier confirms receiving the money.
+     *
+     * @return the amount taken
+     */
+    private BigDecimal collectInHand(Invoice invoice, UserApp collector) {
+        BigDecimal amount = invoice.getSale().getTotalAmount();
+        payments.save(Payment.builder()
+                .amount(amount)
+                .paymentMethod(PaymentMethod.CASH)
+                .paymentDate(calendar.now())
+                .invoice(invoice)
+                .collectedBy(collector)
+                // Left null: the collector holds the cash until they remit it.
+                .cashRemittance(null)
+                .build());
+        invoice.setPaymentStatus(PaymentStatus.COLLECTED);
+        invoice.getSale().setPaymentStatus(PaymentStatus.COLLECTED);
+        return amount;
+    }
+
+    /**
+     * Settles an unpaid order at the till: the restaurant's bill, the customer who comes back to
+     * pay, or any order when the depot does not take money. Paid at once -- the cashier is the one
+     * holding the money, so there is nothing left to hand over or confirm.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public InvoiceResponse pay(Long invoiceId, PaymentMethod method, UserApp cashier) {
+        Invoice invoice = load(invoiceId);
+        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
+            throw new BusinessRuleException("ALREADY_SETTLED",
+                    "La commande " + invoice.getInvoiceNumber() + " est deja reglee.");
+        }
+        payments.save(Payment.builder()
+                .amount(invoice.getSale().getTotalAmount())
+                .paymentMethod(method == null ? PaymentMethod.CASH : method)
+                .paymentDate(calendar.now())
+                .invoice(invoice)
+                .collectedBy(cashier)
+                .cashRemittance(null)
+                .build());
+        invoice.setPaymentStatus(PaymentStatus.PAID);
+        invoice.getSale().setPaymentStatus(PaymentStatus.PAID);
+
+        events.publishEvent(new OrderPaidEvent(invoice.getId(), invoice.getInvoiceNumber()));
+        return InvoiceResponse.of(invoice);
+    }
+
+    /**
+     * Cancels an unpaid order.
+     *
+     * <p>Not handed over yet, its goods go back on the shelf: the stock outputs it wrote are
+     * removed with the units they took, so the stock and its history read as if the order had
+     * never left -- the order itself keeps who cancelled it, when and why. Already handed over,
+     * the goods are gone: the cancellation is only allowed when the shop says so, and only
+     * records what happened (the customer left without paying), with a comment that says it.
+     *
+     * <p>A paid order is never cancelled here: its money would have to go back too. Whoever only
+     * takes orders may cancel their own; a till or the administrator, any.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public InvoiceResponse cancel(Long invoiceId, CancelReason reason, String comment, UserApp actor) {
+        Invoice invoice = load(invoiceId);
+        String number = invoice.getInvoiceNumber();
+        String note = comment == null || comment.isBlank() ? null : comment.trim();
+
+        if (invoice.getPaymentStatus() == PaymentStatus.CANCELLED) {
+            throw new BusinessRuleException("ALREADY_CANCELLED", "La commande " + number + " est deja annulee.");
+        }
+        if (invoice.getPaymentStatus() != PaymentStatus.UNPAID) {
+            throw new BusinessRuleException("ALREADY_SETTLED",
+                    "La commande " + number + " est deja reglee : elle ne peut plus etre annulee.");
+        }
+        boolean mayCancelAny = actor.hasRole(RoleApp.CASHIER) || actor.hasRole(RoleApp.SUPER_ADMIN);
+        if (!mayCancelAny && !invoice.getSale().getSeller().getId().equals(actor.getId())) {
+            throw new BusinessRuleException("NOT_YOUR_ORDER",
+                    "Seule la caisse peut annuler une commande prise par quelqu'un d'autre.");
+        }
+        if (reason == CancelReason.OTHER && note == null) {
+            throw new BusinessRuleException("COMMENT_REQUIRED", "Precisez le motif de l'annulation.");
+        }
+
+        if (invoice.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
+            if (!settings.features().cancelAfterDelivery()) {
+                throw new BusinessRuleException("ALREADY_DELIVERED",
+                        "La commande " + number + " a deja ete remise : elle ne peut plus etre annulee.");
+            }
+            if (note == null) {
+                throw new BusinessRuleException("COMMENT_REQUIRED",
+                        "Commande deja remise : notez ce qui s'est passe avec le client.");
+            }
+        } else {
+            giveBackStock(invoice);
+            invoice.setDeliveryStatus(DeliveryStatus.CANCELLED);
+        }
+
+        invoice.setPaymentStatus(PaymentStatus.CANCELLED);
+        invoice.getSale().setPaymentStatus(PaymentStatus.CANCELLED);
+        invoice.setCancelledAt(calendar.now());
+        invoice.setCancelledBy(actor);
+        invoice.setCancelReason(reason);
+        invoice.setCancelComment(note);
+
+        events.publishEvent(new OrderCancelledEvent(invoice.getId(), number));
+        return InvoiceResponse.of(invoice);
+    }
+
+    private void giveBackStock(Invoice invoice) {
+        List<StockOutput> outputs = movements.findOutputsOfInvoice(invoice.getId());
+        for (StockOutput output : outputs) {
+            // Locked like at checkout: a sale of the same product at that moment must see the units.
+            Product product = products.findByIdForUpdate(output.getProduct().getId())
+                    .orElseThrow(() -> ResourceNotFoundException.of("Produit", output.getProduct().getId()));
+            product.adjustStock(output.getQuantity());
+        }
+        movements.deleteAll(outputs);
     }
 
     /** Front-end counterpart of {@code Invoice#print()}. */

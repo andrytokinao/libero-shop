@@ -26,12 +26,12 @@ public class SaleController {
     }
 
     /**
-     * Records a checkout. The seller is the logged-in cashier, taken from the session --
-     * there is no seller field in the payload to forge.
+     * Records a checkout, or an order taken from a phone. The seller is the logged-in account,
+     * taken from the session -- there is no seller field in the payload to forge.
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('CASHIER')")
+    @PreAuthorize("hasAnyRole('CASHIER', 'ORDER_TAKER')")
     public InvoiceResponse create(@Valid @RequestBody CreateSaleRequest request) {
         return saleService.checkout(request, currentUser.require());
     }

@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { DepotDashboard, Invoice } from '../../core/models';
 import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
@@ -32,13 +33,19 @@ const EMPTY: DepotDashboard = {
       <app-kpi-card
         label="Dont non payées"
         [value]="data().unpaidPendingDeliveries"
-        hint="remise autorisée, paiement au comptant"
+        [hint]="
+          auth.settings().payAtDepot
+            ? 'remise autorisée, paiement au comptant'
+            : 'remise autorisée, paiement à la caisse'
+        "
       />
-      <app-kpi-card
-        label="Espèces en main"
-        [value]="data().cashInHand | ariary"
-        [hint]="data().cashInHandCount + ' encaissement(s) à verser'"
-      />
+      @if (auth.settings().payAtDepot) {
+        <app-kpi-card
+          label="Espèces en main"
+          [value]="data().cashInHand | ariary"
+          [hint]="data().cashInHandCount + ' encaissement(s) à verser'"
+        />
+      }
       <app-kpi-card
         label="Remises effectuées"
         [value]="data().deliveredTotal"
@@ -52,7 +59,7 @@ const EMPTY: DepotDashboard = {
         [invoices]="data().pendingInvoices"
         [showDate]="true"
         [busy]="busy()"
-        [actionLabel]="actionLabel"
+        [actionLabel]="actionLabel()"
         (action)="deliver($event)"
         emptyMessage="Aucune commande en attente."
       />
@@ -64,7 +71,8 @@ export class DepotDashboardComponent {
   private readonly invoiceApi = inject(InvoiceApi);
   private readonly toasts = inject(ToastService);
 
-  protected readonly actionLabel = deliveryActionLabel;
+  protected readonly auth = inject(AuthService);
+  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.settings().payAtDepot));
   protected readonly busy = signal(false);
 
   private readonly resource = apiResource(EMPTY, () => this.dashboardApi.depot());

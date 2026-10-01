@@ -1198,6 +1198,11 @@ textarea.field {
   }
 }
 
+/* The sidebar already has "Nouvelle vente" one click away; the button is a phone thing. */
+.fab {
+  display: none;
+}
+
 /* ==========================================================================
    Phone layout.
    Below this width the sidebar cannot hold a column of its own: it becomes a
@@ -1428,6 +1433,33 @@ textarea.field {
     .bval {
       width: 92px;
     }
+  }
+
+  .fab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 35;
+    padding: 14px 20px;
+    border-radius: 28px;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+
+    &:active {
+      background: var(--brand-dark);
+    }
+  }
+
+  /* Room under the last row of a page, so the button never hides it. */
+  .app.has-fab .content {
+    padding-bottom: 84px;
   }
 
   .toast {

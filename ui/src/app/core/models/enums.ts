@@ -14,19 +14,38 @@ export enum PaymentStatus {
   COLLECTED = 'COLLECTED',
   /** Brought to the desk; a cashier has yet to confirm receiving it. */
   REMITTED = 'REMITTED',
+  /** Cancelled while unpaid: nothing is owed. */
+  CANCELLED = 'CANCELLED',
 }
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.PAID]: 'Payée',
   [PaymentStatus.UNPAID]: 'Non payée',
-  [PaymentStatus.COLLECTED]: 'Encaissée au dépôt',
+  // Taken by the depot or by an order taker: either way, not in the till yet.
+  [PaymentStatus.COLLECTED]: 'Encaissée, à remettre',
   [PaymentStatus.REMITTED]: 'Versée, à confirmer',
+  [PaymentStatus.CANCELLED]: 'Annulée',
 };
 
 export enum DeliveryStatus {
   PENDING = 'PENDING',
   DELIVERED = 'DELIVERED',
+  /** Cancelled before hand-over: the goods went back on the shelf. */
+  CANCELLED = 'CANCELLED',
 }
+
+/** Mirrors com.houssen.liberoshop.entity.CancelReason. */
+export enum CancelReason {
+  INPUT_ERROR = 'INPUT_ERROR',
+  CUSTOMER_GAVE_UP = 'CUSTOMER_GAVE_UP',
+  OTHER = 'OTHER',
+}
+
+export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
+  [CancelReason.INPUT_ERROR]: 'Erreur de saisie',
+  [CancelReason.CUSTOMER_GAVE_UP]: 'Le client a renoncé',
+  [CancelReason.OTHER]: 'Autre',
+};
 
 export enum RemittanceStatus {
   PENDING = 'PENDING',
@@ -42,6 +61,8 @@ export enum PaymentMethod {
 
 export enum RoleApp {
   CASHIER = 'CASHIER',
+  /** Takes orders from a phone — receptionist, waiter — and never takes the money. */
+  ORDER_TAKER = 'ORDER_TAKER',
   DEPOT_AGENT = 'DEPOT_AGENT',
   DEPOT_MANAGER = 'DEPOT_MANAGER',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -67,6 +88,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
  */
 export const ROLE_PRECEDENCE: readonly RoleApp[] = [
   RoleApp.CASHIER,
+  RoleApp.ORDER_TAKER,
   RoleApp.DEPOT_AGENT,
   RoleApp.DEPOT_MANAGER,
   RoleApp.SUPER_ADMIN,
@@ -79,6 +101,7 @@ export function orderRoles(roles: readonly RoleApp[]): RoleApp[] {
 
 export const ROLE_LABELS: Record<RoleApp, string> = {
   [RoleApp.CASHIER]: 'Responsable de caisse',
+  [RoleApp.ORDER_TAKER]: 'Prise de commande',
   [RoleApp.DEPOT_AGENT]: 'Agent de dépôt',
   [RoleApp.DEPOT_MANAGER]: 'Responsable entrée-sortie dépôt',
   [RoleApp.SUPER_ADMIN]: 'Super admin',
@@ -87,6 +110,7 @@ export const ROLE_LABELS: Record<RoleApp, string> = {
 /** One word per role, for the accounts that hold several. Mirrors RolePolicy.shortLabelOf. */
 export const ROLE_SHORT_LABELS: Record<RoleApp, string> = {
   [RoleApp.CASHIER]: 'Caisse',
+  [RoleApp.ORDER_TAKER]: 'Commandes',
   [RoleApp.DEPOT_AGENT]: 'Dépôt',
   [RoleApp.DEPOT_MANAGER]: 'Stock',
   [RoleApp.SUPER_ADMIN]: 'Admin',

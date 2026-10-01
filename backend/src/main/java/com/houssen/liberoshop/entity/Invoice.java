@@ -2,6 +2,8 @@ package com.houssen.liberoshop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -43,6 +45,22 @@ public class Invoice {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sale_id")
     private Sale sale;
+
+    /** Set together, by {@code InvoiceService.cancel}, and only then. */
+    private LocalDateTime cancelledAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelled_by")
+    private UserApp cancelledBy;
+
+    /** A plain varchar, so a reason added later needs no column migration. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 30)
+    private CancelReason cancelReason;
+
+    @Column(length = 255)
+    private String cancelComment;
 
     /** To be implemented: build a PDF representation of this invoice. */
     public byte[] generatePdf() {

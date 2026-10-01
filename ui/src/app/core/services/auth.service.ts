@@ -4,7 +4,17 @@ import { Router } from '@angular/router';
 import { Observable, of, tap } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { API_BASE_URL } from '../api/api.config';
-import { LoginRequest, LoginResponse, RoleApp, Session, UserApp, authorityOf } from '../models';
+import {
+  DEFAULT_SHOP_SETTINGS,
+  LoginRequest,
+  LoginResponse,
+  RoleApp,
+  Session,
+  ShopSettings,
+  UserApp,
+  authorityOf,
+  businessTypeInfo,
+} from '../models';
 import { navigationFor, ownsSegment } from '../config/navigation';
 import { TokenStorage } from './token-storage.service';
 
@@ -14,6 +24,7 @@ const ANONYMOUS: Session = {
   roleLabel: null,
   homePath: '/login',
   authorities: [],
+  settings: null,
 };
 
 /**
@@ -49,8 +60,13 @@ export class AuthService {
   readonly roleLabel = computed(() => this.session().roleLabel ?? '');
   readonly homePath = computed(() => this.session().homePath);
 
+  /** How the shop works. The defaults stand in while signed out, when nothing reads them. */
+  readonly settings = computed<ShopSettings>(() => this.session().settings ?? DEFAULT_SHOP_SETTINGS);
+  /** The words of the shop's business: "Cuisine" and "Table" in a restaurant. */
+  readonly words = computed(() => businessTypeInfo(this.settings().businessType).vocabulary);
+
   /** Sidebar of the current account: one section per role, empty while signed out. */
-  readonly menu = computed(() => navigationFor(this.roles()));
+  readonly menu = computed(() => navigationFor(this.roles(), this.settings()));
 
   readonly initials = computed(() => {
     const user = this.currentUser();
@@ -119,6 +135,11 @@ export class AuthService {
       tap(() => this.clear()),
       map(() => void 0),
     );
+  }
+
+  /** A configuration just saved: the menu and the screens follow it without signing in again. */
+  applySettings(settings: ShopSettings): void {
+    this.session.update((session) => ({ ...session, settings }));
   }
 
   /** Drops the token and the session without calling the server — used on a 401. */

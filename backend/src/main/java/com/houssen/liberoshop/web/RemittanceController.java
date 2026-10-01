@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * The depot cash hand-over.
+ * The cash hand-over: what the depot -- or an order taker allowed to take money -- brings to the till.
  *
  * <p>Neither endpoint takes an actor: the agent remits their own cash and the desk confirms
  * as itself, both read from the session. That is what keeps the trail meaningful.
@@ -46,7 +46,7 @@ public class RemittanceController {
 
     /** What the calling agent has collected and not handed over yet. */
     @GetMapping("/cash-in-hand")
-    @PreAuthorize("hasRole('DEPOT_AGENT')")
+    @PreAuthorize("hasAnyRole('DEPOT_AGENT', 'ORDER_TAKER')")
     public List<PaymentResponse> cashInHand() {
         return remittanceService.cashInHand(currentUser.require());
     }
@@ -57,7 +57,7 @@ public class RemittanceController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('DEPOT_AGENT')")
+    @PreAuthorize("hasAnyRole('DEPOT_AGENT', 'ORDER_TAKER')")
     public CashRemittanceResponse submit(@RequestBody(required = false) SubmitRemittanceRequest request) {
         return remittanceService.submit(currentUser.require(), request == null ? null : request.invoiceIds());
     }

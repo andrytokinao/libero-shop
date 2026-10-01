@@ -21,7 +21,9 @@ public enum PaymentStatus {
     /** Paid to the storekeeper on hand-over; the cash is still with them. */
     COLLECTED,
     /** Brought to the desk by the storekeeper; a cashier has yet to confirm receiving it. */
-    REMITTED;
+    REMITTED,
+    /** Cancelled while unpaid: nothing is owed. Never counted as revenue, never to collect. */
+    CANCELLED;
 
     /** What a checkout may ask for: the other two are reached through the depot, never posted. */
     public boolean isCheckoutStatus() {

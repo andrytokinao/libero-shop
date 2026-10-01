@@ -1,9 +1,10 @@
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { DeliveryStatus, Invoice, RoleApp } from '../../core/models';
 import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
@@ -17,7 +18,7 @@ import { deliveryActionLabel } from './delivery.util';
   template: `
     <div class="card">
       <h2>
-        Remise de commande
+        {{ auth.words().handOver }}
         <small>
           recherchez par n° de facture ou nom du client, puis ouvrez le détail pour
           vérifier les articles avant de remettre
@@ -51,17 +52,20 @@ import { deliveryActionLabel } from './delivery.util';
         [invoices]="invoices()"
         [showDate]="true"
         [busy]="busy()"
-        [actionLabel]="actionLabel"
+        [actionLabel]="actionLabel()"
         (action)="deliver($event)"
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
     </div>
 
     <!-- Where an unpaid order lands once handed over: its cash, with the button to bring it
-         to the desk. Only a storekeeper holds cash; a manager browsing here has none. -->
-    <div *appHasRole="RoleApp.DEPOT_AGENT" style="margin-top:16px;">
-      <app-cash-in-hand />
-    </div>
+         to the desk. Only a storekeeper holds cash; a manager browsing here has none, and
+         neither does anyone when the shop settles every order at the till. -->
+    @if (auth.settings().payAtDepot) {
+      <div *appHasRole="RoleApp.DEPOT_AGENT" style="margin-top:16px;">
+        <app-cash-in-hand />
+      </div>
+    }
   `,
 })
 export class OrderDeliveryComponent {
@@ -71,7 +75,8 @@ export class OrderDeliveryComponent {
   protected readonly search = signal('');
   protected readonly onlyPending = signal(true);
   protected readonly busy = signal(false);
-  protected readonly actionLabel = deliveryActionLabel;
+  protected readonly auth = inject(AuthService);
+  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.settings().payAtDepot));
   protected readonly RoleApp = RoleApp;
 
   /** Refreshed right after a hand-over, without waiting for the socket to echo it. */

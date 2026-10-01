@@ -58,7 +58,10 @@ public class DashboardService {
     }
 
     public CashierDashboardResponse forCashier(UserApp cashier) {
-        List<InvoiceResponse> mine = invoiceService.search(cashier.getId(), null, null, true, null);
+        // A cancelled order is neither a sale of the day nor money owed.
+        List<InvoiceResponse> mine = invoiceService.search(cashier.getId(), null, null, true, null).stream()
+                .filter(invoice -> invoice.paymentStatus() != PaymentStatus.CANCELLED)
+                .toList();
         List<InvoiceResponse> paid = mine.stream()
                 .filter(invoice -> invoice.paymentStatus() == PaymentStatus.PAID)
                 .toList();

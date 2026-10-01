@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { Invoice } from '../../core/models';
+import { CANCEL_REASON_LABELS, Invoice } from '../../core/models';
 import { InvoiceLinesComponent } from './invoice-lines.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 
@@ -46,21 +46,57 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
         </div>
 
         <div class="modal-body">
+          @if (invoice.cancellation; as c) {
+            <p class="cancelled">
+              Annulée le {{ c.at | date: 'dd/MM/y HH:mm' }}
+              @if (c.byName) {
+                par {{ c.byName }}
+              }
+              — {{ reasonLabels[c.reason] }}
+              @if (c.comment) {
+                <br />« {{ c.comment }} »
+              }
+            </p>
+          }
           <app-invoice-lines [invoice]="invoice" />
         </div>
 
         <div class="modal-foot">
+          @if (canCancel) {
+            <button class="btn ghost danger-text" type="button" (click)="cancelRequested.emit()">
+              Annuler la commande
+            </button>
+          }
           <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
         </div>
       </div>
     </div>
+  `,
+  styles: `
+    .cancelled {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .danger-text {
+      color: var(--red);
+      margin-right: auto;
+    }
   `,
 })
 export class InvoiceDetailDialogComponent {
   @Input({ required: true }) invoice!: Invoice;
   /** The cash-desk screens show one seller's own invoices; naming them there says nothing. */
   @Input() showSeller = true;
+  /** Offers "Annuler la commande"; the list decides, knowing who is looking and the settings. */
+  @Input() canCancel = false;
   @Output() readonly closed = new EventEmitter<void>();
+  @Output() readonly cancelRequested = new EventEmitter<void>();
+
+  protected readonly reasonLabels = CANCEL_REASON_LABELS;
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {

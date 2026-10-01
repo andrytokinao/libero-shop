@@ -3,6 +3,7 @@ package com.houssen.liberoshop.notification;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.service.SaleRecordedEvent;
+import com.houssen.liberoshop.service.ShopSettingsService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -30,20 +31,30 @@ public class SaleNotifier {
     static final Set<RoleApp> AUDIENCE = Set.of(RoleApp.DEPOT_AGENT, RoleApp.DEPOT_MANAGER);
 
     private final NotificationService notifications;
+    private final ShopSettingsService settings;
 
-    public SaleNotifier(NotificationService notifications) {
+    public SaleNotifier(NotificationService notifications, ShopSettingsService settings) {
         this.notifications = notifications;
+        this.settings = settings;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSaleRecorded(SaleRecordedEvent sale) {
-        notifications.sendToRoles(AUDIENCE, notificationOf(sale), sale.sellerId());
+        // A counter hands the goods over with the sale: nobody is left to prepare anything.
+        if (!settings.features().separateDelivery()) {
+            return;
+        }
+        notifications.sendToRoles(AUDIENCE, notificationOf(sale, settings.features().payAtDepot()),
+                sale.sellerId());
     }
 
-    static Notification notificationOf(SaleRecordedEvent sale) {
-        String settlement = sale.paymentStatus() == PaymentStatus.PAID
-                ? "payee"
-                : "a encaisser a la remise";
+    static Notification notificationOf(SaleRecordedEvent sale, boolean payAtDepot) {
+        String settlement = switch (sale.paymentStatus()) {
+            case PAID -> "payee";
+            // Paid to whoever took the order: nothing to collect on hand-over.
+            case COLLECTED, REMITTED -> "payee a " + sale.sellerName();
+            default -> payAtDepot ? "a encaisser a la remise" : "a regler a la caisse";
+        };
         String message = sale.invoiceNumber() + " - " + sale.clientName() + " - "
                 + sale.units() + " article(s), " + amount(sale.totalAmount()) + " Ar, "
                 + settlement + ". Vendu par " + sale.sellerName() + ".";

@@ -1,4 +1,4 @@
-import { DeliveryStatus, PaymentStatus } from './enums';
+import { CancelReason, DeliveryStatus, PaymentStatus } from './enums';
 import { Sale } from './sale.model';
 
 /**
@@ -19,6 +19,22 @@ export interface Invoice {
   /** Total units on the invoice, summed server-side. */
   itemCount: number;
   sale: Sale;
+  /** Who cancelled the order, when and why; null for an order that stands. */
+  cancellation: InvoiceCancellation | null;
+}
+
+export interface InvoiceCancellation {
+  at: string;
+  byName: string | null;
+  reason: CancelReason;
+  comment: string | null;
+}
+
+/** POST /api/invoices/{id}/cancel. */
+export interface CancelInvoiceRequest {
+  reason: CancelReason;
+  /** Required for OTHER, and for an order already handed over. */
+  comment: string | null;
 }
 
 /**

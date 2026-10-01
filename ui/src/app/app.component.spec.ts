@@ -8,7 +8,14 @@ import { Router, provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api.config';
-import { LicenseState, LicenseStatus, RoleApp, Session } from './core/models';
+import {
+  BusinessType,
+  DEFAULT_SHOP_SETTINGS,
+  LicenseState,
+  LicenseStatus,
+  RoleApp,
+  Session,
+} from './core/models';
 import { AuthService } from './core/services/auth.service';
 import { TokenStorage } from './core/services/token-storage.service';
 
@@ -24,6 +31,7 @@ const CASHIER_SESSION: Session = {
   roleLabel: 'Responsable de caisse',
   homePath: '/caisse/tableau-de-bord',
   authorities: ['ROLE_CASHIER'],
+  settings: DEFAULT_SHOP_SETTINGS,
 };
 
 /** The small grocery: one person sells at the desk and hands the goods over at the depot. */
@@ -39,6 +47,7 @@ const DOUBLE_ROLE_SESSION: Session = {
   roleLabel: 'Caisse · Dépôt',
   homePath: '/caisse/tableau-de-bord',
   authorities: ['ROLE_CASHIER', 'ROLE_DEPOT_AGENT'],
+  settings: DEFAULT_SHOP_SETTINGS,
 };
 
 /** A licence with room to spare, so the shell renders without its warning bar. */
@@ -104,7 +113,7 @@ describe('AppComponent', () => {
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
     expect(sidebar.textContent).toContain('Responsable de caisse');
-    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(5);
+    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(6);
     // One role, one section: no heading to tell apart, so the menu stays flat.
     expect(sidebar.querySelectorAll('nav.menu-full .group').length).toBe(0);
   });
@@ -122,8 +131,8 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
-    // Five entries at the desk, four at the depot, and a heading over each set.
-    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(9);
+    // Six entries at the desk, four at the depot, and a heading over each set.
+    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(10);
     const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group')).map((el) =>
       el.textContent?.trim(),
     );
@@ -137,6 +146,69 @@ describe('AppComponent', () => {
     expect(auth.owns('caisse')).toBeTrue();
     expect(auth.owns('depot')).toBeTrue();
     expect(auth.owns('admin')).toBeFalse();
+  });
+
+  it('follows the shop configuration: a restaurant has a kitchen and no depot cash', () => {
+    TestBed.inject(TokenStorage).save('jeton-de-test', 3600);
+
+    const auth = TestBed.inject(AuthService);
+    auth.ensureLoaded().subscribe();
+    httpMock.expectOne(`${API_BASE_URL}/auth/session`).flush({
+      ...DOUBLE_ROLE_SESSION,
+      settings: {
+        businessType: BusinessType.RESTAURANT,
+        separateDelivery: true,
+        payAtDepot: false,
+        dualControlRemittance: false,
+        cancelAfterDelivery: false,
+        orderTakerCollects: false,
+      },
+    });
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${API_BASE_URL}/license/status`).flush(HEALTHY_LICENSE);
+    fixture.detectChanges();
+
+    const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
+    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(groups).toEqual(['Caisse', 'Cuisine']);
+    const links = sidebar.querySelector('nav.menu-full')?.textContent ?? '';
+    expect(links).toContain('Commandes à servir');
+    expect(links).not.toContain('Versements dépôt');
+    expect(links).not.toContain('Caisse dépôt');
+  });
+
+  it('gives a receptionist allowed to take money the screen to bring it to the till', () => {
+    TestBed.inject(TokenStorage).save('jeton-de-test', 3600);
+
+    const auth = TestBed.inject(AuthService);
+    auth.ensureLoaded().subscribe();
+    httpMock.expectOne(`${API_BASE_URL}/auth/session`).flush({
+      ...CASHIER_SESSION,
+      user: { ...CASHIER_SESSION.user!, roles: [RoleApp.ORDER_TAKER] },
+      authorities: ['ROLE_ORDER_TAKER'],
+      settings: {
+        businessType: BusinessType.HOTEL,
+        separateDelivery: true,
+        payAtDepot: false,
+        dualControlRemittance: false,
+        cancelAfterDelivery: false,
+        orderTakerCollects: true,
+      },
+    });
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${API_BASE_URL}/license/status`).flush(HEALTHY_LICENSE);
+    fixture.detectChanges();
+
+    const links = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('nav.menu-full a'),
+    ).map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['/commandes/nouvelle', '/commandes/mes-commandes', '/commandes/argent']);
   });
 
   it('opens and closes the mobile menu from the top bar', () => {
@@ -181,7 +253,7 @@ describe('AppComponent', () => {
     fixture.detectChanges();
     // The cards themselves have nothing to close.
     expect(fixture.nativeElement.querySelector('.page-close')).toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.module-card').length).toBe(5);
+    expect(fixture.nativeElement.querySelectorAll('.module-card').length).toBe(6);
 
     await router.navigateByUrl('/caisse/ventes-du-jour');
     fixture.detectChanges();

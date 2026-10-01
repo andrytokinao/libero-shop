@@ -24,6 +24,7 @@ export class PaymentStatusBadgeComponent {
     [PaymentStatus.UNPAID]: 'amber',
     [PaymentStatus.COLLECTED]: 'blue',
     [PaymentStatus.REMITTED]: 'blue',
+    [PaymentStatus.CANCELLED]: 'red',
   };
 }
 
@@ -33,6 +34,8 @@ export class PaymentStatusBadgeComponent {
   template: `
     @if (status === DeliveryStatus.DELIVERED) {
       <span class="badge grey">Remis</span>
+    } @else if (status === DeliveryStatus.CANCELLED) {
+      <span class="badge grey">Remis en stock</span>
     } @else {
       <span class="badge green">À remettre</span>
     }

@@ -19,7 +19,8 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
      * have one and the rest is reported as such rather than passed off as pure profit.
      *
      * <p>Every sale counts, paid or not: the goods left the shelf either way, and the margin
-     * belongs to the day they were sold, not the day they were settled.
+     * belongs to the day they were sold, not the day they were settled. Cancelled orders do not
+     * count: before hand-over their goods went back on the shelf, and after it nothing was earned.
      */
     @Query("""
             select l.product.id, l.product.name,
@@ -29,6 +30,7 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
                    sum(case when l.unitCost is null then 0 else l.unitCost * l.quantity end)
             from SaleLine l
             where l.sale.saleDate >= :from and l.sale.saleDate < :to
+              and l.sale.paymentStatus <> com.houssen.liberoshop.entity.PaymentStatus.CANCELLED
             group by l.product.id, l.product.name
             """)
     List<Object[]> aggregateMarginByProduct(@Param("from") LocalDateTime from,

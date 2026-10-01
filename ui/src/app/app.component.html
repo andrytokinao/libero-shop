@@ -7,7 +7,7 @@
 }
 
 @if (auth.isAuthenticated()) {
-  <div class="app" [class.nav-open]="navOpen()">
+  <div class="app" [class.nav-open]="navOpen()" [class.has-fab]="quickAction() !== null">
     <!-- Phone-only bar: on a small screen the sidebar is off-canvas, so the menu
          needs a permanent handle at the top of the page. -->
     <header class="mobile-bar">
@@ -117,6 +117,13 @@
         <router-outlet />
       </div>
     </main>
+
+    <!-- Phone only (see styles.scss): one tap from any screen to the next customer. -->
+    @if (quickAction(); as action) {
+      <a class="fab" [routerLink]="action.path" [attr.aria-label]="action.label">
+        <span aria-hidden="true">＋</span> {{ action.label }}
+      </a>
+    }
   </div>
 } @else {
   <!-- Signed out: the login page owns the whole viewport, with no shell around it. -->

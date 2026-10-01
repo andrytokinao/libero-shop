@@ -6,6 +6,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.security.JwtService.IssuedToken;
 import com.houssen.liberoshop.service.RolePolicy;
+import com.houssen.liberoshop.service.ShopSettingsService;
 import com.houssen.liberoshop.web.dto.LoginRequest;
 import com.houssen.liberoshop.web.dto.LoginResponse;
 import com.houssen.liberoshop.web.dto.SessionResponse;
@@ -42,12 +43,14 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final CurrentUser currentUser;
+    private final ShopSettingsService settingsService;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
-                          CurrentUser currentUser) {
+                          CurrentUser currentUser, ShopSettingsService settingsService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.currentUser = currentUser;
+        this.settingsService = settingsService;
     }
 
     @PostMapping("/login")
@@ -105,6 +108,6 @@ public class AuthController {
                 .filter(authority -> authority.startsWith(ROLE_PREFIX))
                 .toList();
         return SessionResponse.of(user, RolePolicy.labelOf(user.getRoles()),
-                RolePolicy.homePathOf(user.getRoles()), authorities);
+                RolePolicy.homePathOf(user.getRoles()), authorities, settingsService.current());
     }
 }

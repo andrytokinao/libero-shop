@@ -2,6 +2,7 @@ import { PaymentMethod, PaymentStatus, RoleApp } from './enums';
 import { Category } from './category.model';
 import { Invoice } from './invoice.model';
 import { Product } from './product.model';
+import { ShopSettings } from './shop-settings.model';
 import { UserApp } from './user-app.model';
 
 /**
@@ -20,6 +21,13 @@ export interface Session {
   homePath: string;
   /** e.g. ['ROLE_CASHIER'] — what the UI hides on, never what the server trusts. */
   authorities: string[];
+  /** How the shop works; null while signed out. */
+  settings: ShopSettings | null;
+}
+
+/** POST /api/invoices/{id}/pay — the amount is the order's total, read on the server. */
+export interface PayInvoiceRequest {
+  paymentMethod: PaymentMethod;
 }
 
 export interface LoginRequest {

@@ -65,6 +65,12 @@ export const routes: Routes = [
           import('./features/cashier/new-sale.component').then((m) => m.NewSaleComponent),
       },
       {
+        path: 'a-encaisser',
+        title: 'À encaisser',
+        loadComponent: () =>
+          import('./features/cashier/to-collect.component').then((m) => m.ToCollectComponent),
+      },
+      {
         path: 'ventes-du-jour',
         title: 'Ventes du jour',
         loadComponent: () =>
@@ -80,11 +86,46 @@ export const routes: Routes = [
       },
       {
         path: 'versements',
-        title: 'Versements dépôt',
+        title: 'Versements reçus',
         loadComponent: () =>
           import('./features/cashier/remittance-inbox.component').then(
             (m) => m.RemittanceInboxComponent,
           ),
+      },
+    ],
+  },
+
+  // ----------------------------------------------------------- order taker
+  {
+    path: 'commandes',
+    data: { segment: 'commandes' },
+    canActivate: [roleGuard],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'nouvelle' },
+      {
+        path: 'menu',
+        title: 'Commandes',
+        loadComponent: () =>
+          import('./shared/components/module-menu.component').then((m) => m.ModuleMenuComponent),
+      },
+      {
+        path: 'nouvelle',
+        title: 'Nouvelle commande',
+        loadComponent: () =>
+          import('./features/orders/order-taking.component').then((m) => m.OrderTakingComponent),
+      },
+      {
+        path: 'mes-commandes',
+        title: 'Mes commandes',
+        loadComponent: () =>
+          import('./features/orders/my-orders.component').then((m) => m.MyOrdersComponent),
+      },
+      // The same screen as the depot's: cash in hand, and the slips brought to the till.
+      {
+        path: 'argent',
+        title: 'Argent à remettre',
+        loadComponent: () =>
+          import('./features/depot/depot-cash.component').then((m) => m.DepotCashComponent),
       },
     ],
   },
@@ -237,6 +278,12 @@ export const routes: Routes = [
         title: 'Utilisateurs',
         loadComponent: () =>
           import('./features/admin/users.component').then((m) => m.UsersComponent),
+      },
+      {
+        path: 'configuration',
+        title: 'Configuration de la boutique',
+        loadComponent: () =>
+          import('./features/admin/shop-settings.component').then((m) => m.ShopSettingsComponent),
       },
       {
         path: 'licence',

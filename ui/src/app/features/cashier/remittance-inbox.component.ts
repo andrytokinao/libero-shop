@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { RemittanceApi } from '../../core/api/remittance.api';
@@ -15,6 +15,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   standalone: true,
   imports: [
     DatePipe,
+    NgTemplateOutlet,
     KpiCardComponent,
     RemittanceStatusBadgeComponent,
     HasRoleDirective,
@@ -49,10 +50,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card" style="margin-top:16px;">
       <h2>
         Versements en attente de confirmation
-        <small>argent apporté par les agents de dépôt</small>
+        <small>argent apporté par le dépôt ou la prise de commande</small>
       </h2>
       @if (pending().length) {
-        <table>
+        <table class="inv-table">
           <thead>
             <tr>
               <th>N° versement</th>
@@ -80,49 +81,80 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 </td>
                 <td class="num"><strong>{{ remittance.amount | ariary }}</strong></td>
                 <td>
-                  <!-- Only a cash desk may acknowledge a slip; the API enforces it too.
-                       Two steps: signing for money not counted is the mistake to prevent. -->
-                  <ng-container *appHasRole="RoleApp.CASHIER">
-                    @if (checking() === remittance.id) {
-                      <div class="check">
-                        <span>Avez-vous compté {{ remittance.amount | ariary }} ?</span>
-                        <button
-                          class="btn small"
-                          type="button"
-                          [disabled]="busy()"
-                          (click)="confirm(remittance)"
-                        >
-                          Oui, argent reçu
-                        </button>
-                        <button class="btn small ghost" type="button" (click)="checking.set(null)">
-                          Annuler
-                        </button>
-                      </div>
-                    } @else {
-                      <button
-                        class="btn small"
-                        type="button"
-                        [disabled]="busy()"
-                        (click)="checking.set(remittance.id)"
-                      >
-                        Confirmer réception
-                      </button>
-                    }
-                  </ng-container>
+                  <ng-container
+                    [ngTemplateOutlet]="confirmControls"
+                    [ngTemplateOutletContext]="{ $implicit: remittance }"
+                  />
                 </td>
               </tr>
             }
           </tbody>
         </table>
+
+        <!-- Same slips, phone layout. Hidden by CSS above the breakpoint. -->
+        <ul class="inv-cards">
+          @for (remittance of pending(); track remittance.id) {
+            <li class="inv-card">
+              <div class="head">
+                <strong>V-{{ remittance.id }} · {{ remittance.submittedBy.fullName }}</strong>
+                <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
+              </div>
+              @for (invoice of remittance.invoices; track invoice.invoiceId) {
+                <div class="who small muted">
+                  {{ invoice.invoiceNumber }} · {{ invoice.clientName }} · {{ invoice.amount | ariary }}
+                </div>
+              }
+              <div class="foot">
+                <span class="amount">{{ remittance.amount | ariary }}</span>
+                <ng-container
+                  [ngTemplateOutlet]="confirmControls"
+                  [ngTemplateOutletContext]="{ $implicit: remittance }"
+                />
+              </div>
+            </li>
+          }
+        </ul>
       } @else {
         <div class="empty">Aucun versement en attente.</div>
       }
     </div>
 
+    <!-- Only a cash desk may acknowledge a slip; the API enforces it too.
+         Two steps: signing for money not counted is the mistake to prevent. -->
+    <ng-template #confirmControls let-remittance>
+      <ng-container *appHasRole="RoleApp.CASHIER">
+        @if (checking() === remittance.id) {
+          <div class="check">
+            <span>Avez-vous compté {{ remittance.amount | ariary }} ?</span>
+            <button
+              class="btn small"
+              type="button"
+              [disabled]="busy()"
+              (click)="confirm(remittance)"
+            >
+              Oui, argent reçu
+            </button>
+            <button class="btn small ghost" type="button" (click)="checking.set(null)">
+              Annuler
+            </button>
+          </div>
+        } @else {
+          <button
+            class="btn small"
+            type="button"
+            [disabled]="busy()"
+            (click)="checking.set(remittance.id)"
+          >
+            Confirmer réception
+          </button>
+        }
+      </ng-container>
+    </ng-template>
+
     <div class="card" style="margin-top:16px;">
       <h2>Versements confirmés</h2>
       @if (confirmed().length) {
-        <table>
+        <table class="inv-table">
           <thead>
             <tr>
               <th>N° versement</th>
@@ -149,6 +181,24 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             }
           </tbody>
         </table>
+
+        <ul class="inv-cards">
+          @for (remittance of confirmed(); track remittance.id) {
+            <li class="inv-card">
+              <div class="head">
+                <strong>V-{{ remittance.id }} · {{ remittance.submittedBy.fullName }}</strong>
+                <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
+              </div>
+              <div class="foot">
+                <span class="amount">{{ remittance.amount | ariary }}</span>
+                <app-remittance-status-badge
+                  [status]="remittance.status"
+                  [confirmedBy]="remittance.confirmedBy"
+                />
+              </div>
+            </li>
+          }
+        </ul>
       } @else {
         <div class="empty">Aucun versement confirmé pour le moment.</div>
       }

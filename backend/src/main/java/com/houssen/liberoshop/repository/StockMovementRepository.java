@@ -40,6 +40,10 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             """)
     List<StockOutput> findOutputs();
 
+    /** What one order took off the shelves -- given back when it is cancelled before hand-over. */
+    @Query("select o from StockOutput o where o.invoice.id = :invoiceId")
+    List<StockOutput> findOutputsOfInvoice(@Param("invoiceId") Long invoiceId);
+
     /**
      * The last receipt of each product that stated a cost -- "the last price I paid". Last in
      * booking order, which is the identifier's: a whole import file shares one timestamp.

@@ -4,6 +4,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceApi } from '../../core/api/invoice.api';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus, Product } from '../../core/models';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -92,11 +93,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
         <div class="form-row" style="margin-top:16px;">
           <div class="fld" style="flex:1; min-width:180px;">
-            <label for="client-name">Client</label>
+            <label for="client-name">{{ auth.words().client }}</label>
             <input
               id="client-name"
               type="text"
-              placeholder="Client comptoir"
+              [placeholder]="auth.words().clientPlaceholder"
               [ngModel]="clientName()"
               (ngModelChange)="clientName.set($event)"
             />
@@ -113,7 +114,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               (ngModelChange)="paymentStatus.set($event)"
             >
               <option [ngValue]="PaymentStatus.PAID">Payée à la caisse</option>
-              <option [ngValue]="PaymentStatus.UNPAID">Non payée (à régler au dépôt)</option>
+              <option [ngValue]="PaymentStatus.UNPAID">{{ unpaidLabel() }}</option>
             </select>
           </div>
           @if (paymentStatus() === PaymentStatus.PAID) {
@@ -150,8 +151,16 @@ export class NewSaleComponent {
   private readonly catalog = inject(CatalogApi);
   private readonly invoices = inject(InvoiceApi);
   private readonly toasts = inject(ToastService);
+  protected readonly auth = inject(AuthService);
 
   protected readonly PaymentStatus = PaymentStatus;
+
+  /** Where an unpaid order will be settled, which the shop's configuration decides. */
+  protected readonly unpaidLabel = computed(() =>
+    this.auth.settings().payAtDepot
+      ? `Non payée (à régler à la remise — ${this.auth.words().depot.toLowerCase()})`
+      : 'Non payée (à encaisser plus tard)',
+  );
   protected readonly paymentMethods = Object.values(PaymentMethod);
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 

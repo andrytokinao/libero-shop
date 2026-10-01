@@ -3,10 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api.config';
 import {
+  CancelInvoiceRequest,
   CreateSaleRequest,
   DeliveryResult,
   DeliveryStatus,
   Invoice,
+  PayInvoiceRequest,
   PaymentStatus,
 } from '../models';
 
@@ -54,6 +56,21 @@ export class InvoiceApi {
 
   deliver(invoiceId: number): Observable<DeliveryResult> {
     return this.http.post<DeliveryResult>(`${API_BASE_URL}/invoices/${invoiceId}/deliver`, {});
+  }
+
+  /** An order taker takes the cash of an unpaid order, to bring to the till later. */
+  collect(invoiceId: number): Observable<Invoice> {
+    return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/collect`, {});
+  }
+
+  /** Settles an unpaid order at the till. */
+  pay(invoiceId: number, request: PayInvoiceRequest): Observable<Invoice> {
+    return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/pay`, request);
+  }
+
+  /** Cancels an unpaid order; its goods return to stock unless it was already handed over. */
+  cancel(invoiceId: number, request: CancelInvoiceRequest): Observable<Invoice> {
+    return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/cancel`, request);
   }
 
   print(invoiceId: number): Observable<Invoice> {

@@ -24,7 +24,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card">
       <h2>
         Argent à remettre à la caisse
-        <small>encaissé lors des remises de commandes non payées</small>
+        <small>espèces encaissées sur des commandes, à confirmer par le caissier</small>
       </h2>
       <app-kpi-card
         [flat]="true"

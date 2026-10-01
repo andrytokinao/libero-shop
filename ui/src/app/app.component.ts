@@ -14,6 +14,7 @@ import { filter } from 'rxjs';
 import { LiveUpdateService } from './core/config/live-update.service';
 import { moduleMenuPath, sectionOfUrl } from './core/config/navigation';
 import { ServerConfig } from './core/config/server-config.service';
+import { RoleApp } from './core/models';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
@@ -69,6 +70,21 @@ export class AppComponent {
   });
 
   protected readonly moduleMenuPath = moduleMenuPath;
+
+  /**
+   * The phone's always-there button to serve the next customer: taking an order for whoever
+   * takes orders, a sale at the till otherwise. Hidden on that screen itself, and for the
+   * accounts that neither sell nor take orders.
+   */
+  protected readonly quickAction = computed(() => {
+    const roles = this.auth.roles();
+    const action = roles.includes(RoleApp.ORDER_TAKER)
+      ? { path: '/commandes/nouvelle', label: 'Nouvelle commande' }
+      : roles.includes(RoleApp.CASHIER)
+        ? { path: '/caisse/nouvelle-vente', label: 'Nouvelle vente' }
+        : null;
+    return action && !this.url().startsWith(action.path) ? action : null;
+  });
 
   constructor() {
     // On a phone: pages kept up to date from the server, checked again whenever the app comes

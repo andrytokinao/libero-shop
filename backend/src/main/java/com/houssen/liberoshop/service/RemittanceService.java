@@ -36,13 +36,16 @@ public class RemittanceService {
     private final PaymentRepository payments;
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
+    private final ShopSettingsService settings;
 
     public RemittanceService(CashRemittanceRepository remittances, PaymentRepository payments,
-                             BusinessCalendar calendar, ApplicationEventPublisher events) {
+                             BusinessCalendar calendar, ApplicationEventPublisher events,
+                             ShopSettingsService settings) {
         this.remittances = remittances;
         this.payments = payments;
         this.calendar = calendar;
         this.events = events;
+        this.settings = settings;
     }
 
     /** Collections the given agent has not handed over yet. */
@@ -124,7 +127,9 @@ public class RemittanceService {
             throw new BusinessRuleException("ALREADY_CONFIRMED",
                     "Le versement V-" + remittanceId + " a deja ete confirme.");
         }
-        if (remittance.getSubmittedBy().getId().equals(cashier.getId())) {
+        // A shop run by one person turns the double check off: they would otherwise never get paid.
+        if (settings.features().dualControlRemittance()
+                && remittance.getSubmittedBy().getId().equals(cashier.getId())) {
             throw new BusinessRuleException("SELF_CONFIRMATION",
                     "Un versement ne peut pas etre confirme par la personne qui l'a depose.");
         }

@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ROLE_NAVIGATION, RoleNavigation } from '../../core/config/navigation';
+import { RoleNavigation } from '../../core/config/navigation';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * A module's screens as large cards, two per row.
@@ -14,7 +15,7 @@ import { ROLE_NAVIGATION, RoleNavigation } from '../../core/config/navigation';
   standalone: true,
   imports: [RouterLink],
   template: `
-    @if (section; as s) {
+    @if (section(); as s) {
       <nav class="module-cards" [attr.aria-label]="s.label">
         @for (item of s.items; track item.path) {
           <a class="module-card" [routerLink]="item.path">
@@ -27,9 +28,14 @@ import { ROLE_NAVIGATION, RoleNavigation } from '../../core/config/navigation';
   `,
 })
 export class ModuleMenuComponent {
-  /** The segment comes from the module's parent route, which the role guard already checked. */
-  protected readonly section: RoleNavigation | null =
-    Object.values(ROLE_NAVIGATION).find(
-      (s) => s.segment === inject(ActivatedRoute).snapshot.data['segment'],
-    ) ?? null;
+  private readonly segment: string = inject(ActivatedRoute).snapshot.data['segment'];
+  private readonly auth = inject(AuthService);
+
+  /**
+   * The segment comes from the module's parent route, which the role guard already checked.
+   * Read from the account's menu, so the cards are the screens the shop's configuration keeps.
+   */
+  protected readonly section = computed<RoleNavigation | null>(
+    () => this.auth.menu().find((s) => s.segment === this.segment) ?? null,
+  );
 }
