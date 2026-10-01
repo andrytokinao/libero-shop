@@ -918,6 +918,37 @@ select.field {
   }
 }
 
+/* ------------------------------------------------- stock shortage on a sale
+   A line asking for more than the shelf holds, once the server has refused the sale for it
+   (Cart.isShort). One red, wherever the article shows: basket row, tile, count, total. */
+
+.short-note {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+tr.short td {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.prod-card.short,
+.tile.short {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.prod-count.short,
+.tile.short .count {
+  background: var(--red);
+}
+
+.review li.short {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
 /* The basket's total, repeated at the top of the till on a phone only -- see new-sale. */
 .sale-summary {
   display: none;
@@ -946,6 +977,10 @@ select.field {
 
     strong {
       font-size: 17px;
+    }
+
+    &.short {
+      background: var(--red);
     }
   }
 }

@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.web;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.houssen.liberoshop.entity.StatusTransitionException;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
@@ -49,7 +50,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiError(e.code(), e.getMessage(), List.of(), Instant.now()));
+                .body(new ApiError(e.code(), e.getMessage(), List.of(), Instant.now(), e.data()));
     }
 
     /** The domain refusing a status change: a business rule like the others, same 409. */
@@ -99,7 +100,15 @@ public class ApiExceptionHandler {
      * @param code    stable identifier the client can branch on
      * @param message end-user text, already in French and safe to display as is
      * @param details field-level messages, empty unless this is a validation failure
+     * @param data    what the screen needs to act on a business refusal, keyed by {@code code}
+     *                -- the short lines of an {@code INSUFFICIENT_STOCK}, for one. Left out of
+     *                the JSON when there is none.
      */
-    public record ApiError(String code, String message, List<String> details, Instant timestamp) {
+    public record ApiError(String code, String message, List<String> details, Instant timestamp,
+                           @JsonInclude(JsonInclude.Include.NON_NULL) Object data) {
+
+        public ApiError(String code, String message, List<String> details, Instant timestamp) {
+            this(code, message, details, timestamp, null);
+        }
     }
 }

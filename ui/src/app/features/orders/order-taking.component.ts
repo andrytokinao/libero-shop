@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { Cart } from '../../core/sale/cart';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
+import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -83,6 +84,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           type="button"
           class="tile"
           [class.picked]="cart.quantityOf(product) > 0"
+          [class.short]="cart.isShort(product)"
           [disabled]="cart.remainingStock(product) <= 0"
           (click)="cart.add(product)"
         >
@@ -130,8 +132,15 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           <div class="modal-body">
             <ul class="review">
               @for (line of cart.lines(); track line.product.id) {
-                <li>
-                  <span class="name">{{ line.product.name }}</span>
+                <li [class.short]="cart.isShort(line.product)">
+                  <span class="name">
+                    {{ line.product.name }}
+                    @if (cart.isShort(line.product)) {
+                      <span class="short-note">
+                        — stock insuffisant : {{ line.product.stockQuantity }} disponible(s)
+                      </span>
+                    }
+                  </span>
                   <span class="qty">
                     <button class="qtybtn" type="button" aria-label="Retirer un" (click)="cart.change(line.product, -1)">−</button>
                     {{ line.quantity }}
@@ -155,6 +164,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               <span>Total</span>
               <span>{{ cart.total() | ariary }}</span>
             </div>
+            @if (cart.hasShortage()) {
+              <div class="short-note" role="alert">
+                Le stock ne suffit pas pour les lignes en rouge : réduisez-les ou retirez-les.
+              </div>
+            }
           </div>
           <div class="modal-foot send-actions">
             <button class="btn ghost" type="button" (click)="reviewing.set(false)">Modifier</button>
@@ -163,7 +177,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               <button
                 class="btn ghost"
                 type="button"
-                [disabled]="cart.isEmpty() || sending()"
+                [disabled]="!canSend()"
                 (click)="send(true)"
               >
                 Payée en espèces — envoyer
@@ -172,7 +186,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <button
               class="btn"
               type="button"
-              [disabled]="cart.isEmpty() || sending()"
+              [disabled]="!canSend()"
               (click)="send(false)"
             >
               {{ sending() ? 'Envoi…' : canCollect() ? 'Non payée — envoyer' : 'Confirmer et envoyer' }}
@@ -220,9 +234,14 @@ export class OrderTakingComponent {
     () => this.auth.settings().orderTakerCollects || this.auth.hasRole(RoleApp.CASHIER),
   );
 
+  /** Not with a line in red: the server would only refuse it again. */
+  protected readonly canSend = computed(
+    () => !this.cart.isEmpty() && !this.cart.hasShortage() && !this.sending(),
+  );
+
   /** @param paid the customer paid in cash on the spot */
   protected send(paid: boolean): void {
-    if (this.cart.isEmpty() || this.sending()) {
+    if (!this.canSend()) {
       return;
     }
     this.sending.set(true);
@@ -248,8 +267,10 @@ export class OrderTakingComponent {
               : `Commande ${invoice.invoiceNumber} envoyée — ${invoice.clientName}.`,
           );
         },
-        error: () => {
+        error: (error: unknown) => {
           this.sending.set(false);
+          // The recap stays open: the lines the shelf cannot fill turn red in it.
+          this.cart.applyStock(stockShortagesOf(error));
           // The interceptor has said why; stock may have moved, so re-read it.
           this.finder.refresh();
         },

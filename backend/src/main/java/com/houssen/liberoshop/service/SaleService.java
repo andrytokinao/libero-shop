@@ -29,9 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 /**
  * Checkout at the cash desk.
@@ -95,15 +97,10 @@ public class SaleService {
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
-        for (Map.Entry<Long, Integer> entry : quantities.entrySet()) {
-            // Locked for the duration of the transaction: two desks selling the last unit
-            // at the same moment must not both read the same stale quantity.
-            Product product = products.findByIdForUpdate(entry.getKey())
-                    .orElseThrow(() -> ResourceNotFoundException.of("Produit", entry.getKey()));
+        Map<Product, Integer> wanted = lockAndCheckStock(quantities);
+        for (Map.Entry<Product, Integer> entry : wanted.entrySet()) {
+            Product product = entry.getKey();
             int quantity = entry.getValue();
-            if (product.getStockQuantity() < quantity) {
-                throw new InsufficientStockException(product.getName(), quantity, product.getStockQuantity());
-            }
 
             sale.getLines().add(SaleLine.builder()
                     .sale(sale)
@@ -177,6 +174,41 @@ public class SaleService {
      * Folds duplicate lines so the same product posted twice locks one row and checks its
      * stock once, instead of passing two half-checks that overdraw together.
      */
+    /**
+     * Every product of the sale, locked, once the shelf is known to hold enough of each.
+     *
+     * <p>Checked in full before anything is written, so a refusal names every short line --
+     * the till marks them all in red at once -- and leaves no half-built sale behind.
+     *
+     * <p>Locked for the rest of the transaction: two desks selling the last unit at the same
+     * moment must not both read the same stale quantity. Locked in id order, so two sales
+     * sharing products always take their locks in the same order and cannot deadlock.
+     */
+    private Map<Product, Integer> lockAndCheckStock(Map<Long, Integer> quantities) {
+        Map<Long, Product> locked = new HashMap<>();
+        for (Long productId : new TreeSet<>(quantities.keySet())) {
+            locked.put(productId, products.findByIdForUpdate(productId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId)));
+        }
+
+        // From here on in the order the cashier entered the lines: the order of the receipt,
+        // and of the refusal's list.
+        Map<Product, Integer> wanted = new LinkedHashMap<>();
+        List<InsufficientStockException.Shortage> shortages = new ArrayList<>();
+        quantities.forEach((productId, quantity) -> {
+            Product product = locked.get(productId);
+            if (product.getStockQuantity() < quantity) {
+                shortages.add(new InsufficientStockException.Shortage(
+                        productId, product.getName(), quantity, product.getStockQuantity()));
+            }
+            wanted.put(product, quantity);
+        });
+        if (!shortages.isEmpty()) {
+            throw new InsufficientStockException(shortages);
+        }
+        return wanted;
+    }
+
     private static Map<Long, Integer> mergeLines(List<CreateSaleRequest.Line> lines) {
         Map<Long, Integer> merged = new LinkedHashMap<>();
         for (CreateSaleRequest.Line line : lines) {

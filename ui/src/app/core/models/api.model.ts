@@ -225,6 +225,11 @@ export interface ApiError {
   message: string;
   details?: string[];
   timestamp: string;
+  /**
+   * What the screen needs to act on a business refusal, shaped by `code` — the short lines of
+   * an `INSUFFICIENT_STOCK`, for one (see `stockShortagesOf`). Absent for most errors.
+   */
+  data?: unknown;
 }
 
 /** Convenience for the guards: ROLE_ prefixed authority of a role. */

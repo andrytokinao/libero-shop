@@ -27,13 +27,50 @@ export class Cart {
     this.lines().reduce((sum, line) => sum + line.product.price * line.quantity, 0),
   );
 
+  /**
+   * The lines asking for more than the shelf holds — known once the server has refused the
+   * sale and {@link applyStock} has brought the real figures in. Derived, not flagged: a line
+   * stops being short the moment its quantity is brought down, with nothing to reset.
+   */
+  readonly shortLines = computed(() =>
+    this.lines().filter((line) => line.quantity > line.product.stockQuantity),
+  );
+  readonly hasShortage = computed(() => this.shortLines().length > 0);
+
   quantityOf(product: Product): number {
     return this.entries().get(product.id)?.quantity ?? 0;
   }
 
-  /** What is still on the shelf once this cart has taken its share. */
+  /** Whether this product's line asks for more than the shelf holds. */
+  isShort(product: Product): boolean {
+    const line = this.entries().get(product.id);
+    return !!line && line.quantity > line.product.stockQuantity;
+  }
+
+  /** What is still on the shelf once this cart has taken its share — never below zero. */
   remainingStock(product: Product): number {
-    return product.stockQuantity - this.quantityOf(product);
+    return Math.max(0, product.stockQuantity - this.quantityOf(product));
+  }
+
+  /**
+   * Brings in the stock the server found when it refused the sale. The quantities are left as
+   * the cashier entered them — the lines turn short, and it is for the cashier to decide what
+   * to drop. A "−" on a short line brings it straight down to what is available.
+   */
+  applyStock(stock: readonly { productId: number; available: number }[]): void {
+    if (!stock.length) {
+      return;
+    }
+    this.entries.update((current) => {
+      const updated = new Map(current);
+      for (const { productId, available } of stock) {
+        const line = updated.get(productId);
+        if (line) {
+          updated.set(productId, { ...line, product: { ...line.product, stockQuantity: available } });
+        }
+      }
+      return updated;
+    });
   }
 
   /**
@@ -48,7 +85,10 @@ export class Cart {
     return this.quantityOf(product) - before;
   }
 
-  /** Moves a line by `delta`, capped by the stock; a line brought to zero is removed. */
+  /**
+   * Moves a line by `delta`, capped by the stock of `product`; a line brought to zero is
+   * removed. The line keeps `product` as its snapshot, so the freshest figures win.
+   */
   change(product: Product, delta: number): void {
     this.entries.update((current) => {
       const wanted = (current.get(product.id)?.quantity ?? 0) + delta;

@@ -69,6 +69,34 @@ describe('Cart', () => {
     expect(cart.lines().map((line) => line.product.id)).toEqual([1, 2]);
   });
 
+  it('turns a line short with the stock the server found, until it is brought down', () => {
+    const eau = product(1, 10);
+    const riz = product(2, 10);
+    cart.add(eau, 5);
+    cart.add(riz, 2);
+
+    cart.applyStock([{ productId: 1, available: 3 }]);
+
+    expect(cart.isShort(eau)).toBeTrue();
+    expect(cart.isShort(riz)).toBeFalse();
+    expect(cart.shortLines().map((line) => line.product.id)).toEqual([1]);
+    expect(cart.quantityOf(eau)).toBe(5);
+    expect(cart.remainingStock(cart.lines()[0].product)).toBe(0); // 3 - 5, never below 0
+
+    // One "−" brings the line straight down to what the shelf holds.
+    cart.change(cart.lines()[0].product, -1);
+    expect(cart.quantityOf(eau)).toBe(3);
+    expect(cart.hasShortage()).toBeFalse();
+  });
+
+  it('ignores stock news about products it does not hold', () => {
+    cart.add(product(1, 10), 2);
+    cart.applyStock([{ productId: 99, available: 0 }]);
+
+    expect(cart.hasShortage()).toBeFalse();
+    expect(cart.lines().length).toBe(1);
+  });
+
   it('hands the sale endpoint ids and quantities, then empties', () => {
     cart.add(product(7, 10), 2);
 

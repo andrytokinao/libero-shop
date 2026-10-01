@@ -16,6 +16,7 @@ import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
 import { ShortcutMap, isEnabled } from '../../core/sale/shortcuts';
+import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
@@ -38,7 +39,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
   selector: 'app-new-sale',
   standalone: true,
   imports: [FormsModule, AriaryPipe, DatePipe, CameraScanButtonComponent],
-  host: { '(document:keydown)': 'keys.handle($event)' },
+  host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
     :host {
       display: block;
@@ -59,7 +60,12 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
   template: `
     <!-- Phone only: the basket's card falls below the products, so its total is repeated here,
          pinned at the top while the products scroll. A tap goes down to the checkout. -->
-    <button type="button" class="sale-summary" (click)="goToCheckout()">
+    <button
+      type="button"
+      class="sale-summary"
+      [class.short]="cart.hasShortage()"
+      (click)="goToCheckout()"
+    >
       <span>{{ cart.units() }} article(s)</span>
       <strong>{{ cart.total() | ariary }}</strong>
     </button>
@@ -106,6 +112,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
                 class="prod-card"
                 [class.low]="product.lowStock"
                 [class.picked]="cart.quantityOf(product) > 0"
+                [class.short]="cart.isShort(product)"
                 [disabled]="cart.remainingStock(product) <= 0"
                 (click)="pick(product)"
               >
@@ -115,7 +122,11 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
                 <div class="pstock">Disponible : {{ cart.remainingStock(product) }}</div>
               </button>
               @if (cart.quantityOf(product) > 0) {
-                <span class="prod-count" aria-label="Quantité dans le panier">
+                <span
+                  class="prod-count"
+                  [class.short]="cart.isShort(product)"
+                  aria-label="Quantité dans le panier"
+                >
                   {{ cart.quantityOf(product) }}
                 </span>
                 <button
@@ -177,8 +188,15 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
             </thead>
             <tbody>
               @for (item of cart.lines(); track item.product.id) {
-                <tr>
-                  <td>{{ item.product.name }}</td>
+                <tr [class.short]="cart.isShort(item.product)">
+                  <td>
+                    {{ item.product.name }}
+                    @if (cart.isShort(item.product)) {
+                      <div class="short-note">
+                        Stock insuffisant : {{ item.product.stockQuantity }} disponible(s)
+                      </div>
+                    }
+                  </td>
                   <td>
                     <button class="qtybtn" type="button" (click)="cart.change(item.product, -1)">
                       −
@@ -250,6 +268,11 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
           }
         </div>
 
+        @if (cart.hasShortage()) {
+          <div class="short-note" role="alert" style="margin-bottom:8px;">
+            Le stock ne suffit pas pour les lignes en rouge : réduisez-les ou retirez-les.
+          </div>
+        }
         <button
           class="btn block"
           type="button"
@@ -304,7 +327,10 @@ export class NewSaleComponent {
   private readonly productField = viewChild.required<ElementRef<HTMLInputElement>>('productField');
   private readonly checkout = viewChild.required<ElementRef<HTMLElement>>('checkout');
 
-  protected readonly canValidate = computed(() => !this.cart.isEmpty() && !this.submitting());
+  /** Not with a line in red: the server would only refuse it again. */
+  protected readonly canValidate = computed(
+    () => !this.cart.isEmpty() && !this.cart.hasShortage() && !this.submitting(),
+  );
 
   /**
    * The cart is not touched while a sale is being recorded: held at that moment it would be
@@ -343,6 +369,15 @@ export class NewSaleComponent {
   ]);
 
   protected readonly isEnabled = isEnabled;
+
+  /**
+   * Returns nothing, on purpose. Angular cancels any event whose handler returns `false`, and
+   * {@link ShortcutMap.handle} answers false for every key that is not a shortcut: bound
+   * directly, it swallowed every letter typed into the page.
+   */
+  protected onKeydown(event: KeyboardEvent): void {
+    this.keys.handle(event);
+  }
 
   constructor() {
     afterNextRender(() => this.focusProductField());
@@ -464,8 +499,10 @@ export class NewSaleComponent {
               `(${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar)`,
           );
         },
-        error: () => {
+        error: (error: unknown) => {
           this.submitting.set(false);
+          // A shelf too short for some lines: they turn red until brought down.
+          this.cart.applyStock(stockShortagesOf(error));
           // The interceptor has already shown why; refresh in case stock moved elsewhere.
           this.finder.refresh();
         },

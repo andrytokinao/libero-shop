@@ -19,4 +19,13 @@ public class BusinessRuleException extends RuntimeException {
     public String code() {
         return code;
     }
+
+    /**
+     * What the screen needs to act on the refusal beyond showing it -- which lines, which
+     * products -- serialized as the error's {@code data}. Null for the refusals a message
+     * says all about; a subclass with more to tell overrides this.
+     */
+    public Object data() {
+        return null;
+    }
 }

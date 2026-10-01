@@ -24,7 +24,11 @@ export interface Shortcut {
 export class ShortcutMap {
   constructor(readonly shortcuts: readonly Shortcut[]) {}
 
-  /** @returns true when the key was one of this map's, and the browser's own use of it is cancelled */
+  /**
+   * @returns true when the key was one of this map's, and the browser's own use of it is
+   *   cancelled. Never bind this straight to a template event: Angular cancels the event when a
+   *   handler returns false, which would block every other key. Call it from a void method.
+   */
   handle(event: KeyboardEvent): boolean {
     if (event.ctrlKey || event.altKey || event.metaKey) {
       return false;
