@@ -51,3 +51,4 @@
 # The SDK path of one machine:
 /ui/android/local.properties
 /.gradle/
+/data/
