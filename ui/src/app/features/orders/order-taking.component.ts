@@ -3,9 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceApi } from '../../core/api/invoice.api';
-import { PaymentMethod, PaymentStatus, Product, RoleApp } from '../../core/models';
+import { CategoryNode, PaymentMethod, PaymentStatus, RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { Cart } from '../../core/sale/cart';
+import { ProductEntry } from '../../core/sale/product-entry';
+import { ProductFinder } from '../../core/sale/product-finder';
 import { ToastService } from '../../core/services/toast.service';
+import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -20,7 +24,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-order-taking',
   standalone: true,
-  imports: [FormsModule, AriaryPipe],
+  imports: [FormsModule, AriaryPipe, CameraScanButtonComponent],
   template: `
     <div class="order-top">
       <div class="fld who">
@@ -40,14 +44,17 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           id="order-search"
           type="search"
           autocomplete="off"
-          placeholder="Rechercher…"
-          [ngModel]="search()"
-          (ngModelChange)="search.set($event)"
+          enterkeyhint="go"
+          placeholder="Nom ou code…"
+          [ngModel]="entry.text()"
+          (ngModelChange)="entry.text.set($event)"
+          (keydown.enter)="entry.submit()"
         />
       </div>
+      <app-camera-scan-button class="scan" (scanned)="entry.submit($event)" />
     </div>
 
-    @if (categories().length > 1) {
+    @if (rayons().length > 1) {
       <div class="chips" role="tablist" aria-label="Catégories">
         <button
           type="button"
@@ -55,50 +62,52 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           [class.active]="category() === null"
           (click)="category.set(null)"
         >
-          Tout
+          {{ finder.idle() ? 'Les plus vendus' : 'Tout' }}
         </button>
-        @for (name of categories(); track name) {
+        @for (rayon of rayons(); track rayon.id) {
           <button
             type="button"
             class="chip"
-            [class.active]="category() === name"
-            (click)="category.set(name)"
+            [class.active]="category() === rayon.id"
+            (click)="category.set(rayon.id)"
           >
-            {{ name }}
+            {{ rayon.name }}
           </button>
         }
       </div>
     }
 
     <div class="tiles">
-      @for (product of visibleProducts(); track product.id) {
+      @for (product of finder.products(); track product.id) {
         <button
           type="button"
           class="tile"
-          [class.picked]="quantityOf(product) > 0"
-          [disabled]="remainingStock(product) <= 0"
-          (click)="add(product)"
+          [class.picked]="cart.quantityOf(product) > 0"
+          [disabled]="cart.remainingStock(product) <= 0"
+          (click)="cart.add(product)"
         >
-          @if (quantityOf(product) > 0) {
-            <span class="count" aria-label="Quantité dans la commande">{{ quantityOf(product) }}</span>
+          @if (cart.quantityOf(product) > 0) {
+            <span class="count" aria-label="Quantité dans la commande">{{ cart.quantityOf(product) }}</span>
           }
           <span class="name">{{ product.name }}</span>
           <span class="price">{{ product.price | ariary }}</span>
-          @if (remainingStock(product) <= 0) {
+          @if (cart.remainingStock(product) <= 0) {
             <span class="out">Épuisé</span>
           }
         </button>
       } @empty {
-        <div class="empty">Aucun produit ne correspond.</div>
+        @if (!finder.pending()) {
+          <div class="empty">Aucun produit ne correspond.</div>
+        }
       }
     </div>
 
     <!-- Under the thumb, always: what is in the order, and the one button that sends it. -->
     <div class="order-bar">
-      @if (lines().length) {
+      @if (!cart.isEmpty()) {
         <button type="button" class="summary" (click)="reviewing.set(true)">
-          <strong>{{ units() }} article(s)</strong>
-          <span>{{ total() | ariary }} · voir</span>
+          <strong>{{ cart.units() }} article(s)</strong>
+          <span>{{ cart.total() | ariary }} · voir</span>
         </button>
         <button type="button" class="btn send" [disabled]="sending()" (click)="reviewing.set(true)">
           Valider ›
@@ -120,18 +129,18 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           </div>
           <div class="modal-body">
             <ul class="review">
-              @for (line of lines(); track line.product.id) {
+              @for (line of cart.lines(); track line.product.id) {
                 <li>
                   <span class="name">{{ line.product.name }}</span>
                   <span class="qty">
-                    <button class="qtybtn" type="button" aria-label="Retirer un" (click)="change(line.product, -1)">−</button>
+                    <button class="qtybtn" type="button" aria-label="Retirer un" (click)="cart.change(line.product, -1)">−</button>
                     {{ line.quantity }}
                     <button
                       class="qtybtn"
                       type="button"
                       aria-label="Ajouter un"
-                      [disabled]="remainingStock(line.product) <= 0"
-                      (click)="change(line.product, 1)"
+                      [disabled]="cart.remainingStock(line.product) <= 0"
+                      (click)="cart.change(line.product, 1)"
                     >
                       +
                     </button>
@@ -144,7 +153,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </ul>
             <div class="total-row">
               <span>Total</span>
-              <span>{{ total() | ariary }}</span>
+              <span>{{ cart.total() | ariary }}</span>
             </div>
           </div>
           <div class="modal-foot send-actions">
@@ -154,7 +163,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               <button
                 class="btn ghost"
                 type="button"
-                [disabled]="!lines().length || sending()"
+                [disabled]="cart.isEmpty() || sending()"
                 (click)="send(true)"
               >
                 Payée en espèces — envoyer
@@ -163,7 +172,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <button
               class="btn"
               type="button"
-              [disabled]="!lines().length || sending()"
+              [disabled]="cart.isEmpty() || sending()"
               (click)="send(false)"
             >
               {{ sending() ? 'Envoi…' : canCollect() ? 'Non payée — envoyer' : 'Confirmer et envoyer' }}
@@ -186,73 +195,25 @@ export class OrderTakingComponent {
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 
-  protected readonly search = signal('');
-  protected readonly category = signal<string | null>(null);
+  /** The rayon picked, by id: the server widens it to the rayons below. */
+  protected readonly category = signal<number | null>(null);
   protected readonly clientName = signal('');
   protected readonly reviewing = signal(false);
   protected readonly sending = signal(false);
 
-  /** Quantity per product id; resolved against the live catalogue. */
-  private readonly quantities = signal<Record<number, number>>({});
+  protected readonly cart = new Cart();
 
-  private readonly catalogResource = apiResource<Product[]>([], () => this.catalog.products());
-  private readonly products = this.catalogResource.value;
+  private readonly tree = apiResource<CategoryNode[]>([], () => this.catalog.categories());
 
-  /** The rayons that have something to sell, as one-tap filters. */
-  protected readonly categories = computed(() =>
-    [...new Set(this.products().map((p) => p.category?.name).filter((n): n is string => !!n))].sort(
-      (a, b) => a.localeCompare(b, 'fr'),
-    ),
+  /** The top-level rayons as one-tap filters; picking one includes everything filed below it. */
+  protected readonly rayons = computed(() => this.tree.value().filter((node) => node.depth === 0));
+
+  /** A scanner paired with the phone, or a code typed then "OK", adds the article directly. */
+  protected readonly entry: ProductEntry = new ProductEntry(this.cart, () => this.finder.settled());
+
+  protected readonly finder = new ProductFinder(
+    computed(() => ({ term: this.entry.term(), categoryId: this.category() })),
   );
-
-  protected readonly visibleProducts = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const category = this.category();
-    return this.products().filter(
-      (p) =>
-        (category === null || p.category?.name === category) &&
-        (!term ||
-          [p.name, p.category?.name ?? '', p.barcode ?? ''].some((field) =>
-            field.toLowerCase().includes(term),
-          )),
-    );
-  });
-
-  protected readonly lines = computed(() =>
-    this.products()
-      .filter((p) => (this.quantities()[p.id] ?? 0) > 0)
-      .map((product) => ({ product, quantity: this.quantities()[product.id] })),
-  );
-
-  protected readonly units = computed(() => this.lines().reduce((sum, l) => sum + l.quantity, 0));
-  protected readonly total = computed(() =>
-    this.lines().reduce((sum, l) => sum + l.product.price * l.quantity, 0),
-  );
-
-  protected quantityOf(product: Product): number {
-    return this.quantities()[product.id] ?? 0;
-  }
-
-  protected remainingStock(product: Product): number {
-    return product.stockQuantity - this.quantityOf(product);
-  }
-
-  protected add(product: Product): void {
-    this.change(product, 1);
-  }
-
-  protected change(product: Product, delta: number): void {
-    this.quantities.update((current) => {
-      const next = (current[product.id] ?? 0) + delta;
-      const updated = { ...current };
-      if (next <= 0) {
-        delete updated[product.id];
-      } else {
-        updated[product.id] = Math.min(next, product.stockQuantity);
-      }
-      return updated;
-    });
-  }
 
   /** Taking the customer's money too: the shop allows it, or this account also holds a till. */
   protected readonly canCollect = computed(
@@ -261,8 +222,7 @@ export class OrderTakingComponent {
 
   /** @param paid the customer paid in cash on the spot */
   protected send(paid: boolean): void {
-    const lines = this.lines();
-    if (!lines.length || this.sending()) {
+    if (this.cart.isEmpty() || this.sending()) {
       return;
     }
     this.sending.set(true);
@@ -272,16 +232,16 @@ export class OrderTakingComponent {
         // Paid to an order taker, the server records it as their cash in hand, not as paid.
         paymentStatus: paid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
         paymentMethod: PaymentMethod.CASH,
-        lines: lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+        lines: this.cart.toSaleLines(),
       })
       .subscribe({
         next: (invoice) => {
           this.sending.set(false);
           this.reviewing.set(false);
-          this.quantities.set({});
+          this.cart.clear();
           this.clientName.set('');
-          this.search.set('');
-          this.catalogResource.reload();
+          this.entry.clear();
+          this.finder.refresh();
           this.toasts.show(
             invoice.paymentStatus === PaymentStatus.COLLECTED
               ? `Commande ${invoice.invoiceNumber} envoyée et encaissée — argent à remettre à la caisse.`
@@ -291,7 +251,7 @@ export class OrderTakingComponent {
         error: () => {
           this.sending.set(false);
           // The interceptor has said why; stock may have moved, so re-read it.
-          this.catalogResource.reload();
+          this.finder.refresh();
         },
       });
   }

@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.repository;
 
 import com.houssen.liberoshop.entity.SaleLine;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,4 +36,19 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
             """)
     List<Object[]> aggregateMarginByProduct(@Param("from") LocalDateTime from,
                                             @Param("to") LocalDateTime to);
+
+    /**
+     * The products that left the shelf the most since {@code from}, most units first -- what a
+     * till shows before anything is typed. Cancelled orders do not count, for the reason above.
+     * Ties are broken by id so the grid does not reshuffle between two identical calls.
+     */
+    @Query("""
+            select l.product.id
+            from SaleLine l
+            where l.sale.saleDate >= :from
+              and l.sale.paymentStatus <> com.houssen.liberoshop.entity.PaymentStatus.CANCELLED
+            group by l.product.id
+            order by sum(l.quantity) desc, l.product.id
+            """)
+    List<Long> findBestSellingProductIds(@Param("from") LocalDateTime from, Limit limit);
 }

@@ -3,12 +3,27 @@ import { BarcodeFormat, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning
 import { Capacitor } from '@capacitor/core';
 
 /**
+ * What a product carries in a shop: the retail barcodes (EAN, UPC), the industrial ones a
+ * wholesaler prints on cartons, and a QR code for the shop's own labels. Listing them rather
+ * than reading everything keeps ML Kit fast and stops it from picking up some other code in view.
+ */
+export const PRODUCT_BARCODE_FORMATS: BarcodeFormat[] = [
+  BarcodeFormat.Ean13,
+  BarcodeFormat.Ean8,
+  BarcodeFormat.UpcA,
+  BarcodeFormat.UpcE,
+  BarcodeFormat.Code128,
+  BarcodeFormat.Code39,
+  BarcodeFormat.QrCode,
+];
+
+/**
  * The phone's camera as a code reader — the only code that knows which plugin does it.
  *
  * <p>Uses ML Kit's ready-made scanning screen: on Android it is Google's code scanner, run by
  * Play Services, which needs no camera permission from this app and draws its own interface
- * over the web view. Written for the server's QR code first; the product barcodes the catalogue
- * already has a field for will go through the same `scan`, with the retail formats.
+ * over the web view. Reads the server's QR code at first launch, and product barcodes with
+ * {@link PRODUCT_BARCODE_FORMATS} on the screens that sell.
  */
 @Injectable({ providedIn: 'root' })
 export class CodeScanner {
@@ -27,7 +42,7 @@ export class CodeScanner {
     }
     const { supported } = await BarcodeScanner.isSupported();
     if (!supported) {
-      throw new Error('Ce téléphone ne peut pas scanner de code : saisissez l’adresse à la main.');
+      throw new Error('Ce téléphone ne peut pas scanner de code : saisissez-le à la main.');
     }
     if (Capacitor.getPlatform() === 'android') {
       await this.ensureAndroidModule();
@@ -45,7 +60,7 @@ export class CodeScanner {
       if (String((error as Error)?.message ?? error).toLowerCase().includes('cancel')) {
         return null;
       }
-      throw new Error('Le scan a échoué. Réessayez, ou saisissez l’adresse à la main.');
+      throw new Error('Le scan a échoué. Réessayez, ou saisissez le code à la main.');
     }
   }
 

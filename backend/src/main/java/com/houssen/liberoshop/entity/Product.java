@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.entity;
 
+import com.houssen.liberoshop.util.SearchText;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -55,7 +56,22 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    /**
+     * Name and barcode folded by {@link SearchText}: what the sale screens' search compares
+     * against, so "cafe" finds "Café". Derived, never written by hand -- refreshed before every
+     * insert and update, and filled for older rows by {@code SearchTextBackfill}.
+     */
+    @Setter(AccessLevel.NONE)
+    @Column(length = 512)
+    private String searchText;
+
     public void adjustStock(int quantity) {
         this.stockQuantity += quantity;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void refreshSearchText() {
+        this.searchText = SearchText.fold(name, barcode);
     }
 }

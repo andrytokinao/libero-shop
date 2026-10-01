@@ -1,6 +1,7 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
+import { EXPECTED_STATUSES } from '../interceptors/error.interceptor';
 import { API_BASE_URL } from './api.config';
 import {
   CategoryNode,
@@ -41,6 +42,48 @@ export class CatalogApi {
       params = params.set('lowStockOnly', true);
     }
     return this.http.get<Product[]>(`${API_BASE_URL}/products`, { params });
+  }
+
+  /**
+   * At most `limit` products matching every word of `query` — accents and case ignored, on the
+   * name, the barcode or the rayon — within `categoryId` and the rayons below it. What the sale
+   * screens use instead of {@link products}: the database filters and cuts, the catalogue never
+   * travels whole.
+   */
+  searchProducts(query: string, categoryId: number | null = null, limit?: number):
+    Observable<Product[]> {
+    let params = new HttpParams().set('q', query.trim());
+    if (categoryId != null) {
+      params = params.set('categoryId', categoryId);
+    }
+    if (limit != null) {
+      params = params.set('limit', limit);
+    }
+    return this.http.get<Product[]>(`${API_BASE_URL}/products/search`, { params });
+  }
+
+  /** What a sale screen shows before anything is typed: the best sellers, topped up by name. */
+  featuredProducts(limit?: number): Observable<Product[]> {
+    const params = limit != null ? new HttpParams().set('limit', limit) : undefined;
+    return this.http.get<Product[]>(`${API_BASE_URL}/products/featured`, { params });
+  }
+
+  /**
+   * The product a scanned or typed code designates, matched whole — or null when none carries
+   * it. An unknown code is an ordinary moment at the till, not a failure: the caller says so in
+   * its own words, so only that 404 is kept from the error toast.
+   */
+  productByCode(code: string): Observable<Product | null> {
+    return this.http
+      .get<Product>(`${API_BASE_URL}/products/lookup`, {
+        params: { code },
+        context: new HttpContext().set(EXPECTED_STATUSES, [404]),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) =>
+          error.status === 404 ? of(null) : throwError(() => error),
+        ),
+      );
   }
 
   suppliers(): Observable<Supplier[]> {

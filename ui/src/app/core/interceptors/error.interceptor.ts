@@ -21,6 +21,13 @@ const SILENT_PATHS = ['/api/auth/session', '/api/auth/login', '/api/mobile/updat
 export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
 
 /**
+ * Statuses that are an answer rather than a failure for this one request — a 404 from the
+ * barcode lookup means "no such product", which the till says in its own words. Narrower than
+ * {@link SILENT_ERRORS}: an unreachable server is still announced.
+ */
+export const EXPECTED_STATUSES = new HttpContextToken<readonly number[]>(() => []);
+
+/**
  * Turns an HTTP failure into something the user can act on.
  *
  * <p>Every error body from the API carries a French `message` written for a cashier, so
@@ -39,6 +46,7 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
     catchError((error: HttpErrorResponse) => {
       if (
         request.context.get(SILENT_ERRORS) ||
+        request.context.get(EXPECTED_STATUSES).includes(error.status) ||
         SILENT_PATHS.some((path) => request.url.startsWith(path))
       ) {
         return throwError(() => error);

@@ -27,4 +27,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllWithParent();
 
     long countByParentId(Long parentId);
+
+    /** Rows written before {@code searchText} existed -- see {@code SearchTextBackfill}. */
+    List<Category> findBySearchTextIsNull();
 }

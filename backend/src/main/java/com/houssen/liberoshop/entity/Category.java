@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.entity;
 
+import com.houssen.liberoshop.util.SearchText;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -36,4 +37,15 @@ public class Category {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Category parent;
+
+    /** The name folded by {@link SearchText}, so "epicerie" finds the goods of "Épicerie". */
+    @Setter(AccessLevel.NONE)
+    @Column(length = 255)
+    private String searchText;
+
+    @PrePersist
+    @PreUpdate
+    public void refreshSearchText() {
+        this.searchText = SearchText.fold(name);
+    }
 }

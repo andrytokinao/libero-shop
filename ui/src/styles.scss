@@ -1221,6 +1221,11 @@ textarea.field {
     flex: 2 1 200px;
   }
 
+  /* The camera button sits on the fields' baseline, beside the product field. */
+  .scan {
+    align-self: flex-end;
+  }
+
   label {
     font-size: 11.5px;
     font-weight: 600;

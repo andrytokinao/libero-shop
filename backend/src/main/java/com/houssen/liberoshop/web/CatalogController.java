@@ -31,6 +31,9 @@ public class CatalogController {
         return catalogService.findProducts(search, categoryId, lowStockOnly);
     }
 
+    // The bounded searches of the sale screens -- by code, by words, best sellers -- are served
+    // by ProductSearchController.
+
     // Categories are served by CategoryController: they are a tree now, with writes beside the
     // read, and two handlers on /api/categories would not even start.
 

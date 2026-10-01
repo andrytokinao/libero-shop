@@ -3,18 +3,30 @@ package com.houssen.liberoshop.repository;
 import com.houssen.liberoshop.entity.Product;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface ProductRepository extends JpaRepository<Product, Long> {
+public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+
+    /** Rows written before {@code searchText} existed -- see {@code SearchTextBackfill}. */
+    List<Product> findBySearchTextIsNull();
+
+    @Query("select p from Product p left join fetch p.category where p.id in :ids")
+    List<Product> findAllWithCategoryByIdIn(@Param("ids") Collection<Long> ids);
 
     Optional<Product> findByBarcode(String barcode);
 
     boolean existsByBarcode(String barcode);
+
+    /** {@link #findByBarcode} with the rayon already loaded, for a response built straight away. */
+    @Query("select p from Product p left join fetch p.category where p.barcode = :barcode")
+    Optional<Product> findWithCategoryByBarcode(@Param("barcode") String barcode);
 
     @Query("select p from Product p left join fetch p.category order by p.name")
     List<Product> findAllWithCategory();
