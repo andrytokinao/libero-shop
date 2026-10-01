@@ -15,4 +15,5 @@ export * from './server.model';
 export * from './license.model';
 export * from './shop-settings.model';
 export * from './online-order.model';
+export * from './backup.model';
 export * from './api.model';

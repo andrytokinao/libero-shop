@@ -295,6 +295,12 @@ export const routes: Routes = [
           import('./features/admin/shop-settings.component').then((m) => m.ShopSettingsComponent),
       },
       {
+        path: 'sauvegardes',
+        title: 'Sauvegardes',
+        loadComponent: () =>
+          import('./features/admin/backups.component').then((m) => m.BackupsComponent),
+      },
+      {
         path: 'tables',
         title: 'Tables & QR codes',
         loadComponent: () =>

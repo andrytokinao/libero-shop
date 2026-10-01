@@ -100,6 +100,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },
       { icon: '⚙', label: 'Configuration', path: '/admin/configuration' },
+      { icon: '⛁', label: 'Sauvegardes', path: '/admin/sauvegardes' },
       {
         icon: '▦',
         label: 'Tables & QR codes',
