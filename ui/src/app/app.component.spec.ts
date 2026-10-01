@@ -4,7 +4,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NEVER } from 'rxjs';
 import { RealtimeService } from './core/realtime/realtime.service';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api/api.config';
@@ -70,7 +70,7 @@ describe('AppComponent', () => {
         // open a real socket to the test runner's server.
         {
           provide: RealtimeService,
-          useValue: { notifications$: NEVER, state: signal('offline') },
+          useValue: { notifications$: NEVER, topic: () => NEVER, state: signal('offline') },
         },
       ],
     }).compileComponents();
@@ -104,9 +104,9 @@ describe('AppComponent', () => {
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
     expect(sidebar.textContent).toContain('Responsable de caisse');
-    expect(sidebar.querySelectorAll('nav.menu a').length).toBe(5);
+    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(5);
     // One role, one section: no heading to tell apart, so the menu stays flat.
-    expect(sidebar.querySelectorAll('nav.menu .group').length).toBe(0);
+    expect(sidebar.querySelectorAll('nav.menu-full .group').length).toBe(0);
   });
 
   it('gives an account that holds two roles both menus, under their headings', () => {
@@ -123,11 +123,16 @@ describe('AppComponent', () => {
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
     // Five entries at the desk, four at the depot, and a heading over each set.
-    expect(sidebar.querySelectorAll('nav.menu a').length).toBe(9);
-    const groups = Array.from(sidebar.querySelectorAll('nav.menu .group')).map((el) =>
+    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(9);
+    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group')).map((el) =>
       el.textContent?.trim(),
     );
     expect(groups).toEqual(['Caisse', 'Dépôt']);
+    // The phone drawer lists the two modules only, each opening its page of cards.
+    const modules = Array.from(
+      sidebar.querySelectorAll<HTMLAnchorElement>('nav.menu-modules a'),
+    ).map((a) => a.getAttribute('href'));
+    expect(modules).toEqual(['/caisse/menu', '/depot/menu']);
     // Both sections are reachable; the guard no longer owns a single segment.
     expect(auth.owns('caisse')).toBeTrue();
     expect(auth.owns('depot')).toBeTrue();
@@ -158,6 +163,32 @@ describe('AppComponent', () => {
     (fixture.nativeElement.querySelector('.scrim') as HTMLElement).click();
     fixture.detectChanges();
     expect(shell.classList).not.toContain('nav-open');
+  });
+
+  it('closes a screen back onto its module cards, not onto the home page', async () => {
+    TestBed.inject(TokenStorage).save('jeton-de-test', 3600);
+
+    const auth = TestBed.inject(AuthService);
+    auth.ensureLoaded().subscribe();
+    httpMock.expectOne(`${API_BASE_URL}/auth/session`).flush(CASHIER_SESSION);
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${API_BASE_URL}/license/status`).flush(HEALTHY_LICENSE);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/caisse/menu');
+    fixture.detectChanges();
+    // The cards themselves have nothing to close.
+    expect(fixture.nativeElement.querySelector('.page-close')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.module-card').length).toBe(5);
+
+    await router.navigateByUrl('/caisse/ventes-du-jour');
+    fixture.detectChanges();
+    // The screen loads its own data; only the shell is under test here.
+    httpMock.match(() => true);
+    const close = fixture.nativeElement.querySelector('.page-close') as HTMLAnchorElement;
+    expect(close.getAttribute('href')).toBe('/caisse/menu');
   });
 
   afterEach(() => {

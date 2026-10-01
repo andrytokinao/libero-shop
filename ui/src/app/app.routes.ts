@@ -43,6 +43,13 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'tableau-de-bord' },
+      // Phone: the module's screens as cards, opened from the drawer. One per module.
+      {
+        path: 'menu',
+        title: 'Caisse',
+        loadComponent: () =>
+          import('./shared/components/module-menu.component').then((m) => m.ModuleMenuComponent),
+      },
       {
         path: 'tableau-de-bord',
         title: 'Tableau de bord',
@@ -90,6 +97,12 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'tableau-de-bord' },
       {
+        path: 'menu',
+        title: 'Dépôt',
+        loadComponent: () =>
+          import('./shared/components/module-menu.component').then((m) => m.ModuleMenuComponent),
+      },
+      {
         path: 'tableau-de-bord',
         title: 'Tableau de bord',
         loadComponent: () =>
@@ -125,6 +138,12 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'tableau-de-bord' },
+      {
+        path: 'menu',
+        title: 'Stock',
+        loadComponent: () =>
+          import('./shared/components/module-menu.component').then((m) => m.ModuleMenuComponent),
+      },
       {
         path: 'tableau-de-bord',
         title: 'Tableau de bord',
@@ -175,6 +194,12 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'vue-ensemble' },
+      {
+        path: 'menu',
+        title: 'Admin',
+        loadComponent: () =>
+          import('./shared/components/module-menu.component').then((m) => m.ModuleMenuComponent),
+      },
       {
         path: 'vue-ensemble',
         title: "Vue d'ensemble",

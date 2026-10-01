@@ -13,6 +13,8 @@ export interface RoleNavigation {
   segment: string;
   /** Short name of the job, shown as a heading when an account holds several roles. */
   label: string;
+  /** Glyph of the module itself, in the phone drawer that lists modules only. */
+  icon: string;
   items: MenuItem[];
 }
 
@@ -20,6 +22,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.CASHIER]: {
     segment: 'caisse',
     label: 'Caisse',
+    icon: '¤',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/caisse/tableau-de-bord' },
       { icon: '＋', label: 'Nouvelle vente', path: '/caisse/nouvelle-vente' },
@@ -31,6 +34,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.DEPOT_AGENT]: {
     segment: 'depot',
     label: 'Dépôt',
+    icon: '⇥',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/depot/tableau-de-bord' },
       { icon: '⇥', label: 'Remise de commande', path: '/depot/remise' },
@@ -41,6 +45,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.DEPOT_MANAGER]: {
     segment: 'gestion-depot',
     label: 'Stock',
+    icon: '▢',
     items: [
       { icon: '◧', label: 'Tableau de bord', path: '/gestion-depot/tableau-de-bord' },
       { icon: '▢', label: 'Stock', path: '/gestion-depot/stock' },
@@ -53,6 +58,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.SUPER_ADMIN]: {
     segment: 'admin',
     label: 'Admin',
+    icon: '◈',
     items: [
       { icon: '◧', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
       { icon: '↗', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
@@ -76,6 +82,20 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
  */
 export function navigationFor(roles: readonly RoleApp[]): RoleNavigation[] {
   return ROLE_PRECEDENCE.filter((role) => roles.includes(role)).map((role) => ROLE_NAVIGATION[role]);
+}
+
+/**
+ * The module's own menu page: on a phone the drawer lists the modules only, and each one
+ * opens this screen of cards rather than a long list of links.
+ */
+export function moduleMenuPath(section: RoleNavigation): string {
+  return `/${section.segment}/menu`;
+}
+
+/** The module a URL belongs to, from its first segment — null outside the four modules. */
+export function sectionOfUrl(url: string): RoleNavigation | null {
+  const segment = url.split(/[/?#]/).find((part) => part !== '') ?? '';
+  return Object.values(ROLE_NAVIGATION).find((section) => section.segment === segment) ?? null;
 }
 
 /** True when one of the roles owns that route segment — what the role guard asks. */

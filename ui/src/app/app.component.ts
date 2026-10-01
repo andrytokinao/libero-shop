@@ -1,9 +1,18 @@
 import { DatePipe } from '@angular/common';
-import { Component, HostListener, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { LiveUpdateService } from './core/config/live-update.service';
+import { moduleMenuPath, sectionOfUrl } from './core/config/navigation';
 import { ServerConfig } from './core/config/server-config.service';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
@@ -41,6 +50,26 @@ export class AppComponent {
    */
   protected readonly navOpen = signal(false);
 
+  private readonly url = signal(this.router.url);
+
+  /** The module of the current page — the one highlighted in the phone drawer. */
+  protected readonly currentSection = computed(() => sectionOfUrl(this.url()));
+
+  /**
+   * Where the phone's "Fermer" button leads: back to the module's cards, not to the home
+   * page. Null on the cards themselves, which have nothing to close.
+   */
+  protected readonly closeTarget = computed(() => {
+    const section = this.currentSection();
+    if (section === null) {
+      return null;
+    }
+    const menu = this.moduleMenuPath(section);
+    return this.url().split(/[?#]/)[0] === menu ? null : menu;
+  });
+
+  protected readonly moduleMenuPath = moduleMenuPath;
+
   constructor() {
     // On a phone: pages kept up to date from the server, checked again whenever the app comes
     // back to the foreground or is pointed at another server.
@@ -54,10 +83,13 @@ export class AppComponent {
     // A tap on a menu entry should leave the page visible, not the menu that led to it.
     this.router.events
       .pipe(
-        filter((event) => event instanceof NavigationEnd),
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.navOpen.set(false));
+      .subscribe((event) => {
+        this.navOpen.set(false);
+        this.url.set(event.urlAfterRedirects);
+      });
   }
 
   protected toggleNav(): void {

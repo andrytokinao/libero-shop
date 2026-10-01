@@ -20,7 +20,7 @@ import { CashInHandComponent } from './cash-in-hand.component';
       <div class="card">
         <h2>Mes versements <small>confirmés par le caissier une fois l'argent compté</small></h2>
         @if (myRemittances().length) {
-          <table>
+          <table class="inv-table">
             <thead>
               <tr>
                 <th>N° versement</th>
@@ -47,6 +47,26 @@ import { CashInHandComponent } from './cash-in-hand.component';
               }
             </tbody>
           </table>
+
+          <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
+          <ul class="inv-cards">
+            @for (remittance of myRemittances(); track remittance.id) {
+              <li class="inv-card">
+                <div class="head">
+                  <strong>V-{{ remittance.id }}</strong>
+                  <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
+                </div>
+                <div class="who muted">{{ invoiceNumbers(remittance) }}</div>
+                <div class="foot">
+                  <span class="amount">{{ remittance.amount | ariary }}</span>
+                  <app-remittance-status-badge
+                    [status]="remittance.status"
+                    [confirmedBy]="remittance.confirmedBy"
+                  />
+                </div>
+              </li>
+            }
+          </ul>
         } @else {
           <div class="empty">Aucun versement effectué.</div>
         }

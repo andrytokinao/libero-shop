@@ -34,7 +34,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       />
 
       @if (payments().length) {
-        <table style="margin-top:14px;">
+        <table class="inv-table" style="margin-top:14px;">
           <thead>
             <tr>
               <th>N° facture</th>
@@ -65,6 +65,30 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             }
           </tbody>
         </table>
+
+        <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
+        <ul class="inv-cards" style="margin-top:14px;">
+          @for (payment of payments(); track payment.id) {
+            <li class="inv-card">
+              <div class="head">
+                <strong>{{ payment.invoice.invoiceNumber }}</strong>
+                <span class="muted">{{ payment.paymentDate | date: 'dd/MM HH:mm' }}</span>
+              </div>
+              <div class="who">{{ payment.invoice.clientName }}</div>
+              <div class="foot">
+                <span class="amount">{{ payment.amount | ariary }}</span>
+                <button
+                  class="btn small"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="remit([payment.invoice.id])"
+                >
+                  Remettre à la caisse
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
 
         @if (payments().length > 1) {
           <button

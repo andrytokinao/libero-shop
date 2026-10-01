@@ -40,7 +40,20 @@
         </button>
       </div>
 
-      <nav class="menu">
+      <!-- Phone: the modules only, in large rows. Each opens its own screen of cards
+           (ModuleMenuComponent), where "Nouvelle vente" and the rest are found. -->
+      <nav class="menu menu-modules">
+        @for (section of auth.menu(); track section.segment) {
+          <a
+            [routerLink]="moduleMenuPath(section)"
+            [class.active]="currentSection()?.segment === section.segment"
+          >
+            <span class="ic">{{ section.icon }}</span>{{ section.label }}
+          </a>
+        }
+      </nav>
+
+      <nav class="menu menu-full">
         <!-- One section per role. The heading only appears when the account holds several:
              three of the sections open on a "Tableau de bord" of their own. -->
         @for (section of auth.menu(); track section.segment) {
@@ -85,7 +98,13 @@
            Only appears from 15 days before expiry (see LicenseService.bannerVisible). -->
       <app-license-banner />
       <div class="topbar">
-        <h1>{{ pageTitle() }}</h1>
+        <div class="topbar-title">
+          <!-- Phone: a screen closes back onto its module's cards, not onto the home page. -->
+          @if (closeTarget(); as target) {
+            <a class="page-close" [routerLink]="target" aria-label="Fermer et revenir au menu">✕</a>
+          }
+          <h1>{{ pageTitle() }}</h1>
+        </div>
         <div class="topbar-end">
           <div class="meta">
             {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que

@@ -155,6 +155,61 @@ nav.menu {
   }
 }
 
+/* The modules-only drawer and the "Fermer" button are the phone's way around; a desktop
+   keeps the full menu in its sidebar. Both switch at the breakpoint at the end of the file. */
+nav.menu.menu-modules,
+.page-close {
+  display: none;
+}
+
+/* A module's screens as cards (ModuleMenuComponent). */
+.module-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.module-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 116px;
+  padding: 16px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14.5px;
+  line-height: 1.25;
+  box-shadow: 0 1px 2px rgba(21, 36, 32, 0.04);
+
+  .ic {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--brand);
+  }
+
+  &:active {
+    background: var(--brand-soft);
+  }
+}
+
 .user-box {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding: 14px 16px 16px;
@@ -237,6 +292,13 @@ main {
     color: var(--ink-soft);
   }
 
+  .topbar-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
   /* The date line and the notification bell, kept together on the right. */
   .topbar-end {
     display: flex;
@@ -255,6 +317,12 @@ main {
 .grid {
   display: grid;
   gap: 16px;
+
+  /* A grid item is as wide as its content by default, so a wide table would stretch its
+     card past the screen instead of scrolling inside it. */
+  > * {
+    min-width: 0;
+  }
 }
 
 .g4 {
@@ -1225,8 +1293,57 @@ textarea.field {
     cursor: pointer;
   }
 
+  /* The drawer lists modules only, in rows a thumb can't miss; their screens are on the
+     module's own page of cards. */
+  nav.menu.menu-full {
+    display: none;
+  }
+
+  nav.menu.menu-modules {
+    display: block;
+    padding: 10px 12px;
+
+    a {
+      padding: 16px 14px;
+      margin: 4px 0;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 10px;
+
+      .ic {
+        font-size: 20px;
+        width: 26px;
+      }
+    }
+  }
+
+  .module-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .page-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    margin-left: -6px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 15px;
+
+    &:active {
+      background: var(--brand-soft);
+    }
+  }
+
   .topbar {
     padding: 14px 16px;
+    align-items: center;
 
     h1 {
       font-size: 17px;
