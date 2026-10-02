@@ -903,6 +903,8 @@ select.field {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
+  /* A tile whose unit buttons are open grows alone; its neighbours keep their height. */
+  align-items: start;
 }
 
 .prod-card {
@@ -951,6 +953,13 @@ select.field {
   &.low .pstock {
     color: var(--red);
     font-weight: 600;
+  }
+
+  /* Sold in several units: a tap opens them rather than adding one. */
+  .punits {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 3px;
   }
 
   &.picked {
@@ -1467,6 +1476,18 @@ textarea.field {
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
   margin-top: 12px;
+  /* A tile whose unit buttons are open grows alone; its neighbours keep their height. */
+  align-items: start;
+}
+
+/* A tile and, for a product sold in several units, its unit buttons under it. */
+.tile-cell {
+  display: flex;
+  flex-direction: column;
+
+  > .tile {
+    flex: 1;
+  }
 }
 
 .tile {

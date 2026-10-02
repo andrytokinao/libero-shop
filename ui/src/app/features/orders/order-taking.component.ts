@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceStore } from '../../core/store/invoice.store';
-import { CategoryNode, PaymentMethod, PaymentStatus, RoleApp } from '../../core/models';
+import { CategoryNode, PaymentMethod, PaymentStatus, Product, RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart, lineTotal } from '../../core/sale/cart';
 import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
@@ -14,6 +14,7 @@ import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
+import { UnitPicked, UnitPickerComponent } from '../../shared/components/unit-picker.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -28,7 +29,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-order-taking',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, CameraScanButtonComponent, CartLineQuantityComponent],
+  imports: [
+    FormsModule,
+    AriaryPipe,
+    CameraScanButtonComponent,
+    CartLineQuantityComponent,
+    UnitPickerComponent,
+  ],
   template: `
     <div class="order-top">
       <div class="fld who">
@@ -83,13 +90,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
     <div class="tiles">
       @for (product of finder.products(); track product.id) {
+        <div class="tile-cell">
         <button
           type="button"
           class="tile"
           [class.picked]="cart.quantityOf(product) > 0"
           [class.short]="cart.isShort(product)"
           [disabled]="cart.remainingStock(product) <= 0"
-          (click)="cart.add(product)"
+          (click)="pick(product)"
         >
           @if (cart.quantityOf(product) > 0) {
             <span class="count" aria-label="Quantité dans la commande">{{ cart.countLabelOf(product) }}</span>
@@ -102,6 +110,11 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <span class="out">Épuisé</span>
           }
         </button>
+        <!-- Sold in several units: one tile still, and the units open under it. -->
+        @if (hasUnits(product) && (unitsOpen() === product.id || cart.quantityOf(product) > 0)) {
+          <app-unit-picker [cart]="cart" [product]="product" (picked)="onUnitPicked(product, $event)" />
+        }
+        </div>
       } @empty {
         @if (!finder.pending()) {
           <div class="empty">Aucun produit ne correspond.</div>
@@ -211,6 +224,27 @@ export class OrderTakingComponent {
   protected readonly sending = signal(false);
 
   protected readonly cart = new Cart();
+  /** The product whose unit buttons are open, before anything of it is in the order. */
+  protected readonly unitsOpen = signal<number | null>(null);
+
+  /** A product sold one way goes straight in; one sold in several units opens its unit buttons. */
+  protected pick(product: Product): void {
+    if (this.hasUnits(product)) {
+      this.unitsOpen.update((open) => (open === product.id ? null : product.id));
+    } else {
+      this.cart.add(product);
+    }
+  }
+
+  protected hasUnits(product: Product): boolean {
+    return (product.packagings?.length ?? 0) > 0;
+  }
+
+  protected onUnitPicked(product: Product, { unit, added }: UnitPicked): void {
+    if (!added) {
+      this.toasts.show(`${product.name} : pas assez de stock pour un ${unit.label ?? 'article'}.`);
+    }
+  }
   protected readonly stockLabel = stockLabel;
   protected readonly formatQuantity = formatQuantity;
   protected readonly lineTotal = lineTotal;

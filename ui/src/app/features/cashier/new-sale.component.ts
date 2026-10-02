@@ -23,6 +23,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
+import { UnitPicked, UnitPickerComponent } from '../../shared/components/unit-picker.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -53,6 +54,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     InvoiceDetailFlowComponent,
     IconComponent,
     CartLineQuantityComponent,
+    UnitPickerComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -284,8 +286,20 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
                   {{ product.price | ariary }}@if (product.unit) {<span class="muted"> / {{ product.unit }}</span>}
                 </div>
                 <div class="pstock">Disponible : {{ stockLabel(product, cart.remainingStock(product)) }}</div>
+                @if (hasUnits(product)) {
+                  <div class="punits">Aussi : {{ otherUnits(product) }}</div>
+                }
               </button>
-              @if (cart.quantityOf(product) > 0) {
+              @if (hasUnits(product)) {
+                <!-- Sold in several units: one tile still, and the units open under it. -->
+                @if (unitsOpen() === product.id || cart.quantityOf(product) > 0) {
+                  <app-unit-picker
+                    [cart]="cart"
+                    [product]="product"
+                    (picked)="onUnitPicked(product, $event)"
+                  />
+                }
+              } @else if (cart.quantityOf(product) > 0) {
                 <span
                   class="prod-count"
                   [class.short]="cart.isShort(product)"
@@ -561,9 +575,36 @@ export class NewSaleComponent {
     afterNextRender(() => this.focusProductField());
   }
 
-  /** A tap on a tile. The field is selected back, so the next scan replaces the search. */
+  /** The product whose unit buttons are open, before anything of it is in the basket. */
+  protected readonly unitsOpen = signal<number | null>(null);
+
+  /**
+   * A tap on a tile. A product sold one way goes straight in; one sold in several units opens
+   * its unit buttons instead — the cashier says which, rather than the till guessing. The field
+   * is selected back, so the next scan replaces the search.
+   */
   protected pick(product: Product): void {
-    this.cart.add(product);
+    if (this.hasUnits(product)) {
+      this.unitsOpen.update((open) => (open === product.id ? null : product.id));
+    } else {
+      this.cart.add(product);
+    }
+    this.focusProductField();
+  }
+
+  protected hasUnits(product: Product): boolean {
+    return (product.packagings?.length ?? 0) > 0;
+  }
+
+  /** "kg, sac 50 kg": what else the tile sells in, so the cashier knows a tap offers a choice. */
+  protected otherUnits(product: Product): string {
+    return (product.packagings ?? []).map((packaging) => packaging.label).join(', ');
+  }
+
+  protected onUnitPicked(product: Product, { unit, added }: UnitPicked): void {
+    if (!added) {
+      this.toasts.show(`${product.name} : pas assez de stock pour un ${unit.label ?? 'article'}.`);
+    }
     this.focusProductField();
   }
 
@@ -637,13 +678,17 @@ export class NewSaleComponent {
    * keyboard up over the products being tapped. Decided on the layout rather than on the
    * pointer, because a touch-screen till with a barcode scanner is a till all the same: its
    * scanner needs the field focused.
+   *
+   * <p>Without scrolling: the field sits at the top of the page, and a plain focus() would pull
+   * the page up to it after every tap on a tile further down — the tile just tapped, and its unit
+   * buttons, would slide out of sight. The scanner only needs the focus, not the view.
    */
   private focusProductField(): void {
     if (matchMedia(COMPACT_LAYOUT).matches) {
       return;
     }
     const field = this.productField().nativeElement;
-    field.focus();
+    field.focus({ preventScroll: true });
     field.select();
   }
 
