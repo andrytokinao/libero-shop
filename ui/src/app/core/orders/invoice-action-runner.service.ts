@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, throwError } from 'rxjs';
 import { InvoiceStore } from '../store/invoice.store';
+import { describeSlip } from './remittance';
 import { RemittanceStore } from '../store/remittance.store';
 import { CancelInvoiceRequest, DeliveryStatus, Invoice, PaymentMethod } from '../models';
 
@@ -59,11 +60,7 @@ export class InvoiceActionRunner {
 
   /** This order's cash only: the rest of what the person holds stays in hand. */
   remitCash(invoice: Invoice): Observable<string> {
-    return this.remittances
-      .submit([invoice.id])
-      .pipe(
-        map((slip) => `Versement V-${slip.id} de ${amount(slip.amount)} déposé — la caisse doit le confirmer.`),
-      );
+    return this.remittances.submit([invoice.id]).pipe(map(describeSlip));
   }
 
   confirmRemittance(invoice: Invoice): Observable<string> {

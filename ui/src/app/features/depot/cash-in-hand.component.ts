@@ -4,7 +4,9 @@ import { apiResource } from '../../core/api/api-resource';
 import { RemittanceApi } from '../../core/api/remittance.api';
 import { RemittanceStore } from '../../core/store/remittance.store';
 import { Payment } from '../../core/models';
+import { confirmsOwnSlip, describeSlip, remitLabel } from '../../core/orders/remittance';
 import { reloadOnOrderChange } from '../../core/realtime/reload-on';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -59,7 +61,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                     [disabled]="busy()"
                     (click)="remit([payment.invoice.id])"
                   >
-                    Remettre à la caisse
+                    {{ remitLabel() }}
                   </button>
                 </td>
               </tr>
@@ -84,7 +86,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                   [disabled]="busy()"
                   (click)="remit([payment.invoice.id])"
                 >
-                  Remettre à la caisse
+                  {{ remitLabel() }}
                 </button>
               </div>
             </li>
@@ -99,7 +101,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             [disabled]="busy()"
             (click)="remit([])"
           >
-            Tout remettre à la caisse ({{ total() | ariary }})
+            {{ selfConfirming() ? 'Tout mettre en caisse' : 'Tout remettre à la caisse' }} ({{ total() | ariary }})
           </button>
         }
       } @else {
@@ -113,7 +115,15 @@ export class CashInHandComponent {
   private readonly remittances = inject(RemittanceStore);
   private readonly toasts = inject(ToastService);
 
+  private readonly auth = inject(AuthService);
+
   protected readonly busy = signal(false);
+
+  /** A cashier with no second person to count puts the cash straight in the till. */
+  protected readonly selfConfirming = computed(() =>
+    confirmsOwnSlip(this.auth.roles(), this.auth.settings()),
+  );
+  protected readonly remitLabel = computed(() => remitLabel(this.selfConfirming()));
 
   private readonly resource = apiResource<Payment[]>([], () => this.api.cashInHand());
   protected readonly payments = this.resource.value;
@@ -138,10 +148,7 @@ export class CashInHandComponent {
       next: (slip) => {
         this.busy.set(false);
         this.resource.reload();
-        this.toasts.show(
-          `Versement V-${slip.id} de ${slip.amount.toLocaleString('fr-FR')} Ar remis à la caisse — ` +
-            `en attente de confirmation par le caissier.`,
-        );
+        this.toasts.show(describeSlip(slip));
       },
       error: () => {
         this.busy.set(false);

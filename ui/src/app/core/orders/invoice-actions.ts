@@ -1,4 +1,5 @@
 import { DeliveryStatus, Invoice, PaymentStatus, RoleApp, ShopFeatures } from '../models';
+import { confirmsOwnSlip } from './remittance';
 
 /** What can be done to an order from its detail — one per step of its life. */
 export enum InvoiceActionKind {
@@ -120,11 +121,13 @@ const RULES: readonly InvoiceActionRule[] = [
       !!invoice.cashTrail &&
       invoice.cashTrail.remittanceId === null &&
       invoice.cashTrail.holderId === ctx.userId,
-    describe: (invoice) => ({
-      label: "Remettre l'argent à la caisse",
-      tone: 'primary',
-      confirm: `Vous apportez ${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar à la caisse ?`,
-    }),
+    describe: (invoice, ctx) => {
+      const amount = `${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar`;
+      // Holding the till, with nobody else to count it: the cash goes straight in.
+      return confirmsOwnSlip(ctx.roles, ctx.features)
+        ? { label: 'Mettre en caisse', tone: 'primary', confirm: `${amount} mis directement dans votre caisse ?` }
+        : { label: "Remettre l'argent à la caisse", tone: 'primary', confirm: `Vous apportez ${amount} à la caisse ?` };
+    },
   },
   {
     kind: InvoiceActionKind.CONFIRM_REMITTANCE,

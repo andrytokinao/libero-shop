@@ -5,6 +5,7 @@ import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.PaymentTransition;
 import com.houssen.liberoshop.entity.RemittanceStatus;
+import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.CashRemittanceRepository;
@@ -111,8 +112,23 @@ public class RemittanceService {
             payment.getInvoice().apply(PaymentTransition.REMIT);
         });
 
+        // A cashier bringing cash to the till is the till: with no second pair of eyes required,
+        // there is nobody else to wait for, and the slip is confirmed as it is filed.
+        if (confirmsOwnSlip(agent)) {
+            markConfirmed(remittance, held, agent);
+        }
+
         events.publishEvent(eventOf(remittance, held));
         return CashRemittanceResponse.of(remittance, held);
+    }
+
+    /**
+     * Whether {@code agent}'s slips confirm themselves: they hold the till, and the shop does not
+     * ask for a second person to count. With dual control on, a colleague still confirms -- that
+     * is the whole point of the setting.
+     */
+    public boolean confirmsOwnSlip(UserApp agent) {
+        return agent.hasRole(RoleApp.CASHIER) && !settings.features().dualControlRemittance();
     }
 
     /**
@@ -136,13 +152,18 @@ public class RemittanceService {
                     "Un versement ne peut pas etre confirme par la personne qui l'a depose.");
         }
 
-        remittance.setStatus(RemittanceStatus.CONFIRMED);
-        remittance.setConfirmedBy(cashier);
         List<Payment> carried = payments.findByCashRemittanceId(remittance.getId());
-        carried.forEach(payment -> payment.getInvoice().apply(PaymentTransition.CONFIRM_REMITTANCE));
+        markConfirmed(remittance, carried, cashier);
 
         events.publishEvent(eventOf(remittance, carried));
         return CashRemittanceResponse.of(remittance, carried);
+    }
+
+    /** The cash is counted and in the till: the slip is confirmed and its orders are paid. */
+    private static void markConfirmed(CashRemittance remittance, List<Payment> carried, UserApp cashier) {
+        remittance.setStatus(RemittanceStatus.CONFIRMED);
+        remittance.setConfirmedBy(cashier);
+        carried.forEach(payment -> payment.getInvoice().apply(PaymentTransition.CONFIRM_REMITTANCE));
     }
 
     public BigDecimal pendingTotal() {
