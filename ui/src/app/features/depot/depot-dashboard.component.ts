@@ -1,9 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { DepotDashboard, Invoice } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
@@ -78,7 +78,7 @@ const EMPTY: DepotDashboard = {
 })
 export class DepotDashboardComponent {
   private readonly dashboardApi = inject(DashboardApi);
-  private readonly invoiceApi = inject(InvoiceApi);
+  private readonly invoices = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
 
   protected readonly auth = inject(AuthService);
@@ -91,7 +91,7 @@ export class DepotDashboardComponent {
   protected readonly data = this.resource.value;
 
   constructor() {
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
+    reloadOnOrderChange(this.resource);
   }
 
   protected handOver(invoice: Invoice): void {
@@ -105,7 +105,7 @@ export class DepotDashboardComponent {
   /** @param collect the customer pays now; false: served, the bill is left to the till */
   protected deliver(invoice: Invoice, collect: boolean): void {
     this.busy.set(true);
-    this.invoiceApi.deliver(invoice.id, collect).subscribe({
+    this.invoices.deliver(invoice.id, collect).subscribe({
       next: (result) => {
         this.busy.set(false);
         this.askingFor.set(null);

@@ -1,9 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 
@@ -34,28 +32,21 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
         [actionLabel]="printLabel"
         (action)="print($event)"
         [allowCancel]="true"
-        (changed)="resource.reload()"
         emptyMessage="Aucune facture ne correspond à la recherche."
       />
     </div>
   `,
 })
 export class CashierInvoicesComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
 
   protected readonly search = signal('');
   protected readonly printing = signal(false);
 
   // Filtering happens on the server, so a long history never has to reach the browser.
-  protected readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({ mine: true, search: this.search() }),
-  );
+  protected readonly resource = this.invoiceStore.list(() => ({ mine: true, search: this.search() }));
   protected readonly invoices = this.resource.value;
-
-  constructor() {
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
 
   protected onSearch(value: string): void {
     this.search.set(value);
@@ -67,10 +58,9 @@ export class CashierInvoicesComponent {
 
   protected print(invoice: Invoice): void {
     this.printing.set(true);
-    this.api.print(invoice.id).subscribe({
+    this.invoiceStore.print(invoice.id).subscribe({
       next: () => {
         this.printing.set(false);
-        this.resource.reload();
         this.toasts.show(`Facture ${invoice.invoiceNumber} envoyée à l'impression.`);
       },
       error: () => this.printing.set(false),

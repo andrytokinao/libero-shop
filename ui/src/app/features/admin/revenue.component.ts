@@ -1,13 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
-import { InvoiceApi } from '../../core/api/invoice.api';
-import {
-  Invoice,
-  PAYMENT_METHOD_LABELS,
-  PaymentStatus,
-  RevenueReport,
-} from '../../core/models';
+import { PAYMENT_METHOD_LABELS, PaymentStatus, RevenueReport } from '../../core/models';
+import { reloadOnOrderChange } from '../../core/realtime/reload-on';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
@@ -86,15 +82,21 @@ const EMPTY: RevenueReport = {
 })
 export class RevenueComponent {
   private readonly dashboardApi = inject(DashboardApi);
-  private readonly invoiceApi = inject(InvoiceApi);
+  private readonly invoices = inject(InvoiceStore);
 
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 
   private readonly reportResource = apiResource(EMPTY, () => this.dashboardApi.revenue());
-  private readonly invoiceResource = apiResource<Invoice[]>([], () =>
-    this.invoiceApi.search({ todayOnly: true, paymentStatus: PaymentStatus.PAID }),
-  );
+  private readonly paidTodayList = this.invoices.list(() => ({
+    todayOnly: true,
+    paymentStatus: PaymentStatus.PAID,
+  }));
 
   protected readonly report = this.reportResource.value;
-  protected readonly paidToday = this.invoiceResource.value;
+  protected readonly paidToday = this.paidTodayList.value;
+
+  constructor() {
+    // The totals are the server's: read again when an order is paid, the list follows the store.
+    reloadOnOrderChange(this.reportResource);
+  }
 }

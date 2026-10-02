@@ -1,9 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice, PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
@@ -42,7 +40,6 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
         [actionLabel]="payLabel"
         (action)="selected.set($event)"
         [allowCancel]="true"
-        (changed)="resource.reload()"
         emptyMessage="Aucune commande à encaisser."
       />
     </div>
@@ -58,7 +55,7 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
   `,
 })
 export class ToCollectComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 
@@ -66,15 +63,12 @@ export class ToCollectComponent {
   protected readonly busy = signal(false);
   protected readonly selected = signal<Invoice | null>(null);
 
-  protected readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({ paymentStatus: PaymentStatus.UNPAID, search: this.search() }),
-  );
+  // An order taken elsewhere appears here, and one paid at another till leaves.
+  protected readonly resource = this.invoiceStore.list(() => ({
+    paymentStatus: PaymentStatus.UNPAID,
+    search: this.search(),
+  }));
   protected readonly invoices = this.resource.value;
-
-  constructor() {
-    // An order taken elsewhere appears here, and one paid at another till leaves.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
 
   protected readonly payLabel = (): string => 'Encaisser';
 
@@ -85,11 +79,10 @@ export class ToCollectComponent {
 
   protected pay(invoice: Invoice, method: PaymentMethod): void {
     this.busy.set(true);
-    this.api.pay(invoice.id, { paymentMethod: method }).subscribe({
+    this.invoiceStore.pay(invoice.id, { paymentMethod: method }).subscribe({
       next: () => {
         this.busy.set(false);
         this.selected.set(null);
-        this.resource.reload();
         this.toasts.show(
           `${invoice.invoiceNumber} encaissée : ` +
             `${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar (${PAYMENT_METHOD_LABELS[method]}).`,
@@ -98,7 +91,7 @@ export class ToCollectComponent {
       error: () => {
         this.busy.set(false);
         this.selected.set(null);
-        this.resource.reload();
+        this.invoiceStore.refresh([invoice.id]);
       },
     });
   }

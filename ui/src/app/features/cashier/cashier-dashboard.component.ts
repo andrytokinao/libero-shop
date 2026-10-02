@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { apiResource } from '../../core/api/api-resource';
 import { CashierDashboard } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -90,6 +90,6 @@ export class CashierDashboardComponent {
 
   constructor() {
     // An order handed over at the depot changes what is still to be collected.
-    reloadOnTopic(this.dashboard, ORDERS_TOPIC);
+    reloadOnOrderChange(this.dashboard);
   }
 }

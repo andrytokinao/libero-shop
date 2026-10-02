@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, throwError } from 'rxjs';
-import { InvoiceApi } from '../api/invoice.api';
-import { RemittanceApi } from '../api/remittance.api';
+import { InvoiceStore } from '../store/invoice.store';
+import { RemittanceStore } from '../store/remittance.store';
 import { CancelInvoiceRequest, DeliveryStatus, Invoice, PaymentMethod } from '../models';
 
 const amount = (value: number) => `${value.toLocaleString('fr-FR')} Ar`;
@@ -10,13 +10,13 @@ const amount = (value: number) => `${value.toLocaleString('fr-FR')} Ar`;
  * Carries out the actions of an order's detail and says, in the person's words, what happened.
  *
  * <p>Every method answers the sentence to show once the server has agreed — the screens only
- * toast it and reload. The choices some actions need first (how the customer pays, why the
+ * toast it: the stores carry the order's new state to every screen. The choices some actions need first (how the customer pays, why the
  * order is cancelled) are asked by the screen's dialogs before calling here.
  */
 @Injectable({ providedIn: 'root' })
 export class InvoiceActionRunner {
-  private readonly invoices = inject(InvoiceApi);
-  private readonly remittances = inject(RemittanceApi);
+  private readonly invoices = inject(InvoiceStore);
+  private readonly remittances = inject(RemittanceStore);
 
   pay(invoice: Invoice, paymentMethod: PaymentMethod): Observable<string> {
     return this.invoices

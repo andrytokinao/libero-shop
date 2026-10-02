@@ -219,6 +219,14 @@ class SaleNotificationWebSocketTest {
         assertNotNull(delivered, "the queue never heard of the hand-over");
         assertEquals(OrderChangePublisher.Change.DELIVERED, delivered.get("change"));
         assertEquals(List.of(invoice.invoiceNumber()), delivered.get("invoiceNumbers"));
+        // The order as it now stands, so the screens apply it without reloading.
+        List<?> carried = (List<?>) delivered.get("invoices");
+        assertEquals(1, carried.size());
+        Map<?, ?> order = (Map<?, ?>) carried.getFirst();
+        assertEquals(invoice.id().intValue(), ((Number) order.get("id")).intValue());
+        assertEquals("DELIVERED", order.get("deliveryStatus"));
+        assertTrue(order.get("invoiceDate") instanceof String, "dates go out as ISO text, as over REST");
+        assertNull(delivered.get("remittance"));
     }
 
     @Test

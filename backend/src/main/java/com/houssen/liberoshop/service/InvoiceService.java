@@ -22,10 +22,12 @@ import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -86,6 +88,15 @@ public class InvoiceService {
 
     public InvoiceResponse findById(Long id) {
         return withCashTrail(List.of(load(id))).getFirst();
+    }
+
+    /**
+     * Several orders as every list shows them, cash trail included, read in a transaction of their
+     * own: for the listeners that run after a commit, once the transaction that changed them is over.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public List<InvoiceResponse> findAllById(Collection<Long> ids) {
+        return withCashTrail(ids.stream().distinct().map(this::load).toList());
     }
 
     /**
@@ -279,6 +290,7 @@ public class InvoiceService {
     public InvoiceResponse markPrinted(Long invoiceId) {
         Invoice invoice = load(invoiceId);
         invoice.print();
+        events.publishEvent(new OrderPrintedEvent(invoice.getId(), invoice.getInvoiceNumber()));
         return InvoiceResponse.of(invoice);
     }
 

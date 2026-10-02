@@ -15,6 +15,7 @@ import { LiveUpdateService } from './core/config/live-update/live-update.service
 import { moduleMenuPath, sectionOfUrl } from './core/config/navigation';
 import { ServerConfig } from './core/config/server-config.service';
 import { RoleApp } from './core/models';
+import { OrderEvents } from './core/realtime/order-events.service';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
@@ -87,6 +88,10 @@ export class AppComponent {
   });
 
   constructor() {
+    // The order events are heard from the first screen on, whichever it is: the stores the
+    // screens read stay current behind them.
+    inject(OrderEvents);
+
     // On a phone: pages kept up to date from the server, checked again whenever the app comes
     // back to the foreground or is pointed at another server.
     this.liveUpdate.start();

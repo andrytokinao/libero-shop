@@ -1,9 +1,7 @@
 import { Component, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { DeliveryStatus, Invoice, RoleApp } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
@@ -85,7 +83,7 @@ import { HandOverDialogComponent } from '../../shared/components/hand-over-dialo
   `,
 })
 export class OrderDeliveryComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
 
   protected readonly search = signal('');
@@ -100,19 +98,13 @@ export class OrderDeliveryComponent {
   /** Refreshed right after a hand-over, without waiting for the socket to echo it. */
   private readonly cashInHand = viewChild(CashInHandComponent);
 
-  private readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({
-      search: this.search(),
-      deliveryStatus: this.onlyPending() ? DeliveryStatus.PENDING : undefined,
-    }),
-  );
+  // Kept current by the store: a sale made at the counter appears in the queue, and an order
+  // handed over by another storekeeper leaves it, without anyone pressing F5.
+  private readonly resource = this.invoiceStore.list(() => ({
+    search: this.search(),
+    deliveryStatus: this.onlyPending() ? DeliveryStatus.PENDING : undefined,
+  }));
   protected readonly invoices = this.resource.value;
-
-  constructor() {
-    // A sale made at the counter appears in the queue, and an order handed over by another
-    // storekeeper leaves it, without anyone pressing F5.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
 
   protected onSearch(value: string): void {
     this.search.set(value);
@@ -135,18 +127,18 @@ export class OrderDeliveryComponent {
   /** @param collect the customer pays now; false: served, the bill is left to the till */
   protected deliver(invoice: Invoice, collect: boolean): void {
     this.busy.set(true);
-    this.api.deliver(invoice.id, collect).subscribe({
+    this.invoiceStore.deliver(invoice.id, collect).subscribe({
       next: (result) => {
         this.busy.set(false);
         this.askingFor.set(null);
-        this.resource.reload();
         this.cashInHand()?.reload();
         this.toasts.show(result.message);
       },
       error: () => {
         this.busy.set(false);
         this.askingFor.set(null);
-        this.resource.reload();
+        // Refused: perhaps handed over by someone else meanwhile — show where it really is.
+        this.invoiceStore.refresh([invoice.id]);
       },
     });
   }

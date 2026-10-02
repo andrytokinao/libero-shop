@@ -10,11 +10,13 @@ import java.util.List;
  * <p>Published by {@link RemittanceService} inside the transaction and meant to be heard after it
  * commits, like {@link SaleRecordedEvent}. Plain values only, for the same reason.
  *
+ * @param invoiceIds  the same orders, for the listeners that read them back
  * @param cashierName who confirmed; null while the slip is pending
  */
 public record RemittanceRecordedEvent(Long remittanceId,
                                       BigDecimal amount,
                                       List<String> invoiceNumbers,
+                                      List<Long> invoiceIds,
                                       Long agentId,
                                       String agentName,
                                       boolean confirmed,

@@ -1,8 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
-import { DeliveryStatus, Invoice } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { InvoiceStore } from '../../core/store/invoice.store';
+import { DeliveryStatus } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -29,22 +27,15 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class DeliveryHistoryComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
 
-  private readonly all = apiResource<Invoice[]>([], () =>
-    this.api.search({ deliveryStatus: DeliveryStatus.DELIVERED }),
-  );
-  private readonly today = apiResource<Invoice[]>([], () =>
-    this.api.search({ deliveryStatus: DeliveryStatus.DELIVERED, todayOnly: true }),
-  );
-
-  constructor() {
-    reloadOnTopic(this.all, ORDERS_TOPIC);
-    reloadOnTopic(this.today, ORDERS_TOPIC);
-  }
-
-  protected readonly delivered = this.all.value;
-  protected readonly deliveredToday = this.today.value;
+  protected readonly delivered = this.invoiceStore.list(() => ({
+    deliveryStatus: DeliveryStatus.DELIVERED,
+  })).value;
+  protected readonly deliveredToday = this.invoiceStore.list(() => ({
+    deliveryStatus: DeliveryStatus.DELIVERED,
+    todayOnly: true,
+  })).value;
 
   protected readonly valueToday = computed(() =>
     this.deliveredToday().reduce((total, invoice) => total + invoice.sale.totalAmount, 0),

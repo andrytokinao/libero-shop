@@ -1,9 +1,7 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { RemittanceApi } from '../../core/api/remittance.api';
+import { RemittanceStore } from '../../core/store/remittance.store';
 import { CashRemittance, RemittanceStatus, RoleApp } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
@@ -206,7 +204,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class RemittanceInboxComponent {
-  private readonly api = inject(RemittanceApi);
+  private readonly remittanceStore = inject(RemittanceStore);
   private readonly toasts = inject(ToastService);
 
   protected readonly RoleApp = RoleApp;
@@ -214,14 +212,9 @@ export class RemittanceInboxComponent {
   /** The slip whose "have you counted it?" question is open. */
   protected readonly checking = signal<number | null>(null);
 
-  private readonly resource = apiResource<CashRemittance[]>([], () => this.api.search());
-  private readonly remittances = this.resource.value;
-
-  constructor() {
-    // A slip brought by the depot appears without a refresh; one confirmed at another till
-    // leaves the list.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
+  // Kept current by the store: a slip brought by the depot appears without a refresh, and one
+  // confirmed at another till moves to the confirmed ones.
+  private readonly remittances = this.remittanceStore.list().value;
 
   protected readonly pending = computed(() =>
     this.remittances().filter((r) => r.status === RemittanceStatus.PENDING),
@@ -239,11 +232,10 @@ export class RemittanceInboxComponent {
 
   protected confirm(remittance: CashRemittance): void {
     this.busy.set(true);
-    this.api.confirm(remittance.id).subscribe({
+    this.remittanceStore.confirm(remittance.id).subscribe({
       next: (confirmed) => {
         this.busy.set(false);
         this.checking.set(null);
-        this.resource.reload();
         this.toasts.show(
           `Versement V-${confirmed.id} confirmé reçu à la caisse ` +
             `(${confirmed.amount.toLocaleString('fr-FR')} Ar) : commande(s) payée(s).`,
@@ -252,7 +244,8 @@ export class RemittanceInboxComponent {
       error: () => {
         this.busy.set(false);
         this.checking.set(null);
-        this.resource.reload();
+        // Refused — perhaps confirmed at another till meanwhile: read the slips again.
+        this.remittanceStore.invalidate();
       },
     });
   }

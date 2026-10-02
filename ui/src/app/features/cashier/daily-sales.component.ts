@@ -1,8 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
-import { Invoice, PaymentStatus } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { InvoiceStore } from '../../core/store/invoice.store';
+import { PaymentStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
@@ -39,19 +37,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   `,
 })
 export class DailySalesComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
   protected readonly auth = inject(AuthService);
 
   // mine + todayOnly are resolved server-side: the client cannot ask for another seller.
-  private readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({ mine: true, todayOnly: true }),
-  );
-  protected readonly invoices = this.resource.value;
-
-  constructor() {
-    // Handed over at the depot: the status changes, and an unpaid order is now paid.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
+  // Handed over at the depot, the status changes, and an unpaid order is now paid: the store
+  // carries both here.
+  protected readonly invoices = this.invoiceStore.list(() => ({ mine: true, todayOnly: true })).value;
 
   private readonly paid = computed(() =>
     this.invoices().filter((i) => i.paymentStatus === PaymentStatus.PAID),

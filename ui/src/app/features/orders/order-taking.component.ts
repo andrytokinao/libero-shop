@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { CategoryNode, PaymentMethod, PaymentStatus, RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart } from '../../core/sale/cart';
@@ -205,7 +205,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 })
 export class OrderTakingComponent {
   private readonly catalog = inject(CatalogApi);
-  private readonly invoices = inject(InvoiceApi);
+  private readonly invoices = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 

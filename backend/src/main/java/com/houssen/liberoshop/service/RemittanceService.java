@@ -15,6 +15,7 @@ import com.houssen.liberoshop.web.dto.CashRemittanceResponse;
 import com.houssen.liberoshop.web.dto.PaymentResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -157,6 +158,16 @@ public class RemittanceService {
                 calendar.startOfToday(), calendar.startOfTomorrow());
     }
 
+    /**
+     * One slip as the lists show it, read in a transaction of its own: for the listeners that run
+     * after a commit, once the transaction that wrote the slip is over.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public CashRemittanceResponse findById(Long remittanceId) {
+        return toResponse(remittances.findById(remittanceId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Versement", remittanceId)));
+    }
+
     private CashRemittanceResponse toResponse(CashRemittance remittance) {
         return CashRemittanceResponse.of(remittance, payments.findByCashRemittanceId(remittance.getId()));
     }
@@ -165,6 +176,7 @@ public class RemittanceService {
         UserApp cashier = remittance.getConfirmedBy();
         return new RemittanceRecordedEvent(remittance.getId(), remittance.getAmount(),
                 carried.stream().map(payment -> payment.getInvoice().getInvoiceNumber()).toList(),
+                carried.stream().map(payment -> payment.getInvoice().getId()).toList(),
                 remittance.getSubmittedBy().getId(), remittance.getSubmittedBy().getFullName(),
                 remittance.getStatus() == RemittanceStatus.CONFIRMED,
                 cashier == null ? null : cashier.getId(), cashier == null ? null : cashier.getFullName());

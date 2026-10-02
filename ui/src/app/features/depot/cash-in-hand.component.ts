@@ -1,9 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Output, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { RemittanceApi } from '../../core/api/remittance.api';
-import { CashRemittance, Payment } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { RemittanceStore } from '../../core/store/remittance.store';
+import { Payment } from '../../core/models';
+import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -109,10 +110,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 })
 export class CashInHandComponent {
   private readonly api = inject(RemittanceApi);
+  private readonly remittances = inject(RemittanceStore);
   private readonly toasts = inject(ToastService);
-
-  /** A slip was created: the parent may have lists of its own to refresh. */
-  @Output() readonly remitted = new EventEmitter<CashRemittance>();
 
   protected readonly busy = signal(false);
 
@@ -124,7 +123,7 @@ export class CashInHandComponent {
 
   constructor() {
     // A hand-over just made, here or on another screen of the same account, adds a line.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
+    reloadOnOrderChange(this.resource);
   }
 
   /** For a parent that has just handed an order over. */
@@ -135,11 +134,10 @@ export class CashInHandComponent {
   /** @param invoiceIds one order's, or none for everything in hand */
   protected remit(invoiceIds: number[]): void {
     this.busy.set(true);
-    this.api.submit(invoiceIds).subscribe({
+    this.remittances.submit(invoiceIds).subscribe({
       next: (slip) => {
         this.busy.set(false);
         this.resource.reload();
-        this.remitted.emit(slip);
         this.toasts.show(
           `Versement V-${slip.id} de ${slip.amount.toLocaleString('fr-FR')} Ar remis à la caisse — ` +
             `en attente de confirmation par le caissier.`,

@@ -225,8 +225,8 @@ export class InvoiceTableComponent {
   @Input() allowCancel = false;
   @Output() readonly action = new EventEmitter<Invoice>();
   /**
-   * An order moved from its detail — paid, handed over, its cash remitted, cancelled: the screen
-   * reloads its list. The order screens also hear it over the socket.
+   * An order moved from its detail — paid, handed over, its cash remitted, cancelled. A list read
+   * from the InvoiceStore follows by itself; this is for the figures a screen computes elsewhere.
    */
   @Output() readonly changed = new EventEmitter<void>();
 
@@ -271,9 +271,8 @@ export class InvoiceTableComponent {
   }
 
   /**
-   * Runs one action, says what happened, and lets the screen reload. The detail stays open on
-   * the order, now in its new state — or closes by itself when the reloaded list no longer
-   * holds it. A refusal is told by the error interceptor; the person stays where they were.
+   * Runs one action and says what happened. The detail stays open on the order, now in its new
+   * state — or closes by itself when the list, kept current by the store, no longer holds it. A refusal is told by the error interceptor; the person stays where they were.
    */
   protected run(work: Observable<string>): void {
     this.running.set(true);

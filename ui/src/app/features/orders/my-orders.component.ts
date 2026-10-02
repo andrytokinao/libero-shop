@@ -1,8 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice, PaymentMethod, PaymentStatus } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
@@ -33,7 +31,6 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
         [actionLabel]="collectLabel()"
         (action)="selected.set($event)"
         [allowCancel]="true"
-        (changed)="resource.reload()"
         emptyMessage="Aucune commande prise aujourd'hui."
       />
     </div>
@@ -50,7 +47,7 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
   `,
 })
 export class MyOrdersComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
   private readonly auth = inject(AuthService);
   private readonly toasts = inject(ToastService);
 
@@ -58,10 +55,7 @@ export class MyOrdersComponent {
   protected readonly selected = signal<Invoice | null>(null);
   protected readonly cashOnly = [PaymentMethod.CASH];
 
-  protected readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({ mine: true, todayOnly: true }),
-  );
-  protected readonly invoices = this.resource.value;
+  protected readonly invoices = this.invoiceStore.list(() => ({ mine: true, todayOnly: true })).value;
 
   /** "Encaisser" on the unpaid ones, only where the shop lets order takers take money. */
   protected readonly collectLabel = computed(() =>
@@ -70,17 +64,12 @@ export class MyOrdersComponent {
       : undefined,
   );
 
-  constructor() {
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
-  }
-
   protected collect(invoice: Invoice): void {
     this.busy.set(true);
-    this.api.collect(invoice.id).subscribe({
+    this.invoiceStore.collect(invoice.id).subscribe({
       next: () => {
         this.busy.set(false);
         this.selected.set(null);
-        this.resource.reload();
         this.toasts.show(
           `${invoice.invoiceNumber} encaissée : ${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar ` +
             'à remettre à la caisse.',
@@ -89,7 +78,7 @@ export class MyOrdersComponent {
       error: () => {
         this.busy.set(false);
         this.selected.set(null);
-        this.resource.reload();
+        this.invoiceStore.refresh([invoice.id]);
       },
     });
   }

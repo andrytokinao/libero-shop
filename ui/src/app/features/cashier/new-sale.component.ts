@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { InvoiceApi } from '../../core/api/invoice.api';
+import { InvoiceStore } from '../../core/store/invoice.store';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus, Product } from '../../core/models';
 import { Cart } from '../../core/sale/cart';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
@@ -295,7 +295,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
   `,
 })
 export class NewSaleComponent {
-  private readonly invoices = inject(InvoiceApi);
+  private readonly invoices = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 

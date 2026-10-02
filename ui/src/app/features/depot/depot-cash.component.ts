@@ -1,9 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { RemittanceApi } from '../../core/api/remittance.api';
+import { RemittanceStore } from '../../core/store/remittance.store';
 import { CashRemittance } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CashInHandComponent } from './cash-in-hand.component';
@@ -15,7 +13,7 @@ import { CashInHandComponent } from './cash-in-hand.component';
   imports: [DatePipe, CashInHandComponent, RemittanceStatusBadgeComponent, AriaryPipe],
   template: `
     <div class="grid g2">
-      <app-cash-in-hand (remitted)="remittanceResource.reload()" />
+      <app-cash-in-hand />
 
       <div class="card">
         <h2>Mes versements <small>confirmés par le caissier une fois l'argent compté</small></h2>
@@ -75,17 +73,9 @@ import { CashInHandComponent } from './cash-in-hand.component';
   `,
 })
 export class DepotCashComponent {
-  private readonly api = inject(RemittanceApi);
-
-  protected readonly remittanceResource = apiResource<CashRemittance[]>([], () =>
-    this.api.search({ mine: true }),
-  );
-  protected readonly myRemittances = this.remittanceResource.value;
-
-  constructor() {
-    // "En attente" turns to "Confirmé" the moment the cashier signs for it.
-    reloadOnTopic(this.remittanceResource, ORDERS_TOPIC);
-  }
+  // Kept current by the store: a slip just brought appears, and "En attente" turns to
+  // "Confirmé" the moment the cashier signs for it.
+  protected readonly myRemittances = inject(RemittanceStore).list(() => ({ mine: true })).value;
 
   protected invoiceNumbers(remittance: CashRemittance): string {
     return remittance.invoices.map((invoice) => invoice.invoiceNumber).join(', ');

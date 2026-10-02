@@ -1,8 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { apiResource } from '../../core/api/api-resource';
-import { InvoiceApi } from '../../core/api/invoice.api';
-import { DeliveryStatus, Invoice, PaymentStatus } from '../../core/models';
+import { InvoiceStore } from '../../core/store/invoice.store';
+import { DeliveryStatus, PaymentStatus } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -74,32 +73,29 @@ const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
         [invoices]="invoices()"
         [showDate]="true"
         [allowCancel]="true"
-        (changed)="resource.reload()"
         emptyMessage="Aucune facture ne correspond aux critères."
       />
     </div>
   `,
 })
 export class AllInvoicesComponent {
-  private readonly api = inject(InvoiceApi);
+  private readonly invoiceStore = inject(InvoiceStore);
 
   protected readonly search = signal('');
   protected readonly filter = signal<InvoiceFilter>('ALL');
 
   // Search and filter are both server-side; the UI only maps its labels onto the
   // paymentStatus / deliveryStatus the API already understands.
-  protected readonly resource = apiResource<Invoice[]>([], () =>
-    this.api.search({
-      search: this.search(),
-      paymentStatus: PAYMENT_FILTERS[this.filter()],
-      deliveryStatus:
-        this.filter() === 'PENDING_DELIVERY'
-          ? DeliveryStatus.PENDING
-          : this.filter() === 'DELIVERED'
-            ? DeliveryStatus.DELIVERED
-            : undefined,
-    }),
-  );
+  protected readonly resource = this.invoiceStore.list(() => ({
+    search: this.search(),
+    paymentStatus: PAYMENT_FILTERS[this.filter()],
+    deliveryStatus:
+      this.filter() === 'PENDING_DELIVERY'
+        ? DeliveryStatus.PENDING
+        : this.filter() === 'DELIVERED'
+          ? DeliveryStatus.DELIVERED
+          : undefined,
+  }));
   protected readonly invoices = this.resource.value;
 
   protected readonly totalAmount = computed(() =>

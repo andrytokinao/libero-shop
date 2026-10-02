@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
 import { StockOutput } from '../../core/models';
-import { ORDERS_TOPIC, reloadOnTopic } from '../../core/realtime/reload-on';
+import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { DeliveryStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -80,7 +80,7 @@ export class StockOutputsComponent {
 
   constructor() {
     // Each output shows its order's hand-over status, which the depot changes.
-    reloadOnTopic(this.resource, ORDERS_TOPIC);
+    reloadOnOrderChange(this.resource);
   }
 
   protected readonly units = computed(() =>
