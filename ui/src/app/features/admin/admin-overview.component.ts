@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { AdminDashboard } from '../../core/models';
+import { reloadOnOrderChange, reloadOnStockChange } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
@@ -95,4 +96,10 @@ export class AdminOverviewComponent {
   private readonly api = inject(DashboardApi);
   private readonly resource = apiResource(EMPTY, () => this.api.admin());
   protected readonly data = this.resource.value;
+
+  constructor() {
+    // The whole shop at a glance: its takings move with the orders, its value with the stock.
+    reloadOnOrderChange(this.resource);
+    reloadOnStockChange(this.resource);
+  }
 }

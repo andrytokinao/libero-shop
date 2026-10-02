@@ -88,7 +88,7 @@ class ProductImportServiceTest {
         // an import does with a category column, and stubbing it would assert the stub.
         CategoryService categoryService = new CategoryService(categories, products);
         service = new ProductImportService(products, categories, suppliers, movements,
-                categoryService, calendar);
+                categoryService, calendar, event -> { });
 
         Mockito.when(calendar.now()).thenReturn(LocalDateTime.of(2026, 9, 26, 9, 0));
         Mockito.when(movements.save(ArgumentMatchers.any(Supply.class))).thenAnswer(call -> {

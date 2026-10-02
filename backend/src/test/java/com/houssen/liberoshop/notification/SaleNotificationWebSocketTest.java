@@ -230,6 +230,27 @@ class SaleNotificationWebSocketTest {
     }
 
     @Test
+    @DisplayName("a sale pushes the new stock of what it sold to every till")
+    void saleBroadcastsTheNewStock() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp otherTill = account(RoleApp.CASHIER);
+        Product flour = products.save(Product.builder().name("Farine " + UUID.randomUUID())
+                .price(new BigDecimal("3000")).stockQuantity(10).build());
+        BlockingQueue<Map<String, Object>> stock = listenTopic(otherTill, StockChangePublisher.TOPIC);
+
+        saleService.checkout(new CreateSaleRequest("Rina", PaymentStatus.PAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(flour.getId(), 3))), cashier);
+
+        Map<String, Object> change = stock.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(change, "the other till never heard the stock move");
+        List<?> carried = (List<?>) change.get("products");
+        assertEquals(1, carried.size());
+        Map<?, ?> product = (Map<?, ?>) carried.getFirst();
+        assertEquals(flour.getId().intValue(), ((Number) product.get("id")).intValue());
+        assertEquals(7, ((Number) product.get("stockQuantity")).intValue());
+    }
+
+    @Test
     @DisplayName("the seller hears when the depot hands their order over, cash included")
     void handOverReachesTheSeller() throws Exception {
         UserApp cashier = account(RoleApp.CASHIER);

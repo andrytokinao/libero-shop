@@ -12,6 +12,12 @@ export interface LiveListOptions<T extends Entity> {
    * Signals read here — a search box — are followed.
    */
   readonly matches: (item: T) => boolean;
+  /**
+   * Whether a pushed entity the server did not answer may join. Defaults to `matches`; a query
+   * the browser cannot say again — a search through the rayon tree — answers false, and a new
+   * entity waits for the next reload. The rows already there still follow every push.
+   */
+  readonly admits?: (item: T) => boolean;
   /** The order of the rows, the same as the server's. */
   readonly compare: (a: T, b: T) => number;
 }
@@ -92,7 +98,8 @@ export class LiveList<T extends Entity> {
   }
 
   private matching(items: readonly T[]): number[] {
-    return untracked(() => items.filter((item) => this.options.matches(item)).map((item) => item.id));
+    const admits = this.options.admits ?? this.options.matches;
+    return untracked(() => items.filter((item) => admits(item)).map((item) => item.id));
   }
 }
 

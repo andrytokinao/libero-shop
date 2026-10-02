@@ -3,6 +3,7 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Observable, Subject, of } from 'rxjs';
 import { CatalogApi } from '../api/catalog.api';
 import { Product } from '../models';
+import { ProductStore } from '../store/product.store';
 import { ProductFinder, ProductQuery, SEARCH_DEBOUNCE_MS } from './product-finder';
 
 function product(id: number, name: string): Product {
@@ -101,5 +102,14 @@ describe('ProductFinder', () => {
       { term: '', categoryId: 4 },
       { term: '', categoryId: 4 },
     ]);
+  }));
+
+  it('shows a stock sold at another till without asking again', fakeAsync(() => {
+    start();
+
+    TestBed.inject(ProductStore).push([{ ...best[0], stockQuantity: 0 }]);
+
+    expect(finder.products()[0].stockQuantity).toBe(0);
+    expect(searches).toEqual([]);
   }));
 });

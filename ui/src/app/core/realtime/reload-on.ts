@@ -4,6 +4,8 @@ import { filter, merge } from 'rxjs';
 import { NotificationType } from '../models';
 import { OrderEvents } from './order-events.service';
 import { RealtimeService } from './realtime.service';
+import { Resync } from './resync.service';
+import { StockEvents } from './stock-events.service';
 
 /**
  * Reloads a screen's data whenever one of these notifications arrives, for as long as the
@@ -27,8 +29,18 @@ export function reloadOn(resource: { reload(): void }, ...types: NotificationTyp
  * current without a request. Must be called in an injection context.
  */
 export function reloadOnOrderChange(resource: { reload(): void }): void {
-  const events = inject(OrderEvents);
-  merge(events.changes$, events.resync$)
+  merge(inject(OrderEvents).changes$, inject(Resync).resync$)
+    .pipe(takeUntilDestroyed())
+    .subscribe(() => resource.reload());
+}
+
+/**
+ * The same for the figures computed from the stock — the depot's value, the alerts, the split by
+ * rayon. A list of products reads `ProductStore.list` instead. Must be called in an injection
+ * context.
+ */
+export function reloadOnStockChange(resource: { reload(): void }): void {
+  merge(inject(StockEvents).changes$, inject(Resync).resync$)
     .pipe(takeUntilDestroyed())
     .subscribe(() => resource.reload());
 }

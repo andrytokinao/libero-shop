@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { StockDashboard } from '../../core/models';
+import { reloadOnStockChange } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -57,4 +58,9 @@ export class ManagerDashboardComponent {
   private readonly api = inject(DashboardApi);
   private readonly resource = apiResource(EMPTY, () => this.api.stock());
   protected readonly data = this.resource.value;
+
+  constructor() {
+    // Sold, received, cancelled: the alerts and the value follow every stock movement.
+    reloadOnStockChange(this.resource);
+  }
 }

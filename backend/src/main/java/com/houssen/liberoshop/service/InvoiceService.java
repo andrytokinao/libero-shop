@@ -282,6 +282,10 @@ public class InvoiceService {
             product.adjustStock(output.getQuantity());
         }
         movements.deleteAll(outputs);
+        if (!outputs.isEmpty()) {
+            events.publishEvent(new StockChangedEvent(
+                    outputs.stream().map(output -> output.getProduct().getId()).toList()));
+        }
     }
 
     /** Front-end counterpart of {@code Invoice#print()}. */

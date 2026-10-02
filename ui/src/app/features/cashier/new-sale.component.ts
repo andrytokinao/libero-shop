@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus, Product } from '../../core/models';
 import { Cart } from '../../core/sale/cart';
+import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
@@ -390,6 +391,8 @@ export class NewSaleComponent {
   }
 
   constructor() {
+    // Another till selling the same article turns the line short here, before the sale is sent.
+    followStock(this.cart);
     afterNextRender(() => this.focusProductField());
   }
 

@@ -12,6 +12,7 @@ export * from './stock-movement.model';
 export * from './costing.model';
 export * from './notification.model';
 export * from './order-change.model';
+export * from './stock-change.model';
 export * from './server.model';
 export * from './license.model';
 export * from './shop-settings.model';

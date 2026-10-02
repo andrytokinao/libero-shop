@@ -1,12 +1,11 @@
-import { DOCUMENT } from '@angular/common';
 import { Injectable, effect, inject, untracked } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, Subject, filter, fromEvent, merge, map, pairwise, share } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { OrderChange, OrderChangeKind } from '../models';
 import { AuthService } from '../services/auth.service';
 import { InvoiceStore } from '../store/invoice.store';
 import { RemittanceStore } from '../store/remittance.store';
 import { RealtimeService } from './realtime.service';
+import { Resync } from './resync.service';
 
 /** Mirrors OrderChangePublisher.TOPIC. */
 export const ORDERS_TOPIC = 'orders';
@@ -27,8 +26,8 @@ type OrderChangeHandler = (change: OrderChange) => void;
  * one more line there, and nothing in the screens. A kind this version does not know — a newer
  * server — and a change that came without its data both fall back to every list reloading.
  *
- * <p>Also catches what was missed: nothing is queued for a screen that is not listening, so when
- * the socket comes back, or the app comes back to the foreground, the lists reload. On sign-out,
+ * <p>Also catches what was missed: at each {@link Resync} moment — back online, back on screen —
+ * the lists reload. On sign-out,
  * the stores are emptied — the next account must not see what this one loaded.
  *
  * <p>Started once, by the application's initializer; nothing else needs to inject it, except the
@@ -59,25 +58,9 @@ export class OrderEvents {
   /** Every change, once applied to the stores. */
   readonly changes$: Observable<OrderChange> = this.applied.asObservable();
 
-  /** The moments when changes may have been missed: back online, or back on screen. */
-  readonly resync$: Observable<void>;
-
   constructor() {
-    const document = inject(DOCUMENT);
-    const reconnected = toObservable(this.realtime.state).pipe(
-      pairwise(),
-      filter(([before, now]) => before !== 'online' && now === 'online'),
-    );
-    const shownAgain = fromEvent(document, 'visibilitychange').pipe(
-      filter(() => document.visibilityState === 'visible'),
-    );
-    this.resync$ = merge(reconnected, shownAgain).pipe(
-      map(() => undefined),
-      share(),
-    );
-
     this.realtime.topic<OrderChange>(ORDERS_TOPIC).subscribe((change) => this.apply(change));
-    this.resync$.subscribe(() => this.reloadAll());
+    inject(Resync).resync$.subscribe(() => this.reloadAll());
 
     const auth = inject(AuthService);
     effect(() => {

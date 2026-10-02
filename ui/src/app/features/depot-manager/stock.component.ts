@@ -2,7 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { CategoryNode, Product } from '../../core/models';
+import { CategoryNode } from '../../core/models';
+import { ProductStore } from '../../core/store/product.store';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
@@ -82,14 +83,13 @@ export class StockComponent {
   protected readonly onlyLowStock = signal(false);
 
   // The three filters are applied by the server, so the browser never holds the
-  // whole catalogue just to narrow it down.
-  private readonly resource = apiResource<Product[]>([], () =>
-    this.api.products({
-      search: this.search(),
-      categoryId: this.categoryId(),
-      lowStockOnly: this.onlyLowStock(),
-    }),
-  );
+  // whole catalogue just to narrow it down; the store keeps the figures current — a sale at
+  // the till lowers the count here.
+  private readonly resource = inject(ProductStore).list(() => ({
+    search: this.search(),
+    categoryId: this.categoryId(),
+    lowStockOnly: this.onlyLowStock(),
+  }));
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
 
   protected readonly products = this.resource.value;

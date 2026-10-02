@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import { CatalogApi } from '../api/catalog.api';
 import { Product } from '../models';
+import { ProductStore } from '../store/product.store';
 
 /** What a sale screen is looking for: words, a rayon, both or neither. */
 export interface ProductQuery {
@@ -53,11 +54,18 @@ export function isIdle(query: ProductQuery): boolean {
  */
 export class ProductFinder {
   private readonly catalog = inject(CatalogApi);
+  private readonly store = inject(ProductStore);
   private readonly refreshes = new Subject<void>();
   private readonly answer: Signal<Answer | null>;
 
-  /** What the grid shows: the latest answer, kept on screen while the next one is on its way. */
-  readonly products: Signal<Product[]> = computed(() => this.answer()?.products ?? []);
+  /**
+   * What the grid shows: the latest answer, kept on screen while the next one is on its way —
+   * each product read from the store, so a stock sold at another till shows here at once.
+   */
+  readonly products: Signal<Product[]> = computed(() => {
+    const known = this.store.entities();
+    return (this.answer()?.products ?? []).map((product) => known.get(product.id) ?? product);
+  });
 
   /** True while the grid shows best sellers rather than search results. */
   readonly idle = computed(() => isIdle(this.query()));
@@ -106,8 +114,10 @@ export class ProductFinder {
   }
 
   private fetch(query: ProductQuery): Observable<Product[]> {
-    return isIdle(query)
-      ? this.catalog.featuredProducts(this.limit)
-      : this.catalog.searchProducts(query.term, query.categoryId, this.limit);
+    return this.store.read(
+      isIdle(query)
+        ? this.catalog.featuredProducts(this.limit)
+        : this.catalog.searchProducts(query.term, query.categoryId, this.limit),
+    );
   }
 }

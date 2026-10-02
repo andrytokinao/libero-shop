@@ -2,7 +2,9 @@ import { Component, inject } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { DashboardApi } from '../../core/api/dashboard.api';
-import { CategoryStock, Product, StockDashboard } from '../../core/models';
+import { CategoryStock, StockDashboard } from '../../core/models';
+import { reloadOnStockChange } from '../../core/realtime/reload-on';
+import { ProductStore } from '../../core/store/product.store';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -86,9 +88,15 @@ export class GlobalStockComponent {
   private readonly categoryResource = apiResource<CategoryStock[]>([], () =>
     this.catalogApi.stockByCategory(),
   );
-  private readonly productResource = apiResource<Product[]>([], () => this.catalogApi.products());
+  private readonly productList = inject(ProductStore).list();
 
   protected readonly summary = this.summaryResource.value;
   protected readonly byCategory = this.categoryResource.value;
-  protected readonly products = this.productResource.value;
+  protected readonly products = this.productList.value;
+
+  constructor() {
+    // The totals are the server's: read again when a stock moves; the table follows the store.
+    reloadOnStockChange(this.summaryResource);
+    reloadOnStockChange(this.categoryResource);
+  }
 }

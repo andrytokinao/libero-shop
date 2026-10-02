@@ -7,8 +7,9 @@ import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
 import { StockApi } from '../../core/api/stock.api';
-import { Product, ProductCost, RoleApp, Supplier, SupplierPrice, Supply } from '../../core/models';
+import { ProductCost, RoleApp, Supplier, SupplierPrice, Supply } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { ProductStore } from '../../core/store/product.store';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -256,7 +257,8 @@ export class SupplyComponent {
   protected readonly typedCost = signal<number | null | undefined>(undefined);
   protected readonly busy = signal(false);
 
-  private readonly productResource = apiResource<Product[]>([], () => this.catalog.products());
+  // The store keeps each "stock N" current, whoever sells or receives meanwhile.
+  private readonly productResource = inject(ProductStore).list();
   private readonly supplierResource = apiResource<Supplier[]>([], () => this.catalog.suppliers());
   private readonly supplyResource = apiResource<Supply[]>([], () => this.stock.supplies());
   private readonly costResource = apiResource<ProductCost[]>([], () =>

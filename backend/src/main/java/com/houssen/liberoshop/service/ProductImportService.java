@@ -20,6 +20,7 @@ import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
 import com.houssen.liberoshop.web.dto.ProductImportRequest;
 import com.houssen.liberoshop.web.dto.ProductImportResultResponse;
 import com.houssen.liberoshop.web.dto.ProductRefResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,16 +75,19 @@ public class ProductImportService {
     private final StockMovementRepository movements;
     private final CategoryService categoryService;
     private final BusinessCalendar calendar;
+    private final ApplicationEventPublisher events;
 
     public ProductImportService(ProductRepository products, CategoryRepository categories,
                                 SupplierRepository suppliers, StockMovementRepository movements,
-                                CategoryService categoryService, BusinessCalendar calendar) {
+                                CategoryService categoryService, BusinessCalendar calendar,
+                                ApplicationEventPublisher events) {
         this.products = products;
         this.categories = categories;
         this.suppliers = suppliers;
         this.movements = movements;
         this.categoryService = categoryService;
         this.calendar = calendar;
+        this.events = events;
     }
 
     // --------------------------------------------------------------------- preview
@@ -183,6 +187,8 @@ public class ProductImportService {
         int skipped = 0;
         int unitsAdded = 0;
         int written = 0;
+        // Every product written, so the screens showing them get the new figures.
+        List<Long> touched = new ArrayList<>();
 
         for (ProductImportLineRequest line : request.lines()) {
             String name = line.name().trim();
@@ -207,6 +213,7 @@ public class ProductImportService {
                     product.setUnit(trimmedUnit(line.unit()));
                 }
                 merged++;
+                touched.add(product.getId());
                 unitsAdded += line.quantity();
                 written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
                 lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
@@ -252,6 +259,7 @@ public class ProductImportService {
             index.add(product);
 
             created++;
+            touched.add(product.getId());
             unitsAdded += line.quantity();
             written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
             lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
@@ -259,6 +267,9 @@ public class ProductImportService {
                     product.getId(), String.join(" ", notes)));
         }
 
+        if (!touched.isEmpty()) {
+            events.publishEvent(new StockChangedEvent(touched));
+        }
         return new ProductImportResultResponse(created, merged, skipped, unitsAdded, written,
                 supplier == null ? null : supplier.getName(),
                 rayons.created(), List.copyOf(lines));

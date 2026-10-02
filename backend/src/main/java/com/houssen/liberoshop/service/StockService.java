@@ -12,6 +12,7 @@ import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,13 +35,16 @@ public class StockService {
     private final ProductRepository products;
     private final SupplierRepository suppliers;
     private final BusinessCalendar calendar;
+    private final ApplicationEventPublisher events;
 
     public StockService(StockMovementRepository movements, ProductRepository products,
-                        SupplierRepository suppliers, BusinessCalendar calendar) {
+                        SupplierRepository suppliers, BusinessCalendar calendar,
+                        ApplicationEventPublisher events) {
         this.movements = movements;
         this.products = products;
         this.suppliers = suppliers;
         this.calendar = calendar;
+        this.events = events;
     }
 
     public List<SupplyResponse> findSupplies() {
@@ -83,6 +87,7 @@ public class StockService {
                 .unitCost(unitCost)
                 .build());
 
+        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return SupplyResponse.of(supply);
     }
 

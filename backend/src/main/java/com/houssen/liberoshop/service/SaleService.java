@@ -166,6 +166,7 @@ public class SaleService {
                 savedSale.getLines().stream().mapToInt(SaleLine::getQuantity).sum(),
                 seller.getId(),
                 seller.getFullName()));
+        events.publishEvent(new StockChangedEvent(wanted.keySet().stream().map(Product::getId).toList()));
 
         return InvoiceResponse.of(invoice);
     }

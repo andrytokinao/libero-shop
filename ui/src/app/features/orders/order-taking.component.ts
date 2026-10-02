@@ -6,6 +6,7 @@ import { InvoiceStore } from '../../core/store/invoice.store';
 import { CategoryNode, PaymentMethod, PaymentStatus, RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart } from '../../core/sale/cart';
+import { followStock } from '../../core/sale/follow-stock';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
@@ -238,6 +239,11 @@ export class OrderTakingComponent {
   protected readonly canSend = computed(
     () => !this.cart.isEmpty() && !this.cart.hasShortage() && !this.sending(),
   );
+
+  constructor() {
+    // Another phone or till selling the same article turns the line short here, before sending.
+    followStock(this.cart);
+  }
 
   /** @param paid the customer paid in cash on the spot */
   protected send(paid: boolean): void {

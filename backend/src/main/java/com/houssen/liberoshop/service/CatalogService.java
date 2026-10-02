@@ -10,10 +10,12 @@ import com.houssen.liberoshop.web.dto.CategoryStockResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import com.houssen.liberoshop.web.dto.SupplierResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -62,6 +64,17 @@ public class CatalogService {
                         && branch.contains(product.getCategory().getId())))
                 .filter(product -> !lowStockOnly || StockPolicy.isLowStock(product))
                 .filter(product -> needle.isEmpty() || matches(product, needle))
+                .map(ProductResponse::of)
+                .toList();
+    }
+
+    /**
+     * These products as the lists show them, read in a transaction of their own: for the listeners
+     * that run after a commit, once the transaction that moved their stock is over.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public List<ProductResponse> findAllById(Collection<Long> ids) {
+        return products.findAllWithCategoryByIdIn(ids).stream()
                 .map(ProductResponse::of)
                 .toList();
     }
