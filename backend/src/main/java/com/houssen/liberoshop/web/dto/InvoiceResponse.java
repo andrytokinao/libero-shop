@@ -15,6 +15,9 @@ import java.time.LocalDateTime;
  * @param cashTrail    where the money is while it is not in the till -- see {@link CashTrail};
  *                     null when it is in the till, when there is none, or when the response was
  *                     built without looking ({@link #of(Invoice)})
+ * @param handledBy    who is preparing the order (in progress) or served it (delivered); null
+ *                     while it waits in the queue
+ * @param handledSince when they took it on
  */
 public record InvoiceResponse(Long id,
                               String invoiceNumber,
@@ -26,7 +29,9 @@ public record InvoiceResponse(Long id,
                               int itemCount,
                               SaleResponse sale,
                               Cancellation cancellation,
-                              CashTrail cashTrail) {
+                              CashTrail cashTrail,
+                              UserResponse handledBy,
+                              LocalDateTime handledSince) {
 
     /** Without the cash trail: for the responses that only confirm what was just done. */
     public static InvoiceResponse of(Invoice invoice) {
@@ -45,7 +50,9 @@ public record InvoiceResponse(Long id,
                 invoice.getSale().getLines().stream().mapToInt(line -> line.getQuantity()).sum(),
                 SaleResponse.of(invoice.getSale()),
                 Cancellation.of(invoice),
-                cashTrail);
+                cashTrail,
+                UserResponse.of(invoice.getHandledBy()),
+                invoice.getHandledSince());
     }
 
     /**

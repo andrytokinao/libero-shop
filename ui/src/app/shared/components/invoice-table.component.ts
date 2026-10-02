@@ -4,6 +4,7 @@ import { Invoice } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { InvoiceDetailFlowComponent } from './invoice-detail-flow.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
+import { HandlerChipComponent } from './handler-chip.component';
 import { UserAvatarComponent } from './user-avatar.component';
 
 /**
@@ -24,6 +25,7 @@ import { UserAvatarComponent } from './user-avatar.component';
     DeliveryStatusBadgeComponent,
     InvoiceDetailFlowComponent,
     UserAvatarComponent,
+    HandlerChipComponent,
   ],
   template: `
     @if (invoices.length) {
@@ -64,7 +66,10 @@ import { UserAvatarComponent } from './user-avatar.component';
               <td class="num">{{ invoice.itemCount }}</td>
               <td class="num">{{ invoice.sale.totalAmount | ariary }}</td>
               <td><app-payment-status-badge [status]="invoice.paymentStatus" /></td>
-              <td><app-delivery-status-badge [status]="invoice.deliveryStatus" /></td>
+              <td>
+                <app-delivery-status-badge [status]="invoice.deliveryStatus" />
+                <app-handler-chip [invoice]="invoice" />
+              </td>
               @if (showDetail) {
                 <td class="col-detail">
                   <button
@@ -118,6 +123,7 @@ import { UserAvatarComponent } from './user-avatar.component';
             <div class="badges">
               <app-payment-status-badge [status]="invoice.paymentStatus" />
               <app-delivery-status-badge [status]="invoice.deliveryStatus" />
+              <app-handler-chip [invoice]="invoice" />
               <span class="muted">{{ invoice.itemCount }} article(s)</span>
             </div>
             <div class="foot">

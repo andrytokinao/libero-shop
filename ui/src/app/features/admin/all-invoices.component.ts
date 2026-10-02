@@ -12,6 +12,7 @@ type InvoiceFilter =
   | 'COLLECTED'
   | 'REMITTED'
   | 'PENDING_DELIVERY'
+  | 'IN_PROGRESS'
   | 'DELIVERED'
   | 'CANCELLED';
 
@@ -21,6 +22,13 @@ const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
   COLLECTED: PaymentStatus.COLLECTED,
   REMITTED: PaymentStatus.REMITTED,
   CANCELLED: PaymentStatus.CANCELLED,
+};
+
+/** The filters that are a delivery status, and which one. */
+const DELIVERY_FILTERS: Partial<Record<InvoiceFilter, DeliveryStatus>> = {
+  PENDING_DELIVERY: DeliveryStatus.PENDING,
+  IN_PROGRESS: DeliveryStatus.IN_PROGRESS,
+  DELIVERED: DeliveryStatus.DELIVERED,
 };
 
 @Component({
@@ -64,6 +72,7 @@ const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
             <option value="COLLECTED">Encaissées, argent pas encore remis à la caisse</option>
             <option value="REMITTED">Versées, à confirmer par la caisse</option>
             <option value="PENDING_DELIVERY">En attente de remise</option>
+            <option value="IN_PROGRESS">En cours de service</option>
             <option value="DELIVERED">Remises</option>
             <option value="CANCELLED">Annulées</option>
           </select>
@@ -89,12 +98,7 @@ export class AllInvoicesComponent {
   protected readonly resource = this.invoiceStore.list(() => ({
     search: this.search(),
     paymentStatus: PAYMENT_FILTERS[this.filter()],
-    deliveryStatus:
-      this.filter() === 'PENDING_DELIVERY'
-        ? DeliveryStatus.PENDING
-        : this.filter() === 'DELIVERED'
-          ? DeliveryStatus.DELIVERED
-          : undefined,
+    deliveryStatus: DELIVERY_FILTERS[this.filter()],
   }));
   protected readonly invoices = this.resource.value;
 

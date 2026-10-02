@@ -55,6 +55,16 @@ export class InvoiceApi {
   }
 
   /** @param collect false: served, the customer pays at the till */
+  /** "Je m'en occupe": the order becomes the caller's to prepare. */
+  take(invoiceId: number): Observable<Invoice> {
+    return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/take`, {});
+  }
+
+  /** Back to the queue — by whoever took it, or by the depot's manager. */
+  release(invoiceId: number): Observable<Invoice> {
+    return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/release`, {});
+  }
+
   deliver(invoiceId: number, collect = true): Observable<DeliveryResult> {
     return this.http.post<DeliveryResult>(`${API_BASE_URL}/invoices/${invoiceId}/deliver`, {}, {
       params: { collect },

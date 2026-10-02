@@ -9,7 +9,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
-import { asksHowToPay, deliveryActionLabel } from '../../core/orders/delivery.util';
+import { asksHowToPay, deliveryActionLabel, deliveryRowAction } from '../../core/orders/delivery.util';
 import { HandOverDialogComponent } from '../../shared/components/hand-over-dialog.component';
 
 const EMPTY: DepotDashboard = {
@@ -61,7 +61,7 @@ const EMPTY: DepotDashboard = {
         [showDate]="true"
         [busy]="busy()"
         [actionLabel]="actionLabel()"
-        (action)="handOver($event)"
+        (action)="act($event)"
         emptyMessage="Aucune commande en attente."
       />
     </div>
@@ -82,7 +82,9 @@ export class DepotDashboardComponent {
   private readonly toasts = inject(ToastService);
 
   protected readonly auth = inject(AuthService);
-  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.words().handOverAction));
+  protected readonly actionLabel = computed(() =>
+    deliveryActionLabel(this.auth.words().handOverAction, this.auth.currentUser()?.id ?? null),
+  );
   protected readonly busy = signal(false);
   /** The unpaid order whose "pays now or at the till?" question is open. */
   protected readonly askingFor = signal<Invoice | null>(null);
@@ -92,6 +94,26 @@ export class DepotDashboardComponent {
 
   constructor() {
     reloadOnOrderChange(this.resource);
+  }
+
+  /** The row's button: take the order on, or serve one already yours. */
+  protected act(invoice: Invoice): void {
+    if (deliveryRowAction(invoice, this.auth.currentUser()?.id ?? null) !== 'take') {
+      this.handOver(invoice);
+      return;
+    }
+    this.busy.set(true);
+    this.invoices.take(invoice.id).subscribe({
+      next: (taken) => {
+        this.busy.set(false);
+        this.resource.reload();
+        this.toasts.show(`Commande ${taken.invoiceNumber} : vous vous en occupez.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.resource.reload();
+      },
+    });
   }
 
   protected handOver(invoice: Invoice): void {

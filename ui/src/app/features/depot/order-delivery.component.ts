@@ -7,7 +7,10 @@ import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { CashInHandComponent } from './cash-in-hand.component';
-import { asksHowToPay, deliveryActionLabel } from '../../core/orders/delivery.util';
+import { asksHowToPay, deliveryActionLabel, deliveryRowAction } from '../../core/orders/delivery.util';
+
+/** The tabs of the queue: one delivery status, or every order. */
+type DeliveryView = DeliveryStatus.PENDING | DeliveryStatus.IN_PROGRESS | 'ALL';
 import { HandOverDialogComponent } from '../../shared/components/hand-over-dialog.component';
 import { FilterTab, FilterTabsComponent } from '../../shared/components/filter-tabs.component';
 
@@ -34,7 +37,7 @@ import { FilterTab, FilterTabsComponent } from '../../shared/components/filter-t
       <app-filter-tabs
         label="Commandes"
         [tabs]="tabs()"
-        [value]="onlyPending()"
+        [value]="view()"
         (valueChange)="onFilter($event)"
       />
       <div class="form-row">
@@ -54,7 +57,7 @@ import { FilterTab, FilterTabsComponent } from '../../shared/components/filter-t
         [showDate]="true"
         [busy]="busy()"
         [actionLabel]="actionLabel()"
-        (action)="handOver($event)"
+        (action)="act($event)"
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
     </div>
@@ -83,10 +86,13 @@ export class OrderDeliveryComponent {
   private readonly toasts = inject(ToastService);
 
   protected readonly search = signal('');
-  protected readonly onlyPending = signal(true);
+  /** Which orders the list shows: waiting, being prepared, or all of them. */
+  protected readonly view = signal<DeliveryView>(DeliveryStatus.PENDING);
   protected readonly busy = signal(false);
   protected readonly auth = inject(AuthService);
-  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.words().handOverAction));
+  protected readonly actionLabel = computed(() =>
+    deliveryActionLabel(this.auth.words().handOverAction, this.auth.currentUser()?.id ?? null),
+  );
   protected readonly RoleApp = RoleApp;
   /** The unpaid order whose "pays now or at the till?" question is open. */
   protected readonly askingFor = signal<Invoice | null>(null);
@@ -96,26 +102,34 @@ export class OrderDeliveryComponent {
 
   // Kept current by the store: a sale made at the counter appears in the queue, and an order
   // handed over by another storekeeper leaves it, without anyone pressing F5.
-  private readonly resource = this.invoiceStore.list(() => ({
-    search: this.search(),
-    deliveryStatus: this.onlyPending() ? DeliveryStatus.PENDING : undefined,
-  }));
+  private readonly resource = this.invoiceStore.list(() => {
+    const view = this.view();
+    return { search: this.search(), deliveryStatus: view === 'ALL' ? undefined : view };
+  });
   protected readonly invoices = this.resource.value;
 
   /**
-   * Every order waiting, whatever is searched or shown — what the count on the tab says. Kept
-   * current by the store like the list, so it moves as orders come in and go out.
+   * The orders waiting, and those being prepared, whatever is searched or shown — what the
+   * counts on the tabs say. Kept current by the store like the list, so they move as orders come
+   * in, are taken on and go out.
    */
   private readonly waiting = this.invoiceStore.list(() => ({ deliveryStatus: DeliveryStatus.PENDING }));
+  private readonly inProgress = this.invoiceStore.list(() => ({ deliveryStatus: DeliveryStatus.IN_PROGRESS }));
 
-  protected readonly tabs = computed<FilterTab<boolean>[]>(() => [
+  protected readonly tabs = computed<FilterTab<DeliveryView>[]>(() => [
     {
-      value: true,
+      value: DeliveryStatus.PENDING,
       label: this.auth.words().pendingHandOver,
       icon: 'hourglass',
       count: this.waiting.value().length,
     },
-    { value: false, label: 'Tous', icon: 'list' },
+    {
+      value: DeliveryStatus.IN_PROGRESS,
+      label: 'En cours',
+      icon: 'handOver',
+      count: this.inProgress.value().length,
+    },
+    { value: 'ALL', label: 'Tous', icon: 'list' },
   ]);
 
   protected onSearch(value: string): void {
@@ -123,9 +137,33 @@ export class OrderDeliveryComponent {
     this.resource.reload();
   }
 
-  protected onFilter(onlyPending: boolean): void {
-    this.onlyPending.set(onlyPending);
+  protected onFilter(view: DeliveryView): void {
+    this.view.set(view);
     this.resource.reload();
+  }
+
+  /** The row's button: take the order on, or serve one already yours. */
+  protected act(invoice: Invoice): void {
+    if (deliveryRowAction(invoice, this.auth.currentUser()?.id ?? null) === 'take') {
+      this.take(invoice);
+    } else {
+      this.handOver(invoice);
+    }
+  }
+
+  /** "Je m'en occupe". Refused when someone was quicker: the row then shows who. */
+  private take(invoice: Invoice): void {
+    this.busy.set(true);
+    this.invoiceStore.take(invoice.id).subscribe({
+      next: (taken) => {
+        this.busy.set(false);
+        this.toasts.show(`Commande ${taken.invoiceNumber} : vous vous en occupez.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.invoiceStore.refresh([invoice.id]);
+      },
+    });
   }
 
   protected handOver(invoice: Invoice): void {

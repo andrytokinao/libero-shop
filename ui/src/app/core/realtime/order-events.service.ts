@@ -50,6 +50,8 @@ export class OrderEvents {
     [OrderChangeKind.PAID]: (change) => this.putOrders(change),
     [OrderChangeKind.CANCELLED]: (change) => this.putOrders(change),
     [OrderChangeKind.PRINTED]: (change) => this.putOrders(change),
+    // Someone took an order on, or gave it back: every queue shows who is on it.
+    [OrderChangeKind.HANDLING]: (change) => this.putOrders(change),
     // The cash moved: the slip and the orders it carries, both.
     [OrderChangeKind.CASH_REMITTED]: (change) => this.putCash(change),
     [OrderChangeKind.CASH_CONFIRMED]: (change) => this.putCash(change),

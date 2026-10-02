@@ -13,6 +13,8 @@ export enum OrderChangeKind {
   CANCELLED = 'CANCELLED',
   /** Sent to the printer. */
   PRINTED = 'PRINTED',
+  /** Taken on by someone, or given back to the queue. */
+  HANDLING = 'HANDLING',
   /** Its cash brought to the desk, not confirmed yet. */
   CASH_REMITTED = 'CASH_REMITTED',
   /** Its cash confirmed in the till: the order is paid. */

@@ -49,6 +49,14 @@ export class InvoiceStore extends EntityStore<Invoice> {
     return this.api.createSale(request).pipe(this.thenRefresh((invoice) => invoice.id));
   }
 
+  take(invoiceId: number): Observable<Invoice> {
+    return this.api.take(invoiceId).pipe(this.thenRefresh(() => invoiceId));
+  }
+
+  release(invoiceId: number): Observable<Invoice> {
+    return this.api.release(invoiceId).pipe(this.thenRefresh(() => invoiceId));
+  }
+
   deliver(invoiceId: number, collect = true): Observable<DeliveryResult> {
     return this.api.deliver(invoiceId, collect).pipe(this.thenRefresh(() => invoiceId));
   }

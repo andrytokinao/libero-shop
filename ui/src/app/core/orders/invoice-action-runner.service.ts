@@ -32,6 +32,18 @@ export class InvoiceActionRunner {
       );
   }
 
+  take(invoice: Invoice): Observable<string> {
+    return this.invoices
+      .take(invoice.id)
+      .pipe(map((taken) => `Commande ${taken.invoiceNumber} : vous vous en occupez — les autres la voient prise.`));
+  }
+
+  release(invoice: Invoice): Observable<string> {
+    return this.invoices
+      .release(invoice.id)
+      .pipe(map((released) => `Commande ${released.invoiceNumber} remise dans la file.`));
+  }
+
   /** @param collect the customer pays now, in cash, to whoever hands the order over */
   handOver(invoice: Invoice, collect: boolean): Observable<string> {
     return this.invoices

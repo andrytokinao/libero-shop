@@ -60,7 +60,7 @@ class InvoiceLifecycleTest {
     @DisplayName("each delivery transition moves from its own status, and is refused from any other")
     void deliveryTable(DeliveryTransition transition, DeliveryStatus current) {
         Invoice invoice = order(PaymentStatus.UNPAID, current);
-        if (current == transition.from()) {
+        if (transition.appliesTo(current)) {
             invoice.apply(transition);
             assertEquals(transition.to(), invoice.getDeliveryStatus());
         } else {

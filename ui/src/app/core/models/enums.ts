@@ -29,6 +29,8 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 
 export enum DeliveryStatus {
   PENDING = 'PENDING',
+  /** Someone took it on ("je m'en occupe") and is preparing it — see Invoice.handledBy. */
+  IN_PROGRESS = 'IN_PROGRESS',
   DELIVERED = 'DELIVERED',
   /** Cancelled before hand-over: the goods went back on the shelf. */
   CANCELLED = 'CANCELLED',

@@ -6,8 +6,12 @@ export enum InvoiceActionKind {
   PAY = 'PAY',
   /** An order taker takes the customer's cash, to bring to the till later. */
   COLLECT = 'COLLECT',
+  /** "Je m'en occupe": the depot takes the order on, so nobody else starts it. */
+  TAKE_OVER = 'TAKE_OVER',
   /** The depot (kitchen, bar) hands the order over. */
   HAND_OVER = 'HAND_OVER',
+  /** A taken order goes back to the queue. */
+  RELEASE = 'RELEASE',
   /** Whoever holds the order's cash brings it to the till. */
   REMIT_CASH = 'REMIT_CASH',
   /** The till confirms having counted the cash brought to it. */
@@ -56,6 +60,12 @@ interface InvoiceActionRule {
 const has = (ctx: InvoiceActionContext, ...roles: RoleApp[]) =>
   roles.some((role) => ctx.roles.includes(role));
 
+/** Taken on, and by this person. */
+export const isHandledBy = (invoice: Invoice, userId: number | null) =>
+  invoice.deliveryStatus === DeliveryStatus.IN_PROGRESS &&
+  userId !== null &&
+  invoice.handledBy?.id === userId;
+
 const RULES: readonly InvoiceActionRule[] = [
   {
     kind: InvoiceActionKind.PAY,
@@ -74,10 +84,32 @@ const RULES: readonly InvoiceActionRule[] = [
     describe: () => ({ label: 'Encaisser (espèces)', tone: 'primary' }),
   },
   {
-    kind: InvoiceActionKind.HAND_OVER,
+    kind: InvoiceActionKind.TAKE_OVER,
     appliesTo: (invoice, ctx) =>
       has(ctx, RoleApp.DEPOT_AGENT) && invoice.deliveryStatus === DeliveryStatus.PENDING,
-    describe: (_, ctx) => ({ label: ctx.handOverLabel, tone: 'primary' }),
+    describe: () => ({ label: "Je m'en occupe", tone: 'primary' }),
+  },
+  {
+    kind: InvoiceActionKind.HAND_OVER,
+    // From the queue, or once taken on — by the one who took it, and nobody else.
+    appliesTo: (invoice, ctx) =>
+      has(ctx, RoleApp.DEPOT_AGENT) &&
+      (invoice.deliveryStatus === DeliveryStatus.PENDING || isHandledBy(invoice, ctx.userId)),
+    describe: (invoice, ctx) => ({
+      label: ctx.handOverLabel,
+      tone: invoice.deliveryStatus === DeliveryStatus.IN_PROGRESS ? 'primary' : 'ghost',
+    }),
+  },
+  {
+    kind: InvoiceActionKind.RELEASE,
+    // Its taker gives it back; so does whoever runs the depot or the shop, for one left behind.
+    appliesTo: (invoice, ctx) =>
+      invoice.deliveryStatus === DeliveryStatus.IN_PROGRESS &&
+      (isHandledBy(invoice, ctx.userId) || has(ctx, RoleApp.DEPOT_MANAGER, RoleApp.SUPER_ADMIN)),
+    describe: (invoice, ctx) => ({
+      label: isHandledBy(invoice, ctx.userId) ? 'Libérer' : `Libérer (${invoice.handledBy?.fullName ?? 'pris'})`,
+      tone: 'ghost',
+    }),
   },
   {
     kind: InvoiceActionKind.REMIT_CASH,

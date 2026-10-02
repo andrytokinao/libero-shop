@@ -77,6 +77,20 @@ public class Invoice {
     @Column(length = 255)
     private String cancelComment;
 
+    /**
+     * Who is preparing the order ({@code IN_PROGRESS}), and once handed over, who served it.
+     * Null while it waits in the queue. Moved only by {@link #takeOver}, {@link #release} and
+     * {@link #handOver}.
+     */
+    @Setter(AccessLevel.NONE)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "handled_by")
+    private UserApp handledBy;
+
+    /** When {@link #handledBy} took it on. */
+    @Setter(AccessLevel.NONE)
+    private LocalDateTime handledSince;
+
     /** Refuses, without changing anything, a transition the order's money cannot take now. */
     public void check(PaymentTransition transition) {
         if (!transition.appliesTo(paymentStatus)) {
@@ -105,6 +119,50 @@ public class Invoice {
 
     public boolean isHandedOver() {
         return deliveryStatus == DeliveryStatus.DELIVERED;
+    }
+
+    /**
+     * "Je m'en occupe": the order is {@code agent}'s from now on. Refused when someone already has
+     * it -- the point is that two people never prepare the same order.
+     */
+    public void takeOver(UserApp agent, LocalDateTime at) {
+        apply(DeliveryTransition.TAKE_OVER);
+        handledBy = agent;
+        handledSince = at;
+    }
+
+    /** Back in the queue, for anyone to take. Who may do it is the service's to decide. */
+    public void release() {
+        apply(DeliveryTransition.RELEASE);
+        handledBy = null;
+        handledSince = null;
+    }
+
+    /**
+     * Hands the goods over. An order taken on is handed over by the one who took it, and nobody
+     * else; one handed over straight from the queue records who did it.
+     */
+    public void handOver(UserApp agent, LocalDateTime at) {
+        checkHandOverBy(agent);
+        apply(DeliveryTransition.HAND_OVER);
+        if (handledBy == null) {
+            handledBy = agent;
+            handledSince = at;
+        }
+    }
+
+    /** Refuses, without changing anything, a hand-over by someone other than whoever took it on. */
+    public void checkHandOverBy(UserApp agent) {
+        check(DeliveryTransition.HAND_OVER);
+        if (isHandledByOtherThan(agent)) {
+            throw StatusTransitionException.handledByOther(invoiceNumber, handledBy.getFullName());
+        }
+    }
+
+    /** Taken on, and by someone else than {@code user}. */
+    public boolean isHandledByOtherThan(UserApp user) {
+        return deliveryStatus == DeliveryStatus.IN_PROGRESS && handledBy != null
+                && !handledBy.getId().equals(user.getId());
     }
 
     /**

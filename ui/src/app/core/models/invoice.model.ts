@@ -1,5 +1,6 @@
 import { CancelReason, DeliveryStatus, PaymentStatus } from './enums';
 import { Sale } from './sale.model';
+import { UserApp } from './user-app.model';
 
 /**
  * Mirrors com.houssen.liberoshop.entity.Invoice (table invoice), as served by
@@ -27,6 +28,10 @@ export interface Invoice {
    * confirm an action — the lists and the detail always carry it.
    */
   cashTrail?: CashTrail | null;
+  /** Who is preparing the order (IN_PROGRESS), or who served it (DELIVERED); null in the queue. */
+  handledBy?: UserApp | null;
+  /** When they took it on. LocalDateTime serialized as ISO-8601. */
+  handledSince?: string | null;
 }
 
 /** Mirrors InvoiceResponse.CashTrail. */

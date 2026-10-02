@@ -34,6 +34,8 @@ export class PaymentStatusBadgeComponent {
   template: `
     @if (status === DeliveryStatus.DELIVERED) {
       <span class="badge grey">Remis</span>
+    } @else if (status === DeliveryStatus.IN_PROGRESS) {
+      <span class="badge amber">En cours</span>
     } @else if (status === DeliveryStatus.CANCELLED) {
       <span class="badge grey">Remis en stock</span>
     } @else {

@@ -144,6 +144,10 @@ export class InvoiceDetailFlowComponent {
         return this.run(this.runner.confirmRemittance(invoice));
       case InvoiceActionKind.PRINT:
         return this.run(this.runner.print(invoice));
+      case InvoiceActionKind.TAKE_OVER:
+        return this.run(this.runner.take(invoice));
+      case InvoiceActionKind.RELEASE:
+        return this.run(this.runner.release(invoice));
     }
   }
 

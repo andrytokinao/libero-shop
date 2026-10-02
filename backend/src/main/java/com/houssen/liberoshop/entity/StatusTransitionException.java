@@ -39,8 +39,14 @@ public class StatusTransitionException extends RuntimeException {
             case DELIVERED -> new StatusTransitionException("ALREADY_DELIVERED", order + " a deja ete remise"
                     + (refused == DeliveryTransition.CANCEL ? " : elle ne peut plus etre annulee." : "."));
             case CANCELLED -> new StatusTransitionException("CANCELLED", order + " a ete annulee : rien a remettre.");
-            // Every delivery transition starts from PENDING today; kept for one that would not.
-            case PENDING -> new StatusTransitionException("INVALID_TRANSITION", order + " : operation impossible.");
+            case IN_PROGRESS -> new StatusTransitionException("ALREADY_HANDLED", order + " est deja prise en charge.");
+            case PENDING -> new StatusTransitionException("NOT_HANDLED", order + " n'est prise en charge par personne.");
         };
+    }
+
+    /** Someone else is preparing the order: the step is theirs to take. */
+    static StatusTransitionException handledByOther(String orderNumber, String handlerName) {
+        return new StatusTransitionException("HANDLED_BY_OTHER",
+                "La commande " + orderNumber + " est en cours de service par " + handlerName + ".");
     }
 }

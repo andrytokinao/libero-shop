@@ -68,8 +68,8 @@ describe('availableActions', () => {
     const ctx = { ...as(JOSEPH, [RoleApp.DEPOT_AGENT]), handOverLabel: 'Servir' };
     const actions = availableActions(order(PaymentStatus.UNPAID), ctx);
 
-    expect(actions.map((a) => a.kind)).toEqual([InvoiceActionKind.HAND_OVER]);
-    expect(actions[0].label).toBe('Servir');
+    expect(actions.map((a) => a.kind)).toEqual([InvoiceActionKind.TAKE_OVER, InvoiceActionKind.HAND_OVER]);
+    expect(actions[1].label).toBe('Servir');
     expect(kinds(order(PaymentStatus.UNPAID, DeliveryStatus.DELIVERED), ctx)).toEqual([]);
   });
 
@@ -119,6 +119,20 @@ describe('availableActions', () => {
 
     expect(kinds(order(PaymentStatus.PAID, DeliveryStatus.DELIVERED), everyone)).toEqual([]);
     expect(kinds(order(PaymentStatus.CANCELLED, DeliveryStatus.CANCELLED), everyone)).toEqual([]);
+  });
+
+  it('keeps an order taken on to its taker: serve or give back for them, release for the manager', () => {
+    const taken = { ...order(PaymentStatus.PAID), deliveryStatus: DeliveryStatus.IN_PROGRESS,
+      handledBy: { id: JOSEPH, fullName: 'Joseph', username: 'joseph', roles: [RoleApp.DEPOT_AGENT], enabled: true } } as Invoice;
+
+    expect(kinds(taken, as(JOSEPH, [RoleApp.DEPOT_AGENT]))).toEqual([
+      InvoiceActionKind.HAND_OVER,
+      InvoiceActionKind.RELEASE,
+    ]);
+    expect(kinds(taken, as(7, [RoleApp.DEPOT_AGENT]))).toEqual([]);
+    const manager = availableActions(taken, as(8, [RoleApp.DEPOT_MANAGER]));
+    expect(manager.map((a) => a.kind)).toEqual([InvoiceActionKind.RELEASE]);
+    expect(manager[0].label).toBe('Libérer (Joseph)');
   });
 
   it('lets the till print any order that stands, and says when it is a reprint', () => {

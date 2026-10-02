@@ -141,8 +141,8 @@ public class InvoiceService {
     @Transactional
     public DeliveryResult deliver(Long invoiceId, UserApp agent, boolean collect) {
         Invoice invoice = load(invoiceId);
-        // Refused before any payment is written for it.
-        invoice.check(DeliveryTransition.HAND_OVER);
+        // Refused before any payment is written for it -- delivered already, or someone else's.
+        invoice.checkHandOverBy(agent);
 
         BigDecimal collected = BigDecimal.ZERO;
         // When the depot takes no money, an unpaid order leaves unpaid: the bill is settled at the till.
@@ -151,7 +151,7 @@ public class InvoiceService {
             collected = collectInHand(invoice, agent);
         }
 
-        invoice.apply(DeliveryTransition.HAND_OVER);
+        invoice.handOver(agent, calendar.now());
         // Heard after the commit: the other depot screens drop the order from their queue, and
         // the seller's screens show it handed over.
         events.publishEvent(new OrderDeliveredEvent(invoice.getId(), invoice.getInvoiceNumber(),
@@ -298,8 +298,38 @@ public class InvoiceService {
         return InvoiceResponse.of(invoice);
     }
 
+    /** "Je m'en occupe": the order is {@code agent}'s to prepare, and nobody else's. */
+    @RequiresActiveLicense
+    @Transactional
+    public InvoiceResponse takeOver(Long invoiceId, UserApp agent) {
+        Invoice invoice = load(invoiceId);
+        invoice.takeOver(agent, calendar.now());
+        events.publishEvent(new OrderHandlingChangedEvent(invoice.getId(), invoice.getInvoiceNumber()));
+        return withCashTrail(List.of(invoice)).getFirst();
+    }
+
+    /**
+     * Gives a taken order back to the queue. The one who took it may; so may whoever runs the
+     * depot or the shop -- a storekeeper who went home must not leave an order stuck in their name.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public InvoiceResponse release(Long invoiceId, UserApp actor) {
+        Invoice invoice = load(invoiceId);
+        boolean supervisor = actor.hasRole(RoleApp.DEPOT_MANAGER) || actor.hasRole(RoleApp.SUPER_ADMIN);
+        if (invoice.isHandledByOtherThan(actor) && !supervisor) {
+            throw new BusinessRuleException("HANDLED_BY_OTHER", "La commande " + invoice.getInvoiceNumber()
+                    + " est en cours de service par " + invoice.getHandledBy().getFullName()
+                    + " : lui seul, ou le responsable, peut la liberer.");
+        }
+        invoice.release();
+        events.publishEvent(new OrderHandlingChangedEvent(invoice.getId(), invoice.getInvoiceNumber()));
+        return withCashTrail(List.of(invoice)).getFirst();
+    }
+
+    /** Orders still to hand over: waiting in the queue, or being prepared. */
     public long countPendingDeliveries() {
-        return invoices.countByDeliveryStatus(DeliveryStatus.PENDING);
+        return invoices.countByDeliveryStatusIn(List.of(DeliveryStatus.PENDING, DeliveryStatus.IN_PROGRESS));
     }
 
     public long countDelivered() {

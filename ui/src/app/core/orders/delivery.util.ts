@@ -1,15 +1,38 @@
 import { DeliveryStatus, Invoice, PaymentStatus } from '../models';
+import { isHandledBy } from './invoice-actions';
 
 /**
- * The hand-over button of a row, in the shop's own word (the vocabulary's `handOverAction`:
- * "Remettre au client", "Servir"). An unpaid order, where the shop takes money on hand-over, then
- * asks how the customer pays (HandOverDialogComponent); otherwise the order is simply handed over.
- *
- * <p>Returning null hides the action for an order already delivered or cancelled — the API
- * refuses a second hand-over with a 409, this only spares the user the attempt.
+ * The one button a row of the depot's queue carries: take the order on while it waits, serve it
+ * once it is yours. An order someone else has taken shows no button — its handler chip says who
+ * has it — and the API would refuse it anyway, this only spares the attempt.
  */
-export function deliveryActionLabel(label: string): (invoice: Invoice) => string | null {
-  return (invoice) => (invoice.deliveryStatus === DeliveryStatus.PENDING ? label : null);
+export type DeliveryRowAction = 'take' | 'handOver';
+
+export function deliveryRowAction(invoice: Invoice, userId: number | null): DeliveryRowAction | null {
+  if (invoice.deliveryStatus === DeliveryStatus.PENDING) {
+    return 'take';
+  }
+  return isHandledBy(invoice, userId) ? 'handOver' : null;
+}
+
+/**
+ * The row button's label, in the shop's own words (the vocabulary's `handOverAction`: "Remettre
+ * au client", "Servir").
+ */
+export function deliveryActionLabel(
+  handOverLabel: string,
+  userId: number | null,
+): (invoice: Invoice) => string | null {
+  return (invoice) => {
+    switch (deliveryRowAction(invoice, userId)) {
+      case 'take':
+        return "Je m'en occupe";
+      case 'handOver':
+        return handOverLabel;
+      default:
+        return null;
+    }
+  };
 }
 
 /** True when handing this order over first asks whether the customer pays now or at the till. */

@@ -57,6 +57,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     long countByDeliveryStatus(DeliveryStatus deliveryStatus);
 
+    long countByDeliveryStatusIn(java.util.Collection<DeliveryStatus> deliveryStatuses);
+
     long countByPaymentStatus(PaymentStatus paymentStatus);
 
     @Query("select coalesce(sum(i.sale.totalAmount), 0) from Invoice i where i.paymentStatus = :status")

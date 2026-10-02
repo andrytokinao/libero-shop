@@ -4,6 +4,7 @@ import { CANCEL_REASON_LABELS, CashTrail, Invoice, UserRef } from '../../core/mo
 import { InvoiceAction } from '../../core/orders/invoice-actions';
 import { InvoiceLinesComponent } from './invoice-lines.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
+import { HandlerChipComponent } from './handler-chip.component';
 import { UserAvatarComponent } from './user-avatar.component';
 
 /**
@@ -26,6 +27,7 @@ import { UserAvatarComponent } from './user-avatar.component';
     PaymentStatusBadgeComponent,
     DeliveryStatusBadgeComponent,
     UserAvatarComponent,
+    HandlerChipComponent,
   ],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
@@ -44,6 +46,7 @@ import { UserAvatarComponent } from './user-avatar.component';
             <div class="badges">
               <app-payment-status-badge [status]="invoice.paymentStatus" />
               <app-delivery-status-badge [status]="invoice.deliveryStatus" />
+              <app-handler-chip [invoice]="invoice" />
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>

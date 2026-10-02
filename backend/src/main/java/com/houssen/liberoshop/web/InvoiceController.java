@@ -64,6 +64,20 @@ public class InvoiceController {
         return new DeliveryResponse(result.invoice(), result.collected(), messageOf(result));
     }
 
+    /** "Je m'en occupe": the order is the caller's to prepare; the other storekeepers leave it. */
+    @PostMapping("/{id}/take")
+    @PreAuthorize("hasRole('DEPOT_AGENT')")
+    public InvoiceResponse take(@PathVariable Long id) {
+        return invoiceService.takeOver(id, currentUser.require());
+    }
+
+    /** Back to the queue: by whoever took it, or by whoever runs the depot or the shop. */
+    @PostMapping("/{id}/release")
+    @PreAuthorize("hasAnyRole('DEPOT_AGENT', 'DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public InvoiceResponse release(@PathVariable Long id) {
+        return invoiceService.release(id, currentUser.require());
+    }
+
     /** An order taker takes the cash of an unpaid order, to bring to the till later. */
     @PostMapping("/{id}/collect")
     @PreAuthorize("hasRole('ORDER_TAKER')")

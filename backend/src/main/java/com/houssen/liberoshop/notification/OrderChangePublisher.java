@@ -4,6 +4,7 @@ import com.houssen.liberoshop.service.InvoiceService;
 import com.houssen.liberoshop.service.OrderCancelledEvent;
 import com.houssen.liberoshop.service.OrderDeliveredEvent;
 import com.houssen.liberoshop.service.OrderPaidEvent;
+import com.houssen.liberoshop.service.OrderHandlingChangedEvent;
 import com.houssen.liberoshop.service.OrderPrintedEvent;
 import com.houssen.liberoshop.service.RemittanceRecordedEvent;
 import com.houssen.liberoshop.service.RemittanceService;
@@ -77,6 +78,11 @@ public class OrderChangePublisher {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onHandlingChanged(OrderHandlingChangedEvent handling) {
+        publish(Change.HANDLING, List.of(handling.invoiceNumber()), List.of(handling.invoiceId()), null);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderPrinted(OrderPrintedEvent printed) {
         publish(Change.PRINTED, List.of(printed.invoiceNumber()), List.of(printed.invoiceId()), null);
     }
@@ -127,5 +133,7 @@ public class OrderChangePublisher {
         public static final String CANCELLED = "CANCELLED";
         /** Sent to the printer. */
         public static final String PRINTED = "PRINTED";
+        /** Taken on by someone ("je m'en occupe"), or given back to the queue. */
+        public static final String HANDLING = "HANDLING";
     }
 }
