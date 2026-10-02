@@ -1,9 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
-import { CANCEL_REASON_LABELS, Invoice } from '../../core/models';
+import { CANCEL_REASON_LABELS, CashTrail, Invoice, UserRef } from '../../core/models';
 import { InvoiceAction } from '../../core/orders/invoice-actions';
 import { InvoiceLinesComponent } from './invoice-lines.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
+import { UserAvatarComponent } from './user-avatar.component';
 
 /**
  * The articles sold on one invoice, in a dialog.
@@ -24,6 +25,7 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
     InvoiceLinesComponent,
     PaymentStatusBadgeComponent,
     DeliveryStatusBadgeComponent,
+    UserAvatarComponent,
   ],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
@@ -35,7 +37,8 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
             <div class="sub muted">
               {{ invoice.clientName }} — {{ invoice.invoiceDate | date: 'dd/MM/y HH:mm' }}
               @if (showSeller) {
-                — vendu par {{ invoice.sale.seller.fullName }}
+                — vendu par
+                <app-user-avatar [user]="invoice.sale.seller" size="xs" [showName]="true" />
               }
             </div>
             <div class="badges">
@@ -62,10 +65,14 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
           @if (invoice.cashTrail; as cash) {
             <p class="cash-trail">
               @if (cash.remittanceId === null) {
-                Argent encaissé, détenu par <strong>{{ cash.holderName }}</strong> — à remettre à
+                Argent encaissé, détenu par
+                <app-user-avatar [user]="holderOf(cash)" size="xs" />
+                <strong>{{ cash.holderName }}</strong> — à remettre à
                 la caisse.
               } @else {
-                Argent versé par <strong>{{ cash.holderName }}</strong> (versement V-{{
+                Argent versé par
+                <app-user-avatar [user]="holderOf(cash)" size="xs" />
+                <strong>{{ cash.holderName }}</strong> (versement V-{{
                   cash.remittanceId
                 }}) — à confirmer par la caisse.
               }
@@ -159,6 +166,11 @@ export class InvoiceDetailDialogComponent {
     }
     this.pending.set(null);
     this.act.emit(action);
+  }
+
+  /** Who holds the order's cash, as the avatar takes a person. */
+  protected holderOf(cash: CashTrail): UserRef {
+    return { id: cash.holderId, fullName: cash.holderName, photoVersion: cash.holderPhotoVersion };
   }
 
   protected leftFirst(): InvoiceAction[] {

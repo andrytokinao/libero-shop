@@ -232,11 +232,26 @@ nav.menu.menu-modules,
     font-family: inherit;
   }
 
+  /* A button — it opens "Mon profil" — dressed as the plain block it was. */
   .who {
     display: flex;
     align-items: center;
     gap: 9px;
+    width: 100%;
     margin-top: 10px;
+    padding: 4px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+    }
 
     .name {
       font-size: 12.5px;
@@ -251,17 +266,14 @@ nav.menu.menu-modules,
   }
 }
 
-.avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex: 0 0 auto;
+/* The phone bar's face, opening "Mon profil": the avatar itself is app-user-avatar. */
+.avatar-btn {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
 }
 
 main {
@@ -1626,12 +1638,6 @@ textarea.field {
       span {
         color: #8fd6ac;
       }
-    }
-
-    .avatar {
-      width: 28px;
-      height: 28px;
-      font-size: 12px;
     }
   }
 

@@ -14,6 +14,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { UserDialogComponent } from './user-dialog.component';
 import { UserPasswordDialogComponent } from './user-password-dialog.component';
@@ -37,7 +38,7 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [AriaryPipe, UserDialogComponent, UserPasswordDialogComponent],
+  imports: [AriaryPipe, UserDialogComponent, UserPasswordDialogComponent, UserAvatarComponent],
   template: `
     <div class="card">
       <div class="head-row">
@@ -67,7 +68,7 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
             <tbody>
               @for (row of activity(); track row.user.id) {
                 <tr [class.off]="!row.user.enabled">
-                  <td>{{ row.user.fullName }}</td>
+                  <td><app-user-avatar [user]="row.user" [showName]="true" /></td>
                   <td class="muted">{{ row.user.username }}</td>
                   <td class="muted">{{ describe(row.user.roles) }}</td>
                   <td>
@@ -168,6 +169,7 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
         [busy]="saving()"
         (create)="create($event)"
         (update)="update($event)"
+        (photoChanged)="photoChanged($event)"
         (closed)="closeForm()"
       />
     }
@@ -289,6 +291,16 @@ export class UsersComponent {
   protected closeForm(): void {
     this.formOpen.set(false);
     this.editing.set(null);
+  }
+
+  /**
+   * A photo set or removed from the open dialog: the dialog shows it at once, the list follows,
+   * and so does the sidebar when the administrator changed their own.
+   */
+  protected photoChanged(user: UserApp): void {
+    this.editing.set(user);
+    this.auth.applyCurrentUser(user);
+    this.resource.reload();
   }
 
   protected create(request: CreateUserRequest): void {

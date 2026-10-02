@@ -8,6 +8,7 @@ import {
   UpdateUserRequest,
   UserApp,
 } from '../../core/models';
+import { ProfilePhotoPickerComponent } from '../../shared/components/profile-photo-picker.component';
 import { RolePickerComponent } from './role-picker.component';
 
 /**
@@ -25,7 +26,7 @@ import { RolePickerComponent } from './role-picker.component';
 @Component({
   selector: 'app-user-dialog',
   standalone: true,
-  imports: [FormsModule, RolePickerComponent],
+  imports: [FormsModule, RolePickerComponent, ProfilePhotoPickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -47,6 +48,12 @@ import { RolePickerComponent } from './role-picker.component';
         </div>
 
         <div class="modal-body">
+          @if (user) {
+            <!-- Saved on its own, at once: a photo is not part of the form below. -->
+            <div style="margin-bottom:16px;">
+              <app-profile-photo-picker [user]="user" (changed)="photoChanged.emit($event)" />
+            </div>
+          }
           <div class="fld">
             <label for="user-fullname">Nom complet</label>
             <input
@@ -147,6 +154,8 @@ export class UserDialogComponent implements OnInit {
   @Output() readonly create = new EventEmitter<CreateUserRequest>();
   @Output() readonly update = new EventEmitter<UpdateUserRequest>();
   @Output() readonly closed = new EventEmitter<void>();
+  /** The photo was set or removed — already saved, unlike the rest of the form. */
+  @Output() readonly photoChanged = new EventEmitter<UserApp>();
 
   protected readonly minPasswordLength = MIN_PASSWORD_LENGTH;
 

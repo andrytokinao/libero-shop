@@ -21,7 +21,9 @@ import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
+import { ProfileDialogComponent } from './shared/components/profile-dialog.component';
 import { ToastComponent } from './shared/components/toast.component';
+import { UserAvatarComponent } from './shared/components/user-avatar.component';
 
 /** Application shell: role sidebar, licence bar, top bar, routed page and toast host. */
 @Component({
@@ -35,6 +37,8 @@ import { ToastComponent } from './shared/components/toast.component';
     LicenseBannerComponent,
     NotificationBellComponent,
     ToastComponent,
+    UserAvatarComponent,
+    ProfileDialogComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -52,6 +56,8 @@ export class AppComponent {
    * off-canvas; above the breakpoint the sidebar is always visible and this is ignored.
    */
   protected readonly navOpen = signal(false);
+  /** "Mon profil", opened from the person's name in the sidebar or their face in the phone bar. */
+  protected readonly profileOpen = signal(false);
 
   private readonly url = signal(this.router.url);
 

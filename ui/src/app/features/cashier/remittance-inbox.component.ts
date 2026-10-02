@@ -4,6 +4,7 @@ import { RemittanceStore } from '../../core/store/remittance.store';
 import { CashRemittance, RemittanceStatus, RoleApp } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -18,6 +19,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     RemittanceStatusBadgeComponent,
     HasRoleDirective,
     AriaryPipe,
+    UserAvatarComponent,
   ],
   styles: `
     .small {
@@ -66,7 +68,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             @for (remittance of pending(); track remittance.id) {
               <tr>
                 <td>V-{{ remittance.id }}</td>
-                <td>{{ remittance.submittedBy.fullName }}</td>
+                <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
                 <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
                 <td>
                   <!-- What to count against: each order and its amount. -->
@@ -94,7 +96,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           @for (remittance of pending(); track remittance.id) {
             <li class="inv-card">
               <div class="head">
-                <strong>V-{{ remittance.id }} · {{ remittance.submittedBy.fullName }}</strong>
+                <strong>V-{{ remittance.id }}</strong>
+                <app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" />
                 <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
               </div>
               @for (invoice of remittance.invoices; track invoice.invoiceId) {
@@ -166,7 +169,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             @for (remittance of confirmed(); track remittance.id) {
               <tr>
                 <td>V-{{ remittance.id }}</td>
-                <td>{{ remittance.submittedBy.fullName }}</td>
+                <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
                 <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
                 <td class="num">{{ remittance.amount | ariary }}</td>
                 <td>
@@ -184,7 +187,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           @for (remittance of confirmed(); track remittance.id) {
             <li class="inv-card">
               <div class="head">
-                <strong>V-{{ remittance.id }} · {{ remittance.submittedBy.fullName }}</strong>
+                <strong>V-{{ remittance.id }}</strong>
+                <app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" />
                 <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
               </div>
               <div class="foot">

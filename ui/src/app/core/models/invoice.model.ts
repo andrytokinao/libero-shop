@@ -36,6 +36,8 @@ export interface CashTrail {
   holderName: string;
   /** The slip awaiting the cashier's count; null while the cash is still in hand. */
   remittanceId: number | null;
+  /** The holder's photo version, to show their face beside the money. */
+  holderPhotoVersion?: number | null;
 }
 
 export interface InvoiceCancellation {

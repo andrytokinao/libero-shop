@@ -17,6 +17,7 @@ import { HandOverDialogComponent } from './hand-over-dialog.component';
 import { InvoiceDetailDialogComponent } from './invoice-detail-dialog.component';
 import { PayDialogComponent } from './pay-dialog.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
+import { UserAvatarComponent } from './user-avatar.component';
 
 /**
  * The invoice list shared by the cash-desk, depot and admin screens.
@@ -38,6 +39,7 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
     CancelOrderDialogComponent,
     PayDialogComponent,
     HandOverDialogComponent,
+    UserAvatarComponent,
   ],
   template: `
     @if (invoices.length) {
@@ -73,7 +75,7 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
               }
               <td>{{ invoice.clientName }}</td>
               @if (showSeller) {
-                <td>{{ invoice.sale.seller.fullName }}</td>
+                <td><app-user-avatar [user]="invoice.sale.seller" size="xs" [showName]="true" /></td>
               }
               <td class="num">{{ invoice.itemCount }}</td>
               <td class="num">{{ invoice.sale.totalAmount | ariary }}</td>
@@ -125,7 +127,8 @@ import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './sta
             <div class="who">
               {{ invoice.clientName }}
               @if (showSeller) {
-                <span class="muted">— {{ invoice.sale.seller.fullName }}</span>
+                <span class="muted">—</span>
+                <app-user-avatar [user]="invoice.sale.seller" size="xs" [showName]="true" />
               }
             </div>
             <div class="badges">

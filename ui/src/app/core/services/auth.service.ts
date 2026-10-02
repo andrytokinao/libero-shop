@@ -68,17 +68,6 @@ export class AuthService {
   /** Sidebar of the current account: one section per role, empty while signed out. */
   readonly menu = computed(() => navigationFor(this.roles(), this.settings()));
 
-  readonly initials = computed(() => {
-    const user = this.currentUser();
-    if (!user) {
-      return '';
-    }
-    return user.fullName
-      .split(' ')
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('');
-  });
 
   /**
    * Resolves the session once and caches it. Called by the guards, so a hard refresh on a
@@ -140,6 +129,16 @@ export class AuthService {
   /** A configuration just saved: the menu and the screens follow it without signing in again. */
   applySettings(settings: ShopSettings): void {
     this.session.update((session) => ({ ...session, settings }));
+  }
+
+  /**
+   * The signed-in account changed — a new photo, a corrected name: every screen showing the
+   * person follows without signing in again. Ignored for any other account.
+   */
+  applyCurrentUser(user: UserApp): void {
+    this.session.update((session) =>
+      session.user?.id === user.id ? { ...session, user: { ...session.user, ...user } } : session,
+    );
   }
 
   /** Drops the token and the session without calling the server — used on a 401. */

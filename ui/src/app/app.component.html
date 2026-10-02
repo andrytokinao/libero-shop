@@ -22,7 +22,11 @@
         ☰
       </button>
       <div class="mark">Libero <span>Shop</span></div>
-      <div class="avatar" [title]="auth.currentUser()?.fullName ?? ''">{{ auth.initials() }}</div>
+      @if (auth.currentUser(); as me) {
+        <button class="avatar-btn" type="button" aria-label="Mon profil" (click)="profileOpen.set(true)">
+          <app-user-avatar [user]="me" size="sm" [tooltip]="false" />
+        </button>
+      }
     </header>
 
     @if (navOpen()) {
@@ -69,13 +73,15 @@
       </nav>
 
       <div class="user-box">
-        <div class="who">
-          <div class="avatar">{{ auth.initials() }}</div>
-          <div>
-            <div class="name">{{ auth.currentUser()?.fullName }}</div>
-            <div class="role">{{ auth.roleLabel() }}</div>
-          </div>
-        </div>
+        @if (auth.currentUser(); as me) {
+          <button class="who" type="button" title="Mon profil" (click)="profileOpen.set(true)">
+            <app-user-avatar [user]="me" size="sm" [tooltip]="false" />
+            <div>
+              <div class="name">{{ me.fullName }}</div>
+              <div class="role">{{ auth.roleLabel() }}</div>
+            </div>
+          </button>
+        }
         @if (server.isMobile) {
           <a class="btn ghost block" routerLink="/serveur" style="margin-top:12px;">
             Serveur : {{ server.host() }}
@@ -128,6 +134,10 @@
 } @else {
   <!-- Signed out: the login page owns the whole viewport, with no shell around it. -->
   <router-outlet />
+}
+
+@if (profileOpen() && auth.isAuthenticated()) {
+  <app-profile-dialog (closed)="profileOpen.set(false)" />
 }
 
 <app-toast />

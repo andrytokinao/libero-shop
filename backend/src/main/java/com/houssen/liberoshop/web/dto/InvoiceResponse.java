@@ -57,12 +57,15 @@ public record InvoiceResponse(Long id,
      * @param holderId     who took the money -- and, a remittance only carrying its submitter's
      *                     own cash, who handed the slip in
      * @param remittanceId the slip awaiting confirmation; null while the cash is still in hand
+     * @param holderPhotoVersion the holder's {@link UserResponse#photoVersion()}, so the screens
+     *                     show their face beside the money
      */
-    public record CashTrail(Long holderId, String holderName, Long remittanceId) {
+    public record CashTrail(Long holderId, String holderName, Long remittanceId, Long holderPhotoVersion) {
 
         public static CashTrail of(Payment payment) {
             return new CashTrail(payment.getCollectedBy().getId(), payment.getCollectedBy().getFullName(),
-                    payment.getCashRemittance() == null ? null : payment.getCashRemittance().getId());
+                    payment.getCashRemittance() == null ? null : payment.getCashRemittance().getId(),
+                    payment.getCollectedBy().getPhotoVersion());
         }
     }
 

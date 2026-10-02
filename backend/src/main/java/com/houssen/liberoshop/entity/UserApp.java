@@ -56,6 +56,14 @@ public class UserApp {
     @Builder.Default
     private Set<RoleApp> roles = EnumSet.noneOf(RoleApp.class);
 
+    /**
+     * When the profile photo last changed, in epoch milliseconds; null while the account has
+     * none. The photo itself lives in {@link UserPhoto}, so listing accounts never loads it --
+     * this number is all a screen needs to know whether to show it, and to build a URL that
+     * changes when it does (so a cached old photo is never shown for the new one).
+     */
+    private Long photoVersion;
+
     public boolean hasRole(RoleApp role) {
         return roles.contains(role);
     }
