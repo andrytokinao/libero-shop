@@ -50,6 +50,9 @@ import { UserAvatarComponent } from './user-avatar.component';
         </div>
 
         <div class="modal-body">
+          @if (notice) {
+            <p class="notice" role="status">✓ {{ notice }}</p>
+          }
           @if (invoice.cancellation; as c) {
             <p class="cancelled">
               Annulée le {{ c.at | date: 'dd/MM/y HH:mm' }}
@@ -117,6 +120,15 @@ import { UserAvatarComponent } from './user-avatar.component';
       color: var(--red);
     }
 
+    .notice {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+
     .cash-trail {
       margin: 0 0 12px;
       padding: 10px 12px;
@@ -144,6 +156,8 @@ export class InvoiceDetailDialogComponent {
   @Input({ required: true }) invoice!: Invoice;
   /** The cash-desk screens show one seller's own invoices; naming them there says nothing. */
   @Input() showSeller = true;
+  /** A line above the detail, e.g. "Vente enregistrée" when it opens right after the sale. */
+  @Input() notice: string | null = null;
   /**
    * The buttons for this order and this person — decided by the list, from the rules of
    * `availableActions`; this dialog only shows them and says which was pressed.

@@ -66,6 +66,12 @@ export class InvoiceActionRunner {
       .pipe(map((slip) => `Versement V-${slip.id} confirmé — ${amount(slip.amount)} en caisse.`));
   }
 
+  print(invoice: Invoice): Observable<string> {
+    return this.invoices
+      .print(invoice.id)
+      .pipe(map((printed) => `Facture ${printed.invoiceNumber} envoyée à l'impression.`));
+  }
+
   cancel(invoice: Invoice, request: CancelInvoiceRequest): Observable<string> {
     return this.invoices
       .cancel(invoice.id, request)

@@ -12,6 +12,8 @@ export enum InvoiceActionKind {
   REMIT_CASH = 'REMIT_CASH',
   /** The till confirms having counted the cash brought to it. */
   CONFIRM_REMITTANCE = 'CONFIRM_REMITTANCE',
+  /** The invoice is handed out on paper. */
+  PRINT = 'PRINT',
   CANCEL = 'CANCEL',
 }
 
@@ -106,6 +108,14 @@ const RULES: readonly InvoiceActionRule[] = [
       // A slip may carry several orders: confirming it confirms them all.
       confirm: `Argent du versement V-${invoice.cashTrail!.remittanceId} compté et reçu ? Toutes ses commandes passent payées.`,
     }),
+  },
+  {
+    kind: InvoiceActionKind.PRINT,
+    // The till's and the administrator's, like the endpoint; a cancelled order is not handed out.
+    appliesTo: (invoice, ctx) =>
+      has(ctx, RoleApp.CASHIER, RoleApp.SUPER_ADMIN) &&
+      invoice.paymentStatus !== PaymentStatus.CANCELLED,
+    describe: (invoice) => ({ label: invoice.printed ? 'Réimprimer' : 'Imprimer', tone: 'ghost' }),
   },
   {
     kind: InvoiceActionKind.CANCEL,

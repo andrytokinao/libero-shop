@@ -10,7 +10,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InvoiceStore } from '../../core/store/invoice.store';
-import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus, Product } from '../../core/models';
+import { Invoice, Product } from '../../core/models';
 import { Cart } from '../../core/sale/cart';
 import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
@@ -21,7 +21,9 @@ import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
+import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { SaleCheckout, SaleCheckoutDialogComponent } from './sale-checkout-dialog.component';
 
 /**
  * Where the till goes to one column, products above the basket — the `.g2` breakpoint of
@@ -39,7 +41,14 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
 @Component({
   selector: 'app-new-sale',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, DatePipe, CameraScanButtonComponent],
+  imports: [
+    FormsModule,
+    AriaryPipe,
+    DatePipe,
+    CameraScanButtonComponent,
+    SaleCheckoutDialogComponent,
+    InvoiceDetailFlowComponent,
+  ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
     :host {
@@ -226,73 +235,42 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
           <span>{{ cart.total() | ariary }}</span>
         </div>
 
-        <div class="form-row" style="margin-top:16px;">
-          <div class="fld" style="flex:1; min-width:180px;">
-            <label for="client-name">{{ auth.words().client }}</label>
-            <input
-              id="client-name"
-              type="text"
-              [placeholder]="auth.words().clientPlaceholder"
-              [ngModel]="clientName()"
-              (ngModelChange)="clientName.set($event)"
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
-          @if (mayLeaveUnpaid()) {
-            <div class="fld" style="flex:1; min-width:180px;">
-              <label for="payment-status">Statut du paiement</label>
-              <select
-                id="payment-status"
-                class="field"
-                [ngModel]="chosenStatus()"
-                (ngModelChange)="chosenStatus.set($event)"
-              >
-                <option [ngValue]="PaymentStatus.PAID">Payée à la caisse</option>
-                <option [ngValue]="PaymentStatus.UNPAID">
-                  Non payée (à régler à la remise — {{ auth.words().depot.toLowerCase() }})
-                </option>
-              </select>
-            </div>
-          }
-          @if (paymentStatus() === PaymentStatus.PAID) {
-            <div class="fld" style="flex:1; min-width:160px;">
-              <label for="payment-method">Mode de paiement</label>
-              <select
-                id="payment-method"
-                class="field"
-                [ngModel]="paymentMethod()"
-                (ngModelChange)="paymentMethod.set($event)"
-              >
-                @for (method of paymentMethods; track method) {
-                  <option [ngValue]="method">{{ methodLabels[method] }}</option>
-                }
-              </select>
-            </div>
-          }
-        </div>
-
         @if (cart.hasShortage()) {
-          <div class="short-note" role="alert" style="margin-bottom:8px;">
+          <div class="short-note" role="alert" style="margin:12px 0 8px;">
             Le stock ne suffit pas pour les lignes en rouge : réduisez-les ou retirez-les.
           </div>
         }
         <button
           class="btn block"
           type="button"
-          style="padding:11px;"
+          style="padding:11px; margin-top:16px;"
           [disabled]="!canValidate()"
-          (click)="validateSale()"
+          (click)="openCheckout()"
         >
-          @if (submitting()) {
-            Enregistrement...
-          } @else {
-            Valider la vente et générer la facture <span class="key-hint">(F10)</span>
-          }
+          Valider la vente <span class="key-hint">(F10)</span>
         </button>
       </div>
     </div>
+
+    @if (checkoutOpen()) {
+      <app-sale-checkout-dialog
+        [total]="cart.total()"
+        [units]="cart.units()"
+        [busy]="submitting()"
+        [(clientName)]="clientName"
+        (confirmed)="record($event)"
+        (closed)="closeCheckout()"
+      />
+    }
+
+    @if (sold(); as invoice) {
+      <app-invoice-detail-flow
+        [invoice]="invoice"
+        [showSeller]="false"
+        [notice]="'Vente enregistrée — ' + (invoice.sale.totalAmount | ariary)"
+        (closed)="nextSale()"
+      />
+    }
   `,
 })
 export class NewSaleComponent {
@@ -300,27 +278,16 @@ export class NewSaleComponent {
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 
-  protected readonly PaymentStatus = PaymentStatus;
-
-  protected readonly paymentMethods = Object.values(PaymentMethod);
-  protected readonly methodLabels = PAYMENT_METHOD_LABELS;
-
-  /**
-   * A till leaves a sale unpaid only for the depot to collect on hand-over. With no money taken
-   * there, the choice is not offered: what the till sells, it is paid for. (Order takers still
-   * send unpaid orders, settled at the till under "À encaisser".)
-   */
-  protected readonly mayLeaveUnpaid = computed(() => this.auth.settings().payAtDepot);
-
+  /** For whom — asked at checkout, kept here so a sale put on hold keeps it. */
   protected readonly clientName = signal('');
-  /** What the cashier picked — only read while the choice is offered. */
-  protected readonly chosenStatus = signal<PaymentStatus>(PaymentStatus.PAID);
-  /** What the sale is sent as: the pick, or paid when there is nothing to pick. */
-  protected readonly paymentStatus = computed(() =>
-    this.mayLeaveUnpaid() ? this.chosenStatus() : PaymentStatus.PAID,
-  );
-  protected readonly paymentMethod = signal<PaymentMethod>(PaymentMethod.CASH);
   protected readonly submitting = signal(false);
+
+  /** The checkout questions are on screen. */
+  protected readonly checkoutOpen = signal(false);
+  /** The sale just recorded, shown with what can be done to it next; null back at the till. */
+  protected readonly sold = signal<Invoice | null>(null);
+  /** A dialog is up: the till's keys wait, so F4 cannot hold a basket being paid for. */
+  private readonly dialogOpen = computed(() => this.checkoutOpen() || this.sold() !== null);
 
   protected readonly cart = new Cart();
   protected readonly held = inject(HeldSales);
@@ -340,19 +307,27 @@ export class NewSaleComponent {
 
   /** Not with a line in red: the server would only refuse it again. */
   protected readonly canValidate = computed(
-    () => !this.cart.isEmpty() && !this.cart.hasShortage() && !this.submitting(),
+    () => !this.cart.isEmpty() && !this.cart.hasShortage() && !this.dialogOpen(),
   );
 
   /**
-   * The cart is not touched while a sale is being recorded: held at that moment it would be
+   * The cart is not touched while a sale is being paid for: held at that moment it would be
    * sold and kept waiting at once, and a basket resumed then would be wiped by the success.
    */
-  protected readonly canHold = computed(() => !this.cart.isEmpty() && !this.submitting());
-  protected readonly canResume = computed(() => this.held.count() > 0 && !this.submitting());
+  protected readonly canHold = computed(() => !this.cart.isEmpty() && !this.dialogOpen());
+  protected readonly canResume = computed(() => this.held.count() > 0 && !this.dialogOpen());
 
-  /** The till's function keys; the legend under the product field is drawn from this list. */
+  /**
+   * The till's function keys; the legend under the product field is drawn from this list. F10
+   * opens the checkout here, and records the sale inside it — so a cashier pays with F10, F10.
+   */
   protected readonly keys = new ShortcutMap([
-    { key: 'F2', label: 'Produit', run: () => this.focusProductField() },
+    {
+      key: 'F2',
+      label: 'Produit',
+      run: () => this.focusProductField(),
+      enabled: () => !this.dialogOpen(),
+    },
     {
       key: 'F4',
       label: 'Mettre en attente',
@@ -363,7 +338,7 @@ export class NewSaleComponent {
       key: 'F8',
       label: 'Retirer le dernier article',
       run: () => this.removeLastUnit(),
-      enabled: () => !this.cart.isEmpty(),
+      enabled: () => !this.cart.isEmpty() && !this.dialogOpen(),
     },
     {
       key: 'F9',
@@ -374,7 +349,7 @@ export class NewSaleComponent {
     {
       key: 'F10',
       label: 'Valider la vente',
-      run: () => this.validateSale(),
+      run: () => this.openCheckout(),
       enabled: () => this.canValidate(),
     },
   ]);
@@ -485,40 +460,58 @@ export class NewSaleComponent {
     field.select();
   }
 
-  protected validateSale(): void {
-    if (!this.canValidate()) {
+  /** "Valider la vente": the basket is done, the checkout asks for whom and how it is paid. */
+  protected openCheckout(): void {
+    if (this.canValidate()) {
+      this.checkoutOpen.set(true);
+    }
+  }
+
+  protected closeCheckout(): void {
+    this.checkoutOpen.set(false);
+    this.focusProductField();
+  }
+
+  /**
+   * Records the sale as the checkout settled it. On success the till is emptied at once and the
+   * new invoice comes up with what can be done next (print, serve…); closing it starts the next
+   * sale. A shelf too short sends the cashier back to the basket, where the lines turn red; any
+   * other refusal keeps the checkout open, its answers intact.
+   */
+  protected record(checkout: SaleCheckout): void {
+    if (this.submitting()) {
       return;
     }
     this.submitting.set(true);
-
     this.invoices
-      .createSale({
-        clientName: this.clientName(),
-        paymentStatus: this.paymentStatus(),
-        paymentMethod: this.paymentMethod(),
-        lines: this.cart.toSaleLines(),
-      })
+      .createSale({ clientName: this.clientName(), ...checkout, lines: this.cart.toSaleLines() })
       .subscribe({
         next: (invoice) => {
           this.submitting.set(false);
+          this.checkoutOpen.set(false);
           this.cart.clear();
           this.entry.clear();
           this.clientName.set('');
-          this.focusProductField();
           // The server has moved the stock; re-read it rather than guess the new figures.
           this.finder.refresh();
-          this.toasts.show(
-            `Vente enregistrée — facture ${invoice.invoiceNumber} ` +
-              `(${invoice.sale.totalAmount.toLocaleString('fr-FR')} Ar)`,
-          );
+          this.sold.set(invoice);
         },
         error: (error: unknown) => {
           this.submitting.set(false);
-          // A shelf too short for some lines: they turn red until brought down.
-          this.cart.applyStock(stockShortagesOf(error));
+          const shortages = stockShortagesOf(error);
+          if (shortages.length) {
+            this.cart.applyStock(shortages);
+            this.checkoutOpen.set(false);
+          }
           // The interceptor has already shown why; refresh in case stock moved elsewhere.
           this.finder.refresh();
         },
       });
+  }
+
+  /** The invoice of the last sale is closed: back to an empty till, ready to scan. */
+  protected nextSale(): void {
+    this.sold.set(null);
+    this.focusProductField();
   }
 }

@@ -50,8 +50,11 @@ function as(userId: number, roles: RoleApp[], features: Partial<ShopFeatures> = 
   return { userId, roles, features: { ...FEATURES, ...features }, handOverLabel: 'Remettre au client' };
 }
 
+/** The steps of the order's life — printing, offered beside most of them, is tested on its own. */
 const kinds = (invoice: Invoice, ctx: InvoiceActionContext) =>
-  availableActions(invoice, ctx).map((action) => action.kind);
+  availableActions(invoice, ctx)
+    .map((action) => action.kind)
+    .filter((kind) => kind !== InvoiceActionKind.PRINT);
 
 describe('availableActions', () => {
   it('offers the till to take an unpaid order\'s money, or to cancel it', () => {
@@ -78,7 +81,9 @@ describe('availableActions', () => {
     });
 
     const holder = availableActions(collected, as(FATIMA, [RoleApp.CASHIER, RoleApp.DEPOT_AGENT]));
-    expect(holder.map((a) => a.kind)).toEqual([InvoiceActionKind.REMIT_CASH]);
+    expect(kinds(collected, as(FATIMA, [RoleApp.CASHIER, RoleApp.DEPOT_AGENT]))).toEqual([
+      InvoiceActionKind.REMIT_CASH,
+    ]);
     expect(holder[0].confirm).toContain('20');
 
     expect(kinds(collected, as(JOSEPH, [RoleApp.DEPOT_AGENT]))).toEqual([]);
@@ -114,5 +119,17 @@ describe('availableActions', () => {
 
     expect(kinds(order(PaymentStatus.PAID, DeliveryStatus.DELIVERED), everyone)).toEqual([]);
     expect(kinds(order(PaymentStatus.CANCELLED, DeliveryStatus.CANCELLED), everyone)).toEqual([]);
+  });
+
+  it('lets the till print any order that stands, and says when it is a reprint', () => {
+    const paid = order(PaymentStatus.PAID, DeliveryStatus.DELIVERED);
+    const printOf = (invoice: Invoice, ctx: InvoiceActionContext) =>
+      availableActions(invoice, ctx).find((a) => a.kind === InvoiceActionKind.PRINT);
+
+    expect(printOf(paid, as(FATIMA, [RoleApp.CASHIER]))?.label).toBe('Imprimer');
+    expect(printOf({ ...paid, printed: true }, as(FATIMA, [RoleApp.CASHIER]))?.label).toBe('Réimprimer');
+    expect(printOf(paid, as(9, [RoleApp.SUPER_ADMIN]))).toBeDefined();
+    expect(printOf(paid, as(JOSEPH, [RoleApp.DEPOT_AGENT]))).toBeUndefined();
+    expect(printOf(order(PaymentStatus.CANCELLED), as(FATIMA, [RoleApp.CASHIER]))).toBeUndefined();
   });
 });
