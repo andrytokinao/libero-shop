@@ -52,7 +52,7 @@ import { ROLE_LABELS, ROLE_PRECEDENCE, RoleApp, orderRoles } from '../../core/mo
       border-radius: 8px;
       font-size: 12.5px;
       cursor: pointer;
-      background: #fff;
+      background: var(--panel);
 
       &.on {
         border-color: var(--brand);

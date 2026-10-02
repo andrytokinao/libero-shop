@@ -6,6 +6,17 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- The theme, set before anything is drawn: Angular starts a moment later, and a dark-theme
+       user would otherwise see the page flash white. Same rule and same key as ThemeService. -->
+  <script>
+    (function () {
+      var choice = null;
+      try { choice = localStorage.getItem('liberoshop.theme'); } catch (e) {}
+      var dark = choice === 'dark' ||
+        (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

@@ -18,6 +18,7 @@ import { OrderEvents } from './core/realtime/order-events.service';
 import { StockEvents } from './core/realtime/stock-events.service';
 import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
+import { ThemeService } from './core/services/theme.service';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
 import { IconComponent } from './shared/components/icon.component';
@@ -98,6 +99,8 @@ export class AppComponent {
     // the screens read stay current behind them.
     inject(OrderEvents);
     inject(StockEvents);
+    // The theme follows the device from the start, the login page included.
+    inject(ThemeService);
 
     // On a phone: pages kept up to date from the server, checked again whenever the app comes
     // back to the foreground or is pointed at another server.

@@ -236,15 +236,15 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
       justify-content: space-between;
       gap: 12px;
       padding: 12px 16px;
-      background: var(--brand-dark);
-      color: #eef4ef;
+      background: var(--chrome-bg);
+      color: var(--chrome-ink);
 
       .mark {
         font-weight: 700;
         font-size: 17px;
 
         span {
-          color: #8fd6ac;
+          color: var(--chrome-accent);
         }
       }
 

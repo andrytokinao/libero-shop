@@ -169,7 +169,7 @@ type Network = 'local' | 'internet';
   styles: `
     .download-page {
       min-height: 100vh;
-      background: var(--brand-dark);
+      background: var(--chrome-bg);
       padding: 24px;
     }
 
@@ -265,7 +265,7 @@ type Network = 'local' | 'internet';
       font-size: 12.5px;
 
       a {
-        color: #fff;
+        color: var(--chrome-ink);
       }
     }
   `,

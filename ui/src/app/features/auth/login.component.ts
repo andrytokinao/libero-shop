@@ -74,7 +74,7 @@ import { AuthService } from '../../core/services/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--brand-dark);
+      background: var(--chrome-bg);
       padding: 24px;
     }
 

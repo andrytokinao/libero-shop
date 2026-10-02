@@ -104,7 +104,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 
     .reason {
       border: 2px solid var(--line);
-      background: #fff;
+      background: var(--panel);
       border-radius: 20px;
       padding: 9px 14px;
       font: inherit;

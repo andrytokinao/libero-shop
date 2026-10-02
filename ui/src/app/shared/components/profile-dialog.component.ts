@@ -2,6 +2,7 @@ import { Component, inject, output } from '@angular/core';
 import { ROLE_LABELS, UserApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfilePhotoPickerComponent } from './profile-photo-picker.component';
+import { ThemePickerComponent } from './theme-picker.component';
 
 /**
  * "Mon profil": who is signed in, and their photo — the one thing about their account a person
@@ -10,7 +11,7 @@ import { ProfilePhotoPickerComponent } from './profile-photo-picker.component';
 @Component({
   selector: 'app-profile-dialog',
   standalone: true,
-  imports: [ProfilePhotoPickerComponent],
+  imports: [ProfilePhotoPickerComponent, ThemePickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     @if (auth.currentUser(); as me) {
@@ -29,6 +30,14 @@ import { ProfilePhotoPickerComponent } from './profile-photo-picker.component';
               {{ rolesOf(me) }}. Votre photo apparaît partout où votre nom est affiché : ventes,
               remises, versements.
             </p>
+            <div class="fld" style="margin-top:18px;">
+              <span style="font-size:11.5px; font-weight:600; color:var(--ink-soft);">Thème</span>
+              <app-theme-picker />
+              <span class="muted" style="font-size:12px;">
+                Retenu sur cet appareil. « Automatique » suit le réglage du téléphone ou de
+                l'ordinateur.
+              </span>
+            </div>
           </div>
           <div class="modal-foot">
             <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>

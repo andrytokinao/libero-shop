@@ -95,7 +95,7 @@ import { IconComponent } from './icon.component';
       padding: 1px 5px;
       border-radius: 9px;
       background: var(--red);
-      color: #fff;
+      color: var(--on-brand);
       font-size: 10.5px;
       font-weight: 700;
       line-height: 16px;

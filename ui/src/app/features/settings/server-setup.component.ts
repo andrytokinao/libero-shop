@@ -103,7 +103,7 @@ import { ToastService } from '../../core/services/toast.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--brand-dark);
+      background: var(--chrome-bg);
       padding: 24px;
     }
 

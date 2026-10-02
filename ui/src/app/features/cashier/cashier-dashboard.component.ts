@@ -32,7 +32,7 @@ const EMPTY: CashierDashboard = {
       justify-content: space-between;
       gap: 8px;
       margin-top: 16px;
-      border-left: 4px solid #1f5c99;
+      border-left: 4px solid var(--blue);
       color: inherit;
       text-decoration: none;
     }

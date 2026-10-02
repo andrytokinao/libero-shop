@@ -101,7 +101,7 @@ interface FeatureRow {
       padding: 14px;
       border: 2px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--panel);
       text-align: left;
       cursor: pointer;
       font: inherit;

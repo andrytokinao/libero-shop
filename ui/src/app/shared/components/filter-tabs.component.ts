@@ -100,7 +100,7 @@ export interface FilterTab<T> {
       padding: 0 7px;
       border-radius: 11px;
       background: var(--brand);
-      color: #fff;
+      color: var(--on-brand);
       font-size: 12px;
       line-height: 22px;
       text-align: center;

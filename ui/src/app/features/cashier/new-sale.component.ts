@@ -202,7 +202,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
         padding: 0 6px;
         border-radius: 10px;
         background: var(--amber);
-        color: #fff;
+        color: var(--on-brand);
         font-size: 11.5px;
         line-height: 20px;
         text-align: center;

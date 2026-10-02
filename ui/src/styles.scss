@@ -4,21 +4,83 @@
    than on per-component styles so the whole app stays visually consistent.
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Themes. Every colour of the application is one of these variables: a screen
+   never writes a colour of its own, so the dark theme is only another set of
+   values. Chosen by ThemeService, which sets data-theme on <html> (and the
+   script in index.html, before Angular starts, so no white flash).
+   -------------------------------------------------------------------------- */
 :root {
+  color-scheme: light;
+
   --ink: #152420;
   --ink-soft: #4d5f59;
   --bg: #f2f5f1;
   --panel: #ffffff;
   --line: #dfe6df;
+  /* The fill of a quiet element: a grey badge, an empty bar. */
+  --muted-bg: #eceeec;
   --brand: #22684a;
+  /* A dark green for text and accents on light surfaces — never a background: see --chrome-bg. */
   --brand-dark: #123625;
   --brand-soft: #e4f0e8;
+  /* Text on --brand, --red, --chrome-bg: white in both themes. */
+  --on-brand: #ffffff;
   --amber: #b5750f;
   --amber-soft: #fbeed7;
   --red: #a13a2f;
   --red-soft: #fbe6e2;
+  --blue: #1f5c99;
+  --blue-soft: #e3eefb;
+
+  /* The chrome — sidebar, phone bar, toasts — stays dark green whatever the theme. */
+  --chrome-bg: #123625;
+  --chrome-ink: #eef4ef;
+  --chrome-ink-soft: #a9c2b5;
+  --chrome-accent: #8fd6ac;
+  --chrome-field: #0f2a1e;
+
   --side-w: 250px;
   --mobile-bar-h: 52px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ink: #e3ebe6;
+  --ink-soft: #9db1a8;
+  --bg: #0d1512;
+  --panel: #16211d;
+  --line: #2a3a33;
+  --muted-bg: #23302b;
+  /* Lighter than in the light theme, so a green button still reads on a dark page. */
+  --brand: #2e8a5f;
+  --brand-dark: #8fd6ac;
+  --brand-soft: #1b3428;
+  --amber: #e2a63f;
+  --amber-soft: #3a2c12;
+  --red: #ef8273;
+  --red-soft: #3d1f1b;
+  --blue: #84b6ea;
+  --blue-soft: #18283a;
+
+  --chrome-bg: #0a120f;
+  --chrome-field: #060c0a;
+}
+
+/* Paper is white: an invoice prints in the light theme whatever the screen shows. */
+@media print {
+  :root[data-theme='dark'] {
+    color-scheme: light;
+    --ink: #152420;
+    --ink-soft: #4d5f59;
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --line: #dfe6df;
+    --muted-bg: #eceeec;
+    --brand-dark: #123625;
+    --brand-soft: #e4f0e8;
+  }
 }
 
 * {
@@ -59,8 +121,8 @@ body {
 .side {
   width: var(--side-w);
   flex: 0 0 auto;
-  background: var(--brand-dark);
-  color: #eef4ef;
+  background: var(--chrome-bg);
+  color: var(--chrome-ink);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -80,7 +142,7 @@ body {
     letter-spacing: 0.2px;
 
     span {
-      color: #8fd6ac;
+      color: var(--chrome-accent);
     }
   }
 }
@@ -97,7 +159,7 @@ nav.menu {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #8fbfa4;
+    color: var(--chrome-ink-soft);
     padding: 6px 12px 2px;
     margin-top: 8px;
 
@@ -115,7 +177,7 @@ nav.menu {
     text-decoration: none;
     background: none;
     border: none;
-    color: #d9e6de;
+    color: var(--chrome-ink);
     padding: 10px 12px;
     margin: 2px 0;
     border-radius: 8px;
@@ -140,7 +202,7 @@ nav.menu {
 
     &.active {
       background: var(--brand);
-      color: #fff;
+      color: var(--on-brand);
       font-weight: 600;
     }
   }
@@ -208,7 +270,7 @@ nav.menu.menu-modules,
   label {
     display: block;
     font-size: 11px;
-    color: #a9c2b5;
+    color: var(--chrome-ink-soft);
     margin-bottom: 6px;
   }
 
@@ -217,8 +279,8 @@ nav.menu.menu-modules,
     padding: 9px 10px;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.18);
-    background: #0f2a1e;
-    color: #eef4ef;
+    background: var(--chrome-field);
+    color: var(--chrome-ink);
     font-size: 13px;
     font-family: inherit;
   }
@@ -267,7 +329,7 @@ nav.menu.menu-modules,
 
     .role {
       font-size: 11px;
-      color: #a9c2b5;
+      color: var(--chrome-ink-soft);
     }
   }
 
@@ -281,7 +343,7 @@ nav.menu.menu-modules,
     border: none;
     border-radius: 8px;
     background: none;
-    color: #c9dbd0;
+    color: var(--chrome-ink);
     font: inherit;
     font-size: 13px;
     text-decoration: none;
@@ -291,7 +353,7 @@ nav.menu.menu-modules,
     &:hover,
     &:focus-visible {
       background: rgba(255, 255, 255, 0.08);
-      color: #fff;
+      color: var(--on-brand);
     }
   }
 }
@@ -523,7 +585,7 @@ tr:last-child td {
 .lines {
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--panel);
   padding: 10px 12px;
 
   .lines-head {
@@ -607,7 +669,7 @@ tr:last-child td {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
-  background: #fff;
+  background: var(--panel);
 
   .head {
     display: flex;
@@ -675,14 +737,14 @@ tr:last-child td {
   }
 
   &.grey {
-    background: #eceeec;
+    background: var(--muted-bg);
     color: var(--ink-soft);
   }
 
   /* Money on its way from the depot to the till: neither owed nor in hand. */
   &.blue {
-    background: #e3eefb;
-    color: #1f5c99;
+    background: var(--blue-soft);
+    color: var(--blue);
   }
 }
 
@@ -691,7 +753,7 @@ tr:last-child td {
 .btn {
   border: 1px solid var(--brand);
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 13px;
@@ -700,7 +762,7 @@ tr:last-child td {
   font-family: inherit;
 
   &.ghost {
-    background: #fff;
+    background: var(--panel);
     color: var(--brand);
   }
 
@@ -728,6 +790,7 @@ a.btn {
 /* Password fields are listed too: the login page and the account dialogs use them, and a
    native-looking box next to a styled one reads as a bug. */
 input[type='text'],
+input[type='search'],
 input[type='number'],
 input[type='password'],
 select.field {
@@ -736,7 +799,7 @@ select.field {
   border-radius: 7px;
   font-size: 13px;
   font-family: inherit;
-  background: #fff;
+  background: var(--panel);
   color: inherit;
 }
 
@@ -792,7 +855,7 @@ select.field {
   height: 24px;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--panel);
   cursor: pointer;
   font-family: inherit;
 }
@@ -822,7 +885,7 @@ select.field {
 
 .bar-track {
   flex: 1;
-  background: #eef2ee;
+  background: var(--muted-bg);
   border-radius: 6px;
   height: 14px;
   overflow: hidden;
@@ -847,7 +910,7 @@ select.field {
   border-radius: 9px;
   padding: 12px;
   text-align: left;
-  background: #fff;
+  background: var(--panel);
   cursor: pointer;
   font-family: inherit;
   color: inherit;
@@ -916,13 +979,13 @@ select.field {
   padding: 0 6px;
   border-radius: 12px;
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   font-weight: 700;
   font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 2px #fff;
+  box-shadow: 0 0 0 2px var(--panel);
   pointer-events: none;
 }
 
@@ -934,7 +997,7 @@ select.field {
   height: 30px;
   border: 1px solid var(--brand);
   border-radius: 50%;
-  background: #fff;
+  background: var(--panel);
   color: var(--brand-dark);
   font: inherit;
   font-size: 18px;
@@ -985,8 +1048,8 @@ tr.short td {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--brand-dark);
-  color: #fff;
+  background: var(--chrome-bg);
+  color: var(--on-brand);
   padding: 12px 20px;
   border-radius: 9px;
   font-size: 13.5px;
@@ -1091,7 +1154,7 @@ tr.short td {
     flex: 1;
     height: 7px;
     border-radius: 4px;
-    background: #e8ece8;
+    background: var(--muted-bg);
 
     &.on.s-ok {
       background: var(--brand);
@@ -1189,7 +1252,7 @@ textarea.field {
   border-radius: 8px;
   font-size: 12.5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  background: #fff;
+  background: var(--panel);
   color: inherit;
   resize: vertical;
 }
@@ -1384,7 +1447,7 @@ textarea.field {
 .chip {
   flex: 0 0 auto;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--panel);
   border-radius: 20px;
   padding: 8px 14px;
   font: inherit;
@@ -1395,7 +1458,7 @@ textarea.field {
   &.active {
     background: var(--brand);
     border-color: var(--brand);
-    color: #fff;
+    color: var(--on-brand);
   }
 }
 
@@ -1416,7 +1479,7 @@ textarea.field {
   padding: 12px;
   border: 2px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--panel);
   text-align: left;
   font: inherit;
   color: inherit;
@@ -1459,7 +1522,7 @@ textarea.field {
     padding: 0 6px;
     border-radius: 13px;
     background: var(--brand);
-    color: #fff;
+    color: var(--on-brand);
     font-weight: 700;
     font-size: 14px;
     display: flex;
@@ -1589,8 +1652,8 @@ textarea.field {
     z-index: 40;
     height: var(--mobile-bar-h);
     padding: 0 14px;
-    background: var(--brand-dark);
-    color: #eef4ef;
+    background: var(--chrome-bg);
+    color: var(--chrome-ink);
 
     .burger {
       display: inline-flex;
@@ -1610,7 +1673,7 @@ textarea.field {
       font-weight: 700;
 
       span {
-        color: #8fd6ac;
+        color: var(--chrome-accent);
       }
     }
   }
@@ -1652,7 +1715,7 @@ textarea.field {
     right: 10px;
     border: none;
     background: none;
-    color: #cfe0d6;
+    color: var(--chrome-ink);
     padding: 6px;
     border-radius: 50%;
     cursor: pointer;
@@ -1807,14 +1870,14 @@ textarea.field {
     padding: 14px 20px;
     border-radius: 28px;
     background: var(--brand);
-    color: #fff;
+    color: var(--on-brand);
     font-weight: 700;
     font-size: 15px;
     text-decoration: none;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 
     &:active {
-      background: var(--brand-dark);
+      background: var(--chrome-bg);
     }
   }
 
