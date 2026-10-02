@@ -105,6 +105,15 @@ export interface ProductImportRow {
                 correspondantes sont à saisir ici.
               </div>
             }
+            <!-- The "Unités" sheet: what was read, then each row left out and why. -->
+            @for (note of head.unitNotes; track $index; let first = $first) {
+              <div class="imp-col-line" [class.warn]="!first">
+                @if (first) {
+                  <strong>Unités</strong> —
+                }
+                {{ note }}
+              </div>
+            }
             @if (head.ignored.length) {
               <div class="imp-col-line warn">
                 <strong>En-têtes ignorés</strong> — {{ head.ignored.join(', ') }}. Si l'un
@@ -217,7 +226,7 @@ export interface ProductImportRow {
                           [ngModel]="row.unit"
                           (ngModelChange)="patch(row, { unit: $event })"
                         />
-                        @if (row.packagings.length) {
+                        @if (row.packagings.length && !row.unusable) {
                           <!-- The other units the product will sell in, read from "unite 2"… -->
                           <div class="imp-units muted" [title]="unitsTitle(row)">
                             + {{ unitsSummary(row) }}

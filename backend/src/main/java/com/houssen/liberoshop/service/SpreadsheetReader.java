@@ -14,10 +14,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
- * Reads the first sheet of an Excel workbook (.xlsx or .xls) into the same {@link CsvTable}
+ * Reads the sheets of an Excel workbook (.xlsx or .xls) into the same {@link CsvTable}
  * a text file becomes, so the import behind it cannot tell the two apart.
  *
  * <p>Numbers are the one place where going through the cells beats going through what Excel
@@ -35,31 +39,28 @@ public final class SpreadsheetReader {
     }
 
     /**
+     * The first sheet -- what a one-table import reads.
+     *
      * @throws BusinessRuleException when the bytes are not a workbook this can open, or under
      *                               the conditions {@link CsvTable#parse} refuses a file
      */
     public static CsvTable read(InputStream in) {
+        return readAll(in).first();
+    }
+
+    /**
+     * Every sheet, in the workbook's order -- for an import whose second sheet completes the first,
+     * like the product import's "Unités".
+     *
+     * @throws BusinessRuleException as {@link #read}
+     */
+    public static Sheets readAll(InputStream in) {
         try (Workbook workbook = WorkbookFactory.create(in)) {
-            if (workbook.getNumberOfSheets() == 0) {
-                return CsvTable.of(List.of(), CsvTable.NO_SEPARATOR);
+            Map<String, CsvTable> sheets = new LinkedHashMap<>();
+            for (Sheet sheet : workbook) {
+                sheets.putIfAbsent(sheet.getSheetName(), table(sheet));
             }
-            Sheet sheet = workbook.getSheetAt(0);
-            List<CsvTable.Row> records = new ArrayList<>();
-            for (Row row : sheet) {
-                List<String> cells = new ArrayList<>();
-                for (int i = 0; i < Math.max(row.getLastCellNum(), 0); i++) {
-                    cells.add(text(row.getCell(i)));
-                }
-                CsvTable.Row record = new CsvTable.Row(row.getRowNum() + 1, List.copyOf(cells));
-                if (!record.isBlank()) {
-                    records.add(record);
-                }
-                // Checked while reading, not after: a sheet can claim a million rows.
-                if (records.size() > CsvTable.MAX_ROWS + 1) {
-                    break;
-                }
-            }
-            return CsvTable.of(records, CsvTable.NO_SEPARATOR);
+            return new Sheets(sheets);
         } catch (BusinessRuleException e) {
             throw e;
         } catch (IOException | RuntimeException e) {
@@ -69,6 +70,53 @@ public final class SpreadsheetReader {
                     "Impossible de lire ce fichier Excel. Verifiez qu'il n'est pas protege par un "
                             + "mot de passe, ou enregistrez-le en CSV et recommencez.");
         }
+    }
+
+    /**
+     * The sheets of a workbook by name, in order.
+     *
+     * @param byName sheet name as written, to its table
+     */
+    public record Sheets(Map<String, CsvTable> byName) {
+
+        /** The first sheet, or an empty table for a workbook without any. */
+        public CsvTable first() {
+            return byName.values().stream().findFirst()
+                    .orElseGet(() -> CsvTable.of(List.of(), CsvTable.NO_SEPARATOR));
+        }
+
+        /**
+         * The sheet named like one of these, compared folded -- "Unités", "unites" and "UNITES"
+         * are one name -- or empty. Never the first sheet: that one is the main table.
+         *
+         * @param names already folded by {@link CsvTable#normalise}
+         */
+        public Optional<CsvTable> named(Collection<String> names) {
+            return byName.entrySet().stream()
+                    .skip(1)
+                    .filter(entry -> names.contains(CsvTable.normalise(entry.getKey())))
+                    .map(Map.Entry::getValue)
+                    .findFirst();
+        }
+    }
+
+    private static CsvTable table(Sheet sheet) {
+        List<CsvTable.Row> records = new ArrayList<>();
+        for (Row row : sheet) {
+            List<String> cells = new ArrayList<>();
+            for (int i = 0; i < Math.max(row.getLastCellNum(), 0); i++) {
+                cells.add(text(row.getCell(i)));
+            }
+            CsvTable.Row record = new CsvTable.Row(row.getRowNum() + 1, List.copyOf(cells));
+            if (!record.isBlank()) {
+                records.add(record);
+            }
+            // Checked while reading, not after: a sheet can claim a million rows.
+            if (records.size() > CsvTable.MAX_ROWS + 1) {
+                break;
+            }
+        }
+        return CsvTable.of(records, CsvTable.NO_SEPARATOR);
     }
 
     /** The cell as {@link ExcelUtils#cellValue} reads it, written back as the text a CSV would hold. */

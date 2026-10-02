@@ -21,6 +21,8 @@ import java.util.List;
  *                       documentation names them
  * @param createdRayons  rayon paths the file names that the shop does not have yet; applying
  *                       the import creates them
+ * @param unitNotes      what was read from the workbook's "Unités" sheet, and every row of it
+ *                       left out with why; empty for a file without the sheet
  */
 public record ProductImportPreviewResponse(String separator,
                                            int total,
@@ -33,5 +35,6 @@ public record ProductImportPreviewResponse(String separator,
                                            List<String> ignored,
                                            List<String> missing,
                                            List<String> createdRayons,
+                                           List<String> unitNotes,
                                            List<ProductImportLineResponse> lines) {
 }

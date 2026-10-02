@@ -98,6 +98,11 @@ export interface ProductImportPreview {
   missing: string[];
   /** Rayon paths the file names that the shop has not got; applying creates them. */
   createdRayons: string[];
+  /**
+   * What was read from the workbook's "Unités" sheet — the first entry sums it up — then
+   * each row left out, with why. Empty for a file without the sheet.
+   */
+  unitNotes: string[];
   lines: ProductImportLine[];
 }
 

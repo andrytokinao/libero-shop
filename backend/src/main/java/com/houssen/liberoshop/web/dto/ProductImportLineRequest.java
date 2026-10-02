@@ -2,7 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.service.ImportAction;
-import com.houssen.liberoshop.service.ProductImportColumns;
+import com.houssen.liberoshop.service.ProductUnitSheet;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -68,7 +68,7 @@ public record ProductImportLineRequest(
 
         Long mergeIntoId,
 
-        @Size(max = ProductImportColumns.MAX_EXTRA_UNITS)
+        @Size(max = ProductUnitSheet.MAX_UNITS_PER_PRODUCT)
         List<@Valid PackagingRequest> packagings) {
 
     public ProductImportLineRequest {

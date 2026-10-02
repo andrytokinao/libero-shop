@@ -14,8 +14,6 @@ import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.ProductImportColumns.Column;
 import com.houssen.liberoshop.service.ProductImportColumns.Mapping;
-import com.houssen.liberoshop.service.ProductImportColumns.UnitField;
-import com.houssen.liberoshop.service.ProductImportColumns.UnitSlot;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
@@ -65,11 +63,12 @@ import java.util.Set;
  * inventory count leaves them null. Nothing is ever written in an operator's name from the
  * payload; the actor is read from the session by the controller and passed in here.
  *
- * <p><b>Extra units</b> ("unite 2", "contenance 2", "prix 2"...) are judged by the same
- * {@link PackagingRules} as the units dialog: once while reading, so the preview already says
- * which ones will be refused, and again while writing, against the catalogue as it is then. A
- * refused unit never refuses its line -- the product and its stock still go in, and the line
- * says which unit was left out.
+ * <p><b>Units.</b> A line may be in any unit of its product -- "2 tonne", then "200 kapoka" -- and
+ * is converted to the base unit while reading, so whoever fills the file computes nothing. The
+ * units come from the workbook's "Unités" sheet ({@link ProductUnitSheet}) and from the ones the
+ * product already has. The sheet's units are written with the product, judged by the same
+ * {@link PackagingRules} as the units dialog; a refused unit never refuses its line -- the product
+ * and its stock still go in, and the line says which unit was left out.
  */
 @Service
 @Transactional(readOnly = true)
@@ -118,14 +117,29 @@ public class ProductImportService {
      *                               is nothing to preview rather than something to correct
      */
     public ProductImportPreviewResponse preview(String content) {
-        return preview(CsvTable.parse(content));
+        return preview(CsvTable.parse(content), ProductUnitSheet.empty());
+    }
+
+    /** The same preview over a table already read, with no "Unités" sheet. */
+    public ProductImportPreviewResponse preview(CsvTable table) {
+        return preview(table, ProductUnitSheet.empty());
     }
 
     /**
-     * The same preview over a table already read -- from an Excel workbook, see
-     * {@link SpreadsheetReader}.
+     * The preview of an Excel workbook -- see {@link SpreadsheetReader} -- whose "Unités" sheet
+     * declares the units the products sheet's lines may be written in.
      */
-    public ProductImportPreviewResponse preview(CsvTable table) {
+    public ProductImportPreviewResponse preview(SpreadsheetReader.Sheets workbook) {
+        return preview(workbook.first(), workbook.named(ProductUnitSheet.SHEET_NAMES)
+                .map(ProductUnitSheet::read)
+                .orElse(ProductUnitSheet.empty()));
+    }
+
+    /**
+     * @param units the units the lines may be written in, beside the ones the products already
+     *              have; {@link ProductUnitSheet#empty()} for a file without them
+     */
+    public ProductImportPreviewResponse preview(CsvTable table, ProductUnitSheet units) {
         Mapping mapping = ProductImportColumns.map(table);
         if (!mapping.has(Column.NAME)) {
             throw new BusinessRuleException("IMPORT_NO_NAME_COLUMN",
@@ -145,6 +159,10 @@ public class ProductImportService {
 
         for (CsvTable.Row row : table.rows()) {
             Draft draft = read(row, mapping);
+            if (draft.outcome != ImportOutcome.SKIPPED) {
+                // Before folding: two lines of one product add up in base units, not in theirs.
+                toBaseUnit(draft, index, units);
+            }
             Draft twin = draft.name.isBlank() ? null : findTwin(draft, seen);
             if (twin != null) {
                 twin.absorb(draft);
@@ -169,7 +187,7 @@ public class ProductImportService {
             }
         }
 
-        return summarise(table, mapping, drafts, rayons);
+        return summarise(table, mapping, drafts, rayons, units);
     }
 
     // ----------------------------------------------------------------------- apply
@@ -446,8 +464,9 @@ public class ProductImportService {
             duplicate.folded = this;
             duplicate.selected = false;
             duplicate.outcome = ImportOutcome.SKIPPED;
-            duplicate.notes.add("Doublon dans le fichier : la quantite a ete ajoutee a la ligne "
-                    + line + ".");
+            // Said as what happened, not as a mistake: one product received in two units -- "2
+            // tonne", then "200 kapoka" -- is two lines on purpose.
+            duplicate.notes.add("Meme produit que la ligne " + line + " : sa quantite y est ajoutee.");
         }
     }
 
@@ -508,40 +527,106 @@ public class ProductImportService {
                     + Product.MAX_UNIT_LENGTH + " caracteres.");
             draft.unit = draft.unit.substring(0, Product.MAX_UNIT_LENGTH).trim();
         }
-        readUnits(row, mapping, draft);
         return draft;
     }
 
     /**
-     * The extra units of one line, checked as far as a file alone allows: a name, a readable
-     * contenance and price, by the same rules as the units dialog. Whether the name or the barcode
-     * is already taken can only be known against the catalogue, and is decided when writing.
+     * Puts a line in its product's base unit: "2 tonne" of rice counted in kapoka becomes 7 000
+     * kapoka, its purchase price one 3 500th of a tonne's. The line says what was converted.
+     *
+     * <p>The units are the ones the "Unités" sheet declares for the product, and the ones it
+     * already has -- which win over the sheet, like the rest of what the shop set. A line with no
+     * unit is in the base unit. A line in a unit nobody declared is refused rather than guessed:
+     * read as base units, "2 tonne" would enter as 2 kapoka.
+     *
+     * <p>A product with no units anywhere is left as the file wrote it, which is how every line
+     * was read before units: its unit column names the base unit.
      */
-    private static void readUnits(CsvTable.Row row, Mapping mapping, Draft draft) {
-        for (UnitSlot slot : mapping.unitSlots()) {
-            String label = PackagingRules.squeeze(slot.cell(row, UnitField.LABEL));
-            String rawFactor = slot.cell(row, UnitField.FACTOR);
-            String rawPrice = slot.cell(row, UnitField.PRICE);
-            String barcode = PackagingRules.squeeze(slot.cell(row, UnitField.BARCODE));
-            if (label == null) {
-                if (!rawFactor.isBlank() || !rawPrice.isBlank() || barcode != null) {
-                    draft.notes.add("Unite " + slot.number() + " sans nom : ignoree.");
-                }
-                continue;
+    private static void toBaseUnit(Draft draft, Catalogue index, ProductUnitSheet sheet) {
+        Product known = index.find(draft.barcode, draft.name);
+        ProductUnitSheet.Definition declared = sheet.of(draft.name).orElse(null);
+        String base = known != null && known.getUnit() != null ? known.getUnit()
+                : declared == null ? null : declared.baseUnit();
+
+        if (declared != null && known != null && known.getUnit() != null && declared.baseUnit() != null
+                && !CsvTable.normalise(declared.baseUnit()).equals(CsvTable.normalise(known.getUnit()))) {
+            draft.notes.add("La feuille " + ProductUnitSheet.SHEET_NAME + " compte ce produit en "
+                    + declared.baseUnit() + ", le catalogue en " + known.getUnit()
+                    + " : ses unites de la feuille sont ignorees.");
+            declared = null;
+        }
+        boolean knownUnits = known != null && !known.getPackagings().isEmpty();
+        if (declared == null && !knownUnits) {
+            return;
+        }
+
+        // Base unit first, then the product's own units, then the sheet's: the first one of a
+        // name wins, so the shop's own factor stands against the file's.
+        Map<String, Unit> units = new LinkedHashMap<>();
+        if (base != null) {
+            units.put(CsvTable.normalise(base), new Unit(base, BigDecimal.ONE));
+        }
+        if (known != null) {
+            known.getPackagings().forEach(p ->
+                    units.putIfAbsent(CsvTable.normalise(p.getLabel()), new Unit(p.getLabel(), p.getFactor())));
+        }
+        if (declared != null) {
+            declared.packagings().forEach(p ->
+                    units.putIfAbsent(CsvTable.normalise(p.label()), new Unit(p.label(), p.factor())));
+        }
+
+        Unit unit = draft.unit == null ? units.get(CsvTable.normalise(base)) : units.get(CsvTable.normalise(draft.unit));
+        if (unit == null && base == null) {
+            // The sheet declared the other units but not the base: the line's unit is that base.
+            base = draft.unit;
+            unit = base == null ? null : new Unit(base, BigDecimal.ONE);
+        }
+        if (unit == null && draft.unit == null) {
+            refuse(draft, "Ligne sans unite, et la feuille " + ProductUnitSheet.SHEET_NAME
+                    + " ne dit pas laquelle est l'unite de base (contenance 1).");
+            return;
+        }
+        if (unit == null) {
+            refuse(draft, "Unite \"" + draft.unit + "\" inconnue pour ce produit (unites : "
+                    + String.join(", ", units.values().stream().map(Unit::label).toList())
+                    + ") : ajoutez-la a la feuille " + ProductUnitSheet.SHEET_NAME + ".");
+            return;
+        }
+        if (unit.factor().compareTo(BigDecimal.ONE) != 0) {
+            BigDecimal entered = draft.quantity;
+            draft.quantity = Quantities.scaled(entered.multiply(unit.factor()));
+            draft.notes.add(Quantities.format(entered) + " " + unit.label() + " = "
+                    + Quantities.format(draft.quantity) + " " + base + ".");
+            if (draft.cost != null) {
+                draft.cost = draft.cost.divide(unit.factor(), PurchaseCosting.COST_SCALE, RoundingMode.HALF_UP);
             }
-            if (label.length() > Product.MAX_UNIT_LENGTH) {
-                draft.notes.add("Unite \"" + label + "\" trop longue : raccourcie a "
-                        + Product.MAX_UNIT_LENGTH + " caracteres.");
-                label = label.substring(0, Product.MAX_UNIT_LENGTH).trim();
-            }
-            try {
-                BigDecimal factor = PackagingRules.validFactor(ProductImportColumns.number(rawFactor), draft.unit);
-                BigDecimal price = PackagingRules.validPrice(ProductImportColumns.number(rawPrice));
-                draft.packagings.add(new PackagingRequest(label, factor, price, barcode));
-            } catch (BusinessRuleException refused) {
-                draft.notes.add("Unite \"" + label + "\" ignoree : " + refused.getMessage());
+            if (draft.price != null) {
+                draft.notes.add("Le prix est lu comme celui d'un(e) " + base
+                        + " : celui des autres unites vient de la feuille " + ProductUnitSheet.SHEET_NAME + ".");
             }
         }
+        draft.unit = base;
+        if (declared != null) {
+            if (draft.price == null && declared.basePrice() != null) {
+                draft.price = declared.basePrice().setScale(2, RoundingMode.HALF_UP);
+            }
+            if (draft.barcode == null) {
+                draft.barcode = declared.baseBarcode();
+            }
+            draft.packagings.clear();
+            draft.packagings.addAll(declared.packagings());
+        }
+    }
+
+    /** A unit a line may be written in: its name, and how many base units it holds. */
+    private record Unit(String label, BigDecimal factor) {
+    }
+
+    /** A line the reader cannot apply as written: unticked, unusable, and saying why. */
+    private static void refuse(Draft draft, String why) {
+        draft.outcome = ImportOutcome.SKIPPED;
+        draft.selected = false;
+        draft.notes.add(why);
     }
 
     /** The earlier line of this file carrying the same product, or null. */
@@ -631,7 +716,8 @@ public class ProductImportService {
     // ------------------------------------------------------------------- the reply
 
     private ProductImportPreviewResponse summarise(CsvTable table, Mapping mapping,
-                                                   List<Draft> drafts, List<Category> rayons) {
+                                                   List<Draft> drafts, List<Category> rayons,
+                                                   ProductUnitSheet units) {
         Map<Long, String> rayonPaths = new HashMap<>();
         rayons.forEach(rayon -> rayonPaths.put(rayon.getId(), CategoryService.pathOf(rayon)));
 
@@ -694,6 +780,7 @@ public class ProductImportService {
                 mapping.ignored(),
                 mapping.missing(),
                 createdRayons,
+                units.notes(),
                 lines);
     }
 
@@ -718,6 +805,12 @@ public class ProductImportService {
             Catalogue catalogue = new Catalogue();
             all.forEach(catalogue::add);
             return catalogue;
+        }
+
+        /** The product a line designates: by its barcode first, else by its name; null for none. */
+        Product find(String barcode, String name) {
+            Product byCode = barcode == null ? null : byBarcode.get(barcode);
+            return byCode != null ? byCode : byName.get(CsvTable.normalise(name));
         }
 
         void add(Product product) {

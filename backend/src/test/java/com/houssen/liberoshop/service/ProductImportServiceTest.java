@@ -402,7 +402,7 @@ class ProductImportServiceTest {
         assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("ligne 4")));
         assertEquals(ImportOutcome.SKIPPED, line(preview, 2).outcome());
         assertFalse(line(preview, 2).selected());
-        assertTrue(line(preview, 2).notes().stream().anyMatch(note -> note.contains("Doublon")));
+        assertTrue(line(preview, 2).notes().stream().anyMatch(note -> note.contains("y est ajoutee")));
     }
 
     @Test
@@ -769,66 +769,112 @@ class ProductImportServiceTest {
         assertEquals(new BigDecimal("675.00"), line(preview, 0).cost());
     }
 
-    // ------------------------------------------------------------------ extra units
+    // ------------------------------------------------------------------------ units
 
-    /** Loose rice counted in kapoka, sold by the kilo and the 50 kg sack. */
-    private static final String RICE_WITH_UNITS = "nom;quantite;unite;prix;unite 2;contenance 2;prix 2;"
-            + "Unité 3;Contenance 3;Prix 3;Code barres 3\n"
-            + "Riz vrac;1750;kapoka;900;kg;3,5;3000;sac 50 kg;175;145000;SAC-50\n";
+    /** Loose rice counted in kapoka, received by the tonne and sold by the kilo and the sack. */
+    private static final String RICE_UNITS = "produit;unite;contenance;prix;code barres\n"
+            + "Riz vrac;kapoka;1;900;\n"
+            + "Riz vrac;kg;3,5;3000;\n"
+            + "Riz vrac;sac 50 kg;175;145000;SAC-50\n"
+            + "Riz vrac;tonne;3500;2800000;\n";
 
-    @Test
-    @DisplayName("reads the numbered unit columns, and reports none of them as ignored")
-    void readsExtraUnits() {
-        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+    /** Two deliveries of the same rice, each in the unit it came in. */
+    private static final String RICE_DELIVERIES = "nom;quantite;unite;prix d achat\n"
+            + "Riz vrac;2;tonne;2450000\n"
+            + "Riz vrac;200;kapoka;700\n";
 
-        assertTrue(preview.ignored().isEmpty(), "ignored: " + preview.ignored());
-        List<PackagingRequest> read = line(preview, 0).packagings();
-        assertEquals(List.of("kg", "sac 50 kg"), read.stream().map(PackagingRequest::label).toList());
-        assertEquals(new BigDecimal("3.500"), read.getFirst().factor());
-        assertEquals("SAC-50", read.get(1).barcode());
+    private ProductImportPreviewResponse previewWithUnits(String products, String units) {
+        return service.preview(CsvTable.parse(products), ProductUnitSheet.read(CsvTable.parse(units)));
     }
 
     @Test
-    @DisplayName("a unit the file describes badly is left out with a note, the line stays")
-    void notesABadUnit() {
-        ProductImportPreviewResponse preview = service.preview(
-                "nom;unite;prix;unite 2;contenance 2;prix 2;unite 3;prix 3\n"
-                        + "Riz vrac;kapoka;900;kg;1;3000;;5000\n");
+    @DisplayName("2 tonne and 200 kapoka add up to 7 200 kapoka: the file computes nothing")
+    void convertsEachLineToTheBaseUnit() {
+        ProductImportPreviewResponse preview = previewWithUnits(RICE_DELIVERIES, RICE_UNITS);
 
-        ProductImportLineResponse line = line(preview, 0);
-        assertTrue(line.packagings().isEmpty());
-        assertTrue(line.selected());
-        assertTrue(line.notes().stream().anyMatch(note -> note.contains("\"kg\" ignoree")), line.notes().toString());
-        assertTrue(line.notes().stream().anyMatch(note -> note.contains("Unite 3 sans nom")), line.notes().toString());
+        ProductImportLineResponse rice = line(preview, 0);
+        assertQuantity(7200, rice.quantity());
+        assertEquals("kapoka", rice.unit());
+        assertEquals(new BigDecimal("900.00"), rice.price(), "the base price comes from the sheet");
+        // 2 450 000 a tonne is 700 a kapoka, like the second line: the blend stays at 700.
+        assertEquals(new BigDecimal("700.00"), rice.cost());
+        assertEquals(List.of("kg", "sac 50 kg", "tonne"),
+                rice.packagings().stream().map(PackagingRequest::label).toList());
+        assertTrue(rice.notes().contains("2 tonne = 7000 kapoka."), rice.notes().toString());
+        assertFalse(line(preview, 1).selected(), "the second line was folded into the first");
+        assertEquals("Feuille Unités : 4 unite(s) pour 1 produit(s).", preview.unitNotes().getFirst());
     }
 
     @Test
-    @DisplayName("a new product comes in with its units, counted in the result")
-    void createsUnits() {
-        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+    @DisplayName("a line in a unit nobody declared is refused rather than read as base units")
+    void refusesAnUndeclaredUnit() {
+        ProductImportPreviewResponse preview = previewWithUnits(
+                "nom;quantite;unite\nRiz vrac;3;carton\n", RICE_UNITS);
+
+        ProductImportLineResponse rice = line(preview, 0);
+        assertEquals(ImportOutcome.SKIPPED, rice.outcome());
+        assertFalse(rice.selected());
+        assertTrue(rice.notes().getFirst().contains("\"carton\" inconnue"), rice.notes().toString());
+        assertTrue(rice.notes().getFirst().contains("kapoka, kg, sac 50 kg, tonne"));
+    }
+
+    @Test
+    @DisplayName("applying creates the product in its base unit, with its stock and its units")
+    void createsTheProductWithItsUnits() {
+        ProductImportPreviewResponse preview = previewWithUnits(RICE_DELIVERIES, RICE_UNITS);
 
         ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
 
-        assertEquals(2, result.unitsCreated());
+        assertEquals(3, result.unitsCreated());
         Product rice = shelf.getLast();
         assertEquals("kapoka", rice.getUnit());
-        assertEquals(List.of("kg", "sac 50 kg"), units.stream()
+        assertQuantity(7200, rice.getStockQuantity());
+        assertEquals(new BigDecimal("700.00"), rice.getAverageCost());
+        assertEquals(List.of("kg", "sac 50 kg", "tonne"), units.stream()
                 .filter(unit -> unit.getProduct() == rice).map(ProductPackaging::getLabel).toList());
     }
 
     @Test
-    @DisplayName("a merge adds the units the product lacks and leaves the shop's own as they are")
-    void mergeOnlyAddsMissingUnits() {
+    @DisplayName("a product's own units convert a plain CSV too, with no sheet at all")
+    void convertsWithTheCatalogueUnits() {
+        Product rice = inCatalogue("Riz vrac", 100, null, null);
+        rice.setUnit("kapoka");
+        rice.getPackagings().add(unitOf(rice, "kg", "3.5", null));
+
+        ProductImportLineResponse line = line(service.preview("nom;quantite;unite\nRiz vrac;2;kg\n"), 0);
+
+        assertEquals(ImportAction.MERGE, line.action());
+        assertQuantity(7, line.quantity());
+        assertEquals("kapoka", line.unit());
+    }
+
+    @Test
+    @DisplayName("a merge keeps the shop's own units -- converting with them -- and adds the missing ones")
+    void mergeKeepsTheShopsUnits() {
         Product rice = inCatalogue("Riz vrac", 100, null, null);
         rice.setUnit("kapoka");
         ProductPackaging kilo = unitOf(rice, "kg", "4", null);
+        rice.getPackagings().add(kilo);
 
-        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+        ProductImportPreviewResponse preview = previewWithUnits("nom;quantite;unite\nRiz vrac;1;kg\n", RICE_UNITS);
+        assertQuantity(4, line(preview, 0).quantity(), "the shop's kilo is 4 kapoka, not the sheet's 3.5");
+
         ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+        assertEquals(2, result.unitsCreated(), "the sack and the tonne");
+        assertEquals(new BigDecimal("4"), kilo.getFactor());
+    }
 
-        assertEquals(1, result.unitsCreated());
-        assertEquals(new BigDecimal("4"), kilo.getFactor(), "the shop's kilo stands");
-        assertTrue(units.stream().anyMatch(unit -> unit.getLabel().equals("sac 50 kg")));
+    @Test
+    @DisplayName("a sheet counting the product in another base unit than the catalogue is not used")
+    void refusesAnotherBaseUnit() {
+        Product rice = inCatalogue("Riz vrac", 100, null, null);
+        rice.setUnit("kg");
+
+        ProductImportLineResponse line = line(previewWithUnits("nom;quantite;unite\nRiz vrac;5;kg\n", RICE_UNITS), 0);
+
+        assertQuantity(5, line.quantity());
+        assertTrue(line.packagings().isEmpty());
+        assertTrue(line.notes().stream().anyMatch(note -> note.contains("le catalogue en kg")), line.notes().toString());
     }
 
     @Test
@@ -837,14 +883,27 @@ class ProductImportServiceTest {
         Product other = inCatalogue("Sucre vrac", 10, null, null);
         unitOf(other, "sac", "50", "SAC-50");
 
-        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+        ProductImportPreviewResponse preview = previewWithUnits(RICE_DELIVERIES, RICE_UNITS);
         ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
 
         assertEquals(1, result.created());
-        assertEquals(1, result.unitsCreated(), "the kilo still goes in");
+        assertEquals(2, result.unitsCreated(), "the kilo and the tonne still go in");
         assertTrue(result.lines().getFirst().note().contains("\"sac 50 kg\" non creee"),
                 result.lines().getFirst().note());
-        assertQuantity(1750, shelf.getLast().getStockQuantity());
+        assertQuantity(7200, shelf.getLast().getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("a bad row of the sheet is reported with its line, and the others are read")
+    void reportsBadSheetRows() {
+        ProductImportPreviewResponse preview = previewWithUnits(RICE_DELIVERIES,
+                RICE_UNITS + "Riz vrac;bidon;0;100;\n;kg;2;100;\n");
+
+        assertTrue(preview.unitNotes().stream().anyMatch(note -> note.startsWith("Unités, ligne 6 (Riz vrac, bidon)")),
+                preview.unitNotes().toString());
+        assertTrue(preview.unitNotes().stream().anyMatch(note -> note.startsWith("Unités, ligne 7")),
+                preview.unitNotes().toString());
+        assertEquals(3, line(preview, 0).packagings().size());
     }
 
     @Test
@@ -859,5 +918,17 @@ class ProductImportServiceTest {
 
         assertNull(shelf.getLast().getBarcode());
         assertTrue(result.lines().getFirst().note().contains("celui d'une unite"));
+    }
+
+    @Test
+    @DisplayName("the model workbook previews as it promises: 7 200 kapoka of rice from two lines")
+    void modelWorkbookPreviews() {
+        ProductImportPreviewResponse preview = service.preview(SpreadsheetReader.readAll(
+                new java.io.ByteArrayInputStream(ProductImportTemplate.xlsx())));
+
+        assertQuantity(7200, line(preview, 0).quantity());
+        assertQuantity(60, line(preview, 2).quantity(), "10 packs of 6 bottles");
+        assertEquals("bouteille", line(preview, 2).unit());
+        assertQuantity(48, line(preview, 3).quantity(), "a product with no units is read as before");
     }
 }
