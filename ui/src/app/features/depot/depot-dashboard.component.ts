@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { InvoiceStore } from '../../core/store/invoice.store';
@@ -60,7 +60,7 @@ const EMPTY: DepotDashboard = {
         [invoices]="data().pendingInvoices"
         [showDate]="true"
         [busy]="busy()"
-        [actionLabel]="actionLabel"
+        [actionLabel]="actionLabel()"
         (action)="handOver($event)"
         emptyMessage="Aucune commande en attente."
       />
@@ -82,7 +82,7 @@ export class DepotDashboardComponent {
   private readonly toasts = inject(ToastService);
 
   protected readonly auth = inject(AuthService);
-  protected readonly actionLabel = deliveryActionLabel;
+  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.words().handOverAction));
   protected readonly busy = signal(false);
   /** The unpaid order whose "pays now or at the till?" question is open. */
   protected readonly askingFor = signal<Invoice | null>(null);

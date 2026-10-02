@@ -44,6 +44,8 @@ export interface Vocabulary {
   handOver: string;
   /** The button that hands one order over: "Remettre au client" in a shop, "Servir" at a table. */
   handOverAction: string;
+  /** The orders waiting for it, in two words: "À remettre", "À servir". */
+  pendingHandOver: string;
   /** Who an order is for. */
   client: string;
   /** What the till writes when nobody is named. */
@@ -64,6 +66,7 @@ const SHOP_WORDS: Vocabulary = {
   depot: 'Dépôt',
   handOver: 'Remise de commande',
   handOverAction: 'Remettre au client',
+  pendingHandOver: 'À remettre',
   client: 'Client',
   clientPlaceholder: 'Client comptoir',
 };
@@ -134,6 +137,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       depot: 'Cuisine',
       handOver: 'Commandes à servir',
       handOverAction: 'Servir',
+      pendingHandOver: 'À servir',
       client: 'Table',
       clientPlaceholder: 'Ex : Table 4',
     },
@@ -155,6 +159,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       depot: 'Bar',
       handOver: 'Commandes à servir',
       handOverAction: 'Servir',
+      pendingHandOver: 'À servir',
       client: 'Table',
       clientPlaceholder: 'Ex : Table 2 ou Comptoir',
     },
@@ -176,6 +181,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeInfo[] = [
       depot: 'Service',
       handOver: 'Commandes à servir',
       handOverAction: 'Servir',
+      pendingHandOver: 'À servir',
       client: 'Table / chambre',
       clientPlaceholder: 'Ex : Chambre 12',
     },

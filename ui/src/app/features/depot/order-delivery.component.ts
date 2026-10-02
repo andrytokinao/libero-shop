@@ -1,4 +1,4 @@
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { DeliveryStatus, Invoice, RoleApp } from '../../core/models';
@@ -9,6 +9,7 @@ import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { CashInHandComponent } from './cash-in-hand.component';
 import { asksHowToPay, deliveryActionLabel } from '../../core/orders/delivery.util';
 import { HandOverDialogComponent } from '../../shared/components/hand-over-dialog.component';
+import { FilterTab, FilterTabsComponent } from '../../shared/components/filter-tabs.component';
 
 @Component({
   selector: 'app-order-delivery',
@@ -19,6 +20,7 @@ import { HandOverDialogComponent } from '../../shared/components/hand-over-dialo
     CashInHandComponent,
     HasRoleDirective,
     HandOverDialogComponent,
+    FilterTabsComponent,
   ],
   template: `
     <div class="card">
@@ -29,6 +31,12 @@ import { HandOverDialogComponent } from '../../shared/components/hand-over-dialo
           vérifier les articles avant de remettre
         </small>
       </h2>
+      <app-filter-tabs
+        label="Commandes"
+        [tabs]="tabs()"
+        [value]="onlyPending()"
+        (valueChange)="onFilter($event)"
+      />
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:320px;">
           <label for="delivery-search">Recherche</label>
@@ -40,24 +48,12 @@ import { HandOverDialogComponent } from '../../shared/components/hand-over-dialo
             (ngModelChange)="onSearch($event)"
           />
         </div>
-        <div class="fld">
-          <label for="delivery-filter">Afficher</label>
-          <select
-            id="delivery-filter"
-            class="field"
-            [ngModel]="onlyPending()"
-            (ngModelChange)="onFilter($event)"
-          >
-            <option [ngValue]="true">Commandes à remettre</option>
-            <option [ngValue]="false">Toutes les commandes</option>
-          </select>
-        </div>
       </div>
       <app-invoice-table
         [invoices]="invoices()"
         [showDate]="true"
         [busy]="busy()"
-        [actionLabel]="actionLabel"
+        [actionLabel]="actionLabel()"
         (action)="handOver($event)"
         emptyMessage="Aucune commande ne correspond à la recherche."
       />
@@ -90,7 +86,7 @@ export class OrderDeliveryComponent {
   protected readonly onlyPending = signal(true);
   protected readonly busy = signal(false);
   protected readonly auth = inject(AuthService);
-  protected readonly actionLabel = deliveryActionLabel;
+  protected readonly actionLabel = computed(() => deliveryActionLabel(this.auth.words().handOverAction));
   protected readonly RoleApp = RoleApp;
   /** The unpaid order whose "pays now or at the till?" question is open. */
   protected readonly askingFor = signal<Invoice | null>(null);
@@ -105,6 +101,22 @@ export class OrderDeliveryComponent {
     deliveryStatus: this.onlyPending() ? DeliveryStatus.PENDING : undefined,
   }));
   protected readonly invoices = this.resource.value;
+
+  /**
+   * Every order waiting, whatever is searched or shown — what the count on the tab says. Kept
+   * current by the store like the list, so it moves as orders come in and go out.
+   */
+  private readonly waiting = this.invoiceStore.list(() => ({ deliveryStatus: DeliveryStatus.PENDING }));
+
+  protected readonly tabs = computed<FilterTab<boolean>[]>(() => [
+    {
+      value: true,
+      label: this.auth.words().pendingHandOver,
+      icon: '⏳',
+      count: this.waiting.value().length,
+    },
+    { value: false, label: 'Tous', icon: '≣' },
+  ]);
 
   protected onSearch(value: string): void {
     this.search.set(value);
