@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Loading a catalogue from a spreadsheet export, in two calls.
@@ -106,11 +107,17 @@ public class ProductImportController {
      */
     @GetMapping("/columns")
     public ImportFormat columns() {
-        List<RecommendedColumn> columns = Arrays.stream(ProductImportColumns.Column.values())
-                .map(column -> new RecommendedColumn(
-                        column.name(),
-                        column.label(),
-                        column == ProductImportColumns.Column.NAME))
+        int unit = ProductImportColumns.FIRST_EXTRA_UNIT;
+        List<RecommendedColumn> columns = Stream.concat(
+                Arrays.stream(ProductImportColumns.Column.values())
+                        .map(column -> new RecommendedColumn(
+                                column.name(),
+                                column.label(),
+                                column == ProductImportColumns.Column.NAME)),
+                // The first extra unit stands for the pattern: "unite 3" and on work the same way.
+                Arrays.stream(ProductImportColumns.UnitField.values())
+                        .map(field -> new RecommendedColumn(
+                                "UNIT_" + unit + "_" + field.name(), field.label(unit), false)))
                 .toList();
         return new ImportFormat(columns, CsvTable.MAX_ROWS);
     }

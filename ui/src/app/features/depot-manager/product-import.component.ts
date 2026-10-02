@@ -21,6 +21,7 @@ import {
   ProductImportResultLine,
   Supplier,
 } from '../../core/models';
+import { formatQuantity } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { TEXT_FILE_ACCEPT, readTextFile } from '../../core/utils/text-file.util';
 import { CategoryAssignDialogComponent, CategoryAssignment } from './category-assign-dialog.component';
@@ -115,7 +116,10 @@ const TEMPLATE_FILE_NAME = 'modele-import-produits.xlsx';
             <ul class="imp-report">
               <li><strong>{{ report.created }}</strong> nouveau(x) produit(s) créé(s)</li>
               <li><strong>{{ report.merged }}</strong> produit(s) existant(s) complété(s)</li>
-              <li><strong>{{ report.unitsAdded }}</strong> unité(s) ajoutée(s) au stock</li>
+              <li><strong>{{ formatQuantity(report.unitsAdded) }}</strong> unité(s) ajoutée(s) au stock</li>
+              @if (report.unitsCreated) {
+                <li><strong>{{ report.unitsCreated }}</strong> unité(s) de vente créée(s) (kg, carton…)</li>
+              }
               <li>
                 <strong>{{ report.movements }}</strong> entrée(s) de stock à votre nom
                 @if (report.supplierName) {
@@ -220,6 +224,7 @@ export class ProductImportComponent {
   @Output() readonly imported = new EventEmitter<ProductImportResult>();
 
   protected readonly accept = `${TEXT_FILE_ACCEPT},${SPREADSHEET_ACCEPT}`;
+  protected readonly formatQuantity = formatQuantity;
 
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   protected readonly categories = this.categoryResource.value;
@@ -379,6 +384,7 @@ export class ProductImportComponent {
       categoryPath: row.categoryPath || null,
       action: row.action,
       mergeIntoId: row.action === ImportAction.MERGE ? (row.existing?.id ?? null) : null,
+      packagings: row.packagings,
     };
   }
 

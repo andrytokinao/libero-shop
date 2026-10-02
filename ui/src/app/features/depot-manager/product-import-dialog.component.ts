@@ -4,11 +4,13 @@ import {
   CategoryNode,
   ImportAction,
   ImportOutcome,
+  PackagingRequest,
   ProductImportLine,
   ProductImportPreview,
   Supplier,
   UNIT_SUGGESTIONS,
 } from '../../core/models';
+import { formatAmount, roundQuantity } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** How many lines a page shows. A screen's worth, so the ticking stays a scan and not a scroll. */
@@ -42,6 +44,8 @@ export interface ProductImportRow {
   suggestedName: string | null;
   selected: boolean;
   notes: string[];
+  /** The extra units the file gave the line; shown, not edited here — the units dialog does that. */
+  packagings: PackagingRequest[];
   /** Refused by the reader itself — no name, or folded into another line. Cannot be ticked. */
   unusable: boolean;
   /** The name as the file wrote it, so a rename is reversible. */
@@ -197,7 +201,7 @@ export interface ProductImportRow {
                         <input
                           type="number"
                           min="0"
-                          step="1"
+                          step="any"
                           [attr.aria-label]="'Quantité, ligne ' + row.line"
                           [ngModel]="row.quantity"
                           (ngModelChange)="patch(row, { quantity: asCount($event) })"
@@ -213,6 +217,12 @@ export interface ProductImportRow {
                           [ngModel]="row.unit"
                           (ngModelChange)="patch(row, { unit: $event })"
                         />
+                        @if (row.packagings.length) {
+                          <!-- The other units the product will sell in, read from "unite 2"… -->
+                          <div class="imp-units muted" [title]="unitsTitle(row)">
+                            + {{ unitsSummary(row) }}
+                          </div>
+                        }
                       </td>
                       <td class="num col-price">
                         @if (row.action === merge) {
@@ -454,6 +464,15 @@ export interface ProductImportRow {
         width: 96px;
       }
 
+      .imp-units {
+        font-size: 11px;
+        margin-top: 2px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .col-unit {
         width: 92px;
       }
@@ -583,6 +602,7 @@ export class ProductImportDialogComponent {
       suggestedName: line.suggestedName,
       selected: line.selected && !unusable,
       notes: line.notes,
+      packagings: line.packagings ?? [],
       unusable,
       fileName: line.name,
     };
@@ -794,10 +814,28 @@ export class ProductImportDialogComponent {
     return this.categories.find((node) => node.id === categoryId)?.path ?? '—';
   }
 
-  /** An empty or unreadable number field is 0 units, never NaN in the payload. */
+  /**
+   * An empty or unreadable number field is 0 units, never NaN in the payload. Kept to the
+   * thousandth, like the stock: loose goods come in by weight.
+   */
   protected asCount(value: unknown): number {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+    return Number.isFinite(parsed) && parsed > 0 ? roundQuantity(parsed) : 0;
+  }
+
+  /** "kg, sac 50 kg" — the extra units of a line, short enough for the unit column. */
+  protected unitsSummary(row: ProductImportRow): string {
+    return row.packagings.map((unit) => unit.label).join(', ');
+  }
+
+  /** "kg = 3,5 kapoka à 3 000 Ar" per unit, for the tooltip. */
+  protected unitsTitle(row: ProductImportRow): string {
+    return row.packagings
+      .map(
+        (unit) =>
+          `${unit.label} = ${formatAmount(unit.factor, row.unit?.trim() || null)} à ${unit.price.toLocaleString('fr-FR')} Ar`,
+      )
+      .join('\n');
   }
 
   /** An empty price stays null, which is what `problemOf` reports rather than guessing zero. */

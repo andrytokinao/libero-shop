@@ -3,9 +3,11 @@ package com.houssen.liberoshop.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The columns a product import file may carry, and how they are recognised.
@@ -71,6 +73,59 @@ public final class ProductImportColumns {
         }
     }
 
+    /**
+     * The first number an extra unit's columns carry. "unite" alone is the base unit, so the next
+     * one a shopkeeper writes is "unite 2" -- the way a spreadsheet numbers a repeated column.
+     */
+    public static final int FIRST_EXTRA_UNIT = 2;
+    /** How many extra units one line may bring: kilo, sack and carton is already a lot. */
+    public static final int MAX_EXTRA_UNITS = 3;
+
+    /**
+     * One field of an extra unit -- "kg = 3.5 kapoka at 3 000 Ar". Each is written with the
+     * unit's number after it: "unite 2", "contenance 2", "prix 2", "code barres 2".
+     */
+    public enum UnitField {
+
+        LABEL("unite", "conditionnement", "unit", "mesure"),
+
+        /** How many base units it holds, the same "contenance" the units dialog asks for. */
+        FACTOR("contenance", "contient", "facteur", "conversion", "equivalence"),
+
+        PRICE("prix", "prix de vente", "prix vente", "pv", "price"),
+
+        BARCODE("code barres", "code barre", "barcode", "ean");
+
+        private final List<String> aliases;
+
+        UnitField(String... aliases) {
+            this.aliases = List.of(aliases);
+        }
+
+        /** The spelling the model file and the UI recommend for unit {@code number}. */
+        public String label(int number) {
+            return aliases.getFirst() + " " + number;
+        }
+
+        /** Every accepted spelling for unit {@code number}, folded: "Unité 2", "unite_2", "UNITE2". */
+        String[] normalisedAliases(int number) {
+            return aliases.stream().map(alias -> CsvTable.normalise(alias + number)).toArray(String[]::new);
+        }
+    }
+
+    /**
+     * The columns of one extra unit, as found in the file. Present only when its name column is:
+     * a "prix 2" with no "unite 2" says nothing about which unit it prices.
+     */
+    public record UnitSlot(int number, Map<UnitField, Integer> indexes) {
+
+        /** The trimmed cell for that field, or {@code ""} when the file has no such column. */
+        public String cell(CsvTable.Row row, UnitField field) {
+            Integer index = indexes.get(field);
+            return index == null ? "" : row.cell(index);
+        }
+    }
+
     private ProductImportColumns() {
     }
 
@@ -86,11 +141,14 @@ public final class ProductImportColumns {
      *                   quantity at all, and silently importing 300 products at stock 0 would
      *                   be worse than saying which header was skipped.
      * @param missing    recommended columns the file has none of, under their documented names
+     * @param unitSlots  the extra units the file describes, in their numbers' order; empty for a
+     *                   file of products sold one way only, which is most of them
      */
     public record Mapping(Map<Column, Integer> indexes,
                           Map<String, String> recognised,
                           List<String> ignored,
-                          List<String> missing) {
+                          List<String> missing,
+                          List<UnitSlot> unitSlots) {
 
         public boolean has(Column column) {
             return indexes.containsKey(column);
@@ -118,16 +176,38 @@ public final class ProductImportColumns {
             }
         }
 
+        List<UnitSlot> unitSlots = new ArrayList<>();
+        Set<Integer> used = new HashSet<>(indexes.values());
+        for (int number = FIRST_EXTRA_UNIT; number < FIRST_EXTRA_UNIT + MAX_EXTRA_UNITS; number++) {
+            Map<UnitField, Integer> fields = new EnumMap<>(UnitField.class);
+            for (UnitField field : UnitField.values()) {
+                int index = table.indexOf(field.normalisedAliases(number));
+                if (index >= 0) {
+                    fields.put(field, index);
+                }
+            }
+            if (fields.containsKey(UnitField.LABEL)) {
+                unitSlots.add(new UnitSlot(number, Map.copyOf(fields)));
+                for (Map.Entry<UnitField, Integer> field : fields.entrySet()) {
+                    used.add(field.getValue());
+                    recognised.put(field.getKey().label(number),
+                            table.headers().get(field.getValue()).trim());
+                }
+            }
+        }
+
+        // A header is only ignored once neither a column nor an extra unit took it: "prix 2"
+        // beside a "unite 2" is understood, without one it is reported like any unknown header.
         List<String> ignored = new ArrayList<>();
         for (int i = 0; i < table.headers().size(); i++) {
             String header = table.headers().get(i).trim();
-            if (!header.isEmpty() && !indexes.containsValue(i)) {
+            if (!header.isEmpty() && !used.contains(i)) {
                 ignored.add(header);
             }
         }
 
         return new Mapping(Map.copyOf(indexes), Map.copyOf(recognised),
-                List.copyOf(ignored), List.copyOf(missing));
+                List.copyOf(ignored), List.copyOf(missing), List.copyOf(unitSlots));
     }
 
     /**

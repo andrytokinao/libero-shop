@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.service.ProductImportColumns.Column;
+import com.houssen.liberoshop.service.ProductImportColumns.UnitField;
 import com.houssen.liberoshop.util.ExcelUtils;
 
 import java.util.ArrayList;
@@ -15,6 +16,10 @@ import java.util.Map;
  * <p>The headers are the columns of {@link ProductImportColumns} written the way a person
  * would type them; every one of them folds onto its column's first alias, which the tests
  * check by reading the model back through {@link SpreadsheetReader}.
+ *
+ * <p>After the product columns come those of one extra unit -- "Unité 2", "Contenance 2",
+ * "Prix 2", "Code barres 2" -- the most a model needs to show the pattern: a shop selling by the
+ * sack as well copies them to "Unité 3".
  *
  * <p>The barcode examples are text, so {@link ExcelUtils} formats that column as text before
  * anyone types in it. Typed into a number column, a thirteen-digit barcode is shown as
@@ -48,6 +53,33 @@ public final class ProductImportTemplate {
             Column.CATEGORY, "Rayon, avec ses niveaux séparés par « > » : Épicerie > Riz. "
                     + "Les catégories inconnues sont créées.");
 
+    /** The extra unit the model shows, numbered like the first one a shop would add. */
+    private static final int MODEL_UNIT = ProductImportColumns.FIRST_EXTRA_UNIT;
+
+    private static final Map<UnitField, String> UNIT_HEADINGS = Map.of(
+            UnitField.LABEL, "Unité " + MODEL_UNIT,
+            UnitField.FACTOR, "Contenance " + MODEL_UNIT,
+            UnitField.PRICE, "Prix " + MODEL_UNIT,
+            UnitField.BARCODE, "Code barres " + MODEL_UNIT);
+
+    private static final Map<UnitField, String> UNIT_HELP = Map.of(
+            UnitField.LABEL, "Une autre unité de vente du même produit : carton, sac 50 kg, kg... "
+                    + "Facultatif. Pour une troisième, ajoutez « Unité 3 », « Contenance 3 », etc.",
+            UnitField.FACTOR, "Combien d'unités de base (colonne « Unité ») elle contient : 10 pour un "
+                    + "carton de 10, 3,5 pour 1 kg de riz compté en kapoka. Au plus 3 décimales.",
+            UnitField.PRICE, "Prix de vente de cette unité en Ariary : le prix du carton entier.",
+            UnitField.BARCODE, "Code EAN propre à cette unité (celui du carton). Facultatif.");
+
+    /** The extra unit of each example line, in the same order; null for none. */
+    private static final List<Map<UnitField, Object>> UNIT_EXAMPLES = List.of(
+            Map.of(UnitField.LABEL, "carton de 10",
+                    UnitField.FACTOR, 10,
+                    UnitField.PRICE, 43000,
+                    UnitField.BARCODE, "6111234567906"),
+            Map.of(UnitField.LABEL, "pack de 6",
+                    UnitField.FACTOR, 6,
+                    UnitField.PRICE, 11500));
+
     /** One map per example line; a column left out is an empty cell. */
     private static final List<Map<Column, Object>> EXAMPLES = List.of(
             Map.of(Column.NAME, "Riz Makalioka 1kg",
@@ -74,10 +106,13 @@ public final class ProductImportTemplate {
 
     public static byte[] xlsx() {
         List<Map<String, Object>> products = new ArrayList<>();
-        for (Map<Column, Object> example : EXAMPLES) {
+        for (int i = 0; i < EXAMPLES.size(); i++) {
             Map<String, Object> row = new LinkedHashMap<>();
             for (Column column : Column.values()) {
-                row.put(heading(column), example.get(column));
+                row.put(heading(column), EXAMPLES.get(i).get(column));
+            }
+            for (UnitField field : UnitField.values()) {
+                row.put(UNIT_HEADINGS.get(field), UNIT_EXAMPLES.get(i).get(field));
             }
             products.add(row);
         }
@@ -85,6 +120,9 @@ public final class ProductImportTemplate {
         List<Map<String, Object>> help = new ArrayList<>();
         for (Column column : Column.values()) {
             help.add(helpRow(heading(column), HELP.get(column)));
+        }
+        for (UnitField field : UnitField.values()) {
+            help.add(helpRow(UNIT_HEADINGS.get(field), UNIT_HELP.get(field)));
         }
         help.add(helpRow("Remarque", "Remplacez les lignes d'exemple par vos produits. Seule la "
                 + "première feuille est lue, au maximum " + CsvTable.MAX_ROWS + " lignes par import."));

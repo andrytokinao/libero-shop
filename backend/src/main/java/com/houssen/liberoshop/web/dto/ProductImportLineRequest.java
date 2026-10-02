@@ -2,6 +2,8 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.service.ImportAction;
+import com.houssen.liberoshop.service.ProductImportColumns;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +11,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * One line the operator ticked, as they left it.
@@ -28,6 +31,9 @@ import java.math.BigDecimal;
  *                    Only read when {@code categoryId} is null.
  * @param cost        purchase price of one unit, or null. Read for merges as well as
  *                    creations: unlike the sale price, it describes these goods, not the product.
+ * @param packagings  the other units the product sells in -- "kg = 3,5 kapoka" -- as the units
+ *                    dialog would send them. A merge only adds the ones the product lacks: like its
+ *                    name and price, the units a shop already set stand.
  */
 public record ProductImportLineRequest(
         int line,
@@ -60,5 +66,21 @@ public record ProductImportLineRequest(
 
         @NotNull ImportAction action,
 
-        Long mergeIntoId) {
+        Long mergeIntoId,
+
+        @Size(max = ProductImportColumns.MAX_EXTRA_UNITS)
+        List<@Valid PackagingRequest> packagings) {
+
+    public ProductImportLineRequest {
+        packagings = packagings == null ? List.of() : List.copyOf(packagings);
+    }
+
+    /** A line without extra units, as every line was before units. */
+    public ProductImportLineRequest(int line, String name, BigDecimal quantity, String unit,
+                                    BigDecimal price, BigDecimal cost, String barcode,
+                                    Long categoryId, String categoryPath, ImportAction action,
+                                    Long mergeIntoId) {
+        this(line, name, quantity, unit, price, cost, barcode, categoryId, categoryPath, action,
+                mergeIntoId, List.of());
+    }
 }

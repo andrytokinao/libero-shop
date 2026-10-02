@@ -1,3 +1,5 @@
+import { PackagingRequest } from './product-units.model';
+
 /**
  * Loading a catalogue from a spreadsheet export: what the server proposes, and what it is
  * told to do.
@@ -66,6 +68,11 @@ export interface ProductImportLine {
   selected: boolean;
   /** Ready to show, in French. */
   notes: string[];
+  /**
+   * The extra units the file gave this line ("unite 2", "contenance 2"...) that could be read,
+   * as the units dialog would send them. The unreadable ones are said in `notes`.
+   */
+  packagings: PackagingRequest[];
 }
 
 /** POST /api/products/import/preview — the file's text, decoded by the browser. */
@@ -110,6 +117,8 @@ export interface ProductImportLineRequest {
   action: ImportAction;
   /** Required by MERGE, ignored otherwise. */
   mergeIntoId: number | null;
+  /** Sent back as previewed. A merge only adds the units the product lacks. */
+  packagings: PackagingRequest[];
 }
 
 export interface ProductImportRequest {
@@ -145,6 +154,8 @@ export interface ProductImportResult {
   /** Who the entries name as having delivered, or null for an inventory count. */
   supplierName: string | null;
   rayonsCreated: string[];
+  /** Extra units written — "kg", "sac"; the refused ones are said on their line. */
+  unitsCreated: number;
   lines: ProductImportResultLine[];
 }
 

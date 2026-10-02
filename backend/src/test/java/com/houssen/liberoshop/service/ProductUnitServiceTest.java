@@ -61,7 +61,7 @@ class ProductUnitServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProductUnitService(products, packagings);
+        service = new ProductUnitService(products, packagings, new PackagingRules(products, packagings));
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 

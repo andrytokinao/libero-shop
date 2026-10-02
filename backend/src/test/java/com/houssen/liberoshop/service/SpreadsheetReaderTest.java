@@ -41,6 +41,13 @@ class SpreadsheetReaderTest {
         assertEquals("4500", mapping.cell(rice, Column.PRICE));
         assertEquals("6111234567890", mapping.cell(rice, Column.BARCODE));
         assertEquals("Épicerie > Riz", mapping.cell(rice, Column.CATEGORY));
+
+        // The model's extra unit is read back as one, with its barcode kept as text.
+        assertEquals(1, mapping.unitSlots().size());
+        ProductImportColumns.UnitSlot carton = mapping.unitSlots().getFirst();
+        assertEquals("carton de 10", carton.cell(rice, ProductImportColumns.UnitField.LABEL));
+        assertEquals("10", carton.cell(rice, ProductImportColumns.UnitField.FACTOR));
+        assertEquals("6111234567906", carton.cell(rice, ProductImportColumns.UnitField.BARCODE));
     }
 
     @Test

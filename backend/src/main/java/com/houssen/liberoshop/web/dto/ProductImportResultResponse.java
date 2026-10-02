@@ -17,6 +17,8 @@ import java.util.List;
  * @param movements     stock entries written, one per line that actually raised a quantity --
  *                      so the figure can be checked against the supplies screen
  * @param supplierName  who the entries name as having delivered, or null for an inventory count
+ * @param unitsCreated  extra units the file gave products -- "kg", "sac" -- that were written;
+ *                      the refused ones are said on their line
  */
 public record ProductImportResultResponse(int created,
                                           int merged,
@@ -25,11 +27,13 @@ public record ProductImportResultResponse(int created,
                                           int movements,
                                           String supplierName,
                                           List<String> rayonsCreated,
+                                          int unitsCreated,
                                           List<Line> lines) {
 
     /**
      * @param productId the reference created or added to, null when the line was refused
-     * @param note      why, in French, for the refused ones; empty for the rest
+     * @param note      why, in French, for the refused ones, and what became of the line's
+     *                  units when one was refused; empty for the rest
      */
     public record Line(int line,
                        String name,

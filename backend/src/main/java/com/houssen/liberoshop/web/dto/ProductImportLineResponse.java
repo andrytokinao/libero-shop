@@ -29,6 +29,8 @@ import java.util.List;
  * @param cost        the purchase price of one unit as the file gave it, or null
  * @param selected    whether the row starts ticked; a refused line does not
  * @param notes       what the operator needs to know about this line, in French, ready to show
+ * @param packagings  the extra units the file gave this line that could be read, as the units
+ *                    dialog would send them -- the ones that could not are said in {@code notes}
  */
 public record ProductImportLineResponse(int line,
                                         String name,
@@ -45,5 +47,6 @@ public record ProductImportLineResponse(int line,
                                         String matchedOn,
                                         String suggestedName,
                                         boolean selected,
-                                        List<String> notes) {
+                                        List<String> notes,
+                                        List<PackagingRequest> packagings) {
 }

@@ -2,15 +2,18 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.CategoryRepository;
+import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.web.dto.PackagingRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineResponse;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
@@ -66,6 +69,8 @@ class ProductImportServiceTest {
     private StockMovementRepository movements;
     @Mock
     private BusinessCalendar calendar;
+    @Mock
+    private ProductPackagingRepository packagings;
 
     private ProductImportService service;
 
@@ -74,6 +79,8 @@ class ProductImportServiceTest {
     private final List<Supplier> wholesalers = new ArrayList<>();
     /** Every stock entry the import wrote, in order. */
     private final List<Supply> ledger = new ArrayList<>();
+    /** Every extra unit in the catalogue, the import's and the fixtures'. */
+    private final List<ProductPackaging> units = new ArrayList<>();
     private final AtomicLong nextId = new AtomicLong(1);
 
     /** Who is signed in. The actor never travels in the payload, so it is passed to apply. */
@@ -89,8 +96,24 @@ class ProductImportServiceTest {
         // A real CategoryService on the same mocked table: the path handling is half of what
         // an import does with a category column, and stubbing it would assert the stub.
         CategoryService categoryService = new CategoryService(categories, products);
-        service = new ProductImportService(products, categories, suppliers, movements,
-                categoryService, calendar, event -> { });
+        // The real rules on the same mocked tables: what the import refuses is theirs to decide.
+        service = new ProductImportService(products, categories, suppliers, movements, packagings,
+                new PackagingRules(products, packagings), categoryService, calendar, event -> { });
+
+        Mockito.when(products.existsByBarcode(ArgumentMatchers.anyString())).thenAnswer(call ->
+                shelf.stream().anyMatch(product -> call.getArgument(0).equals(product.getBarcode())));
+        Mockito.when(packagings.existsByBarcode(ArgumentMatchers.anyString())).thenAnswer(call ->
+                units.stream().anyMatch(unit -> call.getArgument(0).equals(unit.getBarcode())));
+        Mockito.when(packagings.findByProductIdOrderByFactorAsc(ArgumentMatchers.anyLong()))
+                .thenAnswer(call -> units.stream()
+                        .filter(unit -> unit.getProduct().getId().equals(call.getArgument(0)))
+                        .toList());
+        Mockito.when(packagings.save(ArgumentMatchers.any(ProductPackaging.class))).thenAnswer(call -> {
+            ProductPackaging saved = call.getArgument(0);
+            saved.setId(nextId.getAndIncrement());
+            units.add(saved);
+            return saved;
+        });
 
         Mockito.when(calendar.now()).thenReturn(LocalDateTime.of(2026, 9, 26, 9, 0));
         Mockito.when(movements.save(ArgumentMatchers.any(Supply.class))).thenAnswer(call -> {
@@ -188,7 +211,14 @@ class ProductImportServiceTest {
                 line.categoryId(),
                 line.categoryPath(),
                 line.action(),
-                line.existing() == null ? null : line.existing().id());
+                line.existing() == null ? null : line.existing().id(),
+                line.packagings());
+    }
+
+    private ProductPackaging unitOf(Product product, String label, String factor, String barcode) {
+        ProductPackaging unit = ProductPackaging.builder().product(product).label(label)
+                .factor(new BigDecimal(factor)).price(BigDecimal.valueOf(1000)).barcode(barcode).build();
+        return packagings.save(unit);
     }
 
     // -------------------------------------------------------------------- reading
@@ -737,5 +767,97 @@ class ProductImportServiceTest {
 
         assertQuantity(40, line(preview, 0).quantity());
         assertEquals(new BigDecimal("675.00"), line(preview, 0).cost());
+    }
+
+    // ------------------------------------------------------------------ extra units
+
+    /** Loose rice counted in kapoka, sold by the kilo and the 50 kg sack. */
+    private static final String RICE_WITH_UNITS = "nom;quantite;unite;prix;unite 2;contenance 2;prix 2;"
+            + "Unité 3;Contenance 3;Prix 3;Code barres 3\n"
+            + "Riz vrac;1750;kapoka;900;kg;3,5;3000;sac 50 kg;175;145000;SAC-50\n";
+
+    @Test
+    @DisplayName("reads the numbered unit columns, and reports none of them as ignored")
+    void readsExtraUnits() {
+        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+
+        assertTrue(preview.ignored().isEmpty(), "ignored: " + preview.ignored());
+        List<PackagingRequest> read = line(preview, 0).packagings();
+        assertEquals(List.of("kg", "sac 50 kg"), read.stream().map(PackagingRequest::label).toList());
+        assertEquals(new BigDecimal("3.500"), read.getFirst().factor());
+        assertEquals("SAC-50", read.get(1).barcode());
+    }
+
+    @Test
+    @DisplayName("a unit the file describes badly is left out with a note, the line stays")
+    void notesABadUnit() {
+        ProductImportPreviewResponse preview = service.preview(
+                "nom;unite;prix;unite 2;contenance 2;prix 2;unite 3;prix 3\n"
+                        + "Riz vrac;kapoka;900;kg;1;3000;;5000\n");
+
+        ProductImportLineResponse line = line(preview, 0);
+        assertTrue(line.packagings().isEmpty());
+        assertTrue(line.selected());
+        assertTrue(line.notes().stream().anyMatch(note -> note.contains("\"kg\" ignoree")), line.notes().toString());
+        assertTrue(line.notes().stream().anyMatch(note -> note.contains("Unite 3 sans nom")), line.notes().toString());
+    }
+
+    @Test
+    @DisplayName("a new product comes in with its units, counted in the result")
+    void createsUnits() {
+        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+
+        ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+
+        assertEquals(2, result.unitsCreated());
+        Product rice = shelf.getLast();
+        assertEquals("kapoka", rice.getUnit());
+        assertEquals(List.of("kg", "sac 50 kg"), units.stream()
+                .filter(unit -> unit.getProduct() == rice).map(ProductPackaging::getLabel).toList());
+    }
+
+    @Test
+    @DisplayName("a merge adds the units the product lacks and leaves the shop's own as they are")
+    void mergeOnlyAddsMissingUnits() {
+        Product rice = inCatalogue("Riz vrac", 100, null, null);
+        rice.setUnit("kapoka");
+        ProductPackaging kilo = unitOf(rice, "kg", "4", null);
+
+        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+        ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+
+        assertEquals(1, result.unitsCreated());
+        assertEquals(new BigDecimal("4"), kilo.getFactor(), "the shop's kilo stands");
+        assertTrue(units.stream().anyMatch(unit -> unit.getLabel().equals("sac 50 kg")));
+    }
+
+    @Test
+    @DisplayName("a unit refused against the catalogue does not refuse its line")
+    void refusedUnitKeepsTheLine() {
+        Product other = inCatalogue("Sucre vrac", 10, null, null);
+        unitOf(other, "sac", "50", "SAC-50");
+
+        ProductImportPreviewResponse preview = service.preview(RICE_WITH_UNITS);
+        ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+
+        assertEquals(1, result.created());
+        assertEquals(1, result.unitsCreated(), "the kilo still goes in");
+        assertTrue(result.lines().getFirst().note().contains("\"sac 50 kg\" non creee"),
+                result.lines().getFirst().note());
+        assertQuantity(1750, shelf.getLast().getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("a new product never takes a barcode that a unit of another product carries")
+    void productBarcodeIsCheckedAgainstUnits() {
+        Product other = inCatalogue("Sucre vrac", 10, null, null);
+        unitOf(other, "sac", "50", "SAC-50");
+
+        ProductImportPreviewResponse preview = service.preview(
+                "nom;prix;code barres\nRiz en sac;145000;SAC-50\n");
+        ProductImportResultResponse result = run(request(List.of(asSent(line(preview, 0)))));
+
+        assertNull(shelf.getLast().getBarcode());
+        assertTrue(result.lines().getFirst().note().contains("celui d'une unite"));
     }
 }

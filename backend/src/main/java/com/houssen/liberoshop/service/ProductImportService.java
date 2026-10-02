@@ -2,19 +2,24 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.CategoryRepository;
+import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.ProductImportColumns.Column;
 import com.houssen.liberoshop.service.ProductImportColumns.Mapping;
+import com.houssen.liberoshop.service.ProductImportColumns.UnitField;
+import com.houssen.liberoshop.service.ProductImportColumns.UnitSlot;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
+import com.houssen.liberoshop.web.dto.PackagingRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineResponse;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
@@ -59,6 +64,12 @@ import java.util.Set;
  * is optional and is the one thing that differs: a file from a wholesaler names them, an
  * inventory count leaves them null. Nothing is ever written in an operator's name from the
  * payload; the actor is read from the session by the controller and passed in here.
+ *
+ * <p><b>Extra units</b> ("unite 2", "contenance 2", "prix 2"...) are judged by the same
+ * {@link PackagingRules} as the units dialog: once while reading, so the preview already says
+ * which ones will be refused, and again while writing, against the catalogue as it is then. A
+ * refused unit never refuses its line -- the product and its stock still go in, and the line
+ * says which unit was left out.
  */
 @Service
 @Transactional(readOnly = true)
@@ -74,18 +85,23 @@ public class ProductImportService {
     private final CategoryRepository categories;
     private final SupplierRepository suppliers;
     private final StockMovementRepository movements;
+    private final ProductPackagingRepository packagings;
+    private final PackagingRules packagingRules;
     private final CategoryService categoryService;
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
 
     public ProductImportService(ProductRepository products, CategoryRepository categories,
                                 SupplierRepository suppliers, StockMovementRepository movements,
+                                ProductPackagingRepository packagings, PackagingRules packagingRules,
                                 CategoryService categoryService, BusinessCalendar calendar,
                                 ApplicationEventPublisher events) {
         this.products = products;
         this.categories = categories;
         this.suppliers = suppliers;
         this.movements = movements;
+        this.packagings = packagings;
+        this.packagingRules = packagingRules;
         this.categoryService = categoryService;
         this.calendar = calendar;
         this.events = events;
@@ -188,6 +204,7 @@ public class ProductImportService {
         int skipped = 0;
         BigDecimal unitsAdded = Quantities.of(0);
         int written = 0;
+        int unitsCreated = 0;
         // Every product written, so the screens showing them get the new figures.
         List<Long> touched = new ArrayList<>();
 
@@ -217,8 +234,10 @@ public class ProductImportService {
                 touched.add(product.getId());
                 unitsAdded = unitsAdded.add(line.quantity());
                 written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
+                List<String> notes = new ArrayList<>();
+                unitsCreated += addUnits(product, line.packagings(), true, notes);
                 lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
-                        ImportOutcome.MERGED, product.getId(), ""));
+                        ImportOutcome.MERGED, product.getId(), String.join(" ", notes)));
                 continue;
             }
 
@@ -243,6 +262,11 @@ public class ProductImportService {
                         + index.byBarcode.get(barcode).getName()
                         + "\" : la reference est creee sans code-barres.");
                 barcode = null;
+            } else if (barcode != null && packagings.existsByBarcode(barcode)) {
+                // A sack's own code: one code, one thing to sell, or the scanner has to guess.
+                notes.add("Le code-barres " + barcode + " est celui d'une unite d'un autre produit"
+                        + " : la reference est creee sans code-barres.");
+                barcode = null;
             }
 
             Product fresh = Product.builder()
@@ -263,6 +287,7 @@ public class ProductImportService {
             touched.add(product.getId());
             unitsAdded = unitsAdded.add(line.quantity());
             written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
+            unitsCreated += addUnits(product, line.packagings(), false, notes);
             lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
                     free.equals(name) ? ImportOutcome.CREATED : ImportOutcome.RENAMED,
                     product.getId(), String.join(" ", notes)));
@@ -273,7 +298,38 @@ public class ProductImportService {
         }
         return new ProductImportResultResponse(created, merged, skipped, unitsAdded, written,
                 supplier == null ? null : supplier.getName(),
-                rayons.created(), List.copyOf(lines));
+                rayons.created(), unitsCreated, List.copyOf(lines));
+    }
+
+    /**
+     * Gives a product the extra units its line carries, and returns how many were written.
+     *
+     * <p>Each unit is judged on its own by {@link PackagingRules}; a refused one is noted on the
+     * line and the others still go in. This is why the rules are not called through a
+     * transactional service: a refusal crossing a {@code @Transactional} proxy would mark the
+     * whole import for rollback.
+     *
+     * @param merging true when the product existed: the units the shop already set stand, like
+     *                its name and price, and only the missing ones are added
+     * @param notes   the line's notes, which a refusal is appended to
+     */
+    private int addUnits(Product product, List<PackagingRequest> requested, boolean merging,
+                         List<String> notes) {
+        int written = 0;
+        for (PackagingRequest request : requested) {
+            if (merging && packagingRules.hasUnit(product, request.label())) {
+                continue;
+            }
+            ProductPackaging packaging = ProductPackaging.builder().product(product).build();
+            try {
+                packagingRules.applyTo(request, packaging);
+                packagings.save(packaging);
+                written++;
+            } catch (BusinessRuleException refused) {
+                notes.add("Unite \"" + request.label() + "\" non creee : " + refused.getMessage());
+            }
+        }
+        return written;
     }
 
     /**
@@ -370,6 +426,8 @@ public class ProductImportService {
         /** Set once folded into an earlier line of the same file; that line owns the quantity. */
         Draft folded;
         final List<String> notes = new ArrayList<>();
+        /** The extra units read from the line that passed the checks a file can be put to. */
+        final List<PackagingRequest> packagings = new ArrayList<>();
 
         /**
          * Takes over a duplicate line's quantity, and says on both rows what happened. Two costs
@@ -379,6 +437,10 @@ public class ProductImportService {
             cost = PurchaseCosting.averageAfterReceipt(quantity, cost, duplicate.quantity,
                     duplicate.cost);
             quantity = quantity.add(duplicate.quantity);
+            if (packagings.isEmpty()) {
+                // The units described once, on whichever line, are the product's.
+                packagings.addAll(duplicate.packagings);
+            }
             notes.add("La ligne " + duplicate.line + " porte le meme produit : les quantites "
                     + "ont ete additionnees ici.");
             duplicate.folded = this;
@@ -446,7 +508,40 @@ public class ProductImportService {
                     + Product.MAX_UNIT_LENGTH + " caracteres.");
             draft.unit = draft.unit.substring(0, Product.MAX_UNIT_LENGTH).trim();
         }
+        readUnits(row, mapping, draft);
         return draft;
+    }
+
+    /**
+     * The extra units of one line, checked as far as a file alone allows: a name, a readable
+     * contenance and price, by the same rules as the units dialog. Whether the name or the barcode
+     * is already taken can only be known against the catalogue, and is decided when writing.
+     */
+    private static void readUnits(CsvTable.Row row, Mapping mapping, Draft draft) {
+        for (UnitSlot slot : mapping.unitSlots()) {
+            String label = PackagingRules.squeeze(slot.cell(row, UnitField.LABEL));
+            String rawFactor = slot.cell(row, UnitField.FACTOR);
+            String rawPrice = slot.cell(row, UnitField.PRICE);
+            String barcode = PackagingRules.squeeze(slot.cell(row, UnitField.BARCODE));
+            if (label == null) {
+                if (!rawFactor.isBlank() || !rawPrice.isBlank() || barcode != null) {
+                    draft.notes.add("Unite " + slot.number() + " sans nom : ignoree.");
+                }
+                continue;
+            }
+            if (label.length() > Product.MAX_UNIT_LENGTH) {
+                draft.notes.add("Unite \"" + label + "\" trop longue : raccourcie a "
+                        + Product.MAX_UNIT_LENGTH + " caracteres.");
+                label = label.substring(0, Product.MAX_UNIT_LENGTH).trim();
+            }
+            try {
+                BigDecimal factor = PackagingRules.validFactor(ProductImportColumns.number(rawFactor), draft.unit);
+                BigDecimal price = PackagingRules.validPrice(ProductImportColumns.number(rawPrice));
+                draft.packagings.add(new PackagingRequest(label, factor, price, barcode));
+            } catch (BusinessRuleException refused) {
+                draft.notes.add("Unite \"" + label + "\" ignoree : " + refused.getMessage());
+            }
+        }
     }
 
     /** The earlier line of this file carrying the same product, or null. */
@@ -559,7 +654,8 @@ public class ProductImportService {
                         draft.matchedOn,
                         draft.suggestedName,
                         draft.selected,
-                        List.copyOf(draft.notes)))
+                        List.copyOf(draft.notes),
+                        List.copyOf(draft.packagings)))
                 .toList();
 
         // Rayons the file names that the shop has not got: created when the import is applied,
