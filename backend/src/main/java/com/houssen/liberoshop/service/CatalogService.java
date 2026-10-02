@@ -5,6 +5,7 @@ import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.CategoryResponse;
 import com.houssen.liberoshop.web.dto.CategoryStockResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
@@ -87,16 +88,21 @@ public class CatalogService {
 
     /** Suppliers, each carrying how much has actually been received from them. */
     public List<SupplierResponse> findSuppliers() {
-        Map<Long, long[]> stats = new HashMap<>();
+        Map<Long, Received> stats = new HashMap<>();
         for (Object[] row : movements.aggregateSuppliesBySupplier()) {
-            stats.put((Long) row[0], new long[]{((Number) row[1]).longValue(), ((Number) row[2]).longValue()});
+            stats.put((Long) row[0], new Received(((Number) row[1]).longValue(), Quantities.orZero(row[2])));
         }
         return suppliers.findAllByOrderByNameAsc().stream()
                 .map(supplier -> {
-                    long[] counters = stats.getOrDefault(supplier.getId(), new long[]{0L, 0L});
-                    return SupplierResponse.of(supplier, counters[0], counters[1]);
+                    Received received = stats.getOrDefault(supplier.getId(), Received.NOTHING);
+                    return SupplierResponse.of(supplier, received.deliveries(), received.units());
                 })
                 .toList();
+    }
+
+    /** What one supplier has delivered: how many times, and how much in base units. */
+    private record Received(long deliveries, BigDecimal units) {
+        static final Received NOTHING = new Received(0, Quantities.of(0));
     }
 
     /** Stock value split by category, for the super-admin stock screen. */
@@ -118,7 +124,7 @@ public class CatalogService {
                             CategoryResponse.of(category),
                             CategoryService.pathOf(category),
                             inCategory.size(),
-                            inCategory.stream().mapToLong(Product::getStockQuantity).sum(),
+                            inCategory.stream().map(Product::getStockQuantity).reduce(BigDecimal.ZERO, BigDecimal::add),
                             value,
                             percentOf(value, total));
                 })
@@ -132,8 +138,8 @@ public class CatalogService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public long totalUnitsInStock() {
-        return products.findAll().stream().mapToLong(Product::getStockQuantity).sum();
+    public BigDecimal totalUnitsInStock() {
+        return products.findAll().stream().map(Product::getStockQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public long countProducts() {
@@ -145,7 +151,7 @@ public class CatalogService {
     }
 
     static BigDecimal valueOf(Product product) {
-        return product.getPrice().multiply(BigDecimal.valueOf(product.getStockQuantity()));
+        return product.getPrice().multiply(product.getStockQuantity()).setScale(2, RoundingMode.HALF_UP);
     }
 
     private static int percentOf(BigDecimal part, BigDecimal total) {

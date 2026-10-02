@@ -36,6 +36,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -94,9 +96,9 @@ class CostingServiceTest {
                 .roles(EnumSet.of(RoleApp.DEPOT_MANAGER))
                 .build());
         riz = db.persist(Product.builder().name("Riz 5kg").price(new BigDecimal("12500"))
-                .stockQuantity(50).averageCost(new BigDecimal("10200.00")).build());
+                .stockQuantity(qty(50)).averageCost(new BigDecimal("10200.00")).build());
         sel = db.persist(Product.builder().name("Sel 1kg").price(new BigDecimal("900"))
-                .stockQuantity(30).build());
+                .stockQuantity(qty(30)).build());
     }
 
     // ------------------------------------------------------------------ fixtures
@@ -105,12 +107,12 @@ class CostingServiceTest {
         return db.persist(Supplier.builder().name(name).build());
     }
 
-    private void receipt(Product product, Supplier from, int quantity, String unitCost,
+    private void receipt(Product product, Supplier from, long quantity, String unitCost,
                          LocalDateTime when) {
         db.persist(Supply.builder()
                 .product(product)
                 .supplier(from)
-                .quantity(quantity)
+                .quantity(qty(quantity))
                 .unitCost(unitCost == null ? null : new BigDecimal(unitCost))
                 .movementDate(when)
                 .performedBy(nadia)
@@ -129,7 +131,7 @@ class CostingServiceTest {
             sale.getLines().add(SaleLine.builder()
                     .sale(sale)
                     .product((Product) lines[i])
-                    .quantity((Integer) lines[i + 1])
+                    .quantity(qty((Integer) lines[i + 1]))
                     .unitPrice(new BigDecimal((String) lines[i + 2]))
                     .unitCost(lines[i + 3] == null ? null : new BigDecimal((String) lines[i + 3]))
                     .build());
@@ -154,7 +156,7 @@ class CostingServiceTest {
         assertEquals(0, new BigDecimal("7300").compareTo(report.grossMargin()));
         assertEquals(new BigDecimal("19.5"), report.marginRate());
         assertEquals(100, report.coveragePercent());
-        assertEquals(3, report.byProduct().getFirst().unitsSold());
+        assertQuantity(3, report.byProduct().getFirst().unitsSold());
         assertEquals(0, new BigDecimal("25000").compareTo(report.paidRevenue()),
                 "the unpaid sale is turnover, not cash");
     }
@@ -207,7 +209,7 @@ class CostingServiceTest {
         Category epicerie = db.persist(Category.builder().name("Epicerie").build());
         riz.setCategory(epicerie);
         db.persist(Product.builder().name("Vide").price(new BigDecimal("500"))
-                .stockQuantity(0).averageCost(new BigDecimal("400")).category(epicerie).build());
+                .stockQuantity(qty(0)).averageCost(new BigDecimal("400")).category(epicerie).build());
         db.flush();
 
         StockValuationResponse valuation = service.stockValuation();
@@ -217,16 +219,16 @@ class CostingServiceTest {
         assertEquals(0, new BigDecimal("652000").compareTo(valuation.saleValue()));
         assertEquals(0, new BigDecimal("115000").compareTo(valuation.potentialMargin()));
         assertEquals(new BigDecimal("18.4"), valuation.potentialMarginRate());
-        assertEquals(30, valuation.uncostedUnits());
+        assertQuantity(30, valuation.uncostedUnits());
         assertEquals(95, valuation.coveragePercent());
         assertEquals(2, valuation.references(), "an empty shelf is not stock");
 
         StockValuationResponse.CategoryValuation first = valuation.byCategory().getFirst();
         assertEquals("Epicerie", first.path());
-        assertEquals(0, first.uncostedUnits());
+        assertQuantity(0, first.uncostedUnits());
         StockValuationResponse.CategoryValuation loose = valuation.byCategory().getLast();
         assertEquals(CostingService.NO_CATEGORY_LABEL, loose.path());
-        assertEquals(30, loose.uncostedUnits());
+        assertQuantity(30, loose.uncostedUnits());
     }
 
     // ------------------------------------------------------------------ products
@@ -273,7 +275,7 @@ class CostingServiceTest {
 
         SupplierPriceResponse grossiste = prices.getLast();
         assertEquals(2, grossiste.receipts());
-        assertEquals(40, grossiste.units());
+        assertQuantity(40, grossiste.units());
         // (10 × 10 500 + 30 × 10 900) / 40
         assertEquals(new BigDecimal("10800.00"), grossiste.averageCost());
         assertEquals(0, new BigDecimal("10900").compareTo(grossiste.lastUnitCost()));

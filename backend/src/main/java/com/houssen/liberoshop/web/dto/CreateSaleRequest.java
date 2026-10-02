@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -24,6 +25,15 @@ public record CreateSaleRequest(@Size(max = 120) String clientName,
                                 PaymentMethod paymentMethod,
                                 @NotEmpty @Valid List<Line> lines) {
 
-    public record Line(@NotNull Long productId, @Positive int quantity) {
+    /**
+     * @param packagingId the unit sold -- "kg", "sac" -- or null for the product's base unit
+     * @param quantity    in that unit, to the thousandth: 0.5 for half a kilo
+     */
+    public record Line(@NotNull Long productId, Long packagingId, @NotNull @Positive BigDecimal quantity) {
+
+        /** A line in the base unit, the only kind there was before units. */
+        public Line(Long productId, BigDecimal quantity) {
+            this(productId, null, quantity);
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.houssen.liberoshop.web.dto;
 import com.houssen.liberoshop.entity.Supply;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
  * @param totalCost {@code unitCost × quantity}, or null with it
  */
 public record SupplyResponse(Long id,
-                             int quantity,
+                             BigDecimal quantity,
                              LocalDateTime movementDate,
                              ProductResponse product,
                              UserResponse performedBy,
@@ -30,7 +31,7 @@ public record SupplyResponse(Long id,
                 supply.getId(),
                 supply.getQuantity(),
                 supply.getMovementDate(),
-                ProductResponse.of(supply.getProduct()),
+                ProductResponse.withoutUnits(supply.getProduct()),
                 UserResponse.of(supply.getPerformedBy()),
                 supply.getSupplier() == null ? null
                         : new SupplierRefResponse(supply.getSupplier().getId(),
@@ -38,7 +39,7 @@ public record SupplyResponse(Long id,
                 supply.isFromImport(),
                 supply.getUnitCost(),
                 supply.getUnitCost() == null ? null
-                        : supply.getUnitCost().multiply(BigDecimal.valueOf(supply.getQuantity())));
+                        : supply.getUnitCost().multiply(supply.getQuantity()).setScale(2, RoundingMode.HALF_UP));
     }
 
     /** Just enough of the supplier to label the row. */

@@ -3,11 +3,13 @@ package com.houssen.liberoshop.service;
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.Sale;
 import com.houssen.liberoshop.entity.SaleLine;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.CategoryRepository;
+import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.SaleLineRepository;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
@@ -29,6 +31,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -52,6 +55,8 @@ class ProductSearchServiceTest {
     @Autowired
     private CategoryRepository categories;
     @Autowired
+    private ProductPackagingRepository packagings;
+    @Autowired
     private SaleLineRepository saleLines;
 
     private ProductSearchService service;
@@ -67,7 +72,7 @@ class ProductSearchServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(TODAY.atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant(),
                 ZoneId.systemDefault());
-        service = new ProductSearchService(products, saleLines,
+        service = new ProductSearchService(products, packagings, saleLines,
                 new CategoryService(categories, products), new BusinessCalendar(clock));
 
         fatima = db.persist(UserApp.builder()
@@ -99,6 +104,20 @@ class ProductSearchServiceTest {
 
         assertEquals("Riz Makalioka 1kg", found.name());
         assertEquals("Épicerie", found.category().name());
+    }
+
+    @Test
+    @DisplayName("a sack's own barcode finds its product, which carries the sack among its units")
+    void findsByPackagingBarcode() {
+        db.persist(ProductPackaging.builder().product(riz).label("sac 25 kg")
+                .factor(new BigDecimal("25.000")).price(new BigDecimal("80000")).barcode("SAC-25").build());
+        db.flush();
+        db.clear();
+
+        ProductResponse found = service.findByCode("SAC-25");
+
+        assertEquals("Riz Makalioka 1kg", found.name());
+        assertEquals("SAC-25", found.packagings().getFirst().barcode());
     }
 
     @Test
@@ -213,7 +232,7 @@ class ProductSearchServiceTest {
             sale.getLines().add(SaleLine.builder()
                     .sale(sale)
                     .product(product)
-                    .quantity((Integer) lines[i + 1])
+                    .quantity(qty((Integer) lines[i + 1]))
                     .unitPrice(product.getPrice())
                     .build());
         }
@@ -226,7 +245,7 @@ class ProductSearchServiceTest {
         return Product.builder()
                 .name(name)
                 .price(BigDecimal.valueOf(1000))
-                .stockQuantity(10)
+                .stockQuantity(qty(10))
                 .barcode(barcode)
                 .category(category)
                 .build();

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.houssen.liberoshop.util.Quantities;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Set;
@@ -56,7 +58,7 @@ public class SaleNotifier {
             default -> payAtDepot ? "a encaisser a la remise" : "a regler a la caisse";
         };
         String message = sale.invoiceNumber() + " - " + sale.clientName() + " - "
-                + sale.units() + " article(s), " + amount(sale.totalAmount()) + " Ar, "
+                + Quantities.format(sale.units()) + " article(s), " + amount(sale.totalAmount()) + " Ar, "
                 + settlement + ". Vendu par " + sale.sellerName() + ".";
         return Notification.of(NotificationType.SALE_CREATED, "Nouvelle vente a preparer",
                 message, SaleCreated.of(sale));
@@ -75,7 +77,7 @@ public class SaleNotifier {
                               String clientName,
                               BigDecimal totalAmount,
                               PaymentStatus paymentStatus,
-                              int units,
+                              BigDecimal units,
                               String sellerName) {
 
         static SaleCreated of(SaleRecordedEvent sale) {

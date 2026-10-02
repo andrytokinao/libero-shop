@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -118,8 +119,11 @@ public class OnlineOrderService {
     public PublicMenuResponse menu(String token) {
         DiningTable table = openTable(token);
         List<PublicMenuResponse.Item> items = catalog.findProducts(null, null, false).stream()
-                .map(p -> new PublicMenuResponse.Item(p.id(), p.name(), p.price(),
-                        p.category() == null ? null : p.category().name(), p.stockQuantity() > 0))
+                .map(p -> new PublicMenuResponse.Item(p.id(), p.name(), p.price(), p.unit(),
+                        p.category() == null ? null : p.category().name(), p.stockQuantity().signum() > 0,
+                        p.packagings().stream()
+                                .map(u -> new PublicMenuResponse.Unit(u.id(), u.label(), u.price()))
+                                .toList()))
                 .toList();
         return new PublicMenuResponse(table.getName(), items);
     }
@@ -128,7 +132,7 @@ public class OnlineOrderService {
     public PublicOrderResponse order(String token, PublicOrderRequest request) {
         DiningTable table = openTable(token);
         for (CreateSaleRequest.Line line : request.lines()) {
-            if (line.quantity() > MAX_UNITS_PER_LINE) {
+            if (line.quantity().compareTo(BigDecimal.valueOf(MAX_UNITS_PER_LINE)) > 0) {
                 throw new BusinessRuleException("TOO_MANY_UNITS",
                         "Au plus " + MAX_UNITS_PER_LINE + " par article : demandez au serveur pour davantage.");
             }
@@ -198,7 +202,7 @@ public class OnlineOrderService {
         boolean paid = invoice.paymentStatus() != PaymentStatus.UNPAID
                 && invoice.paymentStatus() != PaymentStatus.CANCELLED;
         List<PublicOrderResponse.Line> lines = invoice.sale().lines().stream()
-                .map(line -> new PublicOrderResponse.Line(line.product().name(), line.quantity()))
+                .map(line -> new PublicOrderResponse.Line(line.product().name(), line.quantity(), line.unitLabel()))
                 .toList();
         return new PublicOrderResponse(invoice.invoiceNumber(), table.getName(), invoice.sale().totalAmount(),
                 status, paid, lines);

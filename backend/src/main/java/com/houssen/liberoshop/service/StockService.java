@@ -95,7 +95,7 @@ public class StockService {
         return movements.countSuppliesSince(calendar.startOfDaysAgo(7));
     }
 
-    public long unitsSuppliedLastWeek() {
+    public BigDecimal unitsSuppliedLastWeek() {
         return movements.sumSuppliedUnitsSince(calendar.startOfDaysAgo(7));
     }
 }

@@ -16,7 +16,7 @@ import java.math.BigDecimal;
  */
 public record ProductRefResponse(Long id,
                                  String name,
-                                 int stockQuantity,
+                                 BigDecimal stockQuantity,
                                  String unit,
                                  BigDecimal price,
                                  String barcode,

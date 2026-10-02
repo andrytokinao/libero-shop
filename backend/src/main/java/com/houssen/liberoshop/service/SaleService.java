@@ -20,6 +20,7 @@ import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.InsufficientStockException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +87,7 @@ public class SaleService {
                     "Une vente est payee ou non payee a la caisse : les autres statuts viennent du depot.");
         }
         PaymentStatus status = settledStatusOf(request, seller);
-        Map<Long, Integer> quantities = mergeLines(request.lines());
+        Map<LineKey, BigDecimal> quantities = mergeLines(request.lines());
         LocalDateTime now = calendar.now();
 
         Sale sale = Sale.builder()
@@ -97,23 +98,25 @@ public class SaleService {
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
-        Map<Product, Integer> wanted = lockAndCheckStock(quantities);
-        for (Map.Entry<Product, Integer> entry : wanted.entrySet()) {
-            Product product = entry.getKey();
-            int quantity = entry.getValue();
-
+        Map<Long, Product> locked = lock(quantities.keySet());
+        quantities.forEach((key, quantity) -> {
+            Product product = locked.get(key.productId());
+            SaleUnit unit = SaleUnit.of(product, key.packagingId());
             sale.getLines().add(SaleLine.builder()
                     .sale(sale)
                     .product(product)
-                    // Both frozen here: a later price change must not rewrite past receipts,
-                    // and a later delivery at another cost must not rewrite past margins.
-                    .unitPrice(product.getPrice())
-                    .unitCost(PurchaseCosting.costOfSale(product))
+                    // All frozen here: a later price change must not rewrite past receipts, a
+                    // renamed unit must not relabel them, and a later delivery at another cost
+                    // must not rewrite past margins.
+                    .unitPrice(unit.price())
+                    .unitLabel(unit.label())
+                    .unitFactor(unit.factor())
+                    .unitCost(PurchaseCosting.costOfSale(product, unit.factor()))
                     .quantity(quantity)
                     .build());
-
-            product.adjustStock(-quantity);
-        }
+        });
+        refuseShortages(sale.getLines());
+        sale.getLines().forEach(line -> line.getProduct().adjustStock(line.baseQuantity().negate()));
 
         sale.calculateTotal();
         // Flushed now so the generated identifier can number the invoice.
@@ -133,7 +136,7 @@ public class SaleService {
 
         for (SaleLine line : savedSale.getLines()) {
             movements.save(StockOutput.builder()
-                    .quantity(line.getQuantity())
+                    .quantity(line.baseQuantity())
                     .movementDate(now)
                     .product(line.getProduct())
                     .performedBy(seller)
@@ -163,57 +166,74 @@ public class SaleService {
                 savedSale.getTotalAmount(),
                 status,
                 savedSale.getLines().size(),
-                savedSale.getLines().stream().mapToInt(SaleLine::getQuantity).sum(),
+                savedSale.getLines().stream().map(SaleLine::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add),
                 seller.getId(),
                 seller.getFullName()));
-        events.publishEvent(new StockChangedEvent(wanted.keySet().stream().map(Product::getId).toList()));
+        events.publishEvent(new StockChangedEvent(List.copyOf(locked.keySet())));
 
         return InvoiceResponse.of(invoice);
     }
 
+    /** One product in one unit: what two posted lines must share to be folded into one. */
+    private record LineKey(Long productId, Long packagingId) {
+    }
+
     /**
-     * Folds duplicate lines so the same product posted twice locks one row and checks its
-     * stock once, instead of passing two half-checks that overdraw together.
+     * Every product of the sale, locked for the rest of the transaction: two desks selling the
+     * last unit at the same moment must not both read the same stale quantity. Locked in id
+     * order, so two sales sharing products always take their locks in the same order and cannot
+     * deadlock.
      */
-    /**
-     * Every product of the sale, locked, once the shelf is known to hold enough of each.
-     *
-     * <p>Checked in full before anything is written, so a refusal names every short line --
-     * the till marks them all in red at once -- and leaves no half-built sale behind.
-     *
-     * <p>Locked for the rest of the transaction: two desks selling the last unit at the same
-     * moment must not both read the same stale quantity. Locked in id order, so two sales
-     * sharing products always take their locks in the same order and cannot deadlock.
-     */
-    private Map<Product, Integer> lockAndCheckStock(Map<Long, Integer> quantities) {
-        Map<Long, Product> locked = new HashMap<>();
-        for (Long productId : new TreeSet<>(quantities.keySet())) {
+    private Map<Long, Product> lock(Collection<LineKey> keys) {
+        Map<Long, Product> locked = new LinkedHashMap<>();
+        for (Long productId : new TreeSet<>(keys.stream().map(LineKey::productId).toList())) {
             locked.put(productId, products.findByIdForUpdate(productId)
                     .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId)));
         }
+        return locked;
+    }
 
-        // From here on in the order the cashier entered the lines: the order of the receipt,
-        // and of the refusal's list.
-        Map<Product, Integer> wanted = new LinkedHashMap<>();
+    /**
+     * Refuses the sale when the shelf cannot fill it, naming every short product at once.
+     *
+     * <p>Counted per product in base units, across its lines: "1 sac" and "3 kg" of the same rice
+     * draw on one shelf, and two lines that each fit could still overdraw it together.
+     *
+     * <p>Checked in full before anything is written, so a refusal names every short line -- the
+     * till marks them all in red at once -- and leaves no half-built sale behind. In the order the
+     * cashier entered the lines: the order of the receipt, and of the refusal's list.
+     */
+    private static void refuseShortages(List<SaleLine> lines) {
+        Map<Product, BigDecimal> needed = new LinkedHashMap<>();
+        lines.forEach(line -> needed.merge(line.getProduct(), line.baseQuantity(), BigDecimal::add));
+
         List<InsufficientStockException.Shortage> shortages = new ArrayList<>();
-        quantities.forEach((productId, quantity) -> {
-            Product product = locked.get(productId);
-            if (product.getStockQuantity() < quantity) {
-                shortages.add(new InsufficientStockException.Shortage(
-                        productId, product.getName(), quantity, product.getStockQuantity()));
+        needed.forEach((product, quantity) -> {
+            if (product.getStockQuantity().compareTo(quantity) < 0) {
+                shortages.add(new InsufficientStockException.Shortage(product.getId(),
+                        product.getName(), Quantities.scaled(quantity),
+                        Quantities.scaled(product.getStockQuantity()), product.getUnit()));
             }
-            wanted.put(product, quantity);
         });
         if (!shortages.isEmpty()) {
             throw new InsufficientStockException(shortages);
         }
-        return wanted;
     }
 
-    private static Map<Long, Integer> mergeLines(List<CreateSaleRequest.Line> lines) {
-        Map<Long, Integer> merged = new LinkedHashMap<>();
+    /**
+     * Folds duplicate lines -- the same product in the same unit posted twice -- into one
+     * receipt line. The same product in two units stays two lines: "1 sac" and "3 kg" are what
+     * the customer bought, and the stock check adds them up anyway.
+     */
+    private static Map<LineKey, BigDecimal> mergeLines(List<CreateSaleRequest.Line> lines) {
+        Map<LineKey, BigDecimal> merged = new LinkedHashMap<>();
         for (CreateSaleRequest.Line line : lines) {
-            merged.merge(line.productId(), line.quantity(), Integer::sum);
+            if (Quantities.tooPrecise(line.quantity())) {
+                throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
+                        "Une quantite se saisit au millieme au plus (" + line.quantity() + ").");
+            }
+            merged.merge(new LineKey(line.productId(), line.packagingId()),
+                    Quantities.scaled(line.quantity()), BigDecimal::add);
         }
         if (merged.isEmpty()) {
             throw new BusinessRuleException("EMPTY_CART", "Le panier est vide.");

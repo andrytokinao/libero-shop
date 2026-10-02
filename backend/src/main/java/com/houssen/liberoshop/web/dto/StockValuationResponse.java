@@ -22,13 +22,13 @@ import java.util.List;
  * @param byCategory          one row per rayon holding stock, largest tied-up money first
  */
 public record StockValuationResponse(int references,
-                                     long units,
+                                     BigDecimal units,
                                      BigDecimal costValue,
                                      BigDecimal saleValue,
                                      BigDecimal costedSaleValue,
                                      BigDecimal potentialMargin,
                                      BigDecimal potentialMarginRate,
-                                     long uncostedUnits,
+                                     BigDecimal uncostedUnits,
                                      int coveragePercent,
                                      List<CategoryValuation> byCategory) {
 
@@ -40,11 +40,11 @@ public record StockValuationResponse(int references,
     public record CategoryValuation(Long categoryId,
                                     String path,
                                     int references,
-                                    long units,
+                                    BigDecimal units,
                                     BigDecimal costValue,
                                     BigDecimal saleValue,
                                     BigDecimal potentialMargin,
                                     BigDecimal potentialMarginRate,
-                                    long uncostedUnits) {
+                                    BigDecimal uncostedUnits) {
     }
 }

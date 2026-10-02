@@ -9,6 +9,7 @@ import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.InsufficientStockException;
 import com.houssen.liberoshop.service.exception.InsufficientStockException.Shortage;
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.ApiExceptionHandler;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,7 +46,7 @@ class SaleStockShortageTest {
 
     private Product product(String name, int stock) {
         return products.save(Product.builder().name(name + " " + UUID.randomUUID().toString().substring(0, 6))
-                .price(new BigDecimal("1000")).stockQuantity(stock).build());
+                .price(new BigDecimal("1000")).stockQuantity(qty(stock)).build());
     }
 
     private UserApp cashier() {
@@ -61,18 +64,18 @@ class SaleStockShortageTest {
 
         InsufficientStockException refused = assertThrows(InsufficientStockException.class, () ->
                 saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.PAID, PaymentMethod.CASH,
-                        List.of(new CreateSaleRequest.Line(eau.getId(), 5),
-                                new CreateSaleRequest.Line(riz.getId(), 2),
-                                new CreateSaleRequest.Line(sucre.getId(), 9))), cashier()));
+                        List.of(new CreateSaleRequest.Line(eau.getId(), qty(5)),
+                                new CreateSaleRequest.Line(riz.getId(), qty(2)),
+                                new CreateSaleRequest.Line(sucre.getId(), qty(9)))), cashier()));
 
         assertEquals(List.of(
-                        new Shortage(eau.getId(), eau.getName(), 5, 4),
-                        new Shortage(sucre.getId(), sucre.getName(), 9, 6)),
+                        new Shortage(eau.getId(), eau.getName(), Quantities.of(5), Quantities.of(4), null),
+                        new Shortage(sucre.getId(), sucre.getName(), Quantities.of(9), Quantities.of(6), null)),
                 refused.shortages());
         assertTrue(refused.getMessage().startsWith("Stock insuffisant pour " + eau.getName()));
-        assertEquals(50, products.findById(riz.getId()).orElseThrow().getStockQuantity(),
+        assertQuantity(50, products.findById(riz.getId()).orElseThrow().getStockQuantity(),
                 "the line that could be served is not served alone");
-        assertEquals(4, products.findById(eau.getId()).orElseThrow().getStockQuantity());
+        assertQuantity(4, products.findById(eau.getId()).orElseThrow().getStockQuantity());
     }
 
     @Test
@@ -82,9 +85,9 @@ class SaleStockShortageTest {
         JsonMapper json = JsonMapper.builder().findAndAddModules().build();
 
         String shortage = json.writeValueAsString(handler.handleBusinessRule(
-                new InsufficientStockException(List.of(new Shortage(7L, "Eau", 5, 4)))).getBody());
+                new InsufficientStockException(List.of(new Shortage(7L, "Eau", qty(5), qty(4), "bouteille")))).getBody());
         assertTrue(shortage.contains("\"code\":\"INSUFFICIENT_STOCK\""));
-        assertTrue(shortage.contains("\"data\":[{\"productId\":7,\"productName\":\"Eau\",\"requested\":5,\"available\":4}]"),
+        assertTrue(shortage.contains("\"data\":[{\"productId\":7,\"productName\":\"Eau\",\"requested\":5,\"available\":4,\"unit\":\"bouteille\"}]"),
                 shortage);
 
         String other = json.writeValueAsString(handler.handleBusinessRule(

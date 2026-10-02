@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,9 +55,9 @@ class DepotCashFlowTest {
 
     private InvoiceResponse unpaidSale(UserApp cashier, String price) {
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal(price)).stockQuantity(10).build());
+                .price(new BigDecimal(price)).stockQuantity(qty(10)).build());
         return saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.UNPAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(product.getId(), 1))), cashier);
+                List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), cashier);
     }
 
     private PaymentStatus statusOf(InvoiceResponse invoice) {
@@ -138,9 +139,9 @@ class DepotCashFlowTest {
     void deskMoneyIsNotDepotCash() {
         UserApp allRounder = account(RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("5000")).stockQuantity(10).build());
+                .price(new BigDecimal("5000")).stockQuantity(qty(10)).build());
         saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.PAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(product.getId(), 1))), allRounder);
+                List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), allRounder);
 
         assertTrue(remittanceService.cashInHand(allRounder).isEmpty());
     }
@@ -150,10 +151,10 @@ class DepotCashFlowTest {
     void checkoutRefusesDepotStatuses() {
         UserApp cashier = account(RoleApp.CASHIER);
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("5000")).stockQuantity(10).build());
+                .price(new BigDecimal("5000")).stockQuantity(qty(10)).build());
 
         assertThrows(BusinessRuleException.class, () -> saleService.checkout(new CreateSaleRequest("Client",
                 PaymentStatus.COLLECTED, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(product.getId(), 1))), cashier));
+                List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), cashier));
     }
 }

@@ -5,7 +5,9 @@ import com.houssen.liberoshop.entity.SaleLine;
 import java.math.BigDecimal;
 
 public record SaleLineResponse(Long id,
-                               int quantity,
+                               BigDecimal quantity,
+                               String unitLabel,
+                               BigDecimal unitFactor,
                                BigDecimal unitPrice,
                                BigDecimal subtotal,
                                ProductResponse product) {
@@ -14,8 +16,10 @@ public record SaleLineResponse(Long id,
         return new SaleLineResponse(
                 line.getId(),
                 line.getQuantity(),
+                line.getUnitLabel(),
+                line.factor(),
                 line.getUnitPrice(),
-                line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity())),
-                ProductResponse.of(line.getProduct()));
+                line.lineTotal(),
+                ProductResponse.withoutUnits(line.getProduct()));
     }
 }

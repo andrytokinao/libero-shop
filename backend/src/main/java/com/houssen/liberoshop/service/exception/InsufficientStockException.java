@@ -1,5 +1,8 @@
 package com.houssen.liberoshop.service.exception;
 
+import com.houssen.liberoshop.util.Quantities;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,8 +18,14 @@ public class InsufficientStockException extends BusinessRuleException {
 
     public static final String CODE = "INSUFFICIENT_STOCK";
 
-    /** One line the shelf cannot fill: what was asked and what is really there. */
-    public record Shortage(Long productId, String productName, int requested, int available) {
+    /**
+     * One product the shelf cannot fill: what was asked and what is really there, both in the
+     * product's base unit -- its lines may have been in several units.
+     *
+     * @param unit the base unit's name, null for a product counted in bare units
+     */
+    public record Shortage(Long productId, String productName, BigDecimal requested,
+                           BigDecimal available, String unit) {
     }
 
     private final List<Shortage> shortages;
@@ -37,8 +46,13 @@ public class InsufficientStockException extends BusinessRuleException {
 
     private static String messageFor(List<Shortage> shortages) {
         return "Stock insuffisant pour " + shortages.stream()
-                .map(s -> s.productName() + " (" + s.requested() + " demande(s), "
-                        + s.available() + " disponible(s))")
+                .map(s -> s.productName() + " (" + amount(s.requested(), s.unit()) + " demande(s), "
+                        + amount(s.available(), s.unit()) + " disponible(s))")
                 .collect(Collectors.joining(", ")) + ".";
+    }
+
+    /** "1,75 kapoka", or a bare "3" for a product counted in bare units. */
+    private static String amount(BigDecimal quantity, String unit) {
+        return Quantities.format(quantity) + (unit == null ? "" : " " + unit);
     }
 }

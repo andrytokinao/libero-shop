@@ -69,7 +69,7 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
                 </button>
               }
               <div class="un-base-facts muted">
-                Prix {{ u.basePrice | ariary }} · Stock {{ u.stockQuantity }} {{ baseName() }}
+                Prix {{ u.basePrice | ariary }} · Stock {{ formatFactor(u.stockQuantity) }} {{ baseName() }}
               </div>
             </div>
 

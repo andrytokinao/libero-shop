@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Product } from '../../core/models';
+import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { StockStatusBadgeComponent } from './status-badges.component';
 
@@ -31,7 +32,13 @@ import { StockStatusBadgeComponent } from './status-badges.component';
               <td>{{ product.name }}</td>
               <td class="muted">{{ product.category?.name ?? '—' }}</td>
               <td class="muted">{{ product.barcode ?? '—' }}</td>
-              <td class="num">{{ product.stockQuantity }}</td>
+              <td class="num">
+                {{ formatQuantity(product.stockQuantity) }}
+                <!-- Sold in several units: also in the one that reads best, "≈ 9,96 sac". -->
+                @if (product.packagings?.length) {
+                  <div class="muted" style="font-size:11px;">≈ {{ stockLabel(product) }}</div>
+                }
+              </td>
               <td class="muted">{{ product.unit ?? '—' }}</td>
               <td class="num">{{ product.price | ariary }}</td>
               <td class="num">{{ product.stockValue | ariary }}</td>
@@ -71,4 +78,7 @@ export class StockTableComponent {
    */
   @Input() manageUnits = false;
   @Output() readonly unitsRequested = new EventEmitter<Product>();
+
+  protected readonly formatQuantity = formatQuantity;
+  protected readonly stockLabel = stockLabel;
 }

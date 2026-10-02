@@ -5,10 +5,10 @@ import java.util.List;
 
 public record StockDashboardResponse(BigDecimal stockValue,
                                      long referenceCount,
-                                     long unitsInStock,
+                                     BigDecimal unitsInStock,
                                      long lowStockCount,
                                      long suppliesLastWeek,
-                                     long unitsSuppliedLastWeek,
+                                     BigDecimal unitsSuppliedLastWeek,
                                      long deliveredInvoices,
                                      List<ProductResponse> toRestock) {
 }

@@ -1,6 +1,8 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
+import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.SaleLineRepository;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
@@ -47,13 +49,16 @@ public class ProductSearchService {
     private static final Sort BY_NAME = Sort.by("name");
 
     private final ProductRepository products;
+    private final ProductPackagingRepository packagings;
     private final SaleLineRepository saleLines;
     private final CategoryService categories;
     private final BusinessCalendar calendar;
 
-    public ProductSearchService(ProductRepository products, SaleLineRepository saleLines,
-                                CategoryService categories, BusinessCalendar calendar) {
+    public ProductSearchService(ProductRepository products, ProductPackagingRepository packagings,
+                                SaleLineRepository saleLines, CategoryService categories,
+                                BusinessCalendar calendar) {
         this.products = products;
+        this.packagings = packagings;
         this.saleLines = saleLines;
         this.categories = categories;
         this.calendar = calendar;
@@ -66,12 +71,17 @@ public class ProductSearchService {
      * <p>Matched whole, unlike {@link #search}: a scan is an identity, not a search, so "12"
      * must not land on "6111234567812" because it happens to end with it.
      *
+     * <p>A packaging's own code -- the sack's, the carton's -- answers with its product. The
+     * product carries its packagings, so the till works out which one was scanned by itself.
+     * Barcodes are unique across products and packagings, so the two never compete.
+     *
      * @throws ResourceNotFoundException when no product carries that code -- an ordinary outcome
      *                                   at the till, which the caller is expected to handle
      */
     public ProductResponse findByCode(String code) {
         String key = code == null ? "" : code.trim();
         return products.findWithCategoryByBarcode(key)
+                .or(() -> packagings.findWithProductByBarcode(key).map(ProductPackaging::getProduct))
                 .map(ProductResponse::of)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aucun produit ne porte le code « " + key + " »."));

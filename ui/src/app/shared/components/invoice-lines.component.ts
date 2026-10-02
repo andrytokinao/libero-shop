@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { Invoice } from '../../core/models';
+import { formatAmount, formatQuantity } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 
 /**
@@ -19,15 +20,16 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
       <div class="lines-head">
         <span>Articles à vérifier</span>
         <span class="muted">
-          {{ invoice.sale.lines.length }} référence(s) — {{ invoice.itemCount }} unité(s)
+          {{ invoice.sale.lines.length }} référence(s) — {{ formatQuantity(invoice.itemCount) }} unité(s)
         </span>
       </div>
       <ul>
         @for (line of invoice.sale.lines; track line.id) {
           <li>
-            <span class="qty">{{ line.quantity }}×</span>
+            <!-- In the unit it was sold in, as it was called then: "2 kg", "1 sac 50 kg". -->
+            <span class="qty">{{ formatAmount(line.quantity, line.unitLabel) }}{{ line.unitLabel ? "" : "×" }}</span>
             <span class="name">{{ line.product.name }}</span>
-            <span class="unit muted">{{ line.unitPrice | ariary }} / u</span>
+            <span class="unit muted">{{ line.unitPrice | ariary }} / {{ line.unitLabel ?? "u" }}</span>
             <span class="sub">{{ line.unitPrice * line.quantity | ariary }}</span>
           </li>
         } @empty {
@@ -43,4 +45,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 })
 export class InvoiceLinesComponent {
   @Input({ required: true }) invoice!: Invoice;
+
+  protected readonly formatAmount = formatAmount;
+  protected readonly formatQuantity = formatQuantity;
 }

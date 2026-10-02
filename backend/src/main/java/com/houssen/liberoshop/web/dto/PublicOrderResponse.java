@@ -16,6 +16,7 @@ public record PublicOrderResponse(String invoiceNumber,
                                   boolean paid,
                                   List<Line> lines) {
 
-    public record Line(String name, int quantity) {
+    /** @param unit the unit it was ordered in; null for bare units */
+    public record Line(String name, BigDecimal quantity, String unit) {
     }
 }

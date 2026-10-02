@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  */
 public record CreateSupplyRequest(@NotNull Long productId,
                                   @NotNull Long supplierId,
-                                  @Positive int quantity,
+                                  @NotNull @Positive
+                                  @Digits(integer = 11, fraction = 3)
+                                  BigDecimal quantity,
                                   @PositiveOrZero(message = "le prix d'achat ne peut pas etre negatif")
                                   @Digits(integer = 10, fraction = 2)
                                   BigDecimal unitCost) {

@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -24,14 +26,14 @@ class PurchaseCostingTest {
     void weightsByUnits() {
         // 40 sacks at 10 000, then 10 at 11 000: the new sacks are a fifth of the shelf.
         assertEquals(ar("10200.00"),
-                PurchaseCosting.averageAfterReceipt(40, ar("10000.00"), 10, ar("11000")));
+                PurchaseCosting.averageAfterReceipt(qty(40), ar("10000.00"), qty(10), ar("11000")));
     }
 
     @Test
     @DisplayName("two suppliers at two prices land between them, nearer the larger delivery")
     void twoSuppliers() {
-        BigDecimal afterFirst = PurchaseCosting.averageAfterReceipt(0, null, 30, ar("600"));
-        BigDecimal afterSecond = PurchaseCosting.averageAfterReceipt(30, afterFirst, 10, ar("800"));
+        BigDecimal afterFirst = PurchaseCosting.averageAfterReceipt(qty(0), null, qty(30), ar("600"));
+        BigDecimal afterSecond = PurchaseCosting.averageAfterReceipt(qty(30), afterFirst, qty(10), ar("800"));
 
         assertEquals(ar("600.00"), afterFirst);
         assertEquals(ar("650.00"), afterSecond);
@@ -40,27 +42,27 @@ class PurchaseCostingTest {
     @Test
     @DisplayName("the first known cost becomes the average")
     void firstCost() {
-        assertEquals(ar("650.00"), PurchaseCosting.averageAfterReceipt(25, null, 10, ar("650")));
+        assertEquals(ar("650.00"), PurchaseCosting.averageAfterReceipt(qty(25), null, qty(10), ar("650")));
     }
 
     @Test
     @DisplayName("an empty shelf forgets the old cost: nothing is left to carry it")
     void emptyShelfResets() {
-        assertEquals(ar("700.00"), PurchaseCosting.averageAfterReceipt(0, ar("500.00"), 10, ar("700")));
+        assertEquals(ar("700.00"), PurchaseCosting.averageAfterReceipt(qty(0), ar("500.00"), qty(10), ar("700")));
     }
 
     @Test
     @DisplayName("a receipt without a cost teaches nothing")
     void noCost() {
-        assertEquals(ar("500.00"), PurchaseCosting.averageAfterReceipt(10, ar("500.00"), 10, null));
-        assertNull(PurchaseCosting.averageAfterReceipt(10, null, 10, null));
+        assertEquals(ar("500.00"), PurchaseCosting.averageAfterReceipt(qty(10), ar("500.00"), qty(10), null));
+        assertNull(PurchaseCosting.averageAfterReceipt(qty(10), null, qty(10), null));
     }
 
     @Test
     @DisplayName("rounds to two places, half up")
     void rounds() {
         // (1 × 100 + 2 × 101) / 3 = 100.666...
-        assertEquals(ar("100.67"), PurchaseCosting.averageAfterReceipt(1, ar("100"), 2, ar("101")));
+        assertEquals(ar("100.67"), PurchaseCosting.averageAfterReceipt(qty(1), ar("100"), qty(2), ar("101")));
     }
 
     @Test
@@ -69,15 +71,17 @@ class PurchaseCostingTest {
         Product riz = Product.builder()
                 .name("Riz 5kg")
                 .price(ar("12500"))
-                .stockQuantity(40)
+                .stockQuantity(qty(40))
                 .averageCost(ar("10000.00"))
                 .build();
 
-        PurchaseCosting.receive(riz, 10, ar("11000"));
+        PurchaseCosting.receive(riz, qty(10), ar("11000"));
 
-        assertEquals(50, riz.getStockQuantity());
+        assertQuantity(50, riz.getStockQuantity());
         assertEquals(ar("10200.00"), riz.getAverageCost());
-        assertEquals(ar("10200.00"), PurchaseCosting.costOfSale(riz));
+        assertEquals(ar("10200.00"), PurchaseCosting.costOfSale(riz, BigDecimal.ONE));
+        // A kilo of it counted in 3.5 base units costs three and a half of them.
+        assertEquals(ar("35700.00"), PurchaseCosting.costOfSale(riz, new BigDecimal("3.5")));
     }
 
     @Test

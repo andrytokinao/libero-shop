@@ -32,7 +32,7 @@ import java.util.List;
  */
 public record ProductImportLineResponse(int line,
                                         String name,
-                                        int quantity,
+                                        BigDecimal quantity,
                                         String unit,
                                         BigDecimal price,
                                         BigDecimal cost,

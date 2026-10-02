@@ -5,12 +5,14 @@ import com.houssen.liberoshop.entity.DeliveryStatus;
 import com.houssen.liberoshop.entity.Invoice;
 import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentStatus;
+import com.houssen.liberoshop.entity.SaleLine;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * @param itemCount    total units on the invoice, so the lists do not have to sum the lines
- *                     client-side just to show a column
+ * @param itemCount    total quantity on the invoice, each line in its own unit, so the lists do
+ *                     not have to sum the lines client-side just to show a column
  * @param cancellation who cancelled the order, when and why; null for an order that stands
  * @param cashTrail    where the money is while it is not in the till -- see {@link CashTrail};
  *                     null when it is in the till, when there is none, or when the response was
@@ -26,7 +28,7 @@ public record InvoiceResponse(Long id,
                               PaymentStatus paymentStatus,
                               DeliveryStatus deliveryStatus,
                               boolean printed,
-                              int itemCount,
+                              BigDecimal itemCount,
                               SaleResponse sale,
                               Cancellation cancellation,
                               CashTrail cashTrail,
@@ -47,7 +49,7 @@ public record InvoiceResponse(Long id,
                 invoice.getPaymentStatus(),
                 invoice.getDeliveryStatus(),
                 invoice.isPrinted(),
-                invoice.getSale().getLines().stream().mapToInt(line -> line.getQuantity()).sum(),
+                invoice.getSale().getLines().stream().map(SaleLine::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add),
                 SaleResponse.of(invoice.getSale()),
                 Cancellation.of(invoice),
                 cashTrail,

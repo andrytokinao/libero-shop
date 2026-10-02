@@ -8,9 +8,12 @@ import { ApiError } from '../models';
 export interface StockShortage {
   readonly productId: number;
   readonly productName: string;
+  /** In the product's base unit, all its lines together. */
   readonly requested: number;
-  /** What the shelf really holds now, which is the most this line can ask for. */
+  /** What the shelf really holds now, in base units: the most its lines can ask for together. */
   readonly available: number;
+  /** The base unit's name; null for bare units. */
+  readonly unit?: string | null;
 }
 
 export const INSUFFICIENT_STOCK = 'INSUFFICIENT_STOCK';

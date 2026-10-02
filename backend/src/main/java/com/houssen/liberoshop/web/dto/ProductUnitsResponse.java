@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.ProductPackaging;
+import com.houssen.liberoshop.web.dto.ProductResponse.Packaging;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +20,7 @@ public record ProductUnitsResponse(Long productId,
                                    String baseUnit,
                                    BigDecimal basePrice,
                                    String baseBarcode,
-                                   int stockQuantity,
+                                   BigDecimal stockQuantity,
                                    List<Packaging> packagings) {
 
     public static ProductUnitsResponse of(Product product, List<ProductPackaging> packagings) {
@@ -31,18 +32,5 @@ public record ProductUnitsResponse(Long productId,
                 product.getBarcode(),
                 product.getStockQuantity(),
                 packagings.stream().map(Packaging::of).toList());
-    }
-
-    /** @param factor base units in one of these */
-    public record Packaging(Long id, String label, BigDecimal factor, BigDecimal price, String barcode) {
-
-        static Packaging of(ProductPackaging packaging) {
-            return new Packaging(
-                    packaging.getId(),
-                    packaging.getLabel(),
-                    packaging.getFactor(),
-                    packaging.getPrice(),
-                    packaging.getBarcode());
-        }
     }
 }

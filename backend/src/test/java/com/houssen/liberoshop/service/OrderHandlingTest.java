@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -51,9 +52,9 @@ class OrderHandlingTest {
 
     private InvoiceResponse order() {
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("3000")).stockQuantity(10).build());
+                .price(new BigDecimal("3000")).stockQuantity(qty(10)).build());
         return saleService.checkout(new CreateSaleRequest("Table 3", PaymentStatus.PAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(product.getId(), 1))), account(RoleApp.CASHIER));
+                List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), account(RoleApp.CASHIER));
     }
 
     @Test

@@ -1,4 +1,5 @@
 import { Category } from './category.model';
+import { Packaging } from './product-units.model';
 
 /**
  * Mirrors com.houssen.liberoshop.entity.Product (table product), as served by
@@ -9,6 +10,7 @@ export interface Product {
   name: string;
   /** BigDecimal(12,2) on the backend, sent as a JSON number. */
   price: number;
+  /** In the base unit (`unit`), to the thousandth: 1743.5 kapoka. */
   stockQuantity: number;
   /**
    * How the shelf counts it — "kg", "L", "sachet" — exactly as the operator wrote it. Null for
@@ -23,4 +25,10 @@ export interface Product {
   lowStock: boolean;
   /** price × stockQuantity, precomputed server-side. */
   stockValue: number;
+  /**
+   * The other units it sells in — "kg", "sac 50 kg" — smallest first. Empty for most products,
+   * and on the products nested in an invoice or a movement. Optional so a product kept in a held
+   * sale from before units still reads.
+   */
+  packagings?: Packaging[];
 }

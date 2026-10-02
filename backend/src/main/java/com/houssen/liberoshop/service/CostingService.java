@@ -130,17 +130,17 @@ public class CostingService {
 
     private static SupplierPriceResponse priceOf(Long supplierId, List<Supply> receipts) {
         Supply last = receipts.getFirst();
-        long units = receipts.stream().mapToLong(Supply::getQuantity).sum();
+        BigDecimal units = receipts.stream().map(Supply::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal spent = receipts.stream()
-                .map(s -> s.getUnitCost().multiply(BigDecimal.valueOf(s.getQuantity())))
+                .map(s -> s.getUnitCost().multiply(s.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new SupplierPriceResponse(
                 supplierId,
                 last.getSupplier() == null ? NO_SUPPLIER_LABEL : last.getSupplier().getName(),
                 receipts.size(),
                 units,
-                units == 0 ? last.getUnitCost()
-                        : spent.divide(BigDecimal.valueOf(units), PurchaseCosting.COST_SCALE,
+                units.signum() == 0 ? last.getUnitCost()
+                        : spent.divide(units, PurchaseCosting.COST_SCALE,
                                 RoundingMode.HALF_UP),
                 receipts.stream().map(Supply::getUnitCost).min(Comparator.naturalOrder()).orElseThrow(),
                 receipts.stream().map(Supply::getUnitCost).max(Comparator.naturalOrder()).orElseThrow(),
@@ -220,13 +220,13 @@ public class CostingService {
         BigDecimal costedSaleValue = costValue.add(potentialMargin);
         return new StockValuationResponse(
                 byCategory.stream().mapToInt(CategoryValuation::references).sum(),
-                byCategory.stream().mapToLong(CategoryValuation::units).sum(),
+                sum(byCategory, CategoryValuation::units),
                 costValue,
                 saleValue,
                 costedSaleValue,
                 potentialMargin,
                 PurchaseCosting.marginRate(potentialMargin, costedSaleValue),
-                byCategory.stream().mapToLong(CategoryValuation::uncostedUnits).sum(),
+                sum(byCategory, CategoryValuation::uncostedUnits),
                 coveragePercent(costedSaleValue, saleValue),
                 byCategory);
     }
@@ -242,12 +242,12 @@ public class CostingService {
                 categoryId,
                 categoryId == null ? NO_CATEGORY_LABEL : paths.getOrDefault(categoryId, "?"),
                 ((Number) row[1]).intValue(),
-                ((Number) row[2]).longValue(),
+                decimal(row[2]),
                 costValue,
                 saleValue,
                 potentialMargin,
                 PurchaseCosting.marginRate(potentialMargin, costedSaleValue),
-                ((Number) row[6]).longValue());
+                decimal(row[6]));
     }
 
     /**
@@ -268,7 +268,7 @@ public class CostingService {
         return new ProductMargin(
                 (Long) row[0],
                 (String) row[1],
-                ((Number) row[2]).longValue(),
+                decimal(row[2]),
                 revenue,
                 cost,
                 margin,

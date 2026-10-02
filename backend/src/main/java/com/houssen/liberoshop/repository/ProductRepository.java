@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findAllWithCategory();
 
     @Query("select p from Product p left join fetch p.category where p.stockQuantity < :threshold order by p.stockQuantity")
-    List<Product> findLowStock(@Param("threshold") int threshold);
+    List<Product> findLowStock(@Param("threshold") BigDecimal threshold);
 
     /**
      * What the stock on hand is worth, per rayon, summed by the database.

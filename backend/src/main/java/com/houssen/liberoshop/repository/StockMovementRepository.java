@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -70,7 +71,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     long countSuppliesSince(@Param("from") LocalDateTime from);
 
     @Query("select coalesce(sum(s.quantity), 0) from Supply s where s.movementDate >= :from")
-    long sumSuppliedUnitsSince(@Param("from") LocalDateTime from);
+    BigDecimal sumSuppliedUnitsSince(@Param("from") LocalDateTime from);
 
     /**
      * Deliveries and units per supplier. Supplier-less entries -- the ones an import writes --

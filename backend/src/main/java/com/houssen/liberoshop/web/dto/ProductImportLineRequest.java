@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.service.ImportAction;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -35,8 +36,10 @@ public record ProductImportLineRequest(
         @Size(max = 120)
         String name,
 
+        @NotNull
         @PositiveOrZero(message = "la quantite ne peut pas etre negative")
-        int quantity,
+        @Digits(integer = 11, fraction = 3)
+        BigDecimal quantity,
 
         @Size(max = Product.MAX_UNIT_LENGTH)
         String unit,

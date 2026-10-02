@@ -8,6 +8,7 @@ import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.BaseUnitRequest;
 import com.houssen.liberoshop.web.dto.PackagingRequest;
+import com.houssen.liberoshop.web.dto.ProductResponse;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,7 +63,7 @@ class ProductUnitServiceTest {
     void setUp() {
         service = new ProductUnitService(products, packagings);
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
-                .stockQuantity(1750).unit("kapoka").barcode("111").build();
+                .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 
         when(products.findById(anyLong())).thenAnswer(call ->
                 call.getArgument(0).equals(rice.getId()) ? Optional.of(rice) : Optional.empty());
@@ -99,7 +101,7 @@ class ProductUnitServiceTest {
 
         assertEquals("kapoka", units.baseUnit());
         assertEquals(List.of("kg", "sac 50 kg"),
-                units.packagings().stream().map(ProductUnitsResponse.Packaging::label).toList());
+                units.packagings().stream().map(ProductResponse.Packaging::label).toList());
         assertEquals(0, new BigDecimal("3.5").compareTo(units.packagings().getFirst().factor()));
     }
 

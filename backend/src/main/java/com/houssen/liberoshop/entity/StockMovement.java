@@ -1,10 +1,11 @@
 package com.houssen.liberoshop.entity;
 
-
+import com.houssen.liberoshop.util.Quantities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,8 +23,9 @@ public abstract class StockMovement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private int quantity;
+    /** In the product's base unit, whatever unit the goods were sold or received in. */
+    @Column(nullable = false, precision = Quantities.PRECISION, scale = Quantities.SCALE)
+    private BigDecimal quantity;
 
     @Column(nullable = false)
     private LocalDateTime movementDate;

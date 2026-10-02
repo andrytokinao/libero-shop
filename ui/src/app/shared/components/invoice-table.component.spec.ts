@@ -30,6 +30,8 @@ const INVOICE: Invoice = {
       {
         id: 1,
         quantity: 3,
+        unitLabel: null,
+        unitFactor: 1,
         unitPrice: 5000,
         product: {
           id: 11,
@@ -46,6 +48,8 @@ const INVOICE: Invoice = {
       {
         id: 2,
         quantity: 2,
+        unitLabel: null,
+        unitFactor: 1,
         unitPrice: 2000,
         product: {
           id: 12,

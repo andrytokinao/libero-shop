@@ -52,7 +52,11 @@ export interface CreateSaleRequest {
   clientName: string;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
-  lines: { productId: number; quantity: number }[];
+  /**
+   * `packagingId` is the unit sold — "kg", "sac" — or null for the base unit; `quantity` is in
+   * that unit, to the thousandth.
+   */
+  lines: { productId: number; packagingId?: number | null; quantity: number }[];
 }
 
 export interface CreateSupplyRequest {

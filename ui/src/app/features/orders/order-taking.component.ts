@@ -5,13 +5,15 @@ import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { CategoryNode, PaymentMethod, PaymentStatus, RoleApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
-import { Cart } from '../../core/sale/cart';
+import { Cart, lineTotal } from '../../core/sale/cart';
+import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { followStock } from '../../core/sale/follow-stock';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
+import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -26,7 +28,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-order-taking',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, CameraScanButtonComponent],
+  imports: [FormsModule, AriaryPipe, CameraScanButtonComponent, CartLineQuantityComponent],
   template: `
     <div class="order-top">
       <div class="fld who">
@@ -90,10 +92,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           (click)="cart.add(product)"
         >
           @if (cart.quantityOf(product) > 0) {
-            <span class="count" aria-label="Quantité dans la commande">{{ cart.quantityOf(product) }}</span>
+            <span class="count" aria-label="Quantité dans la commande">{{ cart.countLabelOf(product) }}</span>
           }
           <span class="name">{{ product.name }}</span>
-          <span class="price">{{ product.price | ariary }}</span>
+          <span class="price">
+            {{ product.price | ariary }}@if (product.unit) {<span class="muted"> / {{ product.unit }}</span>}
+          </span>
           @if (cart.remainingStock(product) <= 0) {
             <span class="out">Épuisé</span>
           }
@@ -109,7 +113,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="order-bar">
       @if (!cart.isEmpty()) {
         <button type="button" class="summary" (click)="reviewing.set(true)">
-          <strong>{{ cart.units() }} article(s)</strong>
+          <strong>{{ formatQuantity(cart.units()) }} article(s)</strong>
           <span>{{ cart.total() | ariary }} · voir</span>
         </button>
         <button type="button" class="btn send" [disabled]="sending()" (click)="reviewing.set(true)">
@@ -132,30 +136,20 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           </div>
           <div class="modal-body">
             <ul class="review">
-              @for (line of cart.lines(); track line.product.id) {
+              @for (line of cart.lines(); track line.product.id + ':' + line.unit.packagingId) {
                 <li [class.short]="cart.isShort(line.product)">
                   <span class="name">
                     {{ line.product.name }}
                     @if (cart.isShort(line.product)) {
                       <span class="short-note">
-                        — stock insuffisant : {{ line.product.stockQuantity }} disponible(s)
+                        — stock insuffisant : {{ stockLabel(line.product) }} disponible(s)
                       </span>
                     }
                   </span>
                   <span class="qty">
-                    <button class="qtybtn" type="button" aria-label="Retirer un" (click)="cart.change(line.product, -1)">−</button>
-                    {{ line.quantity }}
-                    <button
-                      class="qtybtn"
-                      type="button"
-                      aria-label="Ajouter un"
-                      [disabled]="cart.remainingStock(line.product) <= 0"
-                      (click)="cart.change(line.product, 1)"
-                    >
-                      +
-                    </button>
+                    <app-cart-line-quantity [cart]="cart" [line]="line" />
                   </span>
-                  <span class="sub-total">{{ line.product.price * line.quantity | ariary }}</span>
+                  <span class="sub-total">{{ lineTotal(line) | ariary }}</span>
                 </li>
               } @empty {
                 <li class="muted">La commande est vide.</li>
@@ -217,6 +211,10 @@ export class OrderTakingComponent {
   protected readonly sending = signal(false);
 
   protected readonly cart = new Cart();
+  protected readonly stockLabel = stockLabel;
+  protected readonly formatQuantity = formatQuantity;
+  protected readonly lineTotal = lineTotal;
+
 
   private readonly tree = apiResource<CategoryNode[]>([], () => this.catalog.categories());
 

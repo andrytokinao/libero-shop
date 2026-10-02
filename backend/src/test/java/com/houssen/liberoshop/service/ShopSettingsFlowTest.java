@@ -29,6 +29,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -74,9 +76,9 @@ class ShopSettingsFlowTest {
 
     private InvoiceResponse unpaidSale(UserApp seller) {
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("6000")).stockQuantity(10).build());
+                .price(new BigDecimal("6000")).stockQuantity(qty(10)).build());
         return saleService.checkout(new CreateSaleRequest("Table 4", PaymentStatus.UNPAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(product.getId(), 1))), seller);
+                List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), seller);
     }
 
     @Test
@@ -153,10 +155,10 @@ class ShopSettingsFlowTest {
         assertEquals(PaymentStatus.PAID, invoiceService.pay(order.id(), PaymentMethod.CASH, cashier).paymentStatus());
 
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("1000")).stockQuantity(10).build());
+                .price(new BigDecimal("1000")).stockQuantity(qty(10)).build());
         BusinessRuleException refused = assertThrows(BusinessRuleException.class, () -> saleService.checkout(
                 new CreateSaleRequest("Table 1", PaymentStatus.PAID, PaymentMethod.CASH,
-                        List.of(new CreateSaleRequest.Line(product.getId(), 1))), waiter));
+                        List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), waiter));
         assertEquals("ORDER_TAKER_CANNOT_COLLECT", refused.code());
     }
 
@@ -166,16 +168,16 @@ class ShopSettingsFlowTest {
         UserApp waiter = account(RoleApp.ORDER_TAKER);
         UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("2500")).stockQuantity(10).build());
+                .price(new BigDecimal("2500")).stockQuantity(qty(10)).build());
         InvoiceResponse order = saleService.checkout(new CreateSaleRequest("Table 2", PaymentStatus.UNPAID,
-                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), 3))), waiter);
-        assertEquals(7, products.findById(product.getId()).orElseThrow().getStockQuantity());
+                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), qty(3)))), waiter);
+        assertQuantity(7, products.findById(product.getId()).orElseThrow().getStockQuantity());
 
         InvoiceResponse cancelled = invoiceService.cancel(order.id(), CancelReason.INPUT_ERROR, null, waiter);
         assertEquals(PaymentStatus.CANCELLED, cancelled.paymentStatus());
         assertEquals(DeliveryStatus.CANCELLED, cancelled.deliveryStatus());
         assertEquals(CancelReason.INPUT_ERROR, cancelled.cancellation().reason());
-        assertEquals(10, products.findById(product.getId()).orElseThrow().getStockQuantity(), "back on the shelf");
+        assertQuantity(10, products.findById(product.getId()).orElseThrow().getStockQuantity(), "back on the shelf");
 
         assertEquals("CANCELLED", assertThrows(StatusTransitionException.class,
                 () -> invoiceService.deliver(order.id(), storekeeper)).code());
@@ -205,9 +207,9 @@ class ShopSettingsFlowTest {
         configure(BusinessType.RESTAURANT, BusinessType.RESTAURANT.defaults());
         UserApp cashier = account(RoleApp.CASHIER);
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("4000")).stockQuantity(5).build());
+                .price(new BigDecimal("4000")).stockQuantity(qty(5)).build());
         InvoiceResponse order = saleService.checkout(new CreateSaleRequest("Table 9", PaymentStatus.UNPAID,
-                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), 2))), cashier);
+                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), qty(2)))), cashier);
         invoiceService.deliver(order.id(), account(RoleApp.DEPOT_AGENT));
 
         StatusTransitionException refused = assertThrows(StatusTransitionException.class,
@@ -223,7 +225,7 @@ class ShopSettingsFlowTest {
         assertEquals(PaymentStatus.CANCELLED, cancelled.paymentStatus());
         assertEquals(DeliveryStatus.DELIVERED, cancelled.deliveryStatus(), "it was handed over all the same");
         assertEquals("Parti sans payer", cancelled.cancellation().comment());
-        assertEquals(3, products.findById(product.getId()).orElseThrow().getStockQuantity(), "the goods are gone");
+        assertQuantity(3, products.findById(product.getId()).orElseThrow().getStockQuantity(), "the goods are gone");
     }
 
     @Test
@@ -233,11 +235,11 @@ class ShopSettingsFlowTest {
         UserApp receptionist = account(RoleApp.ORDER_TAKER);
         UserApp cashier = account(RoleApp.CASHIER);
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("3000")).stockQuantity(10).build());
+                .price(new BigDecimal("3000")).stockQuantity(qty(10)).build());
 
         // Paid on the spot: cash in hand, not yet in the till.
         InvoiceResponse paidNow = saleService.checkout(new CreateSaleRequest("Chambre 12", PaymentStatus.PAID,
-                PaymentMethod.MOBILE_MONEY, List.of(new CreateSaleRequest.Line(product.getId(), 1))), receptionist);
+                PaymentMethod.MOBILE_MONEY, List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), receptionist);
         assertEquals(PaymentStatus.COLLECTED, paidNow.paymentStatus());
 
         // Paid later, from "Mes commandes".

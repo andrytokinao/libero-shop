@@ -36,7 +36,7 @@ public final class PurchaseCosting {
      * @param unitCost what one unit of this receipt cost, or null when it was not given -- the
      *                 units still enter the stock, and the average is left as it was
      */
-    public static void receive(Product product, int quantity, BigDecimal unitCost) {
+    public static void receive(Product product, BigDecimal quantity, BigDecimal unitCost) {
         product.setAverageCost(averageAfterReceipt(
                 product.getStockQuantity(), product.getAverageCost(), quantity, unitCost));
         product.adjustStock(quantity);
@@ -54,31 +54,34 @@ public final class PurchaseCosting {
      *   <li>otherwise: {@code (stock × average + received × cost) / (stock + received)}.</li>
      * </ul>
      */
-    public static BigDecimal averageAfterReceipt(int stockBefore, BigDecimal averageBefore,
-                                                 int received, BigDecimal unitCost) {
+    public static BigDecimal averageAfterReceipt(BigDecimal stockBefore, BigDecimal averageBefore,
+                                                 BigDecimal received, BigDecimal unitCost) {
         if (unitCost == null) {
             return averageBefore;
         }
-        if (averageBefore == null || stockBefore <= 0) {
+        if (averageBefore == null || stockBefore.signum() <= 0) {
             return scaled(unitCost);
         }
-        if (received <= 0) {
+        if (received.signum() <= 0) {
             return averageBefore;
         }
-        BigDecimal valueBefore = averageBefore.multiply(BigDecimal.valueOf(stockBefore));
-        BigDecimal valueReceived = unitCost.multiply(BigDecimal.valueOf(received));
+        BigDecimal valueBefore = averageBefore.multiply(stockBefore);
+        BigDecimal valueReceived = unitCost.multiply(received);
         return valueBefore.add(valueReceived)
-                .divide(BigDecimal.valueOf((long) stockBefore + received), COST_SCALE,
-                        RoundingMode.HALF_UP);
+                .divide(stockBefore.add(received), COST_SCALE, RoundingMode.HALF_UP);
     }
 
     /**
-     * The cost to freeze on a sale line: the average of the stock the units leave from. Null
+     * The cost to freeze on a sale line: the average of the stock the units leave from, times
+     * the base units in one of the unit sold -- a kilo of rice costs 3.5 kapoka's worth. Null
      * when the product has never been costed -- the report then says the margin is unknown
      * rather than calling the goods free.
+     *
+     * @param factor base units in one of the unit sold; 1 for the base unit itself
      */
-    public static BigDecimal costOfSale(Product product) {
-        return product.getAverageCost();
+    public static BigDecimal costOfSale(Product product, BigDecimal factor) {
+        BigDecimal average = product.getAverageCost();
+        return average == null ? null : scaled(average.multiply(factor));
     }
 
     /**

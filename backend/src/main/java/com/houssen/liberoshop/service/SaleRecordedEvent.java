@@ -15,7 +15,8 @@ import java.math.BigDecimal;
  * <p>Plain values only, copied while the entities are still attached: a listener running after
  * the commit has no session to load a lazy association with.
  *
- * @param units total quantity across the lines, what the depot has to pick
+ * @param units total quantity across the lines, each in its own unit -- what the depot has to
+ *              pick, as a rough size of the order rather than a stock figure
  */
 public record SaleRecordedEvent(Long invoiceId,
                                 String invoiceNumber,
@@ -23,7 +24,7 @@ public record SaleRecordedEvent(Long invoiceId,
                                 BigDecimal totalAmount,
                                 PaymentStatus paymentStatus,
                                 int lineCount,
-                                int units,
+                                BigDecimal units,
                                 Long sellerId,
                                 String sellerName) {
 }

@@ -28,6 +28,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,7 +55,7 @@ class OnlineOrderServiceTest {
     void restaurantWithOnlineOrdering() {
         configure(new ShopFeatures(true, true, false, false, false, true));
         dish = products.save(Product.builder().name("Plat " + UUID.randomUUID())
-                .price(new BigDecimal("12000")).stockQuantity(50).build());
+                .price(new BigDecimal("12000")).stockQuantity(qty(50)).build());
     }
 
     @AfterEach
@@ -77,7 +78,7 @@ class OnlineOrderServiceTest {
 
     private PublicOrderResponse order(DiningTableResponse table, String name, int quantity) {
         return onlineOrders.order(table.token(), new PublicOrderRequest(name,
-                List.of(new CreateSaleRequest.Line(dish.getId(), quantity))));
+                List.of(new CreateSaleRequest.Line(dish.getId(), qty(quantity)))));
     }
 
     private UserApp account(RoleApp role) {

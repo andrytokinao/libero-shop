@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.service.ImportOutcome;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,7 +21,7 @@ import java.util.List;
 public record ProductImportResultResponse(int created,
                                           int merged,
                                           int skipped,
-                                          int unitsAdded,
+                                          BigDecimal unitsAdded,
                                           int movements,
                                           String supplierName,
                                           List<String> rayonsCreated,

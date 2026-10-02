@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -71,9 +72,9 @@ class RemittanceSelfConfirmTest {
     /** An unpaid order handed over by {@code agent}, who takes its cash. */
     private InvoiceResponse collectedBy(UserApp agent) {
         Product product = products.save(Product.builder().name("Produit " + UUID.randomUUID())
-                .price(new BigDecimal("6000")).stockQuantity(10).build());
+                .price(new BigDecimal("6000")).stockQuantity(qty(10)).build());
         InvoiceResponse order = saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.UNPAID,
-                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), 1))),
+                PaymentMethod.CASH, List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))),
                 account(RoleApp.CASHIER));
         invoiceService.deliver(order.id(), agent);
         return order;

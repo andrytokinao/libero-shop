@@ -11,7 +11,8 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice, Product } from '../../core/models';
-import { Cart } from '../../core/sale/cart';
+import { Cart, CartLine, lineTotal } from '../../core/sale/cart';
+import { baseUnitOf, formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
@@ -21,6 +22,7 @@ import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
+import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -50,6 +52,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     SaleCheckoutDialogComponent,
     InvoiceDetailFlowComponent,
     IconComponent,
+    CartLineQuantityComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -277,8 +280,10 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
               >
                 <div class="pname">{{ product.name }}</div>
                 <div class="pcat">{{ product.category?.name ?? 'Sans catégorie' }}</div>
-                <div class="pprice">{{ product.price | ariary }}</div>
-                <div class="pstock">Disponible : {{ cart.remainingStock(product) }}</div>
+                <div class="pprice">
+                  {{ product.price | ariary }}@if (product.unit) {<span class="muted"> / {{ product.unit }}</span>}
+                </div>
+                <div class="pstock">Disponible : {{ stockLabel(product, cart.remainingStock(product)) }}</div>
               </button>
               @if (cart.quantityOf(product) > 0) {
                 <span
@@ -286,7 +291,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
                   [class.short]="cart.isShort(product)"
                   aria-label="Quantité dans le panier"
                 >
-                  {{ cart.quantityOf(product) }}
+                  {{ cart.countLabelOf(product) }}
                 </span>
                 <button
                   type="button"
@@ -349,7 +354,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
                 [title]="'En attente depuis ' + (sale.heldAt | date: 'HH:mm') + ' — cliquer pour reprendre'"
                 (click)="resume(sale.id)"
               >
-                ⏸ {{ sale.clientName || auth.words().client }} · {{ unitsOf(sale) }} art. · {{ totalOf(sale) | ariary }}
+                ⏸ {{ sale.clientName || auth.words().client }} · {{ formatQuantity(unitsOf(sale)) }} art. · {{ totalOf(sale) | ariary }}
               </button>
             }
           </div>
@@ -364,31 +369,20 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
               </tr>
             </thead>
             <tbody>
-              @for (item of cart.lines(); track item.product.id) {
+              @for (item of cart.lines(); track item.product.id + ':' + item.unit.packagingId) {
                 <tr [class.short]="cart.isShort(item.product)">
                   <td>
                     {{ item.product.name }}
                     @if (cart.isShort(item.product)) {
                       <div class="short-note">
-                        Stock insuffisant : {{ item.product.stockQuantity }} disponible(s)
+                        Stock insuffisant : {{ stockLabel(item.product) }} disponible(s)
                       </div>
                     }
                   </td>
                   <td>
-                    <button class="qtybtn" type="button" (click)="cart.change(item.product, -1)">
-                      −
-                    </button>
-                    {{ item.quantity }}
-                    <button
-                      class="qtybtn"
-                      type="button"
-                      [disabled]="item.quantity >= item.product.stockQuantity"
-                      (click)="cart.change(item.product, 1)"
-                    >
-                      +
-                    </button>
+                    <app-cart-line-quantity [cart]="cart" [line]="item" />
                   </td>
-                  <td class="num">{{ item.product.price * item.quantity | ariary }}</td>
+                  <td class="num">{{ lineTotal(item) | ariary }}</td>
                 </tr>
               }
             </tbody>
@@ -425,7 +419,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     <div class="sale-bar" [class.short]="cart.hasShortage()">
       <div class="sale-bar-sum">
         <strong>{{ cart.total() | ariary }}</strong>
-        <span>{{ cart.units() }} article(s)</span>
+        <span>{{ formatQuantity(cart.units()) }} article(s)</span>
       </div>
       <button
         class="btn ghost"
@@ -548,6 +542,9 @@ export class NewSaleComponent {
   ]);
 
   protected readonly isEnabled = isEnabled;
+  protected readonly stockLabel = stockLabel;
+  protected readonly formatQuantity = formatQuantity;
+  protected readonly lineTotal = lineTotal;
 
   /**
    * Returns nothing, on purpose. Angular cancels any event whose handler returns `false`, and
@@ -616,8 +613,9 @@ export class NewSaleComponent {
   }
 
   protected totalOf(sale: HeldSale): number {
-    return sale.lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
+    return sale.lines.reduce((sum, line) => sum + lineTotal(withUnit(line)), 0);
   }
+
 
   private resumeOldest(): void {
     const oldest = this.held.list()[0];
@@ -705,4 +703,9 @@ export class NewSaleComponent {
     this.sold.set(null);
     this.focusProductField();
   }
+}
+
+/** A held line from before units had none: it was in the base unit. */
+function withUnit(line: CartLine): CartLine {
+  return line.unit ? line : { ...line, unit: baseUnitOf(line.product) };
 }

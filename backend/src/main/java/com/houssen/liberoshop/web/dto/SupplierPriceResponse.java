@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public record SupplierPriceResponse(Long supplierId,
                                     String supplierName,
                                     int receipts,
-                                    long units,
+                                    BigDecimal units,
                                     BigDecimal averageCost,
                                     BigDecimal lowestCost,
                                     BigDecimal highestCost,

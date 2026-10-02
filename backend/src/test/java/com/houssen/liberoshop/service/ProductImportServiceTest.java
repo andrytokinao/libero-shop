@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -142,7 +144,7 @@ class ProductImportServiceTest {
         Product product = Product.builder()
                 .name(name)
                 .price(BigDecimal.valueOf(12500))
-                .stockQuantity(stock)
+                .stockQuantity(qty(stock))
                 .barcode(barcode)
                 .category(rayon)
                 .build();
@@ -210,7 +212,7 @@ class ProductImportServiceTest {
 
         ProductImportLineResponse row = line(preview, 0);
         assertEquals("Riz parfumé 5kg", row.name());
-        assertEquals(40, row.quantity());
+        assertQuantity(40, row.quantity());
         assertEquals("sac", row.unit());
         assertEquals(0, new BigDecimal("12500.00").compareTo(row.price()));
         assertEquals(0, new BigDecimal("10200.00").compareTo(row.cost()));
@@ -230,7 +232,7 @@ class ProductImportServiceTest {
                 "a misspelled quantity column must be reported, not read as zero");
         assertTrue(preview.ignored().contains("quantit"));
         assertTrue(preview.ignored().contains("fournisseur"));
-        assertEquals(0, line(preview, 0).quantity());
+        assertQuantity(0, line(preview, 0).quantity());
     }
 
     @Test
@@ -248,13 +250,15 @@ class ProductImportServiceTest {
     }
 
     @Test
-    @DisplayName("says so when it rounds a weighed quantity, rather than rounding in silence")
+    @DisplayName("keeps a weighed quantity, and says so when it has to round past the thousandth")
     void notesARoundedQuantity() {
         ProductImportPreviewResponse preview =
-                service.preview("nom;quantite\nFarine en vrac;12,4\n");
+                service.preview("nom;quantite\nFarine en vrac;12,4\nSucre en vrac;3,14159\n");
 
-        assertEquals(12, line(preview, 0).quantity());
-        assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("arrondie")));
+        assertQuantity("12.4", line(preview, 0).quantity());
+        assertTrue(line(preview, 0).notes().stream().noneMatch(note -> note.contains("arrondie")));
+        assertQuantity("3.142", line(preview, 1).quantity());
+        assertTrue(line(preview, 1).notes().stream().anyMatch(note -> note.contains("arrondie")));
     }
 
     @Test
@@ -262,7 +266,7 @@ class ProductImportServiceTest {
     void refusesNegativeQuantities() {
         ProductImportPreviewResponse preview = service.preview("nom;quantite\nRiz;-5\n");
 
-        assertEquals(0, line(preview, 0).quantity());
+        assertQuantity(0, line(preview, 0).quantity());
         assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("negative")));
     }
 
@@ -312,7 +316,7 @@ class ProductImportServiceTest {
         assertEquals(ImportAction.MERGE, row.action());
         assertEquals("name", row.matchedOn());
         assertEquals(riz.getId(), row.existing().id());
-        assertEquals(40, row.existing().stockQuantity(), "the row must be able to show 40 + 12");
+        assertQuantity(40, row.existing().stockQuantity(), "the row must be able to show 40 + 12");
         assertEquals(1, preview.merged());
     }
 
@@ -364,7 +368,7 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview = service.preview(
                 "nom;quantite;prix\nSel 1kg;30;900\nAutre;5;100\nSEL 1KG;20;900\n");
 
-        assertEquals(50, line(preview, 0).quantity(), "the two lines' quantities add up");
+        assertQuantity(50, line(preview, 0).quantity(), "the two lines' quantities add up");
         assertTrue(line(preview, 0).notes().stream().anyMatch(note -> note.contains("ligne 4")));
         assertEquals(ImportOutcome.SKIPPED, line(preview, 2).outcome());
         assertFalse(line(preview, 2).selected());
@@ -377,7 +381,7 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview = service.preview(
                 "nom;quantite;prix;ean\nEau 1.5L;10;1200;600400\nEau minerale 1,5 L;6;1200;600400\n");
 
-        assertEquals(16, line(preview, 0).quantity());
+        assertQuantity(16, line(preview, 0).quantity());
         assertEquals(ImportOutcome.SKIPPED, line(preview, 1).outcome());
     }
 
@@ -464,8 +468,8 @@ class ProductImportServiceTest {
                 run(request(List.of(asSent(line(preview, 0)))));
 
         assertEquals(1, result.merged());
-        assertEquals(12, result.unitsAdded());
-        assertEquals(52, riz.getStockQuantity());
+        assertQuantity(12, result.unitsAdded());
+        assertQuantity(52, riz.getStockQuantity());
         assertEquals("Riz 5kg", riz.getName());
         assertEquals(0, BigDecimal.valueOf(12500).compareTo(riz.getPrice()),
                 "the file is a delivery note, not a re-pricing");
@@ -500,7 +504,7 @@ class ProductImportServiceTest {
         assertEquals(List.of("Epicerie > Condiments"), result.rayonsCreated());
         Product created = shelf.getLast();
         assertEquals("Sel 1kg", created.getName());
-        assertEquals(30, created.getStockQuantity());
+        assertQuantity(30, created.getStockQuantity());
         assertEquals("sachet", created.getUnit());
         assertEquals("Condiments", created.getCategory().getName());
         assertEquals("Epicerie", created.getCategory().getParent().getName());
@@ -545,7 +549,7 @@ class ProductImportServiceTest {
         // The preview would have matched on the barcode; the operator insists on a new
         // reference, which is the case this covers.
         ProductImportLineRequest insisted = new ProductImportLineRequest(
-                2, "Lait entier 1L", 20, null, BigDecimal.valueOf(4800), null, "6001002000053",
+                2, "Lait entier 1L", qty(20), null, BigDecimal.valueOf(4800), null, "6001002000053",
                 null, null, ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
@@ -561,10 +565,10 @@ class ProductImportServiceTest {
     @DisplayName("reports a merge target that no longer exists instead of failing the import")
     void reportsAVanishedMergeTarget() {
         ProductImportLineRequest orphan = new ProductImportLineRequest(
-                2, "Riz 5kg", 12, null, BigDecimal.valueOf(12500), null, null, null, null,
+                2, "Riz 5kg", qty(12), null, BigDecimal.valueOf(12500), null, null, null, null,
                 ImportAction.MERGE, 404L);
         ProductImportLineRequest fine = new ProductImportLineRequest(
-                3, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null, null, null,
+                3, "Sel 1kg", qty(30), null, BigDecimal.valueOf(900), null, null, null, null,
                 ImportAction.CREATE, null);
 
         ProductImportResultResponse result =
@@ -590,7 +594,8 @@ class ProductImportServiceTest {
 
         assertEquals(2, result.movements());
         assertEquals(2, ledger.size());
-        assertEquals(List.of(12, 30), ledger.stream().map(Supply::getQuantity).toList());
+        assertQuantity(12, ledger.get(0).getQuantity());
+        assertQuantity(30, ledger.get(1).getQuantity());
         assertTrue(ledger.stream().allMatch(entry -> entry.getPerformedBy() == operator),
                 "a stock that went up must always name somebody");
         assertTrue(ledger.stream().allMatch(Supply::isFromImport));
@@ -651,7 +656,7 @@ class ProductImportServiceTest {
         Category alimentaire = rayon("Alimentaire", null);
 
         ProductImportLineRequest sent = new ProductImportLineRequest(
-                2, "Sel 1kg", 30, null, BigDecimal.valueOf(900), null, null,
+                2, "Sel 1kg", qty(30), null, BigDecimal.valueOf(900), null, null,
                 alimentaire.getId(), "Un autre rayon", ImportAction.CREATE, null);
 
         run(request(List.of(sent)));
@@ -691,7 +696,7 @@ class ProductImportServiceTest {
         run(request(List.of(asSent(line(preview, 0)))));
 
         Product created = shelf.getLast();
-        assertEquals(30, created.getStockQuantity());
+        assertQuantity(30, created.getStockQuantity());
         assertEquals(new BigDecimal("650.00"), created.getAverageCost());
         assertEquals(new BigDecimal("650.00"), ledger.getFirst().getUnitCost());
     }
@@ -708,7 +713,7 @@ class ProductImportServiceTest {
 
         // (40 × 10 000 + 10 × 11 000) / 50
         assertEquals(new BigDecimal("10200.00"), riz.getAverageCost());
-        assertEquals(50, riz.getStockQuantity());
+        assertQuantity(50, riz.getStockQuantity());
     }
 
     @Test
@@ -730,7 +735,7 @@ class ProductImportServiceTest {
         ProductImportPreviewResponse preview = service.preview(
                 "nom;quantite;prix;prix achat\nSel 1kg;10;900;600\nSel 1kg;30;900;700\n");
 
-        assertEquals(40, line(preview, 0).quantity());
+        assertQuantity(40, line(preview, 0).quantity());
         assertEquals(new BigDecimal("675.00"), line(preview, 0).cost());
     }
 }

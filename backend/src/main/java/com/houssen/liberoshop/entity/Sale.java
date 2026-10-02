@@ -50,7 +50,7 @@ public class Sale {
 
     public BigDecimal calculateTotal() {
         this.totalAmount = lines.stream()
-                .map(l -> l.getUnitPrice().multiply(BigDecimal.valueOf(l.getQuantity())))
+                .map(SaleLine::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return this.totalAmount;
     }

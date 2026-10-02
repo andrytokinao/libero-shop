@@ -1,10 +1,14 @@
 package com.houssen.liberoshop.entity;
 
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.util.SearchText;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "product")
@@ -28,8 +32,9 @@ public class Product {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
-    @Column(nullable = false)
-    private int stockQuantity;
+    /** Counted in the base unit ({@link #unit}), to the thousandth -- see {@link Quantities}. */
+    @Column(nullable = false, precision = Quantities.PRECISION, scale = Quantities.SCALE)
+    private BigDecimal stockQuantity;
 
     /**
      * Weighted average purchase cost of one unit of the stock on hand -- the "coût moyen
@@ -65,8 +70,21 @@ public class Product {
     @Column(length = 512)
     private String searchText;
 
-    public void adjustStock(int quantity) {
-        this.stockQuantity += quantity;
+    /**
+     * The other units it sells in, smallest first -- see {@link ProductPackaging}. Read-only from
+     * here: they are written through {@code ProductUnitService}, so this side never decides.
+     * Batch-fetched, so a grid of forty products costs one query for all their units.
+     */
+    @Setter(AccessLevel.NONE)
+    @Builder.Default
+    @OneToMany(mappedBy = "product")
+    @OrderBy("factor asc")
+    @BatchSize(size = 100)
+    private List<ProductPackaging> packagings = new ArrayList<>();
+
+    /** @param quantity in base units; negative takes goods out */
+    public void adjustStock(BigDecimal quantity) {
+        this.stockQuantity = Quantities.scaled(stockQuantity.add(quantity));
     }
 
     @PrePersist

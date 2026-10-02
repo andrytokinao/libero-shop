@@ -10,6 +10,11 @@ describe('parseScanEntry', () => {
     expect(parseScanEntry(' 12 * baguette ')).toEqual({ quantity: 12, code: 'baguette' });
   });
 
+  it('reads a weighed quantity, with a comma or a point', () => {
+    expect(parseScanEntry('0,5*riz')).toEqual({ quantity: 0.5, code: 'riz' });
+    expect(parseScanEntry('1.25*riz')).toEqual({ quantity: 1.25, code: 'riz' });
+  });
+
   it('has nothing to look up while the code is still missing', () => {
     expect(parseScanEntry('')).toBeNull();
     expect(parseScanEntry('   ')).toBeNull();

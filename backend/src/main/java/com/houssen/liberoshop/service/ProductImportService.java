@@ -14,6 +14,7 @@ import com.houssen.liberoshop.service.ProductImportColumns.Column;
 import com.houssen.liberoshop.service.ProductImportColumns.Mapping;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.ProductImportLineRequest;
 import com.houssen.liberoshop.web.dto.ProductImportLineResponse;
 import com.houssen.liberoshop.web.dto.ProductImportPreviewResponse;
@@ -185,7 +186,7 @@ public class ProductImportService {
         int created = 0;
         int merged = 0;
         int skipped = 0;
-        int unitsAdded = 0;
+        BigDecimal unitsAdded = Quantities.of(0);
         int written = 0;
         // Every product written, so the screens showing them get the new figures.
         List<Long> touched = new ArrayList<>();
@@ -214,7 +215,7 @@ public class ProductImportService {
                 }
                 merged++;
                 touched.add(product.getId());
-                unitsAdded += line.quantity();
+                unitsAdded = unitsAdded.add(line.quantity());
                 written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
                 lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
                         ImportOutcome.MERGED, product.getId(), ""));
@@ -247,7 +248,7 @@ public class ProductImportService {
             Product fresh = Product.builder()
                     .name(free)
                     .price(line.price())
-                    .stockQuantity(0)
+                    .stockQuantity(Quantities.of(0))
                     .unit(trimmedUnit(line.unit()))
                     .barcode(barcode)
                     .category(rayon)
@@ -260,7 +261,7 @@ public class ProductImportService {
 
             created++;
             touched.add(product.getId());
-            unitsAdded += line.quantity();
+            unitsAdded = unitsAdded.add(line.quantity());
             written += book(product, line.quantity(), unitCost, supplier, operator, enteredAt);
             lines.add(new ProductImportResultResponse.Line(line.line(), product.getName(),
                     free.equals(name) ? ImportOutcome.CREATED : ImportOutcome.RENAMED,
@@ -285,9 +286,9 @@ public class ProductImportService {
      * @param unitCost what one unit cost, or null when the file did not say
      * @param supplier null for an inventory count; see {@link com.houssen.liberoshop.entity.Supply}
      */
-    private int book(Product product, int quantity, BigDecimal unitCost, Supplier supplier,
+    private int book(Product product, BigDecimal quantity, BigDecimal unitCost, Supplier supplier,
                      UserApp operator, LocalDateTime enteredAt) {
-        if (quantity <= 0) {
+        if (quantity.signum() <= 0) {
             return 0;
         }
         movements.save(Supply.builder()
@@ -352,7 +353,7 @@ public class ProductImportService {
     private static final class Draft {
         int line;
         String name = "";
-        int quantity;
+        BigDecimal quantity = Quantities.of(0);
         String unit;
         BigDecimal price;
         /** Purchase price of one unit, or null: optional, so never a reason to refuse the line. */
@@ -377,7 +378,7 @@ public class ProductImportService {
         void absorb(Draft duplicate) {
             cost = PurchaseCosting.averageAfterReceipt(quantity, cost, duplicate.quantity,
                     duplicate.cost);
-            quantity += duplicate.quantity;
+            quantity = quantity.add(duplicate.quantity);
             notes.add("La ligne " + duplicate.line + " porte le meme produit : les quantites "
                     + "ont ete additionnees ici.");
             duplicate.folded = this;
@@ -411,14 +412,14 @@ public class ProductImportService {
             draft.notes.add("Quantite negative (\"" + rawQuantity + "\") : lue comme 0. "
                     + "Un import ajoute du stock, il n'en retire pas.");
             quantity = null;
-        } else if (quantity != null && quantity.stripTrailingZeros().scale() > 0) {
-            // The stock is held in whole units. A shop weighing its goods needs a decimal
-            // stock everywhere, not a rounding hidden in the importer -- so this is said.
+        } else if (quantity != null && Quantities.tooPrecise(quantity)) {
+            // The stock is held to the thousandth. Finer than that is a spreadsheet artefact
+            // rather than a weighing, but rounding is still said rather than hidden.
             draft.notes.add("Quantite \"" + rawQuantity + "\" arrondie a "
-                    + quantity.setScale(0, RoundingMode.HALF_UP) + " : le stock se compte en "
-                    + "unites entieres.");
+                    + Quantities.format(Quantities.scaled(quantity)) + " : le stock se compte "
+                    + "au millieme.");
         }
-        draft.quantity = quantity == null ? 0 : quantity.setScale(0, RoundingMode.HALF_UP).intValue();
+        draft.quantity = quantity == null ? Quantities.of(0) : Quantities.scaled(quantity);
 
         String rawPrice = mapping.cell(row, Column.PRICE);
         BigDecimal price = ProductImportColumns.number(rawPrice);

@@ -10,11 +10,26 @@ import {
   PublicOrder,
   PublicOrderStatus,
 } from '../../core/models';
+import { formatAmount } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** How often a sent order's status is asked again: the customer is waiting, not watching. */
 const POLL_MS = 10_000;
+
+/** A unit the customer can order in; `id` null for the base unit. */
+interface OrderUnit {
+  readonly id: number | null;
+  readonly label: string | null;
+  readonly price: number;
+}
+
+/** One item of the basket in one unit. */
+interface OrderLine {
+  readonly item: PublicMenuItem;
+  readonly unit: OrderUnit;
+  readonly quantity: number;
+}
 
 const STATUS_LABELS: Record<PublicOrderStatus, string> = {
   RECEIVED: 'Reçue — en préparation',
@@ -74,7 +89,7 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
                 </div>
                 <div class="muted small">
                   @for (l of order.lines; track $index) {
-                    {{ l.quantity }}× {{ l.name }}{{ $last ? '' : ', ' }}
+                    {{ formatAmount(l.quantity, l.unit) }}{{ l.unit ? '' : '×' }} {{ l.name }}{{ $last ? '' : ', ' }}
                   }
                 </div>
                 <div class="line">
@@ -133,14 +148,16 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
               type="button"
               class="tile"
               [class.picked]="quantityOf(item) > 0"
-              [disabled]="!item.available || quantityOf(item) >= maxUnits"
-              (click)="change(item, 1)"
+              [disabled]="!item.available || baseQuantityOf(item) >= maxUnits"
+              (click)="change(item, baseUnitOf(item), 1)"
             >
               @if (quantityOf(item) > 0) {
                 <span class="count">{{ quantityOf(item) }}</span>
               }
               <span class="name">{{ item.name }}</span>
-              <span class="price">{{ item.price | ariary }}</span>
+              <span class="price">
+                {{ item.price | ariary }}@if (item.unit) {<span class="muted"> / {{ item.unit }}</span>}
+              </span>
               @if (!item.available) {
                 <span class="out">Épuisé</span>
               }
@@ -180,23 +197,41 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
           </div>
           <div class="modal-body">
             <ul class="review">
-              @for (line of lines(); track line.item.id) {
+              @for (line of lines(); track keyOf(line.item.id, line.unit.id)) {
                 <li>
-                  <span class="name">{{ line.item.name }}</span>
+                  <span class="name">
+                    {{ line.item.name }}
+                    <!-- One button per unit it can be ordered in: a tap orders the line in it. -->
+                    @if (line.item.units.length) {
+                      <span class="units" role="group" aria-label="Unité">
+                        @for (unit of unitsOf(line.item); track unit.id) {
+                          <button
+                            type="button"
+                            class="unit-chip"
+                            [class.on]="unit.id === line.unit.id"
+                            [attr.aria-pressed]="unit.id === line.unit.id"
+                            (click)="setUnit(line, unit)"
+                          >
+                            {{ unit.label ?? 'unité' }}
+                          </button>
+                        }
+                      </span>
+                    }
+                  </span>
                   <span class="qty">
-                    <button class="qtybtn" type="button" aria-label="Retirer un" (click)="change(line.item, -1)">−</button>
+                    <button class="qtybtn" type="button" aria-label="Retirer un" (click)="change(line.item, line.unit, -1)">−</button>
                     {{ line.quantity }}
                     <button
                       class="qtybtn"
                       type="button"
                       aria-label="Ajouter un"
                       [disabled]="line.quantity >= maxUnits"
-                      (click)="change(line.item, 1)"
+                      (click)="change(line.item, line.unit, 1)"
                     >
                       +
                     </button>
                   </span>
-                  <span class="sub-total">{{ line.item.price * line.quantity | ariary }}</span>
+                  <span class="sub-total">{{ line.unit.price * line.quantity | ariary }}</span>
                 </li>
               } @empty {
                 <li class="muted">La commande est vide.</li>
@@ -225,6 +260,31 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
       display: block;
       min-height: 100vh;
       background: var(--bg, #f3f5f2);
+    }
+
+    .units {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .unit-chip {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: none;
+      color: var(--ink-soft);
+      font: inherit;
+      font-size: 12px;
+      padding: 3px 10px;
+      cursor: pointer;
+
+      &.on {
+        border-color: var(--brand);
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        font-weight: 600;
+      }
     }
 
     .public-bar {
@@ -333,7 +393,8 @@ export class TableOrderComponent implements OnInit {
   /** The orders sent from this tab, newest first. */
   protected readonly sent = signal<PublicOrder[]>([]);
 
-  private readonly quantities = signal<Record<number, number>>({});
+  /** By {@link keyOf}: one item in one unit. */
+  private readonly quantities = signal<Record<string, number>>({});
   private readonly storageKey = `liberoshop.table-orders.${this.token}`;
 
   protected readonly categories = computed(() =>
@@ -352,13 +413,16 @@ export class TableOrderComponent implements OnInit {
     );
   });
 
-  protected readonly lines = computed(() =>
-    (this.menu()?.items ?? [])
-      .filter((item) => (this.quantities()[item.id] ?? 0) > 0)
-      .map((item) => ({ item, quantity: this.quantities()[item.id] })),
+  protected readonly lines = computed<OrderLine[]>(() =>
+    (this.menu()?.items ?? []).flatMap((item) =>
+      this.unitsOf(item)
+        .map((unit) => ({ item, unit, quantity: this.quantities()[this.keyOf(item.id, unit.id)] ?? 0 }))
+        .filter((line) => line.quantity > 0),
+    ),
   );
   protected readonly units = computed(() => this.lines().reduce((s, l) => s + l.quantity, 0));
-  protected readonly total = computed(() => this.lines().reduce((s, l) => s + l.item.price * l.quantity, 0));
+  protected readonly total = computed(() => this.lines().reduce((s, l) => s + l.unit.price * l.quantity, 0));
+  protected readonly formatAmount = formatAmount;
 
   ngOnInit(): void {
     this.api.menu(this.token).subscribe({
@@ -374,18 +438,57 @@ export class TableOrderComponent implements OnInit {
     return STATUS_LABELS[status];
   }
 
-  protected quantityOf(item: PublicMenuItem): number {
-    return this.quantities()[item.id] ?? 0;
+  /** One item in one unit; `null` is the base unit. */
+  protected keyOf(itemId: number, unitId: number | null): string {
+    return `${itemId}:${unitId ?? 'base'}`;
   }
 
-  protected change(item: PublicMenuItem, delta: number): void {
+  protected baseUnitOf(item: PublicMenuItem): OrderUnit {
+    return { id: null, label: item.unit, price: item.price };
+  }
+
+  /** The base unit first, then the others, smallest first. */
+  protected unitsOf(item: PublicMenuItem): OrderUnit[] {
+    return [this.baseUnitOf(item), ...item.units];
+  }
+
+  /** Every unit of it together, for the tile's badge. */
+  protected quantityOf(item: PublicMenuItem): number {
+    return this.unitsOf(item).reduce(
+      (sum, unit) => sum + (this.quantities()[this.keyOf(item.id, unit.id)] ?? 0),
+      0,
+    );
+  }
+
+  protected baseQuantityOf(item: PublicMenuItem): number {
+    return this.quantities()[this.keyOf(item.id, null)] ?? 0;
+  }
+
+  protected change(item: PublicMenuItem, unit: OrderUnit, delta: number): void {
+    const key = this.keyOf(item.id, unit.id);
+    this.put(key, (this.quantities()[key] ?? 0) + delta);
+  }
+
+  /** Orders the line in another unit, keeping the number, joined to that unit's line if any. */
+  protected setUnit(line: OrderLine, unit: OrderUnit): void {
+    if (unit.id === line.unit.id) {
+      return;
+    }
+    const target = this.keyOf(line.item.id, unit.id);
+    const merged = (this.quantities()[target] ?? 0) + line.quantity;
+    this.put(this.keyOf(line.item.id, line.unit.id), 0);
+    this.put(target, merged);
+  }
+
+  /** At most {@link maxUnits} a line, like the server; at zero the line goes. */
+  private put(key: string, quantity: number): void {
     this.quantities.update((current) => {
-      const next = Math.min((current[item.id] ?? 0) + delta, this.maxUnits);
+      const next = Math.min(quantity, this.maxUnits);
       const updated = { ...current };
       if (next <= 0) {
-        delete updated[item.id];
+        delete updated[key];
       } else {
-        updated[item.id] = next;
+        updated[key] = next;
       }
       return updated;
     });
@@ -400,7 +503,7 @@ export class TableOrderComponent implements OnInit {
     this.api
       .order(this.token, {
         clientName: this.customerName().trim() || null,
-        lines: lines.map((l) => ({ productId: l.item.id, quantity: l.quantity })),
+        lines: lines.map((l) => ({ productId: l.item.id, packagingId: l.unit.id, quantity: l.quantity })),
       })
       .subscribe({
         next: (order) => {

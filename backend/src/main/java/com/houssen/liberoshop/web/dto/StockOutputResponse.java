@@ -3,11 +3,12 @@ package com.houssen.liberoshop.web.dto;
 import com.houssen.liberoshop.entity.StockOutput;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /** An OUTPUT row of the stock_movement table: goods leaving against an invoice. */
 public record StockOutputResponse(Long id,
-                                  int quantity,
+                                  BigDecimal quantity,
                                   LocalDateTime movementDate,
                                   ProductResponse product,
                                   UserResponse performedBy,
@@ -19,9 +20,9 @@ public record StockOutputResponse(Long id,
                 output.getId(),
                 output.getQuantity(),
                 output.getMovementDate(),
-                ProductResponse.of(output.getProduct()),
+                ProductResponse.withoutUnits(output.getProduct()),
                 UserResponse.of(output.getPerformedBy()),
                 InvoiceRefResponse.of(output.getInvoice()),
-                output.getProduct().getPrice().multiply(BigDecimal.valueOf(output.getQuantity())));
+                output.getProduct().getPrice().multiply(output.getQuantity()).setScale(2, RoundingMode.HALF_UP));
     }
 }

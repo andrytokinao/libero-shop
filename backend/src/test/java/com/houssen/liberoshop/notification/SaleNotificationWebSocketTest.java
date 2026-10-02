@@ -42,6 +42,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -173,7 +174,7 @@ class SaleNotificationWebSocketTest {
         UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
         UserApp otherCashier = account(RoleApp.CASHIER);
         Product rice = products.save(Product.builder().name("Riz " + UUID.randomUUID())
-                .price(new BigDecimal("12500")).stockQuantity(40).build());
+                .price(new BigDecimal("12500")).stockQuantity(qty(40)).build());
 
         BlockingQueue<Map<String, Object>> depot = listen(storekeeper);
         BlockingQueue<Map<String, Object>> seller = listen(cashier);
@@ -181,7 +182,7 @@ class SaleNotificationWebSocketTest {
 
         InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Hotely Vaha",
                 PaymentStatus.UNPAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(rice.getId(), 2))), cashier);
+                List.of(new CreateSaleRequest.Line(rice.getId(), qty(2)))), cashier);
 
         Map<String, Object> notification = depot.poll(WAIT_SECONDS, TimeUnit.SECONDS);
         assertNotNull(notification, "the storekeeper was never told");
@@ -201,12 +202,12 @@ class SaleNotificationWebSocketTest {
         // Seller and storekeeper in one: the phone open on the queue belongs to the seller.
         UserApp allRounder = account(RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
         Product oil = products.save(Product.builder().name("Huile " + UUID.randomUUID())
-                .price(new BigDecimal("9000")).stockQuantity(10).build());
+                .price(new BigDecimal("9000")).stockQuantity(qty(10)).build());
         BlockingQueue<Map<String, Object>> queue = listenTopic(allRounder, OrderChangePublisher.TOPIC);
 
         InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Rina",
                 PaymentStatus.PAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(oil.getId(), 1))), allRounder);
+                List.of(new CreateSaleRequest.Line(oil.getId(), qty(1)))), allRounder);
 
         Map<String, Object> added = queue.poll(WAIT_SECONDS, TimeUnit.SECONDS);
         assertNotNull(added, "the queue never heard of the sale");
@@ -235,11 +236,11 @@ class SaleNotificationWebSocketTest {
         UserApp cashier = account(RoleApp.CASHIER);
         UserApp otherTill = account(RoleApp.CASHIER);
         Product flour = products.save(Product.builder().name("Farine " + UUID.randomUUID())
-                .price(new BigDecimal("3000")).stockQuantity(10).build());
+                .price(new BigDecimal("3000")).stockQuantity(qty(10)).build());
         BlockingQueue<Map<String, Object>> stock = listenTopic(otherTill, StockChangePublisher.TOPIC);
 
         saleService.checkout(new CreateSaleRequest("Rina", PaymentStatus.PAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(flour.getId(), 3))), cashier);
+                List.of(new CreateSaleRequest.Line(flour.getId(), qty(3)))), cashier);
 
         Map<String, Object> change = stock.poll(WAIT_SECONDS, TimeUnit.SECONDS);
         assertNotNull(change, "the other till never heard the stock move");
@@ -256,10 +257,10 @@ class SaleNotificationWebSocketTest {
         UserApp cashier = account(RoleApp.CASHIER);
         UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
         Product sugar = products.save(Product.builder().name("Sucre " + UUID.randomUUID())
-                .price(new BigDecimal("4000")).stockQuantity(10).build());
+                .price(new BigDecimal("4000")).stockQuantity(qty(10)).build());
         InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Hery",
                 PaymentStatus.UNPAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(sugar.getId(), 2))), cashier);
+                List.of(new CreateSaleRequest.Line(sugar.getId(), qty(2)))), cashier);
 
         BlockingQueue<Map<String, Object>> seller = listen(cashier);
         BlockingQueue<Map<String, Object>> depot = listen(storekeeper);
@@ -280,10 +281,10 @@ class SaleNotificationWebSocketTest {
         UserApp cashier = account(RoleApp.CASHIER);
         UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
         Product salt = products.save(Product.builder().name("Sel " + UUID.randomUUID())
-                .price(new BigDecimal("1500")).stockQuantity(10).build());
+                .price(new BigDecimal("1500")).stockQuantity(qty(10)).build());
         InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Lova",
                 PaymentStatus.UNPAID, PaymentMethod.CASH,
-                List.of(new CreateSaleRequest.Line(salt.getId(), 2))), cashier);
+                List.of(new CreateSaleRequest.Line(salt.getId(), qty(2)))), cashier);
         invoiceService.deliver(invoice.id(), storekeeper);
 
         BlockingQueue<Map<String, Object>> desk = listen(cashier);

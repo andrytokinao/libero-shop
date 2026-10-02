@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 public record CategoryStockResponse(CategoryResponse category,
                                     String path,
                                     long references,
-                                    long units,
+                                    BigDecimal units,
                                     BigDecimal value,
                                     int sharePercent) {
 }

@@ -14,7 +14,9 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
     /**
      * What each product sold for and cost over a window, summed by the database.
      *
-     * <p>One row per product: {@code [productId, name, units, revenue, costedRevenue, cost]}.
+     * <p>One row per product: {@code [productId, name, units, revenue, costedRevenue, cost]}, units
+     * in the product's base unit whatever unit each line was sold in. Price and cost are per unit
+     * sold, so {@code price × quantity} is the line's money as it stands.
      * Lines sold without a known cost are counted in {@code revenue} but kept out of both
      * {@code costedRevenue} and {@code cost}, so the margin is computed on the lines that can
      * have one and the rest is reported as such rather than passed off as pure profit.
@@ -25,7 +27,7 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
      */
     @Query("""
             select l.product.id, l.product.name,
-                   sum(l.quantity),
+                   sum(l.quantity * coalesce(l.unitFactor, 1)),
                    sum(l.unitPrice * l.quantity),
                    sum(case when l.unitCost is null then 0 else l.unitPrice * l.quantity end),
                    sum(case when l.unitCost is null then 0 else l.unitCost * l.quantity end)
@@ -48,7 +50,7 @@ public interface SaleLineRepository extends JpaRepository<SaleLine, Long> {
             where l.sale.saleDate >= :from
               and l.sale.paymentStatus <> com.houssen.liberoshop.entity.PaymentStatus.CANCELLED
             group by l.product.id
-            order by sum(l.quantity) desc, l.product.id
+            order by sum(l.quantity * coalesce(l.unitFactor, 1)) desc, l.product.id
             """)
     List<Long> findBestSellingProductIds(@Param("from") LocalDateTime from, Limit limit);
 }

@@ -2,6 +2,8 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Product;
 
+import java.math.BigDecimal;
+
 /**
  * Where "the stock is low" is defined, once.
  *
@@ -11,12 +13,12 @@ import com.houssen.liberoshop.entity.Product;
  */
 public final class StockPolicy {
 
-    public static final int LOW_STOCK_THRESHOLD = 10;
+    public static final BigDecimal LOW_STOCK_THRESHOLD = BigDecimal.TEN;
 
     private StockPolicy() {
     }
 
     public static boolean isLowStock(Product product) {
-        return product.getStockQuantity() < LOW_STOCK_THRESHOLD;
+        return product.getStockQuantity().compareTo(LOW_STOCK_THRESHOLD) < 0;
     }
 }

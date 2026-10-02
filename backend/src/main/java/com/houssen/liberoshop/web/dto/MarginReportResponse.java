@@ -41,7 +41,7 @@ public record MarginReportResponse(LocalDate from,
      */
     public record ProductMargin(Long productId,
                                 String name,
-                                long unitsSold,
+                                BigDecimal unitsSold,
                                 BigDecimal revenue,
                                 BigDecimal costOfGoodsSold,
                                 BigDecimal grossMargin,

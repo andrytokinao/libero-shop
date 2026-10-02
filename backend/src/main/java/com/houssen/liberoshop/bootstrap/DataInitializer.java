@@ -28,6 +28,7 @@ import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.BusinessCalendar;
 import com.houssen.liberoshop.service.InvoiceNumbering;
 import com.houssen.liberoshop.service.PurchaseCosting;
+import com.houssen.liberoshop.util.Quantities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -177,7 +178,7 @@ public class DataInitializer implements ApplicationRunner {
                 .name(name)
                 .price(BigDecimal.valueOf(price))
                 .averageCost(PurchaseCosting.scaled(BigDecimal.valueOf(Math.round(price * 0.75 / 100) * 100)))
-                .stockQuantity(stock)
+                .stockQuantity(Quantities.of(stock))
                 .barcode(barcode)
                 .category(category)
                 .build());
@@ -203,7 +204,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private void supply(Product product, int quantity, Supplier supplier, UserApp by, LocalDateTime when) {
         movements.save(Supply.builder()
-                .quantity(quantity)
+                .quantity(Quantities.of(quantity))
                 .movementDate(when)
                 .product(product)
                 .performedBy(by)
@@ -306,10 +307,10 @@ public class DataInitializer implements ApplicationRunner {
                     .sale(sale)
                     .product(seedLine.product())
                     .unitPrice(seedLine.product().getPrice())
-                    .unitCost(PurchaseCosting.costOfSale(seedLine.product()))
-                    .quantity(seedLine.quantity())
+                    .unitCost(PurchaseCosting.costOfSale(seedLine.product(), BigDecimal.ONE))
+                    .quantity(Quantities.of(seedLine.quantity()))
                     .build());
-            seedLine.product().adjustStock(-seedLine.quantity());
+            seedLine.product().adjustStock(Quantities.of(seedLine.quantity()).negate());
         }
         sale.calculateTotal();
         Sale saved = sales.saveAndFlush(sale);
@@ -326,7 +327,7 @@ public class DataInitializer implements ApplicationRunner {
 
         for (SaleLine line : saved.getLines()) {
             movements.save(StockOutput.builder()
-                    .quantity(line.getQuantity())
+                    .quantity(line.baseQuantity())
                     .movementDate(when)
                     .product(line.getProduct())
                     .performedBy(seller)

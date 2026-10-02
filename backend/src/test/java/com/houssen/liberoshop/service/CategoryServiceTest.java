@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -97,7 +98,7 @@ class CategoryServiceTest {
         Product product = Product.builder()
                 .name(name)
                 .price(BigDecimal.valueOf(1000))
-                .stockQuantity(1)
+                .stockQuantity(qty(1))
                 .category(category)
                 .build();
         product.setId(nextId.getAndIncrement());

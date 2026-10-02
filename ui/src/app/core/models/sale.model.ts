@@ -5,7 +5,12 @@ import { UserApp } from './user-app.model';
 /** Mirrors com.houssen.liberoshop.entity.SaleLine (table sale_line). */
 export interface SaleLine {
   id: number;
+  /** In the unit it was sold in — 2 for "2 kg" — to the thousandth. */
   quantity: number;
+  /** The unit's name at the time of the sale; null for bare units. */
+  unitLabel: string | null;
+  /** Base units in one of the unit sold; 1 for the base unit. */
+  unitFactor: number;
   /** BigDecimal(12,2) on the backend — price frozen at sale time. */
   unitPrice: number;
   product: Product;
