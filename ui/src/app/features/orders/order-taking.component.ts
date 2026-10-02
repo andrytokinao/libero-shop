@@ -3,7 +3,14 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceStore } from '../../core/store/invoice.store';
-import { CategoryNode, PaymentMethod, PaymentStatus, Product, RoleApp } from '../../core/models';
+import {
+  CatalogFolder,
+  CategoryNode,
+  PaymentMethod,
+  PaymentStatus,
+  Product,
+  RoleApp,
+} from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart, lineTotal } from '../../core/sale/cart';
 import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
@@ -15,6 +22,13 @@ import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
 import { UnitPicked, UnitPickerComponent } from '../../shared/components/unit-picker.component';
+import { FolderTileComponent } from '../../shared/components/folder-tile.component';
+import {
+  CatalogNavigatorComponent,
+  CatalogScope,
+  FEATURED,
+} from '../../shared/components/catalog-navigator.component';
+import { FavoritesStore } from '../../core/store/favorites.store';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -35,6 +49,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     CameraScanButtonComponent,
     CartLineQuantityComponent,
     UnitPickerComponent,
+    CatalogNavigatorComponent,
+    FolderTileComponent,
   ],
   template: `
     <div class="order-top">
@@ -65,32 +81,21 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       <app-camera-scan-button class="scan" (scanned)="entry.submit($event)" />
     </div>
 
-    @if (rayons().length > 1) {
-      <div class="chips" role="tablist" aria-label="Catégories">
-        <button
-          type="button"
-          class="chip"
-          [class.active]="category() === null"
-          (click)="category.set(null)"
-        >
-          {{ finder.idle() ? 'Les plus vendus' : 'Tout' }}
-        </button>
-        @for (rayon of rayons(); track rayon.id) {
-          <button
-            type="button"
-            class="chip"
-            [class.active]="category() === rayon.id"
-            (click)="category.set(rayon.id)"
-          >
-            {{ rayon.name }}
-          </button>
-        }
-      </div>
-    }
+    <app-catalog-navigator [categories]="tree.value()" [scope]="scope()" (scopeChange)="scope.set($event)" />
 
     <div class="tiles">
+      <!-- An explorer: the favourites and the rayons as folders first, then the products. -->
+      @if (scope().kind === 'featured' && !entry.term() && favorites.any()) {
+        <button type="button" class="tile tile-favorites" (click)="scope.set({ kind: 'favorites' })">
+          <span class="name">★ Favoris</span>
+        </button>
+      }
+      @for (folder of finder.folders(); track folder.rayon.id) {
+        <app-folder-tile [folder]="folder" (opened)="openFolder($event)" />
+      }
       @for (product of finder.products(); track product.id) {
         <div class="tile-cell">
+        <div class="tile-box">
         <button
           type="button"
           class="tile"
@@ -110,17 +115,42 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <span class="out">Épuisé</span>
           }
         </button>
+        <button
+          type="button"
+          class="tile-pin"
+          [class.on]="favorites.isProductPinned(product.id)"
+          [attr.aria-pressed]="favorites.isProductPinned(product.id)"
+          [attr.aria-label]="(favorites.isProductPinned(product.id) ? 'Retirer des favoris : ' : 'Ajouter aux favoris : ') + product.name"
+          (click)="favorites.toggleProduct(product.id)"
+        >
+          {{ favorites.isProductPinned(product.id) ? '★' : '☆' }}
+        </button>
+        </div>
         <!-- Sold in several units: one tile still, and the units open under it. -->
         @if (hasUnits(product) && (unitsOpen() === product.id || cart.quantityOf(product) > 0)) {
           <app-unit-picker [cart]="cart" [product]="product" (picked)="onUnitPicked(product, $event)" />
         }
         </div>
       } @empty {
-        @if (!finder.pending()) {
-          <div class="empty">Aucun produit ne correspond.</div>
+        @if (!finder.pending() && !finder.folders().length) {
+          <div class="empty">
+            {{ scope().kind === 'favorites' ? 'Aucun favori : touchez ☆ sur un produit ou un rayon.' : 'Aucun produit ne correspond.' }}
+          </div>
         }
       }
     </div>
+    @if (finder.hasMore()) {
+      <button
+        type="button"
+        class="btn ghost block"
+        style="margin-top:10px;"
+        [disabled]="finder.loadingMore()"
+        (click)="finder.loadMore()"
+      >
+        {{ finder.loadingMore() ? 'Chargement…' : 'Afficher plus' }}
+        ({{ finder.products().length }} sur {{ finder.total() }})
+      </button>
+    }
 
     <!-- Under the thumb, always: what is in the order, and the one button that sends it. -->
     <div class="order-bar">
@@ -217,8 +247,9 @@ export class OrderTakingComponent {
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
 
-  /** The rayon picked, by id: the server widens it to the rayons below. */
-  protected readonly category = signal<number | null>(null);
+  /** Where the tiles are: best sellers, favourites, or inside a rayon (with the ones below it). */
+  protected readonly scope = signal<CatalogScope>(FEATURED);
+  protected readonly favorites = inject(FavoritesStore);
   protected readonly clientName = signal('');
   protected readonly reviewing = signal(false);
   protected readonly sending = signal(false);
@@ -240,6 +271,12 @@ export class OrderTakingComponent {
     return (product.packagings?.length ?? 0) > 0;
   }
 
+  /** A folder tapped: the tiles go into it, and the words typed have done their job. */
+  protected openFolder(folder: CatalogFolder): void {
+    this.entry.clear();
+    this.scope.set({ kind: 'rayon', id: folder.rayon.id });
+  }
+
   protected onUnitPicked(product: Product, { unit, added }: UnitPicked): void {
     if (!added) {
       this.toasts.show(`${product.name} : pas assez de stock pour un ${unit.label ?? 'article'}.`);
@@ -250,16 +287,22 @@ export class OrderTakingComponent {
   protected readonly lineTotal = lineTotal;
 
 
-  private readonly tree = apiResource<CategoryNode[]>([], () => this.catalog.categories());
-
-  /** The top-level rayons as one-tap filters; picking one includes everything filed below it. */
-  protected readonly rayons = computed(() => this.tree.value().filter((node) => node.depth === 0));
+  /** The rayon tree, for the navigator's chips: a few dozen rows, read once. */
+  protected readonly tree = apiResource<CategoryNode[]>([], () => this.catalog.categories());
 
   /** A scanner paired with the phone, or a code typed then "OK", adds the article directly. */
   protected readonly entry: ProductEntry = new ProductEntry(this.cart, () => this.finder.settled());
 
   protected readonly finder = new ProductFinder(
-    computed(() => ({ term: this.entry.term(), categoryId: this.category() })),
+    computed(() => {
+      const scope = this.scope();
+      return {
+        term: this.entry.term(),
+        categoryId: scope.kind === 'rayon' ? scope.id : null,
+        favorites: scope.kind === 'favorites',
+        all: scope.kind === 'rayon' && !!scope.all,
+      };
+    }),
   );
 
   /** Taking the customer's money too: the shop allows it, or this account also holds a till. */

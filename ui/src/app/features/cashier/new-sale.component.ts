@@ -9,21 +9,28 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
 import { InvoiceStore } from '../../core/store/invoice.store';
-import { Invoice, Product } from '../../core/models';
+import { CatalogFolder, CategoryNode, Invoice } from '../../core/models';
 import { Cart, CartLine, lineTotal } from '../../core/sale/cart';
 import { baseUnitOf, formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
-import { ShortcutMap, isEnabled } from '../../core/sale/shortcuts';
+import { ShortcutMap } from '../../core/sale/shortcuts';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
-import { UnitPicked, UnitPickerComponent } from '../../shared/components/unit-picker.component';
+import {
+  CatalogNavigatorComponent,
+  CatalogScope,
+  FEATURED,
+} from '../../shared/components/catalog-navigator.component';
+import { CatalogGridComponent, GridUnitPicked } from '../../shared/components/catalog-grid.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -54,7 +61,8 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     InvoiceDetailFlowComponent,
     IconComponent,
     CartLineQuantityComponent,
-    UnitPickerComponent,
+    CatalogNavigatorComponent,
+    CatalogGridComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -62,8 +70,17 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
       display: block;
     }
 
-    div.key-hint {
+    /* The search field alone above the products, the camera beside it on the phone. */
+    .search-row {
       display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+
+      input {
+        flex: 1;
+        min-width: 0;
+      }
     }
 
     /* The phone's bottom bar, its basket panel and their backdrop: nothing of them on a desk. */
@@ -234,97 +251,49 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
   template: `
     <div class="grid g2">
       <div class="card products-card">
-        <h2>Produits <small>scannez, tapez un code puis Entrée, ou cliquez</small></h2>
-        <!-- On a phone this row is all there is above the products, and it stays in view
-             while they scroll: the next scan or search is always one tap away. -->
-        <div class="form-row search-row" style="align-items:flex-end;">
-          <div class="fld" style="flex:1; min-width:180px;">
-            <label for="product-search">Produit</label>
-            <input
-              #productField
-              id="product-search"
-              type="text"
-              autocomplete="off"
-              placeholder="Code-barres, code ou nom — 3*code pour 3 unités"
-              [ngModel]="entry.text()"
-              (ngModelChange)="entry.text.set($event)"
-              (keydown.enter)="entry.submit()"
-            />
-          </div>
+        <!-- The search field and nothing else above the products: a scanner types into it, words
+             narrow the grid, and on the phone the camera reads a code beside it. It stays in view
+             while the products scroll there, so the next scan is always one tap away. -->
+        <div class="search-row">
+          <input
+            #productField
+            id="product-search"
+            type="search"
+            autocomplete="off"
+            aria-label="Rechercher un produit ou un rayon, ou scanner un code"
+            placeholder="Rechercher ou scanner…"
+            [ngModel]="entry.text()"
+            (ngModelChange)="entry.text.set($event)"
+            (keydown.enter)="entry.submit()"
+          />
           <app-camera-scan-button (scanned)="entry.submit($event)" />
         </div>
-        <div class="muted key-hint" style="font-size:12px; margin:0 0 8px; flex-wrap:wrap; gap:4px 12px;">
-          @for (shortcut of keys.shortcuts; track shortcut.key) {
-            <span [style.opacity]="isEnabled(shortcut) ? 1 : 0.45">
-              <kbd>{{ shortcut.key }}</kbd> {{ shortcut.label }}
-            </span>
-          }
-        </div>
-        <div class="muted grid-caption" style="font-size:12px; margin:0 0 8px;">
-          {{ finder.idle() ? 'Les plus vendus ces 30 derniers jours' : 'Résultats de la recherche' }}
-          @if (finder.pending()) {
-            <span> — recherche…</span>
-          }
-        </div>
-        <div class="prod-grid">
-          @for (product of finder.products(); track product.id) {
-            <!-- The count and the minus sit beside the card, not in it: a button cannot hold
-                 another, and a tap on "−" must never also count as a tap on the product. -->
-            <div class="prod-item">
-              <button
-                type="button"
-                class="prod-card"
-                [class.low]="product.lowStock"
-                [class.picked]="cart.quantityOf(product) > 0"
-                [class.short]="cart.isShort(product)"
-                [disabled]="cart.remainingStock(product) <= 0"
-                (click)="pick(product)"
-              >
-                <div class="pname">{{ product.name }}</div>
-                <div class="pcat">{{ product.category?.name ?? 'Sans catégorie' }}</div>
-                <div class="pprice">
-                  {{ product.price | ariary }}@if (product.unit) {<span class="muted"> / {{ product.unit }}</span>}
-                </div>
-                <div class="pstock">Disponible : {{ stockLabel(product, cart.remainingStock(product)) }}</div>
-                @if (hasUnits(product)) {
-                  <div class="punits">Aussi : {{ otherUnits(product) }}</div>
-                }
-              </button>
-              @if (hasUnits(product)) {
-                <!-- Sold in several units: one tile still, and the units open under it. -->
-                @if (unitsOpen() === product.id || cart.quantityOf(product) > 0) {
-                  <app-unit-picker
-                    [cart]="cart"
-                    [product]="product"
-                    (picked)="onUnitPicked(product, $event)"
-                  />
-                }
-              } @else if (cart.quantityOf(product) > 0) {
-                <span
-                  class="prod-count"
-                  [class.short]="cart.isShort(product)"
-                  aria-label="Quantité dans le panier"
-                >
-                  {{ cart.countLabelOf(product) }}
-                </span>
-                <button
-                  type="button"
-                  class="prod-minus"
-                  [attr.aria-label]="'Retirer un ' + product.name"
-                  (click)="unpick(product)"
-                >
-                  −
-                </button>
-              }
-            </div>
-          } @empty {
-            @if (!finder.pending()) {
-              <div class="empty">
-                {{ finder.idle() ? 'Aucun produit au catalogue.' : 'Aucun produit ne correspond à la recherche.' }}
-              </div>
-            }
-          }
-        </div>
+        <app-catalog-navigator [categories]="rayons()" [scope]="scope()" (scopeChange)="scope.set($event)" />
+        <app-catalog-grid
+          [folders]="finder.folders()"
+          [products]="finder.products()"
+          [cart]="cart"
+          [showFavorites]="scope().kind === 'featured' && !entry.term()"
+          [pending]="finder.pending()"
+          [emptyMessage]="emptyMessage()"
+          (folderOpened)="openFolder($event)"
+          (favoritesOpened)="scope.set({ kind: 'favorites' })"
+          (tapped)="focusProductField()"
+          (unitPicked)="onUnitPicked($event)"
+        />
+        @if (finder.hasMore()) {
+          <!-- A big rayon comes a page at a time: the rest is one tap away, never a scroll of 300. -->
+          <button
+            type="button"
+            class="btn ghost block"
+            style="margin-top:10px;"
+            [disabled]="finder.loadingMore()"
+            (click)="finder.loadMore()"
+          >
+            {{ finder.loadingMore() ? 'Chargement…' : 'Afficher plus' }}
+            ({{ finder.products().length }} sur {{ finder.total() }})
+          </button>
+        }
       </div>
 
       <!-- The basket. Beside the products on a desktop; on a phone, a panel brought up from the
@@ -496,8 +465,22 @@ export class NewSaleComponent {
 
   protected readonly entry: ProductEntry = new ProductEntry(this.cart, () => this.finder.settled());
 
+  private readonly catalog = inject(CatalogApi);
+  /** The rayon tree, for the path above the grid: a few dozen rows, read once. */
+  protected readonly rayons = apiResource<CategoryNode[]>([], () => this.catalog.categories()).value;
+  /** Where the grid is: the top of the shop, the favourites, or inside a rayon. */
+  protected readonly scope = signal<CatalogScope>(FEATURED);
+
   protected readonly finder = new ProductFinder(
-    computed(() => ({ term: this.entry.term(), categoryId: null })),
+    computed(() => {
+      const scope = this.scope();
+      return {
+        term: this.entry.term(),
+        categoryId: scope.kind === 'rayon' ? scope.id : null,
+        favorites: scope.kind === 'favorites',
+        all: scope.kind === 'rayon' && !!scope.all,
+      };
+    }),
   );
 
   /**
@@ -519,7 +502,7 @@ export class NewSaleComponent {
   protected readonly canResume = computed(() => this.held.count() > 0 && !this.dialogOpen());
 
   /**
-   * The till's function keys; the legend under the product field is drawn from this list. F10
+   * The till's function keys — bound without a legend, the header keeping to the search. F10
    * opens the checkout here, and records the sale inside it — so a cashier pays with F10, F10.
    */
   protected readonly keys = new ShortcutMap([
@@ -555,7 +538,6 @@ export class NewSaleComponent {
     },
   ]);
 
-  protected readonly isEnabled = isEnabled;
   protected readonly stockLabel = stockLabel;
   protected readonly formatQuantity = formatQuantity;
   protected readonly lineTotal = lineTotal;
@@ -575,42 +557,30 @@ export class NewSaleComponent {
     afterNextRender(() => this.focusProductField());
   }
 
-  /** The product whose unit buttons are open, before anything of it is in the basket. */
-  protected readonly unitsOpen = signal<number | null>(null);
-
-  /**
-   * A tap on a tile. A product sold one way goes straight in; one sold in several units opens
-   * its unit buttons instead — the cashier says which, rather than the till guessing. The field
-   * is selected back, so the next scan replaces the search.
-   */
-  protected pick(product: Product): void {
-    if (this.hasUnits(product)) {
-      this.unitsOpen.update((open) => (open === product.id ? null : product.id));
-    } else {
-      this.cart.add(product);
+  protected readonly emptyMessage = computed(() => {
+    const scope = this.scope();
+    if (this.entry.term()) {
+      return 'Aucun produit ne correspond à la recherche.';
     }
+    if (scope.kind === 'favorites') {
+      return 'Aucun favori : touchez ☆ sur un produit ou un rayon pour l\'y retrouver ici.';
+    }
+    return scope.kind === 'rayon' ? 'Aucun produit dans ce rayon.' : 'Aucun produit au catalogue.';
+  });
+
+  /** A folder tapped in the grid: the grid goes into it, and the words typed have done their job. */
+  protected openFolder(folder: CatalogFolder): void {
+    this.entry.clear();
+    this.scope.set({ kind: 'rayon', id: folder.rayon.id });
     this.focusProductField();
   }
 
-  protected hasUnits(product: Product): boolean {
-    return (product.packagings?.length ?? 0) > 0;
-  }
-
-  /** "kg, sac 50 kg": what else the tile sells in, so the cashier knows a tap offers a choice. */
-  protected otherUnits(product: Product): string {
-    return (product.packagings ?? []).map((packaging) => packaging.label).join(', ');
-  }
-
-  protected onUnitPicked(product: Product, { unit, added }: UnitPicked): void {
+  /** A unit tapped under a tile; says so when the shelf could not give a whole one. */
+  protected onUnitPicked({ product, picked: { unit, added } }: GridUnitPicked): void {
     if (!added) {
       this.toasts.show(`${product.name} : pas assez de stock pour un ${unit.label ?? 'article'}.`);
     }
     this.focusProductField();
-  }
-
-  /** The tile's "−": one unit back on the shelf, the line gone at zero. */
-  protected unpick(product: Product): void {
-    this.cart.change(product, -1);
   }
 
   /** Sets this customer aside, with their name, and frees the till for the next one. */
@@ -683,7 +653,7 @@ export class NewSaleComponent {
    * the page up to it after every tap on a tile further down — the tile just tapped, and its unit
    * buttons, would slide out of sight. The scanner only needs the focus, not the view.
    */
-  private focusProductField(): void {
+  protected focusProductField(): void {
     if (matchMedia(COMPACT_LAYOUT).matches) {
       return;
     }

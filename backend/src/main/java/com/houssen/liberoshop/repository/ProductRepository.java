@@ -60,6 +60,13 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Object[]> aggregateStockValueByCategory();
 
     /**
+     * How many products each rayon holds directly, as {@code [categoryId, count]} -- one grouped
+     * query for every folder of an explorer page, rather than a count per folder.
+     */
+    @Query("select p.category.id, count(p) from Product p where p.category is not null group by p.category.id")
+    List<Object[]> countByCategory();
+
+    /**
      * Pessimistic read-for-update, used while a sale or a supply moves the stock.
      * Two cash desks selling the last unit at the same instant would otherwise both
      * succeed on a stale quantity.

@@ -9,10 +9,12 @@ import com.houssen.liberoshop.entity.Sale;
 import com.houssen.liberoshop.entity.SaleLine;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.CategoryRepository;
+import com.houssen.liberoshop.repository.FavoriteRepository;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.SaleLineRepository;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.web.dto.ProductPageResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +35,9 @@ import java.util.List;
 
 import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The searches behind the sale screens, against a real database: what is under test is the
@@ -58,8 +62,12 @@ class ProductSearchServiceTest {
     private ProductPackagingRepository packagings;
     @Autowired
     private SaleLineRepository saleLines;
+    @Autowired
+    private FavoriteRepository favoriteRows;
 
     private ProductSearchService service;
+    private FavoriteService favorites;
+    private CategoryService categoryService;
     private UserApp fatima;
     private Category boissons;
     private Product riz;
@@ -72,8 +80,10 @@ class ProductSearchServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(TODAY.atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant(),
                 ZoneId.systemDefault());
-        service = new ProductSearchService(products, packagings, saleLines,
-                new CategoryService(categories, products), new BusinessCalendar(clock));
+        BusinessCalendar calendar = new BusinessCalendar(clock);
+        categoryService = new CategoryService(categories, products);
+        favorites = new FavoriteService(favoriteRows, products, categories, categoryService, calendar);
+        service = new ProductSearchService(products, packagings, saleLines, categoryService, favorites, calendar);
 
         fatima = db.persist(UserApp.builder()
                 .fullName("Fatima")
@@ -253,5 +263,62 @@ class ProductSearchServiceTest {
 
     private static List<String> names(List<ProductResponse> found) {
         return found.stream().map(ProductResponse::name).toList();
+    }
+
+    // ------------------------------------------------------------------- browsing
+
+    private static List<String> names(ProductPageResponse page) {
+        return page.items().stream().map(ProductResponse::name).toList();
+    }
+
+    @Test
+    @DisplayName("a rayon's name finds the goods of the rayons below it too")
+    void searchClimbsTheTree() {
+        // Coca sits on "Boissons > Gazeux": "boissons" is its grandparent rayon's name.
+        assertEquals(List.of("Coca-Cola 1,5 L", "Eau Vive 1,5L"), names(service.browse("boissons", null, null, 0, 40)));
+    }
+
+    @Test
+    @DisplayName("a page says how many there are in all and whether more follow")
+    void pagesWithATotal() {
+        ProductPageResponse first = service.browse("", null, null, 0, 2);
+        ProductPageResponse last = service.browse("", null, null, 2, 2);
+
+        assertEquals(5, first.total());
+        assertEquals(List.of("Baguette", "Café Malagasy 250g"), names(first));
+        assertTrue(first.hasMore());
+        assertEquals(List.of("Riz Makalioka 1kg"), names(last));
+        assertFalse(last.hasMore());
+    }
+
+    @Test
+    @DisplayName("a rayon browses with everything below it, and words narrow it further")
+    void browsesARayon() {
+        assertEquals(List.of("Coca-Cola 1,5 L", "Eau Vive 1,5L"), names(service.browse("", boissons.getId(), null, 0, 40)));
+        assertEquals(List.of("Coca-Cola 1,5 L"), names(service.browse("coca", boissons.getId(), null, 0, 40)));
+    }
+
+    @Test
+    @DisplayName("favourites are the pinned products and everything in a pinned rayon, per seller")
+    void browsesFavourites() {
+        favorites.pinProduct(fatima, baguette.getId());
+        favorites.pinCategory(fatima, boissons.getId());
+        favorites.pinProduct(fatima, baguette.getId());
+        UserApp other = db.persist(UserApp.builder().fullName("Hary").username("hary").password("x")
+                .enabled(true).roles(EnumSet.of(RoleApp.CASHIER)).build());
+
+        assertEquals(List.of("Baguette", "Coca-Cola 1,5 L", "Eau Vive 1,5L"), names(service.browse("", null, fatima, 0, 40)));
+        assertEquals(List.of(), names(service.browse("", null, other, 0, 40)), "no pins, no favourites");
+        assertEquals(List.of(baguette.getId()), favorites.of(fatima).productIds(), "pinning twice keeps one pin");
+
+        favorites.unpinCategory(fatima, boissons.getId());
+        assertEquals(List.of("Baguette"), names(service.browse("", null, fatima, 0, 40)));
+    }
+
+    @Test
+    @DisplayName("a rayon search matches the rayon's own name, in the tree's order")
+    void searchesRayons() {
+        assertEquals(List.of("Gazeux"), categoryService.search("gaz", 8).stream().map(n -> n.name()).toList());
+        assertEquals(List.of(), categoryService.search("  ", 8));
     }
 }

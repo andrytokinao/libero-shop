@@ -1,5 +1,7 @@
 package com.houssen.liberoshop.web;
 
+import com.houssen.liberoshop.entity.CategoryImage;
+import com.houssen.liberoshop.service.CategoryImageService;
 import com.houssen.liberoshop.service.CategoryImportService;
 import com.houssen.liberoshop.service.CategoryService;
 import com.houssen.liberoshop.web.dto.CategoryNodeResponse;
@@ -10,7 +12,10 @@ import com.houssen.liberoshop.web.dto.SimpleImportRequest;
 import com.houssen.liberoshop.web.dto.SimpleImportResultResponse;
 import com.houssen.liberoshop.web.dto.UpdateCategoryRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +27,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -42,17 +50,27 @@ public class CategoryController {
 
     private final CategoryService categoryService;
     private final CategoryImportService categoryImportService;
+    private final CategoryImageService categoryImageService;
 
     public CategoryController(CategoryService categoryService,
-                              CategoryImportService categoryImportService) {
+                              CategoryImportService categoryImportService,
+                              CategoryImageService categoryImageService) {
         this.categoryService = categoryService;
         this.categoryImportService = categoryImportService;
+        this.categoryImageService = categoryImageService;
     }
 
     /** The whole tree, depth-first, each row carrying its depth -- see CategoryNodeResponse. */
     @GetMapping
     public List<CategoryNodeResponse> categories() {
         return categoryService.tree();
+    }
+
+    /** The rayons whose name holds every word of {@code q}: what a sale screen offers to open. */
+    @GetMapping("/search")
+    public List<CategoryNodeResponse> search(@RequestParam(defaultValue = "") String q,
+                                             @RequestParam(defaultValue = "8") int limit) {
+        return categoryService.search(q, limit);
     }
 
     @PostMapping
@@ -87,6 +105,34 @@ public class CategoryController {
 
     /** @param productsMoved how many references changed rayon on the way out */
     public record DeletedCategory(Long id, int productsMoved) {
+    }
+
+    // ----------------------------------------------------------------------- image
+
+    /**
+     * The rayon's picture. Cached for good: its address carries the version (the screens add
+     * {@code ?v=imageVersion}), so a new picture is a new address and never a stale one.
+     */
+    @GetMapping("/{id}/image")
+    public ResponseEntity<byte[]> image(@PathVariable Long id) {
+        CategoryImage image = categoryImageService.find(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(image.getContentType()))
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePrivate().immutable())
+                .body(image.getContent());
+    }
+
+    @PutMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public CategoryNodeResponse uploadImage(@PathVariable Long id, @RequestParam("file") MultipartFile file)
+            throws IOException {
+        return categoryImageService.store(id, file.getBytes());
+    }
+
+    @DeleteMapping("/{id}/image")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public CategoryNodeResponse removeImage(@PathVariable Long id) {
+        return categoryImageService.remove(id);
     }
 
     // ---------------------------------------------------------------------- import

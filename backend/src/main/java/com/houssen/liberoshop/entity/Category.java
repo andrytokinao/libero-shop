@@ -26,6 +26,13 @@ import lombok.*;
 @Builder
 public class Category {
 
+    /**
+     * How deep a rayon may sit. Four levels is more than a grocery uses -- "Boissons &gt;
+     * Sans alcool &gt; Eau &gt; Eau gazeuse" already feels laboured -- and the cap is what stops
+     * an import file from growing a path forever, and what bounds the joins a search walks up.
+     */
+    public static final int MAX_DEPTH = 4;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,6 +44,13 @@ public class Category {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Category parent;
+
+    /**
+     * When the rayon's picture last changed, as epoch milliseconds, or null for none -- the sale
+     * screens then show its initial. Part of the picture's address, like a profile photo's, so a
+     * browser may keep it for good and a new picture is a new address.
+     */
+    private Long imageVersion;
 
     /** The name folded by {@link SearchText}, so "epicerie" finds the goods of "Épicerie". */
     @Setter(AccessLevel.NONE)

@@ -14,11 +14,14 @@ package com.houssen.liberoshop.web.dto;
  *                 -- shown where a row stands alone and "Eau" would not say which one
  * @param children how many rayons sit directly inside this one, so a screen can tell a leaf
  *                 from a branch without scanning the rest of the list
+ * @param imageVersion when its picture last changed, or null when it has none -- part of the
+ *                 picture's address, see {@code Category#imageVersion}
  */
 public record CategoryNodeResponse(Long id,
                                    String name,
                                    Long parentId,
                                    int depth,
                                    String path,
-                                   int children) {
+                                   int children,
+                                   Long imageVersion) {
 }

@@ -982,7 +982,8 @@ select.field {
 .prod-count {
   position: absolute;
   top: -7px;
-  right: -7px;
+  /* Left corner: the right one holds the favourite star. */
+  left: -7px;
   min-width: 24px;
   height: 24px;
   padding: 0 6px;
@@ -996,6 +997,32 @@ select.field {
   justify-content: center;
   box-shadow: 0 0 0 2px var(--panel);
   pointer-events: none;
+}
+
+/* The favourite star, in the card's top-right corner: a sibling of the card, so a tap on it
+   never also counts as a tap on the product. */
+.prod-pin {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg);
+  }
+
+  &.on {
+    color: var(--amber);
+  }
 }
 
 .prod-minus {
@@ -1485,8 +1512,47 @@ textarea.field {
   display: flex;
   flex-direction: column;
 
-  > .tile {
+  > .tile-box {
     flex: 1;
+    display: flex;
+    position: relative;
+
+    > .tile {
+      flex: 1;
+    }
+  }
+}
+
+/* The favourite star of an order tile, bottom-right: the count holds the top-right corner. */
+.tile-pin {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+
+  &.on {
+    color: var(--amber);
+  }
+}
+
+/* The favourites as a folder at the top of the order screen's tiles — doubled class so it wins
+   over .tile, declared below. */
+.tile.tile-favorites {
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+
+  .name {
+    padding-right: 0;
+    color: var(--amber);
   }
 }
 

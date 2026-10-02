@@ -4,6 +4,8 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { EXPECTED_STATUSES } from '../interceptors/error.interceptor';
 import { API_BASE_URL } from './api.config';
 import {
+  CatalogExplore,
+  CatalogPage,
   CategoryNode,
   CategoryStock,
   CreateCategoryRequest,
@@ -11,9 +13,11 @@ import {
   ImportFormat,
   PackagingRequest,
   Product,
+  ProductBrowse,
   ProductImportPreview,
   ProductImportRequest,
   ProductImportResult,
+  ProductPage,
   ProductUnits,
   SimpleImportKind,
   SimpleImportPreview,
@@ -62,6 +66,90 @@ export class CatalogApi {
       params = params.set('limit', limit);
     }
     return this.http.get<Product[]>(`${API_BASE_URL}/products/search`, { params });
+  }
+
+  /**
+   * One page of what a sale screen browses — words, a rayon with everything below it, the
+   * seller's favourites, any combination — by name, with the total for "Afficher plus".
+   */
+  browseProducts(browse: ProductBrowse): Observable<ProductPage> {
+    let params = new HttpParams();
+    if (browse.q?.trim()) {
+      params = params.set('q', browse.q.trim());
+    }
+    if (browse.categoryId != null) {
+      params = params.set('categoryId', browse.categoryId);
+    }
+    if (browse.favorites) {
+      params = params.set('favorites', true);
+    }
+    if (browse.page) {
+      params = params.set('page', browse.page);
+    }
+    if (browse.size != null) {
+      params = params.set('size', browse.size);
+    }
+    return this.http.get<ProductPage>(`${API_BASE_URL}/products/browse`, { params });
+  }
+
+  /**
+   * The catalogue as a file explorer: the folders (rayons) of where the grid is, then a page of
+   * its products — see CatalogExplorerService.
+   */
+  explore(where: CatalogExplore): Observable<CatalogPage> {
+    let params = new HttpParams();
+    if (where.q?.trim()) {
+      params = params.set('q', where.q.trim());
+    }
+    if (where.rayonId != null) {
+      params = params.set('rayonId', where.rayonId);
+    }
+    if (where.all) {
+      params = params.set('all', true);
+    }
+    if (where.favorites) {
+      params = params.set('favorites', true);
+    }
+    if (where.page) {
+      params = params.set('page', where.page);
+    }
+    if (where.size != null) {
+      params = params.set('size', where.size);
+    }
+    return this.http.get<CatalogPage>(`${API_BASE_URL}/products/explore`, { params });
+  }
+
+  /**
+   * A rayon's picture. Fetched rather than put in an `<img src>`: the token travels in a header,
+   * which an image request cannot carry. `version` makes the address change with the picture, so
+   * the browser may keep it for good. A picture gone meanwhile (404) is not worth a toast.
+   */
+  categoryImage(categoryId: number, version: number): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/categories/${categoryId}/image`, {
+      params: { v: version },
+      responseType: 'blob',
+      context: new HttpContext().set(EXPECTED_STATUSES, [404]),
+    });
+  }
+
+  /** Sets or replaces a rayon's picture; answers the rayon with its new `imageVersion`. */
+  uploadCategoryImage(categoryId: number, image: Blob): Observable<CategoryNode> {
+    const body = new FormData();
+    body.append('file', image, 'rayon.jpg');
+    return this.http.put<CategoryNode>(`${API_BASE_URL}/categories/${categoryId}/image`, body);
+  }
+
+  removeCategoryImage(categoryId: number): Observable<CategoryNode> {
+    return this.http.delete<CategoryNode>(`${API_BASE_URL}/categories/${categoryId}/image`);
+  }
+
+  /** The rayons whose name holds every word of `query`, to offer them beside the products found. */
+  searchCategories(query: string, limit?: number): Observable<CategoryNode[]> {
+    let params = new HttpParams().set('q', query.trim());
+    if (limit != null) {
+      params = params.set('limit', limit);
+    }
+    return this.http.get<CategoryNode[]>(`${API_BASE_URL}/categories/search`, { params });
   }
 
   /** What a sale screen shows before anything is typed: the best sellers, topped up by name. */

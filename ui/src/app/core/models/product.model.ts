@@ -1,4 +1,4 @@
-import { Category } from './category.model';
+import { Category, CategoryNode } from './category.model';
 import { Packaging } from './product-units.model';
 
 /**
@@ -31,4 +31,65 @@ export interface Product {
    * sale from before units still reads.
    */
   packagings?: Packaging[];
+}
+
+/** One page of a browse — mirrors ProductPageResponse. */
+export interface ProductPage {
+  items: Product[];
+  /** How many match in all, for "40 sur 130". */
+  total: number;
+  page: number;
+  size: number;
+  hasMore: boolean;
+}
+
+/**
+ * One tile of the catalogue explorer — mirrors CatalogEntry: a rayon shown as a folder, or a
+ * product. Switch on `kind`.
+ */
+export type CatalogEntry = CatalogFolder | CatalogItem;
+
+/** A rayon as a folder: what opening it leads to. */
+export interface CatalogFolder {
+  kind: 'folder';
+  rayon: CategoryNode;
+  /** Rayons directly inside it. */
+  folders: number;
+  /** Products in it and in every rayon below it. */
+  products: number;
+}
+
+export interface CatalogItem {
+  kind: 'product';
+  product: Product;
+}
+
+/** One page of the explorer: the folders (first page only), then a page of products. */
+export interface CatalogPage {
+  entries: CatalogEntry[];
+  /** Products the open folder (or the search) holds in all, for "Afficher plus". */
+  totalProducts: number;
+  page: number;
+  hasMore: boolean;
+}
+
+/** Where the explorer looks — mirrors the parameters of `GET /api/products/explore`. */
+export interface CatalogExplore {
+  q?: string;
+  /** The open folder; absent for the top of the shop. */
+  rayonId?: number | null;
+  /** In a folder: every product below it, not only those filed directly in it. */
+  all?: boolean;
+  favorites?: boolean;
+  page?: number;
+  size?: number;
+}
+
+/** What a sale screen browses: words, a rayon and the ones below it, the seller's favourites. */
+export interface ProductBrowse {
+  q?: string;
+  categoryId?: number | null;
+  favorites?: boolean;
+  page?: number;
+  size?: number;
 }

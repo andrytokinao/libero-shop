@@ -4,8 +4,10 @@ import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.CategoryRepository;
+import com.houssen.liberoshop.repository.CategorySpecifications;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
+import com.houssen.liberoshop.util.SearchText;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.CategoryNodeResponse;
 import com.houssen.liberoshop.web.dto.CreateCategoryRequest;
@@ -41,12 +43,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CategoryService {
 
-    /**
-     * How deep a rayon may sit. Four levels is more than a grocery uses -- "Boissons &gt;
-     * Sans alcool &gt; Eau &gt; Eau gazeuse" already feels laboured -- and the cap is what
-     * stops an import file from growing a path forever by accident.
-     */
-    public static final int MAX_DEPTH = 4;
+    /** How deep a rayon may sit -- see {@link Category#MAX_DEPTH}, where the rule lives. */
+    public static final int MAX_DEPTH = Category.MAX_DEPTH;
 
     /** How a path is written back to the operator. */
     public static final String PATH_SEPARATOR = " > ";
@@ -74,6 +72,27 @@ public class CategoryService {
      */
     public List<CategoryNodeResponse> tree() {
         return nodesOf(categories.findAllWithParent());
+    }
+
+    /**
+     * The rayons whose name holds every word of {@code query}, in the tree's order -- what a sale
+     * screen offers beside the products it found, so "eau" can be opened as a rayon too. Empty for
+     * a blank query.
+     *
+     * @param limit at most this many; a search is for picking, not for reading the tree
+     */
+    public List<CategoryNodeResponse> search(String query, int limit) {
+        List<String> words = SearchText.words(query);
+        if (words.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> found = categories.findAll(CategorySpecifications.nameContainsAllWords(words)).stream()
+                .map(Category::getId)
+                .collect(Collectors.toUnmodifiableSet());
+        return tree().stream()
+                .filter(node -> found.contains(node.id()))
+                .limit(Math.max(limit, 0))
+                .toList();
     }
 
     /**
@@ -356,7 +375,16 @@ public class CategoryService {
                 category.getParent() == null ? null : category.getParent().getId(),
                 depth,
                 pathOf(category),
-                children);
+                children,
+                category.getImageVersion());
+    }
+
+    /** One rayon as the tree shows it, depth and path included. */
+    public CategoryNodeResponse node(Long id) {
+        return tree().stream()
+                .filter(node -> node.id().equals(id))
+                .findFirst()
+                .orElseThrow(() -> ResourceNotFoundException.of("Categorie", id));
     }
 
     private Category require(Long id) {

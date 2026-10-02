@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, tap } from 'rxjs';
 import { CatalogApi } from '../api/catalog.api';
-import { Product } from '../models';
+import { CatalogPage, Product, ProductPage } from '../models';
 import { EntityStore } from './entity-store';
 import { LiveList, liveList } from './live-list';
 
@@ -49,6 +49,29 @@ export class ProductStore extends EntityStore<Product> {
     return defer(() => {
       const mark = this.mark();
       return request.pipe(tap((products) => this.load(products, mark)));
+    });
+  }
+
+  /** As {@link read}, for one page of the catalogue explorer: its products, not its folders. */
+  readCatalog(request: Observable<CatalogPage>): Observable<CatalogPage> {
+    return defer(() => {
+      const mark = this.mark();
+      return request.pipe(
+        tap((page) =>
+          this.load(
+            page.entries.flatMap((entry) => (entry.kind === 'product' ? [entry.product] : [])),
+            mark,
+          ),
+        ),
+      );
+    });
+  }
+
+  /** As {@link read}, for one page of a browse: its products are written in the same way. */
+  readPage(request: Observable<ProductPage>): Observable<ProductPage> {
+    return defer(() => {
+      const mark = this.mark();
+      return request.pipe(tap((page) => this.load(page.items, mark)));
     });
   }
 }

@@ -22,6 +22,11 @@ export interface CategoryNode extends Category {
   path: string;
   /** How many rayons sit directly inside this one, so a leaf reads as a leaf. */
   children: number;
+  /**
+   * When its picture last changed, or null for none — the folder tile then shows its initial.
+   * Part of the picture's address, so a new picture is never served from a stale cache.
+   */
+  imageVersion: number | null;
 }
 
 /** POST /api/categories. `parentId` null creates a root. */

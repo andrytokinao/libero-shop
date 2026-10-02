@@ -12,6 +12,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { CategoryImagePickerComponent } from './category-image-picker.component';
 
 /**
  * The rayons of the shop, and the tree they make.
@@ -33,7 +34,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [FormsModule, CategoryPickerComponent, SimpleImportComponent, AriaryPipe],
+  imports: [
+    FormsModule,
+    CategoryPickerComponent,
+    SimpleImportComponent,
+    AriaryPipe,
+    CategoryImagePickerComponent,
+  ],
   template: `
     <div class="card">
       <div class="head-row">
@@ -57,6 +64,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           <table>
             <thead>
               <tr>
+                <th>Image</th>
                 <th>Rayon</th>
                 <th class="num">Sous-rayons</th>
                 <th class="num">Références</th>
@@ -68,6 +76,10 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <tbody>
               @for (node of tree(); track node.id) {
                 <tr>
+                  <td>
+                    <!-- What the sale screens' folder tile shows for this rayon. -->
+                    <app-category-image-picker [rayon]="node" (changed)="reload()" />
+                  </td>
                   <td>
                     <span class="cat-indent" [style.width.px]="node.depth * 18"></span>
                     @if (node.depth) {

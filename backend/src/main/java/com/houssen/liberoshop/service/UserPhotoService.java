@@ -53,16 +53,7 @@ public class UserPhotoService {
     @Transactional
     public UserResponse store(Long userId, byte[] content, UserApp actor) {
         UserApp user = editableBy(userId, actor);
-        if (content == null || content.length == 0) {
-            throw new BusinessRuleException("PHOTO_EMPTY", "Aucune image recue.");
-        }
-        if (content.length > UserPhoto.MAX_BYTES) {
-            throw new BusinessRuleException("PHOTO_TOO_LARGE",
-                    "La photo est trop lourde (" + content.length / 1024 + " Ko, au plus "
-                            + UserPhoto.MAX_BYTES / 1024 + " Ko).");
-        }
-        PhotoFormat format = PhotoFormat.detect(content).orElseThrow(() -> new BusinessRuleException(
-                "PHOTO_FORMAT", "Ce fichier n'est pas une image JPEG, PNG ou WebP."));
+        PhotoFormat format = ImageUpload.check(content, UserPhoto.MAX_BYTES, "La photo");
 
         photos.save(UserPhoto.builder()
                 .userId(user.getId())

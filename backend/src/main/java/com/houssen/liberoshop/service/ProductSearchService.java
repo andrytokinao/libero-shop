@@ -2,13 +2,17 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.ProductPackaging;
+import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.SaleLineRepository;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.SearchText;
+import com.houssen.liberoshop.web.dto.ProductPageResponse;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -52,15 +56,17 @@ public class ProductSearchService {
     private final ProductPackagingRepository packagings;
     private final SaleLineRepository saleLines;
     private final CategoryService categories;
+    private final FavoriteService favorites;
     private final BusinessCalendar calendar;
 
     public ProductSearchService(ProductRepository products, ProductPackagingRepository packagings,
                                 SaleLineRepository saleLines, CategoryService categories,
-                                BusinessCalendar calendar) {
+                                FavoriteService favorites, BusinessCalendar calendar) {
         this.products = products;
         this.packagings = packagings;
         this.saleLines = saleLines;
         this.categories = categories;
+        this.favorites = favorites;
         this.calendar = calendar;
     }
 
@@ -124,6 +130,45 @@ public class ProductSearchService {
                     .forEach(featured::add);
         }
         return featured.stream().map(ProductResponse::of).toList();
+    }
+
+    /**
+     * One page of the products a sale screen is browsing: within a rayon and the rayons below
+     * it, among a seller's favourites, matching some words -- any of the three, or all of them --
+     * by name. Every filter is a {@link Specification}, so the database does the narrowing and the
+     * counting, whatever the combination.
+     *
+     * @param query       a few words, matched against the name, the barcode and every rayon up
+     *                    the tree; blank means no word filter
+     * @param categoryId  a rayon and everything below it, or null for the whole shop
+     * @param favoritesOf the seller whose favourites bound the browse, or null for no such bound
+     * @param page        zero-based
+     * @param size        clamped to {@code 1..MAX_LIMIT}
+     */
+    public ProductPageResponse browse(String query, Long categoryId, UserApp favoritesOf, int page, int size) {
+        return page(containsAllWords(SearchText.words(query))
+                        .and(inCategories(categories.branchOf(categoryId)))
+                        .and(favoritesOf == null ? Specification.unrestricted() : favorites.pinnedBy(favoritesOf)),
+                page, size);
+    }
+
+    /**
+     * One page of the products matching any criteria, by name, counted by the database -- what
+     * {@link #browse} and the catalogue explorer are both built on.
+     *
+     * @param page zero-based
+     * @param size clamped to {@code 1..MAX_LIMIT}
+     */
+    public ProductPageResponse page(Specification<Product> criteria, int page, int size) {
+        Page<Product> found = products.findBy(criteria, fluent -> fluent
+                .project("category")
+                .page(PageRequest.of(Math.max(page, 0), clamp(size), BY_NAME)));
+        return new ProductPageResponse(
+                found.getContent().stream().map(ProductResponse::of).toList(),
+                found.getTotalElements(),
+                found.getNumber(),
+                found.getSize(),
+                found.hasNext());
     }
 
     private List<Product> find(Specification<Product> criteria, int limit) {
