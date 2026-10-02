@@ -9,10 +9,12 @@ import {
   CreateCategoryRequest,
   DeletedCategory,
   ImportFormat,
+  PackagingRequest,
   Product,
   ProductImportPreview,
   ProductImportRequest,
   ProductImportResult,
+  ProductUnits,
   SimpleImportKind,
   SimpleImportPreview,
   SimpleImportRequest,
@@ -84,6 +86,36 @@ export class CatalogApi {
           error.status === 404 ? of(null) : throwError(() => error),
         ),
       );
+  }
+
+  // ------------------------------------------------------------------- sale units
+
+  /** The base unit and the other units of one product. Every write below answers the same shape. */
+  productUnits(productId: number): Observable<ProductUnits> {
+    return this.http.get<ProductUnits>(`${API_BASE_URL}/products/${productId}/units`);
+  }
+
+  /** @param unit blank clears it, for a product counted in bare units */
+  renameBaseUnit(productId: number, unit: string): Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/units/base`, { unit });
+  }
+
+  addPackaging(productId: number, request: PackagingRequest): Observable<ProductUnits> {
+    return this.http.post<ProductUnits>(`${API_BASE_URL}/products/${productId}/units`, request);
+  }
+
+  updatePackaging(productId: number, packagingId: number, request: PackagingRequest):
+    Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(
+      `${API_BASE_URL}/products/${productId}/units/${packagingId}`,
+      request,
+    );
+  }
+
+  removePackaging(productId: number, packagingId: number): Observable<ProductUnits> {
+    return this.http.delete<ProductUnits>(
+      `${API_BASE_URL}/products/${productId}/units/${packagingId}`,
+    );
   }
 
   suppliers(): Observable<Supplier[]> {

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Product } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { StockStatusBadgeComponent } from './status-badges.component';
@@ -20,6 +20,9 @@ import { StockStatusBadgeComponent } from './status-badges.component';
             <th class="num">Prix unitaire</th>
             <th class="num">Valeur stock</th>
             <th></th>
+            @if (manageUnits) {
+              <th></th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -38,6 +41,18 @@ import { StockStatusBadgeComponent } from './status-badges.component';
                   [lowStock]="product.lowStock"
                 />
               </td>
+              @if (manageUnits) {
+                <td>
+                  <button
+                    class="btn small ghost"
+                    type="button"
+                    title="Unités de vente : kg, carton, sac…"
+                    (click)="unitsRequested.emit(product)"
+                  >
+                    Unités
+                  </button>
+                </td>
+              }
             </tr>
           }
         </tbody>
@@ -50,4 +65,10 @@ import { StockStatusBadgeComponent } from './status-badges.component';
 export class StockTableComponent {
   @Input({ required: true }) products: readonly Product[] = [];
   @Input() emptyMessage = 'Aucun produit à afficher.';
+  /**
+   * Offers a "Unités" button per row. Off by default: the table is also the read-only stock of
+   * the dashboards, and only the screen of the roles that own the catalogue turns it on.
+   */
+  @Input() manageUnits = false;
+  @Output() readonly unitsRequested = new EventEmitter<Product>();
 }

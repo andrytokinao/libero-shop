@@ -2,6 +2,7 @@ export * from './enums';
 export * from './user-app.model';
 export * from './category.model';
 export * from './product.model';
+export * from './product-units.model';
 export * from './product-import.model';
 export * from './simple-import.model';
 export * from './sale.model';
