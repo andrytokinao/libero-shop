@@ -19,9 +19,11 @@
         [attr.aria-expanded]="navOpen()"
         (click)="toggleNav()"
       >
-        ☰
+        <app-icon name="menu" [size]="22" />
       </button>
       <div class="mark">Libero <span>Shop</span></div>
+      <!-- The bell beside the person, as at the foot of the sidebar on a desktop. -->
+      <app-notification-bell />
       @if (auth.currentUser(); as me) {
         <button class="avatar-btn" type="button" aria-label="Mon profil" (click)="profileOpen.set(true)">
           <app-user-avatar [user]="me" size="sm" [tooltip]="false" />
@@ -37,10 +39,8 @@
     <aside class="side" id="app-side">
       <div class="side-head">
         <div class="mark">Libero <span>Shop</span></div>
-        <div class="sub">Gestion supermarché</div>
-        <div class="role-tag">{{ auth.roleLabel() }}</div>
         <button class="side-close" type="button" aria-label="Fermer le menu" (click)="closeNav()">
-          ✕
+          <app-icon name="close" [size]="20" />
         </button>
       </div>
 
@@ -52,7 +52,7 @@
             [routerLink]="moduleMenuPath(section)"
             [class.active]="currentSection()?.segment === section.segment"
           >
-            <span class="ic">{{ section.icon }}</span>{{ section.label }}
+            <span class="ic"><app-icon [name]="section.icon" /></span>{{ section.label }}
           </a>
         }
       </nav>
@@ -66,7 +66,7 @@
           }
           @for (item of section.items; track item.path) {
             <a [routerLink]="item.path" routerLinkActive="active">
-              <span class="ic">{{ item.icon }}</span>{{ item.label }}
+              <span class="ic"><app-icon [name]="item.icon" /></span>{{ item.label }}
             </a>
           }
         }
@@ -74,27 +74,31 @@
 
       <div class="user-box">
         @if (auth.currentUser(); as me) {
-          <button class="who" type="button" title="Mon profil" (click)="profileOpen.set(true)">
-            <app-user-avatar [user]="me" size="sm" [tooltip]="false" />
-            <div>
-              <div class="name">{{ me.fullName }}</div>
-              <div class="role">{{ auth.roleLabel() }}</div>
-            </div>
-          </button>
+          <!-- Who is signed in, and what is waiting for them: the bell sits with the person. -->
+          <div class="user-row">
+            <button class="who" type="button" title="Mon profil" (click)="profileOpen.set(true)">
+              <app-user-avatar [user]="me" size="sm" [tooltip]="false" />
+              <div class="who-text">
+                <div class="name">{{ me.fullName }}</div>
+                <div class="role">{{ auth.roleLabel() }}</div>
+              </div>
+            </button>
+            <app-notification-bell placement="above" />
+          </div>
         }
         @if (server.isMobile) {
-          <a class="btn ghost block" routerLink="/serveur" style="margin-top:12px;">
-            Serveur : {{ server.host() }}
+          <a class="side-btn" routerLink="/serveur">
+            <app-icon name="server" [size]="16" /> Serveur : {{ server.host() }}
           </a>
         } @else {
           <!-- Every role, rather than one menu entry per role section: the same page
                would otherwise appear up to four times for an account holding them all. -->
-          <a class="btn ghost block" routerLink="/application-mobile" style="margin-top:12px;">
-            ▯ Application mobile
+          <a class="side-btn" routerLink="/application-mobile">
+            <app-icon name="phone" [size]="16" /> Application mobile
           </a>
         }
-        <button class="btn ghost block" type="button" style="margin-top:12px;" (click)="logout()">
-          Se déconnecter
+        <button class="side-btn" type="button" (click)="logout()">
+          <app-icon name="logout" [size]="16" /> Se déconnecter
         </button>
       </div>
     </aside>
@@ -103,20 +107,17 @@
       <!-- Above the title so an expiring licence is read before the day's figures are.
            Only appears from 15 days before expiry (see LicenseService.bannerVisible). -->
       <app-license-banner />
+      <!-- The screen's name and nothing else: who is signed in and what is new are with the
+           person in the sidebar, and the date is on the clock of every device. -->
       <div class="topbar">
         <div class="topbar-title">
           <!-- Phone: a screen closes back onto its module's cards, not onto the home page. -->
           @if (closeTarget(); as target) {
-            <a class="page-close" [routerLink]="target" aria-label="Fermer et revenir au menu">✕</a>
+            <a class="page-close" [routerLink]="target" aria-label="Fermer et revenir au menu">
+              <app-icon name="close" [size]="20" />
+            </a>
           }
           <h1>{{ pageTitle() }}</h1>
-        </div>
-        <div class="topbar-end">
-          <div class="meta">
-            {{ today | date: 'EEEE d MMMM y' }} — connecté en tant que
-            {{ auth.currentUser()?.fullName }}
-          </div>
-          <app-notification-bell />
         </div>
       </div>
       <div class="content">
@@ -127,7 +128,7 @@
     <!-- Phone only (see styles.scss): one tap from any screen to the next customer. -->
     @if (quickAction(); as action) {
       <a class="fab" [routerLink]="action.path" [attr.aria-label]="action.label">
-        <span aria-hidden="true">＋</span> {{ action.label }}
+        <app-icon name="plus" [size]="20" /> {{ action.label }}
       </a>
     }
   </div>

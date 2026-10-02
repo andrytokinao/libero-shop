@@ -3,8 +3,8 @@ import { FilterTab, FilterTabsComponent } from './filter-tabs.component';
 
 describe('FilterTabsComponent', () => {
   const tabs: FilterTab<boolean>[] = [
-    { value: true, label: 'À remettre', icon: '⏳', count: 3 },
-    { value: false, label: 'Tous', icon: '≣' },
+    { value: true, label: 'À remettre', icon: 'hourglass', count: 3 },
+    { value: false, label: 'Tous', icon: 'list' },
   ];
   let fixture: ComponentFixture<FilterTabsComponent<boolean>>;
   let chosen: boolean[];

@@ -1,12 +1,14 @@
 import { Component, ElementRef, input, model, viewChildren } from '@angular/core';
+import { IconName } from '../../core/ui/icons';
+import { IconComponent } from './icon.component';
 
 /** One choice of a {@link FilterTabsComponent}. */
 export interface FilterTab<T> {
   readonly value: T;
   /** One or two words: "À remettre", "Tous". */
   readonly label: string;
-  /** A glyph shown before the label, like the sidebar's — text only, no icon font. */
-  readonly icon?: string;
+  /** Drawn before the label, like the sidebar's. */
+  readonly icon?: IconName;
   /** A count in a badge after the label; nothing is shown for 0, null or undefined. */
   readonly count?: number | null;
 }
@@ -25,6 +27,7 @@ export interface FilterTab<T> {
 @Component({
   selector: 'app-filter-tabs',
   standalone: true,
+  imports: [IconComponent],
   template: `
     <div class="tabs" role="tablist" [attr.aria-label]="label()">
       @for (tab of tabs(); track tab.value; let i = $index) {
@@ -40,7 +43,7 @@ export interface FilterTab<T> {
           (keydown)="onKey($event, i)"
         >
           @if (tab.icon) {
-            <span class="icon" aria-hidden="true">{{ tab.icon }}</span>
+            <app-icon [name]="tab.icon" [size]="17" />
           }
           <span>{{ tab.label }}</span>
           @if (tab.count) {
@@ -89,10 +92,6 @@ export interface FilterTab<T> {
         color: var(--brand-dark);
         border-bottom-color: var(--brand);
       }
-    }
-
-    .icon {
-      font-size: 15px;
     }
 
     .count {

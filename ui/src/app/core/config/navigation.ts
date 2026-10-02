@@ -8,10 +8,11 @@ import {
   businessTypeInfo,
   hasCashTrail,
 } from '../models';
+import { IconName } from '../ui/icons';
 
 export interface MenuItem {
-  /** Glyph shown in the sidebar — kept text-only, no icon font needed. */
-  icon: string;
+  /** Drawn beside the label in the sidebar and on the module's cards. */
+  icon: IconName;
   label: string;
   /** Absolute router path. */
   path: string;
@@ -26,8 +27,8 @@ export interface RoleNavigation {
   segment: string;
   /** Short name of the job, shown as a heading when an account holds several roles. */
   label: string;
-  /** Glyph of the module itself, in the phone drawer that lists modules only. */
-  icon: string;
+  /** The module itself, in the phone drawer that lists modules only. */
+  icon: IconName;
   items: MenuItem[];
   requires?: (features: ShopFeatures) => boolean;
   wording?: keyof Vocabulary;
@@ -37,25 +38,25 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.CASHIER]: {
     segment: 'caisse',
     label: 'Caisse',
-    icon: '¤',
+    icon: 'store',
     items: [
-      { icon: '◧', label: 'Tableau de bord', path: '/caisse/tableau-de-bord' },
-      { icon: '＋', label: 'Nouvelle vente', path: '/caisse/nouvelle-vente' },
-      { icon: '¤', label: 'À encaisser', path: '/caisse/a-encaisser' },
-      { icon: '≣', label: 'Ventes du jour', path: '/caisse/ventes-du-jour' },
-      { icon: '▤', label: 'Factures', path: '/caisse/factures' },
-      { icon: '⇤', label: 'Versements reçus', path: '/caisse/versements', requires: hasCashTrail },
+      { icon: 'dashboard', label: 'Tableau de bord', path: '/caisse/tableau-de-bord' },
+      { icon: 'cart', label: 'Nouvelle vente', path: '/caisse/nouvelle-vente' },
+      { icon: 'cash', label: 'À encaisser', path: '/caisse/a-encaisser' },
+      { icon: 'list', label: 'Ventes du jour', path: '/caisse/ventes-du-jour' },
+      { icon: 'invoice', label: 'Factures', path: '/caisse/factures' },
+      { icon: 'inbox', label: 'Versements reçus', path: '/caisse/versements', requires: hasCashTrail },
     ],
   },
   [RoleApp.ORDER_TAKER]: {
     segment: 'commandes',
     label: 'Commandes',
-    icon: '✎',
+    icon: 'clipboard',
     items: [
-      { icon: '＋', label: 'Nouvelle commande', path: '/commandes/nouvelle' },
-      { icon: '≣', label: 'Mes commandes', path: '/commandes/mes-commandes' },
+      { icon: 'plus', label: 'Nouvelle commande', path: '/commandes/nouvelle' },
+      { icon: 'list', label: 'Mes commandes', path: '/commandes/mes-commandes' },
       {
-        icon: '$',
+        icon: 'wallet',
         label: 'Argent à remettre',
         path: '/commandes/argent',
         requires: (f) => f.orderTakerCollects,
@@ -65,44 +66,44 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
   [RoleApp.DEPOT_AGENT]: {
     segment: 'depot',
     label: 'Dépôt',
-    icon: '⇥',
+    icon: 'package',
     requires: (f) => f.separateDelivery,
     wording: 'depot',
     items: [
-      { icon: '◧', label: 'Tableau de bord', path: '/depot/tableau-de-bord' },
-      { icon: '⇥', label: 'Remise de commande', path: '/depot/remise', wording: 'handOver' },
-      { icon: '$', label: 'Caisse dépôt', path: '/depot/caisse', requires: (f) => f.payAtDepot },
-      { icon: '≣', label: 'Historique des remises', path: '/depot/historique' },
+      { icon: 'dashboard', label: 'Tableau de bord', path: '/depot/tableau-de-bord' },
+      { icon: 'handOver', label: 'Remise de commande', path: '/depot/remise', wording: 'handOver' },
+      { icon: 'wallet', label: 'Caisse dépôt', path: '/depot/caisse', requires: (f) => f.payAtDepot },
+      { icon: 'history', label: 'Historique des remises', path: '/depot/historique' },
     ],
   },
   [RoleApp.DEPOT_MANAGER]: {
     segment: 'gestion-depot',
     label: 'Stock',
-    icon: '▢',
+    icon: 'warehouse',
     items: [
-      { icon: '◧', label: 'Tableau de bord', path: '/gestion-depot/tableau-de-bord' },
-      { icon: '▢', label: 'Stock', path: '/gestion-depot/stock' },
-      { icon: '⊞', label: 'Catégories', path: '/gestion-depot/categories' },
-      { icon: '⇩', label: 'Approvisionnement', path: '/gestion-depot/approvisionnement' },
-      { icon: '⇧', label: 'Sorties', path: '/gestion-depot/sorties' },
-      { icon: '⛟', label: 'Fournisseurs', path: '/gestion-depot/fournisseurs' },
+      { icon: 'dashboard', label: 'Tableau de bord', path: '/gestion-depot/tableau-de-bord' },
+      { icon: 'warehouse', label: 'Stock', path: '/gestion-depot/stock' },
+      { icon: 'layers', label: 'Catégories', path: '/gestion-depot/categories' },
+      { icon: 'stockIn', label: 'Approvisionnement', path: '/gestion-depot/approvisionnement' },
+      { icon: 'stockOut', label: 'Sorties', path: '/gestion-depot/sorties' },
+      { icon: 'truck', label: 'Fournisseurs', path: '/gestion-depot/fournisseurs' },
     ],
   },
   [RoleApp.SUPER_ADMIN]: {
     segment: 'admin',
     label: 'Admin',
-    icon: '◈',
+    icon: 'shield',
     items: [
-      { icon: '◧', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
-      { icon: '↗', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
-      { icon: '%', label: 'Bénéfices & stock', path: '/admin/marges' },
-      { icon: '▢', label: 'Stock global', path: '/admin/stock-global' },
-      { icon: '▤', label: 'Toutes les factures', path: '/admin/factures' },
-      { icon: '⚉', label: 'Utilisateurs', path: '/admin/utilisateurs' },
-      { icon: '⚙', label: 'Configuration', path: '/admin/configuration' },
-      { icon: '⛁', label: 'Sauvegardes', path: '/admin/sauvegardes' },
+      { icon: 'overview', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
+      { icon: 'trendingUp', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
+      { icon: 'percent', label: 'Bénéfices & stock', path: '/admin/marges' },
+      { icon: 'warehouse', label: 'Stock global', path: '/admin/stock-global' },
+      { icon: 'invoice', label: 'Toutes les factures', path: '/admin/factures' },
+      { icon: 'users', label: 'Utilisateurs', path: '/admin/utilisateurs' },
+      { icon: 'settings', label: 'Configuration', path: '/admin/configuration' },
+      { icon: 'database', label: 'Sauvegardes', path: '/admin/sauvegardes' },
       {
-        icon: '▦',
+        icon: 'qrCode',
         label: 'Tables & QR codes',
         path: '/admin/tables',
         requires: (f) => f.onlineOrdering,

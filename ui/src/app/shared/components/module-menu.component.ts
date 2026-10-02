@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RoleNavigation } from '../../core/config/navigation';
 import { AuthService } from '../../core/services/auth.service';
+import { IconComponent } from './icon.component';
 
 /**
  * A module's screens as large cards, two per row.
@@ -13,13 +14,13 @@ import { AuthService } from '../../core/services/auth.service';
 @Component({
   selector: 'app-module-menu',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, IconComponent],
   template: `
     @if (section(); as s) {
       <nav class="module-cards" [attr.aria-label]="s.label">
         @for (item of s.items; track item.path) {
           <a class="module-card" [routerLink]="item.path">
-            <span class="ic" aria-hidden="true">{{ item.icon }}</span>
+            <span class="ic" aria-hidden="true"><app-icon [name]="item.icon" [size]="24" /></span>
             <span class="lbl">{{ item.label }}</span>
           </a>
         }

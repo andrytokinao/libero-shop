@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   HostListener,
@@ -21,6 +20,7 @@ import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
+import { IconComponent } from './shared/components/icon.component';
 import { ProfileDialogComponent } from './shared/components/profile-dialog.component';
 import { ToastComponent } from './shared/components/toast.component';
 import { UserAvatarComponent } from './shared/components/user-avatar.component';
@@ -33,12 +33,12 @@ import { UserAvatarComponent } from './shared/components/user-avatar.component';
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    DatePipe,
     LicenseBannerComponent,
     NotificationBellComponent,
     ToastComponent,
     UserAvatarComponent,
     ProfileDialogComponent,
+    IconComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -49,7 +49,6 @@ export class AppComponent {
   protected readonly liveUpdate = inject(LiveUpdateService);
   private readonly router = inject(Router);
   protected readonly pageTitle = inject(PageTitleStrategy).pageTitle;
-  protected readonly today = new Date();
 
   /**
    * Drawer state of the sidebar. Only meaningful on a phone, where the menu sits

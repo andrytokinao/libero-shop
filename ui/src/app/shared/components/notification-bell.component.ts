@@ -1,12 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AppNotification } from '../../core/models';
 import { NotificationCenterService } from '../../core/realtime/notification-center.service';
+import { IconComponent } from './icon.component';
 
 /**
- * The bell in the top bar: how many alerts are new, the list of the latest, and whether the
- * real-time link is up.
+ * The bell beside the person: how many alerts are new, the list of the latest, and whether the
+ * real-time link is up. At the foot of the sidebar on a desktop, in the phone's top bar.
  *
  * <p>The dot says the link's state because silence is ambiguous: "no sale since nine o'clock"
  * and "the socket dropped at nine" look the same from a storekeeper's chair, and only one of
@@ -15,7 +16,8 @@ import { NotificationCenterService } from '../../core/realtime/notification-cent
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, IconComponent],
+  host: { '[class.above]': "placement() === 'above'" },
   template: `
     <button
       class="bell"
@@ -24,7 +26,7 @@ import { NotificationCenterService } from '../../core/realtime/notification-cent
       [attr.aria-label]="'Notifications, ' + center.unread() + ' non lue(s)'"
       (click)="toggle()"
     >
-      🔔
+      <app-icon name="bell" [size]="20" />
       @if (center.unread() > 0) {
         <span class="count">{{ center.unread() > 9 ? '9+' : center.unread() }}</span>
       }
@@ -64,20 +66,31 @@ import { NotificationCenterService } from '../../core/realtime/notification-cent
       display: inline-block;
     }
 
+    /* Takes the colour of where it sits — the dark sidebar, the phone bar — like the icons beside it. */
     .bell {
       position: relative;
-      border: 1px solid var(--line);
-      background: var(--panel);
-      border-radius: 8px;
-      padding: 5px 10px;
-      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: inherit;
       cursor: pointer;
+
+      &:hover,
+      &:focus-visible,
+      &[aria-expanded='true'] {
+        background: rgba(255, 255, 255, 0.12);
+      }
     }
 
     .count {
       position: absolute;
-      top: -7px;
-      right: -7px;
+      top: 0;
+      right: -2px;
       min-width: 18px;
       padding: 1px 5px;
       border-radius: 9px;
@@ -119,9 +132,18 @@ import { NotificationCenterService } from '../../core/realtime/notification-cent
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
       padding: 10px;
       z-index: 50;
+      color: var(--ink);
       display: flex;
       flex-direction: column;
       gap: 6px;
+    }
+
+    /* At the foot of the sidebar: the panel opens upwards, from the bell's left edge. */
+    :host(.above) .panel {
+      top: auto;
+      bottom: calc(100% + 8px);
+      right: auto;
+      left: 0;
     }
 
     .panel-head {
@@ -166,6 +188,9 @@ export class NotificationBellComponent {
   protected readonly center = inject(NotificationCenterService);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
+
+  /** Where the panel opens: below the bell in a top bar, above it at the foot of the sidebar. */
+  readonly placement = input<'below' | 'above'>('below');
 
   protected readonly open = signal(false);
 

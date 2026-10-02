@@ -83,20 +83,6 @@ body {
       color: #8fd6ac;
     }
   }
-
-  .sub {
-    font-size: 12px;
-    color: #b7c9bf;
-    margin-top: 3px;
-  }
-}
-
-.role-tag {
-  margin: 14px 20px 4px;
-  font-size: 11px;
-  color: #a9d6bb;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 14px;
 }
 
 nav.menu {
@@ -138,9 +124,14 @@ nav.menu {
     font-family: inherit;
 
     .ic {
-      font-size: 15px;
-      width: 18px;
-      text-align: center;
+      display: inline-flex;
+      justify-content: center;
+      width: 20px;
+      opacity: 0.85;
+    }
+
+    &.active .ic {
+      opacity: 1;
     }
 
     &:hover {
@@ -232,13 +223,21 @@ nav.menu.menu-modules,
     font-family: inherit;
   }
 
+  /* The person and their bell, side by side. */
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
   /* A button — it opens "Mon profil" — dressed as the plain block it was. */
   .who {
     display: flex;
     align-items: center;
     gap: 9px;
-    width: 100%;
-    margin-top: 10px;
+    flex: 1;
+    min-width: 0;
     padding: 4px;
     border: none;
     border-radius: 8px;
@@ -253,10 +252,17 @@ nav.menu.menu-modules,
       background: rgba(255, 255, 255, 0.08);
     }
 
+    .who-text {
+      min-width: 0;
+    }
+
     .name {
       font-size: 12.5px;
       font-weight: 600;
       line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .role {
@@ -264,11 +270,34 @@ nav.menu.menu-modules,
       color: #a9c2b5;
     }
   }
+
+  /* The quiet actions at the foot of the menu: an icon and a word, no box. */
+  .side-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: #c9dbd0;
+    font: inherit;
+    font-size: 13px;
+    text-decoration: none;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+  }
 }
 
 /* The phone bar's face, opening "Mon profil": the avatar itself is app-user-avatar. */
 .avatar-btn {
-  margin-left: auto;
   padding: 0;
   border: none;
   background: none;
@@ -299,23 +328,11 @@ main {
     font-weight: 700;
   }
 
-  .meta {
-    font-size: 12.5px;
-    color: var(--ink-soft);
-  }
-
   .topbar-title {
     display: flex;
     align-items: center;
     gap: 10px;
     min-width: 0;
-  }
-
-  /* The date line and the notification bell, kept together on the right. */
-  .topbar-end {
-    display: flex;
-    align-items: center;
-    gap: 14px;
   }
 }
 
@@ -1619,11 +1636,11 @@ textarea.field {
     color: #eef4ef;
 
     .burger {
+      display: inline-flex;
       border: none;
       background: none;
       color: inherit;
-      font-size: 20px;
-      line-height: 1;
+      line-height: 0;
       padding: 8px;
       margin-left: -8px;
       border-radius: 8px;
@@ -1672,15 +1689,15 @@ textarea.field {
   }
 
   .side-close {
-    display: block;
+    display: inline-flex;
     position: absolute;
     top: 14px;
     right: 10px;
     border: none;
     background: none;
     color: #cfe0d6;
-    font-size: 14px;
-    padding: 6px 8px;
+    padding: 6px;
+    border-radius: 50%;
     cursor: pointer;
   }
 
@@ -1702,7 +1719,6 @@ textarea.field {
       border-radius: 10px;
 
       .ic {
-        font-size: 20px;
         width: 26px;
       }
     }
@@ -1739,10 +1755,12 @@ textarea.field {
     h1 {
       font-size: 17px;
     }
+  }
 
-    .meta {
-      font-size: 12px;
-    }
+  /* A card's helper line under its title is for the first visit on a desk; on a phone it
+     only pushes the work below the fold. */
+  .card > h2 > small {
+    display: none;
   }
 
   .content {

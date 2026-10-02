@@ -112,10 +112,10 @@ export class OrderDeliveryComponent {
     {
       value: true,
       label: this.auth.words().pendingHandOver,
-      icon: '⏳',
+      icon: 'hourglass',
       count: this.waiting.value().length,
     },
-    { value: false, label: 'Tous', icon: '≣' },
+    { value: false, label: 'Tous', icon: 'list' },
   ]);
 
   protected onSearch(value: string): void {
