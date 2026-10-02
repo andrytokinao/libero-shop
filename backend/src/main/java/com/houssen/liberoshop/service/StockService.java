@@ -8,7 +8,9 @@ import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
+import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
@@ -66,6 +68,10 @@ public class StockService {
     /**
      * Receives goods: raises the stock, blends their cost into the product's average, and
      * records the movement that explains both.
+     *
+     * <p>Booked in the unit they came in -- "10 sacs at 145 000" -- and kept that way on the
+     * receipt, so it reads like the supplier's invoice. The stock and the average move in base
+     * units: 1 750 kapoka at 828.57.
      */
     @RequiresActiveLicense
     @Transactional
@@ -74,18 +80,27 @@ public class StockService {
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", request.productId()));
         Supplier supplier = suppliers.findById(request.supplierId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
-        BigDecimal unitCost = PurchaseCosting.scaled(request.unitCost());
+        if (Quantities.tooPrecise(request.quantity())) {
+            throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
+                    "Une quantite se saisit au millieme au plus (" + request.quantity() + ").");
+        }
+        // The same resolution as a sale's: the base unit, or one of the product's packagings.
+        SaleUnit unit = SaleUnit.of(product, request.packagingId());
+        boolean inBaseUnit = request.packagingId() == null;
 
-        PurchaseCosting.receive(product, request.quantity(), unitCost);
-
-        Supply supply = movements.save(Supply.builder()
-                .quantity(request.quantity())
+        Supply supply = Supply.builder()
+                .quantity(Quantities.scaled(request.quantity().multiply(unit.factor())))
                 .movementDate(calendar.now())
                 .product(product)
                 .performedBy(receiver)
                 .supplier(supplier)
-                .unitCost(unitCost)
-                .build());
+                .unitCost(PurchaseCosting.scaled(request.unitCost()))
+                .unitLabel(inBaseUnit ? null : unit.label())
+                .unitFactor(inBaseUnit ? null : unit.factor())
+                .build();
+        // The average is kept per base unit: ten sacks at 145 000 teach it 828.57 a kapoka.
+        PurchaseCosting.receive(product, supply.getQuantity(), supply.baseUnitCost());
+        movements.save(supply);
 
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return SupplyResponse.of(supply);

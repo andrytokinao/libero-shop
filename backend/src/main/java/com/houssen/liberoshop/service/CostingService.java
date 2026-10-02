@@ -101,7 +101,8 @@ public class CostingService {
                 average,
                 unitMargin,
                 PurchaseCosting.marginRate(unitMargin, product.getPrice()),
-                latest == null ? null : latest.getUnitCost(),
+                // Per base unit, like the average beside it: a sack's price would dwarf it.
+                latest == null ? null : latest.baseUnitCost(),
                 latest == null || latest.getSupplier() == null ? null : latest.getSupplier().getName(),
                 latest == null ? null : latest.getMovementDate());
     }
@@ -128,23 +129,25 @@ public class CostingService {
                 .toList();
     }
 
+    /**
+     * One supplier's receipts of a product, compared per base unit: one supplier selling by the
+     * sack and another by the kilo must still be read on the same scale.
+     */
     private static SupplierPriceResponse priceOf(Long supplierId, List<Supply> receipts) {
         Supply last = receipts.getFirst();
         BigDecimal units = receipts.stream().map(Supply::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal spent = receipts.stream()
-                .map(s -> s.getUnitCost().multiply(s.getQuantity()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal spent = receipts.stream().map(Supply::totalCost).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new SupplierPriceResponse(
                 supplierId,
                 last.getSupplier() == null ? NO_SUPPLIER_LABEL : last.getSupplier().getName(),
                 receipts.size(),
                 units,
-                units.signum() == 0 ? last.getUnitCost()
+                units.signum() == 0 ? last.baseUnitCost()
                         : spent.divide(units, PurchaseCosting.COST_SCALE,
                                 RoundingMode.HALF_UP),
-                receipts.stream().map(Supply::getUnitCost).min(Comparator.naturalOrder()).orElseThrow(),
-                receipts.stream().map(Supply::getUnitCost).max(Comparator.naturalOrder()).orElseThrow(),
-                last.getUnitCost(),
+                receipts.stream().map(Supply::baseUnitCost).min(Comparator.naturalOrder()).orElseThrow(),
+                receipts.stream().map(Supply::baseUnitCost).max(Comparator.naturalOrder()).orElseThrow(),
+                last.baseUnitCost(),
                 last.getMovementDate());
     }
 

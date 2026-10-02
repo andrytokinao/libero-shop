@@ -7,11 +7,11 @@ import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import java.math.BigDecimal;
 
 /**
- * The unit one line of a sale is sold in, as the checkout resolves it: its name, how many base
- * units it holds, and its price.
+ * The unit a line is sold or received in, as the checkout and the receipt resolve it: its name,
+ * how many base units it holds, and its sale price.
  *
- * <p>The base unit and a packaging answer the same three questions, so the checkout asks this
- * and never has to know which of the two it is holding.
+ * <p>The base unit and a packaging answer the same three questions, so the callers ask this and
+ * never have to know which of the two they are holding.
  *
  * @param label  null for the base unit of a product counted in bare units
  * @param factor 1 for the base unit
@@ -33,7 +33,7 @@ public record SaleUnit(String label, BigDecimal factor, BigDecimal price) {
                 .filter(candidate -> candidate.getId().equals(packagingId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessRuleException("UNKNOWN_SALE_UNIT",
-                        "\"" + product.getName() + "\" ne se vend plus dans cette unite. "
+                        "\"" + product.getName() + "\" n'a plus cette unite. "
                                 + "Rechargez l'ecran et choisissez-en une autre."));
         return new SaleUnit(packaging.getLabel(), packaging.getFactor(), packaging.getPrice());
     }

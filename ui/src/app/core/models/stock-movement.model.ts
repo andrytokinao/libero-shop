@@ -25,12 +25,16 @@ interface StockMovementBase {
  * empty cell looks like missing data.
  */
 export interface Supply extends StockMovementBase {
+  /** The same goods as received: 10 for "10 sacs" (`quantity` is in base units: 1 750). */
+  receivedQuantity: number;
+  /** The unit they came in — "sac 50 kg" — or null for the base unit. */
+  unitLabel: string | null;
   supplier: { id: number; name: string } | null;
   /** Said outright by the server so a screen does not have to infer it from the null. */
   fromImport: boolean;
-  /** Purchase price of one unit of this receipt; null when it was not given. */
+  /** Purchase price of one unit as received — the sack's — or null when it was not given. */
   unitCost: number | null;
-  /** unitCost × quantity, or null with it. */
+  /** unitCost × receivedQuantity, the supplier invoice's line, or null with it. */
   totalCost: number | null;
 }
 

@@ -62,9 +62,12 @@ export interface CreateSaleRequest {
 export interface CreateSupplyRequest {
   productId: number;
   supplierId: number;
+  /** The unit the goods came in — "sac 50 kg" — or null for the base unit. */
+  packagingId: number | null;
+  /** In that unit: 10 for ten sacks. */
   quantity: number;
   /**
-   * What one unit cost on this delivery. Null is accepted — the supplier's invoice sometimes
+   * What one of that unit cost on this delivery — the sack's price. Null is accepted — the supplier's invoice sometimes
    * comes later — but such a receipt teaches the average cost nothing.
    */
   unitCost: number | null;
