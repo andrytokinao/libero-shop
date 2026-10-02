@@ -21,6 +21,7 @@ import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
+import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { SaleCheckout, SaleCheckoutDialogComponent } from './sale-checkout-dialog.component';
@@ -48,6 +49,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     CameraScanButtonComponent,
     SaleCheckoutDialogComponent,
     InvoiceDetailFlowComponent,
+    IconComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -59,32 +61,179 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
       display: flex;
     }
 
-    /* Function keys mean nothing on a phone: their hints go with the one-column layout
-       (COMPACT_LAYOUT). The keys stay bound — a tablet may have a keyboard. */
+    /* The phone's bottom bar, its basket panel and their backdrop: nothing of them on a desk. */
+    .sale-bar,
+    .sheet-backdrop,
+    .sheet-close {
+      display: none;
+    }
+
+    /* ------------------------------------------------------------------------------------
+       One column (COMPACT_LAYOUT): the products take the screen; the search shrinks to its
+       field and stays in view; the basket hides behind the bottom bar's "Détails".
+       ------------------------------------------------------------------------------------ */
     @media (max-width: 980px) {
+      :host {
+        --sticky-top: 0px;
+      }
+
+      /* Function keys mean nothing on a phone. The keys stay bound — a tablet may have a
+         keyboard. */
       .key-hint {
         display: none !important;
       }
+
+      .products-card {
+        padding-top: 0;
+
+        > h2,
+        .grid-caption,
+        label[for='product-search'] {
+          display: none;
+        }
+      }
+
+      .search-row {
+        position: sticky;
+        top: var(--sticky-top);
+        z-index: 5;
+        margin: 0 -14px 10px;
+        padding: 10px 14px;
+        gap: 8px;
+        flex-wrap: nowrap;
+        background: var(--panel);
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid var(--line);
+
+        .fld {
+          margin: 0;
+          min-width: 0 !important;
+        }
+      }
+
+      .cart-card {
+        display: none;
+
+        &.sheet-open {
+          display: block;
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 60;
+          max-height: 82vh;
+          overflow-y: auto;
+          padding-bottom: calc(16px + env(safe-area-inset-bottom));
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.22);
+          animation: sheet-up 160ms ease-out;
+
+          table {
+            width: 100%;
+          }
+        }
+      }
+
+      .sheet-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 59;
+        background: rgba(21, 36, 32, 0.45);
+      }
+
+      .sheet-close {
+        display: inline-flex;
+        vertical-align: middle;
+        margin: -4px 6px 0 -4px;
+        padding: 4px;
+        border: none;
+        border-radius: 50%;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .sale-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px -16px -16px;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+        background: var(--panel);
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08);
+
+        &.short .sale-bar-sum strong {
+          color: var(--red);
+        }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 11px 14px;
+        }
+      }
+
+      .sale-bar-sum {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.2;
+
+        strong {
+          font-size: 18px;
+        }
+
+        span {
+          font-size: 12px;
+          color: var(--ink-soft);
+        }
+      }
+
+      .held-count {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background: var(--amber);
+        color: #fff;
+        font-size: 11.5px;
+        line-height: 20px;
+        text-align: center;
+      }
+    }
+
+    /* The app's own bar is sticky above everything at this width: the search sits under it. */
+    @media (max-width: 900px) {
+      :host {
+        --sticky-top: var(--mobile-bar-h);
+      }
+    }
+
+    /* A slide only: a panel that fades in shows the products through it for a moment. */
+    @keyframes sheet-up {
+      from { transform: translateY(32px); }
+      to { transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cart-card.sheet-open { animation: none; }
     }
   `,
   template: `
-    <!-- Phone only: the basket's card falls below the products, so its total is repeated here,
-         pinned at the top while the products scroll. A tap goes down to the checkout. -->
-    <button
-      type="button"
-      class="sale-summary"
-      [class.short]="cart.hasShortage()"
-      (click)="goToCheckout()"
-    >
-      <span>{{ cart.units() }} article(s)</span>
-      <strong>{{ cart.total() | ariary }}</strong>
-    </button>
-
     <div class="grid g2">
-      <div class="card">
+      <div class="card products-card">
         <h2>Produits <small>scannez, tapez un code puis Entrée, ou cliquez</small></h2>
-        <div class="form-row" style="align-items:flex-end;">
-          <div class="fld" style="flex:1; min-width:220px;">
+        <!-- On a phone this row is all there is above the products, and it stays in view
+             while they scroll: the next scan or search is always one tap away. -->
+        <div class="form-row search-row" style="align-items:flex-end;">
+          <div class="fld" style="flex:1; min-width:180px;">
             <label for="product-search">Produit</label>
             <input
               #productField
@@ -106,7 +255,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
             </span>
           }
         </div>
-        <div class="muted" style="font-size:12px; margin:0 0 8px;">
+        <div class="muted grid-caption" style="font-size:12px; margin:0 0 8px;">
           {{ finder.idle() ? 'Les plus vendus ces 30 derniers jours' : 'Résultats de la recherche' }}
           @if (finder.pending()) {
             <span> — recherche…</span>
@@ -159,8 +308,26 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
         </div>
       </div>
 
-      <div class="card" #checkout>
+      <!-- The basket. Beside the products on a desktop; on a phone, a panel brought up from the
+           bottom bar's "Détails" — the same markup either way, so both edit the same lines. -->
+      @if (cartSheetOpen()) {
+        <div class="sheet-backdrop" (click)="cartSheetOpen.set(false)"></div>
+      }
+      <div
+        class="card cart-card"
+        [class.sheet-open]="cartSheetOpen()"
+        [attr.role]="cartSheetOpen() ? 'dialog' : null"
+        [attr.aria-label]="cartSheetOpen() ? 'Panier' : null"
+      >
         <h2>
+          <button
+            class="sheet-close"
+            type="button"
+            aria-label="Fermer le panier"
+            (click)="cartSheetOpen.set(false)"
+          >
+            <app-icon name="close" [size]="20" />
+          </button>
           Panier
           <button
             class="btn ghost"
@@ -252,6 +419,31 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
       </div>
     </div>
 
+    <!-- Phone only: under the thumb, what the basket comes to and the two things to do with
+         it — look at it, or take the money. Sticky rather than fixed, so it stays inside the
+         page on a tablet whose sidebar is still showing. -->
+    <div class="sale-bar" [class.short]="cart.hasShortage()">
+      <div class="sale-bar-sum">
+        <strong>{{ cart.total() | ariary }}</strong>
+        <span>{{ cart.units() }} article(s)</span>
+      </div>
+      <button
+        class="btn ghost"
+        type="button"
+        [disabled]="cart.isEmpty() && !held.count()"
+        (click)="cartSheetOpen.set(true)"
+      >
+        <app-icon name="list" [size]="18" />
+        Détails
+        @if (held.count()) {
+          <span class="held-count" [attr.aria-label]="held.count() + ' en attente'">{{ held.count() }}</span>
+        }
+      </button>
+      <button class="btn" type="button" [disabled]="!canValidate()" (click)="openCheckout()">
+        Valider
+      </button>
+    </div>
+
     @if (checkoutOpen()) {
       <app-sale-checkout-dialog
         [total]="cart.total()"
@@ -286,6 +478,8 @@ export class NewSaleComponent {
   protected readonly checkoutOpen = signal(false);
   /** The sale just recorded, shown with what can be done to it next; null back at the till. */
   protected readonly sold = signal<Invoice | null>(null);
+  /** Phone only: the basket brought up as a panel from the bottom bar's "Détails". */
+  protected readonly cartSheetOpen = signal(false);
   /** A dialog is up: the till's keys wait, so F4 cannot hold a basket being paid for. */
   private readonly dialogOpen = computed(() => this.checkoutOpen() || this.sold() !== null);
 
@@ -303,7 +497,6 @@ export class NewSaleComponent {
    * a till that must always be here.
    */
   private readonly productField = viewChild.required<ElementRef<HTMLInputElement>>('productField');
-  private readonly checkout = viewChild.required<ElementRef<HTMLElement>>('checkout');
 
   /** Not with a line in red: the server would only refuse it again. */
   protected readonly canValidate = computed(
@@ -380,10 +573,6 @@ export class NewSaleComponent {
   /** The tile's "−": one unit back on the shelf, the line gone at zero. */
   protected unpick(product: Product): void {
     this.cart.change(product, -1);
-  }
-
-  protected goToCheckout(): void {
-    this.checkout().nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** Sets this customer aside, with their name, and frees the till for the next one. */
@@ -463,6 +652,8 @@ export class NewSaleComponent {
   /** "Valider la vente": the basket is done, the checkout asks for whom and how it is paid. */
   protected openCheckout(): void {
     if (this.canValidate()) {
+      // On a phone the basket panel may be up: the checkout takes its place.
+      this.cartSheetOpen.set(false);
       this.checkoutOpen.set(true);
     }
   }
