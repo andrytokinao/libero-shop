@@ -74,13 +74,15 @@ public class ProductUnitService {
     }
 
     /**
-     * Safe at any time: a sale line copies the label, factor and price it was sold at, so
-     * removing a unit never rewrites a past ticket.
+     * Safe for the history: a sale line copies the label, factor and price it was sold at, so
+     * removing a unit never rewrites a past ticket. Refused only while another unit is written
+     * in this one -- see {@link PackagingRules#refuseRemoval}.
      */
     @RequiresActiveLicense
     @Transactional
     public ProductUnitsResponse remove(Long productId, Long packagingId) {
         ProductPackaging packaging = requirePackaging(productId, packagingId);
+        rules.refuseRemoval(packaging);
         Product product = packaging.getProduct();
         packagings.delete(packaging);
         packagings.flush();

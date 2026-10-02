@@ -13,8 +13,8 @@ const vrac: Product = {
   lowStock: false,
   stockValue: 0,
   packagings: [
-    { id: 5, label: 'kg', factor: 3.5, price: 3000, barcode: null },
-    { id: 6, label: 'sac 50 kg', factor: 175, price: 145000, barcode: 'SAC' },
+    { id: 5, label: 'kg', factor: 3.5, price: 3000, barcode: null, reference: null, referenceQuantity: 3.5 },
+    { id: 6, label: 'sac 50 kg', factor: 175, price: 145000, barcode: 'SAC', reference: null, referenceQuantity: 175 },
   ],
 };
 

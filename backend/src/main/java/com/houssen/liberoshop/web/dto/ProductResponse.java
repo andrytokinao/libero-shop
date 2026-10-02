@@ -57,12 +57,22 @@ public record ProductResponse(Long id,
                 packagings);
     }
 
-    /** @param factor base units in one of these: 3.5 for a kilo of rice counted in kapoka */
-    public record Packaging(Long id, String label, BigDecimal factor, BigDecimal price, String barcode) {
+    /**
+     * @param factor            base units in one of these: 87.5 for a 25 kg sack of rice counted
+     *                          in kapoka -- what the stock moves by
+     * @param reference         the unit it is written in -- "kg" for "sac 25 kg" -- or null for
+     *                          the base unit
+     * @param referenceQuantity how many of {@code reference} it holds: 25. With the two above, how
+     *                          the screens say it: "sac 25 kg = 25 kg (87,5 kapoka)"
+     */
+    public record Packaging(Long id, String label, BigDecimal factor, BigDecimal price, String barcode,
+                            String reference, BigDecimal referenceQuantity) {
 
         public static Packaging of(ProductPackaging packaging) {
             return new Packaging(packaging.getId(), packaging.getLabel(), packaging.getFactor(),
-                    packaging.getPrice(), packaging.getBarcode());
+                    packaging.getPrice(), packaging.getBarcode(),
+                    packaging.getReference() == null ? null : packaging.getReference().getLabel(),
+                    packaging.quantityInReference());
         }
     }
 }

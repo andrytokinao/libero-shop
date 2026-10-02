@@ -8,13 +8,26 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 /**
- * One sale unit of a product, as the units dialog sends it -- for a creation and an edit alike.
+ * One sale unit of a product, as the units dialog and the import send it -- for a creation and
+ * an edit alike.
  *
- * @param factor  how many base units it holds; positive, at most three decimals
- * @param barcode optional; blank means none
+ * <p>Written the way the unit is printed on it: "sac 25 kg" contains 25 of {@code reference}
+ * "kg". How many base units that makes is the server's sum, not the operator's.
+ *
+ * @param factor    how many {@code reference} units it holds -- the contenance; positive, at most
+ *                  three decimals
+ * @param reference the unit it is written in, by its name: another unit of the same product, or
+ *                  null (or the base unit's name) for the base unit itself
+ * @param barcode   optional; blank means none
  */
 public record PackagingRequest(@NotBlank @Size(max = Product.MAX_UNIT_LENGTH) String label,
                                @NotNull BigDecimal factor,
                                @NotNull BigDecimal price,
-                               @Size(max = 64) String barcode) {
+                               @Size(max = 64) String barcode,
+                               @Size(max = Product.MAX_UNIT_LENGTH) String reference) {
+
+    /** A unit written directly in base units, as every unit was before references. */
+    public PackagingRequest(String label, BigDecimal factor, BigDecimal price, String barcode) {
+        this(label, factor, price, barcode, null);
+    }
 }

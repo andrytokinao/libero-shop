@@ -920,6 +920,45 @@ class ProductImportServiceTest {
         assertTrue(result.lines().getFirst().note().contains("celui d'une unite"));
     }
 
+    /** The same rice, its units written as printed: the sack in kilos, the tonne in kilos. */
+    private static final String RICE_UNITS_BY_REFERENCE =
+            "produit;unite;contenance;unite de reference;prix\n"
+                    + "Riz vrac;sac 25 kg;25;kg;72000\n"
+                    + "Riz vrac;kapoka;1;;900\n"
+                    + "Riz vrac;tonne;1000;kg;2800000\n"
+                    + "Riz vrac;kg;3,5;kapoka;3000\n";
+
+    @Test
+    @DisplayName("units written in other units chain: 1 sac 25 kg is 87.5 kapoka, in any row order")
+    void chainsReferenceUnits() {
+        ProductImportPreviewResponse preview = previewWithUnits(
+                "nom;quantite;unite\nRiz vrac;1;sac 25 kg\nRiz vrac;1;tonne\n", RICE_UNITS_BY_REFERENCE);
+
+        ProductImportLineResponse rice = line(preview, 0);
+        assertQuantity("3587.5", rice.quantity(), "87.5 + 3 500 kapoka");
+        // The kilo comes before what is written in it, whatever order the sheet gave.
+        List<String> labels = rice.packagings().stream().map(PackagingRequest::label).toList();
+        assertTrue(labels.indexOf("kg") < labels.indexOf("sac 25 kg"), labels.toString());
+
+        run(request(List.of(asSent(rice))));
+        ProductPackaging sack = units.stream().filter(u -> u.getLabel().equals("sac 25 kg")).findFirst().orElseThrow();
+        assertEquals(new BigDecimal("87.500"), sack.getFactor());
+        assertEquals("kg", sack.getReference().getLabel());
+    }
+
+    @Test
+    @DisplayName("a sheet unit written in the shop's own kilo uses the shop's kilo")
+    void chainsThroughTheShopsUnits() {
+        Product rice = inCatalogue("Riz vrac", 100, null, null);
+        rice.setUnit("kapoka");
+        rice.getPackagings().add(unitOf(rice, "kg", "4", null));
+
+        ProductImportLineResponse line = line(previewWithUnits("nom;quantite;unite\nRiz vrac;1;sac 25 kg\n",
+                "produit;unite;contenance;reference;prix\nRiz vrac;sac 25 kg;25;kg;72000\n"), 0);
+
+        assertQuantity(100, line.quantity(), "25 of the shop's 4-kapoka kilos");
+    }
+
     @Test
     @DisplayName("the model workbook previews as it promises: 7 200 kapoka of rice from two lines")
     void modelWorkbookPreviews() {

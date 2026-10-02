@@ -43,9 +43,33 @@ public class ProductPackaging {
     @Column(nullable = false, length = Product.MAX_UNIT_LENGTH)
     private String label;
 
-    /** How many base units one of these holds: 3.5 for a kilo of rice counted in kapoka. */
+    /**
+     * How many base units one of these holds: 3.5 for a kilo of rice counted in kapoka, 87.5 for
+     * a 25 kg sack. Computed from {@link #reference} and {@link #referenceQuantity}, never typed,
+     * and kept here so the till, the stock and the reports read one number without walking a
+     * chain.
+     */
     @Column(nullable = false, precision = 12, scale = FACTOR_SCALE)
     private BigDecimal factor;
+
+    /**
+     * The unit this one is written in: a "sac 25 kg" is 25 <em>kg</em>, whatever a kilo is in
+     * kapoka. Null when it is written in the base unit directly.
+     *
+     * <p>Kept as a link, not as the number it gave at the time: when a kilo turns out to be 3.6
+     * kapoka rather than 3.5, every unit written in kilos follows, as the sack still holds 25 kg.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reference_id")
+    private ProductPackaging reference;
+
+    /**
+     * How many {@link #reference} units one of these holds: 25 for a 25 kg sack written in kg.
+     * Null on units written before references existed, which were all in the base unit -- read it
+     * through {@link #quantityInReference()}.
+     */
+    @Column(precision = 12, scale = FACTOR_SCALE)
+    private BigDecimal referenceQuantity;
 
     /**
      * What one of these sells for. Set by the operator rather than derived from the base price:
@@ -58,4 +82,19 @@ public class ProductPackaging {
     /** A sack or a carton often has its own code, distinct from the unit's. */
     @Column(unique = true)
     private String barcode;
+
+    /** How many reference units one of these holds; the factor itself for a unit in base units. */
+    public BigDecimal quantityInReference() {
+        return referenceQuantity == null ? factor : referenceQuantity;
+    }
+
+    /** Whether {@code other} is this unit or is written, directly or through others, in it. */
+    public boolean underlies(ProductPackaging other) {
+        for (ProductPackaging step = other; step != null; step = step.getReference()) {
+            if (step == this || (id != null && id.equals(step.getId()))) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

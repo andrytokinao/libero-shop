@@ -6,6 +6,7 @@ import com.houssen.liberoshop.web.dto.PackagingRequest;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +18,11 @@ import java.util.Set;
  * linked to the product by its name.
  *
  * <pre>
- * Produit  | Unité     | Contenance | Prix    | Code barres
- * Riz vrac | kapoka    | 1          | 900     |
- * Riz vrac | kg        | 3,5        | 3000    |
- * Riz vrac | tonne     | 3500       | 2800000 |
+ * Produit  | Unité     | Contenance | Unité de référence | Prix    | Code barres
+ * Riz vrac | kapoka    | 1          |                    | 900     |
+ * Riz vrac | kg        | 3,5        | kapoka             | 3000    |
+ * Riz vrac | sac 25 kg | 25         | kg                 | 72000   |
+ * Riz vrac | tonne     | 1000       | kg                 | 2800000 |
  * </pre>
  *
  * <p>Kept apart from the products sheet on purpose. Units are set once per product; the products
@@ -28,9 +30,13 @@ import java.util.Set;
  * tonne", "200 kapoka" -- with no columns to repeat and nothing to compute: the import converts
  * each line with the units declared here.
  *
- * <p>The row of contenance 1 is the base unit, the one the stock is counted in. Every other
- * contenance says how many base units the unit holds, and is judged by the same
- * {@link PackagingRules} as the units dialog. A row that fails them is reported and left out;
+ * <p>The row of contenance 1 with no reference is the base unit, the one the stock is counted
+ * in. Every other row says how many of its reference unit it holds -- the base unit when the
+ * reference is left blank -- the way it is printed on the sack: "sac 25 kg" is 25 kg, and the
+ * import works out what that is in kapoka. A row may name a reference declared further down;
+ * {@link Definition#packagings()} come out in an order where every reference precedes the units
+ * written in it. The resulting factors are judged by the same {@link PackagingRules} as the
+ * units dialog, once the product's own units are known. A row that fails them is reported and left out;
  * it never stops the rest of the file.
  */
 public final class ProductUnitSheet {
@@ -53,7 +59,10 @@ public final class ProductUnitSheet {
         UNIT("unite", "conditionnement", "unit", "mesure"),
 
         FACTOR("contenance", "contient", "coefficient", "coef", "facteur", "conversion",
-                "equivalence"),
+                "equivalence", "nombre", "quantite"),
+
+        /** The unit the contenance is counted in; blank for the base unit. */
+        REFERENCE("unite de reference", "reference", "unite reference", "ref", "en"),
 
         PRICE("prix", "prix de vente", "prix vente", "pv", "price"),
 
@@ -81,7 +90,8 @@ public final class ProductUnitSheet {
      *                    product's own unit is then the base
      * @param basePrice   that row's price, or null
      * @param baseBarcode that row's barcode, or null
-     * @param packagings  the other rows, as the units dialog would send them
+     * @param packagings  the other rows, as the units dialog would send them, every reference
+     *                    before the units written in it
      */
     public record Definition(String baseUnit, BigDecimal basePrice, String baseBarcode,
                              List<PackagingRequest> packagings) {
@@ -146,6 +156,7 @@ public final class ProductUnitSheet {
             try {
                 builder.add(unit,
                         ProductImportColumns.number(cell(row, columns, Column.FACTOR)),
+                        PackagingRules.squeeze(cell(row, columns, Column.REFERENCE)),
                         ProductImportColumns.number(cell(row, columns, Column.PRICE)),
                         PackagingRules.squeeze(cell(row, columns, Column.BARCODE)));
                 units++;
@@ -158,7 +169,7 @@ public final class ProductUnitSheet {
                 + builders.size() + " produit(s).");
 
         Map<String, Definition> byProduct = new LinkedHashMap<>();
-        builders.forEach((product, builder) -> byProduct.put(product, builder.build()));
+        builders.forEach((product, builder) -> byProduct.put(product, builder.build(notes)));
         return new ProductUnitSheet(Map.copyOf(byProduct), List.copyOf(notes));
     }
 
@@ -175,12 +186,16 @@ public final class ProductUnitSheet {
         private final Map<String, PackagingRequest> packagings = new LinkedHashMap<>();
 
         /**
-         * A contenance of 1 is the base unit; anything else must pass
-         * {@link PackagingRules#validFactor} and {@link PackagingRules#validPrice}.
+         * A contenance of 1 with no reference is the base unit; anything else must pass
+         * {@link PackagingRules#validQuantity} and {@link PackagingRules#validPrice}.
          */
-        void add(String unit, BigDecimal factor, BigDecimal price, String barcode) {
+        void add(String unit, BigDecimal factor, String reference, BigDecimal price, String barcode) {
             String folded = CsvTable.normalise(unit);
-            if (factor != null && factor.compareTo(BigDecimal.ONE) == 0) {
+            if (reference != null && CsvTable.normalise(reference).equals(folded)) {
+                throw new BusinessRuleException("PACKAGING_REFERENCE_CYCLE",
+                        "une unite ne peut pas etre ecrite en elle-meme.");
+            }
+            if (reference == null && factor != null && factor.compareTo(BigDecimal.ONE) == 0) {
                 if (baseUnit != null && !CsvTable.normalise(baseUnit).equals(folded)) {
                     throw new BusinessRuleException("IMPORT_TWO_BASE_UNITS",
                             "deux unites de contenance 1 (" + baseUnit + " et " + unit
@@ -199,13 +214,38 @@ public final class ProductUnitSheet {
                 throw new BusinessRuleException("IMPORT_UNIT_TWICE", "unite deja declaree pour ce produit.");
             }
             packagings.put(folded, new PackagingRequest(unit,
-                    PackagingRules.validFactor(factor, baseUnit),
+                    PackagingRules.validQuantity(factor),
                     PackagingRules.validPrice(price),
-                    barcode));
+                    barcode,
+                    reference));
         }
 
-        Definition build() {
-            return new Definition(baseUnit, basePrice, baseBarcode, List.copyOf(packagings.values()));
+        /**
+         * The rows, every reference first. A reference to the base unit, or to a unit the sheet
+         * does not declare -- the product may already have it -- puts no constraint on the order;
+         * rows whose references go round in a circle can never be resolved, and are noted.
+         */
+        Definition build(List<String> notes) {
+            List<PackagingRequest> ordered = new ArrayList<>();
+            Set<String> placed = new HashSet<>();
+            List<PackagingRequest> waiting = new ArrayList<>(packagings.values());
+            boolean progress = true;
+            while (!waiting.isEmpty() && progress) {
+                progress = false;
+                for (var it = waiting.iterator(); it.hasNext(); ) {
+                    PackagingRequest request = it.next();
+                    String reference = request.reference() == null ? null : CsvTable.normalise(request.reference());
+                    if (reference == null || !packagings.containsKey(reference) || placed.contains(reference)) {
+                        ordered.add(request);
+                        placed.add(CsvTable.normalise(request.label()));
+                        it.remove();
+                        progress = true;
+                    }
+                }
+            }
+            waiting.forEach(request -> notes.add(SHEET_NAME + " : \"" + request.label()
+                    + "\" ignoree, ses unites de reference tournent en rond."));
+            return new Definition(baseUnit, basePrice, baseBarcode, List.copyOf(ordered));
         }
     }
 }

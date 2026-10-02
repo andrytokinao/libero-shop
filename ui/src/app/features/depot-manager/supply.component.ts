@@ -26,10 +26,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 interface NewUnitDraft {
   label: string;
   factor: string;
+  /** The unit the contenance is counted in, by name; null for the base unit. */
+  reference: string | null;
   price: string;
 }
 
-const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', price: '' };
+const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price: '' };
 
 @Component({
   selector: 'app-supply',
@@ -164,11 +166,23 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', price: '' };
                   type="text"
                   inputmode="decimal"
                   autocomplete="off"
-                  placeholder="87,5"
+                  placeholder="25"
                   [ngModel]="newUnit().factor"
                   (ngModelChange)="patchNewUnit({ factor: $event })"
                 />
-                <span class="muted">{{ baseName() }}</span>
+                <!-- As printed on it: a 25 kg sack contains 25 kg. -->
+                <select
+                  name="reference"
+                  class="field"
+                  aria-label="Unité de référence"
+                  [ngModel]="newUnit().reference"
+                  (ngModelChange)="patchNewUnit({ reference: $event })"
+                >
+                  <option [ngValue]="null">{{ baseName() }}</option>
+                  @for (p of selectedProduct()?.packagings ?? []; track p.id) {
+                    <option [ngValue]="p.label">{{ p.label }}</option>
+                  }
+                </select>
               </div>
             </div>
             <div class="fld">
@@ -376,9 +390,9 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', price: '' };
         flex: 1;
       }
 
-      span {
-        font-size: 12px;
-        white-space: nowrap;
+      select {
+        width: auto;
+        max-width: 110px;
       }
     }
 
@@ -518,7 +532,7 @@ export class SupplyComponent {
     const factor = parseQuantity(draft.factor);
     const price = parseQuantity(draft.price);
     return draft.label.trim() && factor !== null && price !== null
-      ? { label: draft.label.trim(), factor, price, barcode: null }
+      ? { label: draft.label.trim(), factor, price, barcode: null, reference: draft.reference }
       : null;
   });
 

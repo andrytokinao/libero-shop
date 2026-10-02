@@ -9,11 +9,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 interface Draft {
   label: string;
   factor: string;
+  /** The unit the contenance is counted in, by name; null for the base unit. */
+  reference: string | null;
   price: string;
   barcode: string;
 }
 
-const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
+const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', barcode: '' };
 
 /**
  * The units a product is sold in: its base unit, and "1 kg = 3.5 kapoka"-style packagings.
@@ -39,8 +41,9 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
           <div>
             <h2 id="units-title">Unités de vente — {{ productName }}</h2>
             <div class="sub muted">
-              Le stock est compté dans l'unité de base. Chaque autre unité dit combien d'unités de
-              base elle contient. Choisissez la plus petite comme unité de base.
+              Le stock est compté dans l'unité de base, la plus petite. Chaque autre unité s'écrit
+              comme sur l'emballage, dans l'unité de votre choix : « sac 25 kg » contient 25 kg.
+              Le calcul en unité de base est fait pour vous.
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -95,7 +98,14 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
                 @for (p of u.packagings; track p.id) {
                   <tr [class.on]="editingId() === p.id">
                     <td>{{ p.label }}</td>
-                    <td>{{ formatFactor(p.factor) }} {{ baseName() }}</td>
+                    <td>
+                      @if (p.reference) {
+                        {{ formatFactor(p.referenceQuantity) }} {{ p.reference }}
+                        <span class="muted">({{ formatFactor(p.factor) }} {{ baseName() }})</span>
+                      } @else {
+                        {{ formatFactor(p.factor) }} {{ baseName() }}
+                      }
+                    </td>
                     <td class="num">{{ p.price | ariary }}</td>
                     <td class="muted">{{ p.barcode ?? '—' }}</td>
                     <td class="un-actions">
@@ -158,7 +168,20 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
                       [ngModel]="draft().factor"
                       (ngModelChange)="patch({ factor: $event })"
                     />
-                    <span class="muted">{{ baseName() }}</span>
+                    <!-- Written the way it is printed: a 25 kg sack contains 25 kg, and the
+                         server works out the kapoka. -->
+                    <select
+                      name="reference"
+                      class="field"
+                      aria-label="Unité de référence"
+                      [ngModel]="draft().reference"
+                      (ngModelChange)="patch({ reference: $event })"
+                    >
+                      <option [ngValue]="null">{{ baseName() }}</option>
+                      @for (p of referenceChoices(); track p.id) {
+                        <option [ngValue]="p.label">{{ p.label }}</option>
+                      }
+                    </select>
                   </div>
                 </div>
                 <div class="fld">
@@ -294,9 +317,9 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', price: '', barcode: '' };
         flex: 1;
       }
 
-      span {
-        font-size: 12px;
-        white-space: nowrap;
+      select {
+        width: auto;
+        max-width: 120px;
       }
     }
 
@@ -349,7 +372,46 @@ export class ProductUnitsDialogComponent implements OnInit {
     if (!draft.label.trim() || factor === null || factor <= 0 || price === null || price <= 0) {
       return null;
     }
-    return { label: draft.label.trim(), factor, price, barcode: draft.barcode.trim() || null };
+    return {
+      label: draft.label.trim(),
+      factor,
+      price,
+      barcode: draft.barcode.trim() || null,
+      reference: draft.reference,
+    };
+  });
+
+  /**
+   * The units the one being written may be counted in: the others, minus any written — directly
+   * or through others — in it, which would go round in a circle. The server refuses those too.
+   */
+  protected readonly referenceChoices = computed(() => {
+    const packagings = this.units()?.packagings ?? [];
+    const editing = this.editingId();
+    if (editing === null) {
+      return packagings;
+    }
+    const byLabel = new Map(packagings.map((p) => [p.label, p]));
+    const leadsToEditing = (p: Packaging): boolean => {
+      for (let step: Packaging | undefined = p; step; step = step.reference ? byLabel.get(step.reference) : undefined) {
+        if (step.id === editing) {
+          return true;
+        }
+      }
+      return false;
+    };
+    return packagings.filter((p) => !leadsToEditing(p));
+  });
+
+  /** Base units in one of the unit being written: its contenance times its reference's. */
+  protected readonly baseFactor = computed(() => {
+    const draft = this.draft();
+    const quantity = parseDecimal(draft.factor);
+    if (!quantity) {
+      return null;
+    }
+    const reference = this.units()?.packagings.find((p) => p.label === draft.reference);
+    return Math.round(quantity * (reference?.factor ?? 1) * 1000) / 1000;
   });
 
   /**
@@ -357,19 +419,24 @@ export class ProductUnitsDialogComponent implements OnInit {
    * the operator rounds, never a value filled in for them: a sack's price is a wholesale decision.
    */
   protected readonly suggestedPrice = computed(() => {
-    const factor = parseDecimal(this.draft().factor);
+    const factor = this.baseFactor();
     const base = this.units()?.basePrice;
     return factor && base ? String(Math.round(factor * base)) : null;
   });
 
-  /** The form read back as a sentence: "1 kg = 3,5 kapoka · 857 Ar le kapoka". */
+  /**
+   * The form read back as a sentence: "1 kg = 3,5 kapoka · 857 Ar le kapoka", or for a unit
+   * written in another, "1 sac 25 kg = 25 kg = 87,5 kapoka".
+   */
   protected readonly preview = computed(() => {
     const draft = this.draft();
-    const factor = parseDecimal(draft.factor);
-    if (!draft.label.trim() || !factor || factor <= 0) {
+    const quantity = parseDecimal(draft.factor);
+    const factor = this.baseFactor();
+    if (!draft.label.trim() || !quantity || !factor) {
       return null;
     }
-    const sentence = `1 ${draft.label.trim()} = ${this.formatFactor(factor)} ${this.baseName()}`;
+    const written = draft.reference ? ` = ${this.formatFactor(quantity)} ${draft.reference}` : '';
+    const sentence = `1 ${draft.label.trim()}${written} = ${this.formatFactor(factor)} ${this.baseName()}`;
     const price = parseDecimal(draft.price);
     if (!price || price <= 0) {
       return sentence;
@@ -402,7 +469,8 @@ export class ProductUnitsDialogComponent implements OnInit {
     this.editingId.set(packaging.id);
     this.draft.set({
       label: packaging.label,
-      factor: this.formatFactor(packaging.factor),
+      factor: this.formatFactor(packaging.referenceQuantity ?? packaging.factor),
+      reference: packaging.reference ?? null,
       price: String(packaging.price),
       barcode: packaging.barcode ?? '',
     });

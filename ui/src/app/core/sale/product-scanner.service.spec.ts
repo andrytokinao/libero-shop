@@ -29,7 +29,7 @@ describe('ProductScanner', () => {
     name: 'Riz vrac',
     unit: 'kapoka',
     barcode: 'VRAC',
-    packagings: [{ id: 5, label: 'sac 50 kg', factor: 175, price: 145000, barcode: 'SAC' }],
+    packagings: [{ id: 5, label: 'sac 50 kg', factor: 175, price: 145000, barcode: 'SAC', reference: null, referenceQuantity: 175 }],
   };
   let cart: Cart;
   let scanner: ProductScanner;

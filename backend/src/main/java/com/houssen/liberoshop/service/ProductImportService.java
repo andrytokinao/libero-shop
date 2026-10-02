@@ -570,9 +570,28 @@ public class ProductImportService {
             known.getPackagings().forEach(p ->
                     units.putIfAbsent(CsvTable.normalise(p.getLabel()), new Unit(p.getLabel(), p.getFactor())));
         }
+        List<PackagingRequest> resolved = new ArrayList<>();
         if (declared != null) {
-            declared.packagings().forEach(p ->
-                    units.putIfAbsent(CsvTable.normalise(p.label()), new Unit(p.label(), p.factor())));
+            // The sheet's units, references first: each one's factor is its contenance times its
+            // reference's -- a sack of 25 kg is 25 × 3.5 kapoka -- with the shop's own units
+            // standing wherever the sheet names one of them.
+            for (PackagingRequest request : declared.packagings()) {
+                Unit reference = request.reference() == null ? units.get(CsvTable.normalise(base))
+                        : units.get(CsvTable.normalise(request.reference()));
+                if (request.reference() != null && reference == null) {
+                    draft.notes.add("Unite \"" + request.label() + "\" ignoree : son unite de reference \""
+                            + request.reference() + "\" n'existe pas pour ce produit.");
+                    continue;
+                }
+                BigDecimal multiplier = reference == null ? BigDecimal.ONE : reference.factor();
+                try {
+                    BigDecimal factor = PackagingRules.validFactor(request.factor().multiply(multiplier), base);
+                    units.putIfAbsent(CsvTable.normalise(request.label()), new Unit(request.label(), factor));
+                    resolved.add(request);
+                } catch (BusinessRuleException refused) {
+                    draft.notes.add("Unite \"" + request.label() + "\" ignoree : " + refused.getMessage());
+                }
+            }
         }
 
         Unit unit = draft.unit == null ? units.get(CsvTable.normalise(base)) : units.get(CsvTable.normalise(draft.unit));
@@ -614,7 +633,7 @@ public class ProductImportService {
                 draft.barcode = declared.baseBarcode();
             }
             draft.packagings.clear();
-            draft.packagings.addAll(declared.packagings());
+            draft.packagings.addAll(resolved);
         }
     }
 

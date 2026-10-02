@@ -104,7 +104,7 @@ describe('Cart', () => {
       return {
         ...product(1, stock, 900),
         unit: 'kapoka',
-        packagings: [{ id: 5, label: 'kg', factor: 3.5, price: 3000, barcode: null }],
+        packagings: [{ id: 5, label: 'kg', factor: 3.5, price: 3000, barcode: null, reference: null, referenceQuantity: 3.5 }],
       };
     }
     const kilo = unitsOf(vrac(0))[1];

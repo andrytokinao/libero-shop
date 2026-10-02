@@ -89,6 +89,7 @@ public final class ProductImportTemplate {
             ProductUnitSheet.Column.PRODUCT, "Produit",
             ProductUnitSheet.Column.UNIT, "Unité",
             ProductUnitSheet.Column.FACTOR, "Contenance",
+            ProductUnitSheet.Column.REFERENCE, "Unité de référence",
             ProductUnitSheet.Column.PRICE, "Prix",
             ProductUnitSheet.Column.BARCODE, "Code barres");
 
@@ -96,21 +97,27 @@ public final class ProductImportTemplate {
             ProductUnitSheet.Column.PRODUCT, "Le nom du produit, écrit comme dans la feuille Produits "
                     + "(ou comme au catalogue).",
             ProductUnitSheet.Column.UNIT, "Une unité dans laquelle le produit se vend ou se reçoit.",
-            ProductUnitSheet.Column.FACTOR, "Combien d'unités de base elle contient. L'unité de base "
-                    + "(celle du stock, la plus petite) a la contenance 1 : kapoka 1, kg 3,5, "
-                    + "tonne 3500. Au plus 3 décimales.",
+            ProductUnitSheet.Column.FACTOR, "Combien d'unités de référence elle contient, comme c'est "
+                    + "écrit dessus : 25 pour un sac de 25 kg écrit en kg. L'unité de base (celle du "
+                    + "stock, la plus petite) a la contenance 1 et pas de référence. Au plus 3 décimales.",
+            ProductUnitSheet.Column.REFERENCE, "L'unité dans laquelle la contenance est comptée : kg pour "
+                    + "« sac 25 kg = 25 kg ». Vide = l'unité de base. Le calcul en unité de base est "
+                    + "fait par l'application, et suit si la référence change.",
             ProductUnitSheet.Column.PRICE, "Prix de vente de cette unité entière, en Ariary : le prix "
                     + "du sac, pas du kilo.",
             ProductUnitSheet.Column.BARCODE, "Code EAN propre à cette unité (celui du sac). Facultatif.");
 
-    /** The units of the examples above: one row per unit, the base one at contenance 1. */
+    /**
+     * The units of the examples above: one row per unit, the base one at contenance 1, the others
+     * written as they are printed -- the sack is 50 kg, the tonne 1 000 kg -- never in kapoka.
+     */
     private static final List<Map<ProductUnitSheet.Column, Object>> UNIT_EXAMPLES = List.of(
-            unitRow("Riz vrac Makalioka", "kapoka", 1, 900, null),
-            unitRow("Riz vrac Makalioka", "kg", 3.5, 3000, null),
-            unitRow("Riz vrac Makalioka", "sac 50 kg", 175, 145000, "6111234567906"),
-            unitRow("Riz vrac Makalioka", "tonne", 3500, 2800000, null),
-            unitRow("Eau Vive 1,5L", "bouteille", 1, 2000, null),
-            unitRow("Eau Vive 1,5L", "pack de 6", 6, 11500, null));
+            unitRow("Riz vrac Makalioka", "kapoka", 1, null, 900, null),
+            unitRow("Riz vrac Makalioka", "kg", 3.5, "kapoka", 3000, null),
+            unitRow("Riz vrac Makalioka", "sac 50 kg", 50, "kg", 145000, "6111234567906"),
+            unitRow("Riz vrac Makalioka", "tonne", 1000, "kg", 2800000, null),
+            unitRow("Eau Vive 1,5L", "bouteille", 1, null, 2000, null),
+            unitRow("Eau Vive 1,5L", "pack de 6", 6, "bouteille", 11500, null));
 
     private ProductImportTemplate() {
     }
@@ -168,12 +175,13 @@ public final class ProductImportTemplate {
     }
 
     private static Map<ProductUnitSheet.Column, Object> unitRow(String product, String unit,
-                                                                Number factor, Number price,
-                                                                String barcode) {
+                                                                Number factor, String reference,
+                                                                Number price, String barcode) {
         Map<ProductUnitSheet.Column, Object> row = new LinkedHashMap<>();
         row.put(ProductUnitSheet.Column.PRODUCT, product);
         row.put(ProductUnitSheet.Column.UNIT, unit);
         row.put(ProductUnitSheet.Column.FACTOR, factor);
+        row.put(ProductUnitSheet.Column.REFERENCE, reference);
         row.put(ProductUnitSheet.Column.PRICE, price);
         row.put(ProductUnitSheet.Column.BARCODE, barcode);
         return row;

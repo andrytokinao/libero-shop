@@ -30,6 +30,7 @@ import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -194,5 +195,92 @@ class ProductUnitServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> service.remove(2L, id));
         assertEquals(0, service.remove(1L, id).packagings().size());
+    }
+
+    // ------------------------------------------------------------- reference units
+
+    private static PackagingRequest written(String label, String quantity, String reference) {
+        return new PackagingRequest(label, new BigDecimal(quantity), new BigDecimal("1000"), null, reference);
+    }
+
+    private ProductResponse.Packaging unit(ProductUnitsResponse units, String label) {
+        return units.packagings().stream().filter(p -> p.label().equals(label)).findFirst().orElseThrow();
+    }
+
+    @Test
+    @DisplayName("a 25 kg sack is written as 25 kg; the server works out 87.5 kapoka")
+    void chainsThroughTheReference() {
+        service.add(1L, request("kg", "3.5", "3000", null));
+
+        ProductResponse.Packaging sack = unit(service.add(1L, written("sac 25 kg", "25", "kg")), "sac 25 kg");
+
+        assertEquals(new BigDecimal("87.500"), sack.factor());
+        assertEquals("kg", sack.reference());
+        assertEquals(new BigDecimal("25.000"), sack.referenceQuantity());
+    }
+
+    @Test
+    @DisplayName("the base unit may be named as the reference, like leaving it blank")
+    void baseUnitByName() {
+        ProductResponse.Packaging kilo = unit(service.add(1L, written("kg", "3.5", "kapoka")), "kg");
+
+        assertEquals(new BigDecimal("3.500"), kilo.factor());
+        assertNull(kilo.reference());
+    }
+
+    @Test
+    @DisplayName("when the kilo is corrected, every unit written in kilos follows")
+    void followersFollow() {
+        Long kilo = service.add(1L, request("kg", "3.5", "3000", null)).packagings().getFirst().id();
+        service.add(1L, written("sac 25 kg", "25", "kg"));
+        service.add(1L, written("palette", "40", "sac 25 kg"));
+
+        ProductUnitsResponse units = service.update(1L, kilo, request("kg", "3.6", "3000", null));
+
+        assertEquals(new BigDecimal("90.000"), unit(units, "sac 25 kg").factor());
+        assertEquals(new BigDecimal("3600.000"), unit(units, "palette").factor(), "two links away");
+    }
+
+    @Test
+    @DisplayName("a correction that would leave a follower uncountable is refused, and nothing moves")
+    void followersAreCheckedFirst() {
+        Long kilo = service.add(1L, request("kg", "3.5", "3000", null)).packagings().getFirst().id();
+        service.add(1L, written("demi-kilo", "0.5", "kg"));
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> service.update(1L, kilo, request("kg", "3.333", "3000", null)));
+
+        assertTrue(refused.getMessage().startsWith("\"demi-kilo\""), refused.getMessage());
+        assertEquals(new BigDecimal("3.500"), table.stream()
+                .filter(p -> p.getLabel().equals("kg")).findFirst().orElseThrow().getFactor());
+    }
+
+    @Test
+    @DisplayName("a unit cannot be written in a unit that is itself written in it")
+    void refusesCycles() {
+        Long kilo = service.add(1L, request("kg", "3.5", "3000", null)).packagings().getFirst().id();
+        service.add(1L, written("sac 25 kg", "25", "kg"));
+
+        assertEquals("PACKAGING_REFERENCE_CYCLE", assertThrows(BusinessRuleException.class,
+                () -> service.update(1L, kilo, written("kg", "0.04", "sac 25 kg"))).code());
+    }
+
+    @Test
+    @DisplayName("an unknown reference is refused, naming it")
+    void refusesUnknownReference() {
+        assertEquals("PACKAGING_REFERENCE_UNKNOWN", assertThrows(BusinessRuleException.class,
+                () -> service.add(1L, written("sac 25 kg", "25", "kg"))).code());
+    }
+
+    @Test
+    @DisplayName("a unit others are written in cannot be removed until they are rewritten")
+    void referenceCannotBeRemoved() {
+        Long kilo = service.add(1L, request("kg", "3.5", "3000", null)).packagings().getFirst().id();
+        service.add(1L, written("sac 25 kg", "25", "kg"));
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class, () -> service.remove(1L, kilo));
+
+        assertEquals("PACKAGING_IS_REFERENCE", refused.code());
+        assertTrue(refused.getMessage().contains("sac 25 kg"));
     }
 }
