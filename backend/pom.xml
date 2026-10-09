@@ -143,6 +143,69 @@
 
     <build>
         <plugins>
+            <!-- Obfuscates our own classes (names only) in the thin jar, in the package
+                 phase, BEFORE spring-boot:repackage wraps them into the executable jar.
+                 Declared first so it runs before repackage within the same phase. The rules
+                 live in proguard.conf; dependencies are read as -libraryjars, never touched. -->
+            <plugin>
+                <groupId>com.github.wvengen</groupId>
+                <artifactId>proguard-maven-plugin</artifactId>
+                <version>2.7.0</version>
+                <executions>
+                    <execution>
+                        <id>obfuscate</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>proguard</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <proguardVersion>7.6.1</proguardVersion>
+                    <!-- Read the thin jar jar:jar just produced and overwrite it in place. -->
+                    <injar>${project.build.finalName}.jar</injar>
+                    <outjar>${project.build.finalName}.jar</outjar>
+                    <obfuscate>true</obfuscate>
+                    <!-- Already the project's main artifact; do not attach a second one. -->
+                    <attach>false</attach>
+                    <proguardInclude>${project.basedir}/proguard.conf</proguardInclude>
+                    <!-- The Java 21 runtime modules: ProGuard needs them to resolve the class
+                         hierarchy of everything we keep. ${java.home} is the JDK running Maven. -->
+                    <libs>
+                        <lib>${java.home}/jmods/java.base.jmod</lib>
+                        <lib>${java.home}/jmods/java.sql.jmod</lib>
+                        <lib>${java.home}/jmods/java.sql.rowset.jmod</lib>
+                        <lib>${java.home}/jmods/java.xml.jmod</lib>
+                        <lib>${java.home}/jmods/java.naming.jmod</lib>
+                        <lib>${java.home}/jmods/java.management.jmod</lib>
+                        <lib>${java.home}/jmods/java.management.rmi.jmod</lib>
+                        <lib>${java.home}/jmods/java.rmi.jmod</lib>
+                        <lib>${java.home}/jmods/java.desktop.jmod</lib>
+                        <lib>${java.home}/jmods/java.logging.jmod</lib>
+                        <lib>${java.home}/jmods/java.instrument.jmod</lib>
+                        <lib>${java.home}/jmods/java.net.http.jmod</lib>
+                        <lib>${java.home}/jmods/java.security.jgss.jmod</lib>
+                        <lib>${java.home}/jmods/java.security.sasl.jmod</lib>
+                        <lib>${java.home}/jmods/java.transaction.xa.jmod</lib>
+                        <lib>${java.home}/jmods/java.datatransfer.jmod</lib>
+                        <lib>${java.home}/jmods/java.prefs.jmod</lib>
+                        <lib>${java.home}/jmods/java.compiler.jmod</lib>
+                        <lib>${java.home}/jmods/java.scripting.jmod</lib>
+                        <lib>${java.home}/jmods/jdk.unsupported.jmod</lib>
+                        <lib>${java.home}/jmods/jdk.httpserver.jmod</lib>
+                        <lib>${java.home}/jmods/jdk.crypto.ec.jmod</lib>
+                    </libs>
+                </configuration>
+                <dependencies>
+                    <!-- ProGuard 7.6.x: supports the Java 21 class-file format. -->
+                    <dependency>
+                        <groupId>com.guardsquare</groupId>
+                        <artifactId>proguard-base</artifactId>
+                        <version>7.6.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

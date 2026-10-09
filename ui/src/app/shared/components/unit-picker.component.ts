@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { Product } from '../../core/models';
-import { Cart } from '../../core/sale/cart';
+import { Cart, CartLine } from '../../core/sale/cart';
 import { SaleUnit, formatQuantity, sameUnit, unitsOf } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 
@@ -12,7 +12,8 @@ export interface UnitPicked {
 
 /**
  * The units of one product tile, as buttons: "kapoka", "kg", "sac 50 kg" — a tap puts one of
- * that unit in the basket — then the "−" that takes one back off.
+ * that unit in the basket — each with its own "−" once some of it is in, so taking back a sack
+ * never takes a kilo instead.
  *
  * <p>A product sold in several units stays one tile on the sale screens; this is what opens
  * under it once tapped, so a cashier picks the rice first and how much of it second, without
@@ -29,32 +30,34 @@ export interface UnitPicked {
   template: `
     <div class="up" role="group" [attr.aria-label]="'Unités de ' + product.name">
       @for (unit of units(); track unit.packagingId) {
-        <button
-          type="button"
-          class="up-unit"
-          [class.in]="countOf(unit) > 0"
-          [disabled]="!fits(unit)"
-          [attr.aria-label]="'Ajouter 1 ' + (unit.label ?? 'unité') + ' de ' + product.name"
-          (click)="pick(unit)"
-        >
-          <span class="up-label">
-            {{ unit.label ?? 'unité' }}
-            @if (countOf(unit) > 0) {
-              <span class="up-count">{{ formatQuantity(countOf(unit)) }}</span>
-            }
-          </span>
-          <span class="up-price">{{ unit.price | ariary }}</span>
-        </button>
-      }
-      @if (cart.quantityOf(product) > 0) {
-        <button
-          type="button"
-          class="up-minus"
-          [attr.aria-label]="'Retirer un ' + product.name"
-          (click)="cart.change(product, -1)"
-        >
-          −
-        </button>
+        @let line = lineOf(unit);
+        <span class="up-cell" [class.in]="!!line">
+          <button
+            type="button"
+            class="up-unit"
+            [disabled]="!fits(unit)"
+            [attr.aria-label]="'Ajouter 1 ' + (unit.label ?? 'unité') + ' de ' + product.name"
+            (click)="pick(unit)"
+          >
+            <span class="up-label">
+              {{ unit.label ?? 'unité' }}
+              @if (line) {
+                <span class="up-count">{{ formatQuantity(line.quantity) }}</span>
+              }
+            </span>
+            <span class="up-price">{{ unit.price | ariary }}</span>
+          </button>
+          @if (line) {
+            <button
+              type="button"
+              class="up-minus"
+              [attr.aria-label]="'Retirer 1 ' + (unit.label ?? 'unité') + ' de ' + product.name"
+              (click)="cart.changeLine(line, -1, product)"
+            >
+              −
+            </button>
+          }
+        </span>
       }
     </div>
   `,
@@ -67,20 +70,16 @@ export interface UnitPicked {
       margin-top: 6px;
     }
 
-    .up-unit {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1px;
-      padding: 5px 9px;
+    /* A unit and, once some of it is in the basket, its own "−": one joined button pair. */
+    .up-cell {
+      display: inline-flex;
+      align-items: stretch;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
-      color: inherit;
-      font: inherit;
-      cursor: pointer;
+      overflow: hidden;
 
-      &:hover:not(:disabled) {
+      &:hover:has(.up-unit:not(:disabled)) {
         border-color: var(--brand);
       }
 
@@ -88,6 +87,19 @@ export interface UnitPicked {
         border-color: var(--brand);
         background: var(--brand-soft);
       }
+    }
+
+    .up-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+      padding: 5px 9px;
+      border: none;
+      background: none;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
 
       &:disabled {
         opacity: 0.45;
@@ -119,12 +131,10 @@ export interface UnitPicked {
     }
 
     .up-minus {
-      margin-left: auto;
-      align-self: center;
-      width: 32px;
-      height: 32px;
-      border: 1px solid var(--brand);
-      border-radius: 50%;
+      min-width: 32px;
+      padding: 0 8px;
+      border: none;
+      border-left: 1px solid var(--brand);
       background: var(--panel);
       color: var(--brand-dark);
       font: inherit;
@@ -157,9 +167,9 @@ export class UnitPickerComponent {
   });
   protected readonly formatQuantity = formatQuantity;
 
-  /** What the basket holds of this product in this unit. */
-  protected countOf(unit: SaleUnit): number {
-    return this.cart.linesOf(this.product.id).find((line) => sameUnit(line.unit, unit))?.quantity ?? 0;
+  /** The basket's line of this product in this unit — what its count and its "−" act on. */
+  protected lineOf(unit: SaleUnit): CartLine | undefined {
+    return this.cart.linesOf(this.product.id).find((line) => sameUnit(line.unit, unit));
   }
 
   /** Whether one more of this unit is still on the shelf: a sack needs 175 kapoka left, not one. */
