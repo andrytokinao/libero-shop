@@ -11,7 +11,12 @@ import {
 import { AuthService } from '../services/auth.service';
 import { isoDate } from '../utils/date.util';
 import { EntityStore } from './entity-store';
-import { QueryContext, matchesInvoiceQuery, newestInvoiceFirst } from './invoice-query';
+import {
+  HISTORY_DAYS,
+  QueryContext,
+  matchesInvoiceQuery,
+  newestInvoiceFirst,
+} from './invoice-query';
 import { LiveList, liveList } from './live-list';
 
 /**
@@ -82,6 +87,12 @@ export class InvoiceStore extends EntityStore<Invoice> {
   }
 
   private context(): QueryContext {
-    return { userId: this.auth.currentUser()?.id ?? null, today: isoDate(new Date()) };
+    const historyStart = new Date();
+    historyStart.setDate(historyStart.getDate() - HISTORY_DAYS);
+    return {
+      userId: this.auth.currentUser()?.id ?? null,
+      today: isoDate(new Date()),
+      historyStart: isoDate(historyStart),
+    };
   }
 }

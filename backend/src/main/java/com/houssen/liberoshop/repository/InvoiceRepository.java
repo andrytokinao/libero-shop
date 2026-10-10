@@ -34,6 +34,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
      * <p>The sale, its seller and its lines are fetched in the same round trip: the
      * responses always carry the line count and the total, and a lazy proxy would turn
      * each row into extra queries.
+     *
+     * @param openToo with a {@code from}: also the orders older than it that still wait for
+     *                someone -- {@code InvoiceAccess#isOpen}, said again here. An unpaid credit
+     *                does not leave the till's list because it has aged.
      */
     @Query("""
             select distinct i from Invoice i
@@ -44,7 +48,13 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             where (:sellerId is null or s.seller.id = :sellerId)
               and (:paymentStatus is null or i.paymentStatus = :paymentStatus)
               and (:deliveryStatus is null or i.deliveryStatus = :deliveryStatus)
-              and (:from is null or i.invoiceDate >= :from)
+              and (:from is null or i.invoiceDate >= :from
+                   or (:openToo = true and (
+                        i.paymentStatus in (com.houssen.liberoshop.entity.PaymentStatus.UNPAID,
+                                            com.houssen.liberoshop.entity.PaymentStatus.COLLECTED,
+                                            com.houssen.liberoshop.entity.PaymentStatus.REMITTED)
+                        or i.deliveryStatus in (com.houssen.liberoshop.entity.DeliveryStatus.PENDING,
+                                                com.houssen.liberoshop.entity.DeliveryStatus.IN_PROGRESS))))
               and (:to is null or i.invoiceDate < :to)
             order by i.invoiceDate desc, i.id desc
             """)
@@ -52,7 +62,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                          @Param("paymentStatus") PaymentStatus paymentStatus,
                          @Param("deliveryStatus") DeliveryStatus deliveryStatus,
                          @Param("from") LocalDateTime from,
-                         @Param("to") LocalDateTime to);
+                         @Param("to") LocalDateTime to,
+                         @Param("openToo") boolean openToo);
 
     @Query("""
             select i from Invoice i

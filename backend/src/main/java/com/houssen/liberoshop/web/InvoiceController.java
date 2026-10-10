@@ -9,6 +9,7 @@ import com.houssen.liberoshop.web.dto.DeliveryResponse;
 import jakarta.validation.Valid;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import com.houssen.liberoshop.web.dto.PayInvoiceRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,17 +40,26 @@ public class InvoiceController {
      * day's work for the till and the depot, their own for an order taker: see
      * {@code InvoiceAccess}.
      *
+     * <p>Without {@code todayOnly}, {@code from} or {@code to}, the answer is the last 30 days
+     * and whatever is still open: the history is asked for a period at a time.
+     *
      * @param mine when true, restrict to the invoices issued by the caller -- that is how
      *             a cash desk gets "my invoices" without being able to ask for someone else's
+     * @param from first day of the period, {@code yyyy-MM-dd}
+     * @param to   last day of the period, included
      */
     @GetMapping
     public List<InvoiceResponse> search(@RequestParam(defaultValue = "false") boolean mine,
                                         @RequestParam(required = false) PaymentStatus paymentStatus,
                                         @RequestParam(required = false) DeliveryStatus deliveryStatus,
                                         @RequestParam(defaultValue = "false") boolean todayOnly,
+                                        @RequestParam(required = false)
+                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                        @RequestParam(required = false)
+                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                                         @RequestParam(required = false) String search) {
         return invoiceService.searchFor(currentUser.require(), mine, paymentStatus, deliveryStatus,
-                todayOnly, search);
+                todayOnly, from, to, search);
     }
 
     /** 403 for an order that exists but is outside what the caller may read. */

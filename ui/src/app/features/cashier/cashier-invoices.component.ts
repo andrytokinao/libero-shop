@@ -4,14 +4,20 @@ import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
+import { Period, PeriodFilterComponent } from '../../shared/components/period-filter.component';
 
 @Component({
   selector: 'app-cashier-invoices',
   standalone: true,
-  imports: [FormsModule, InvoiceTableComponent],
+  imports: [FormsModule, InvoiceTableComponent, PeriodFilterComponent],
   template: `
     <div class="card">
-      <h2>Mes factures <small>recherchez par numéro ou nom du client</small></h2>
+      <h2>
+        Mes factures
+        <small>
+          {{ period().from || period().to ? 'période choisie' : '30 derniers jours et factures encore ouvertes' }}
+        </small>
+      </h2>
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:320px;">
           <label for="invoice-search">Recherche</label>
@@ -23,6 +29,7 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
             (ngModelChange)="onSearch($event)"
           />
         </div>
+        <app-period-filter name="invoice" (changed)="onPeriod($event)" />
       </div>
       <app-invoice-table
         [invoices]="invoices()"
@@ -44,9 +51,21 @@ export class CashierInvoicesComponent {
   protected readonly search = signal('');
   protected readonly printing = signal(false);
 
-  // Filtering happens on the server, so a long history never has to reach the browser.
-  protected readonly resource = this.invoiceStore.list(() => ({ mine: true, search: this.search() }));
+  protected readonly period = signal<Period>({});
+
+  // Filtering happens on the server, a period at a time, so a long history never has to reach
+  // the browser.
+  protected readonly resource = this.invoiceStore.list(() => ({
+    ...this.period(),
+    mine: true,
+    search: this.search(),
+  }));
   protected readonly invoices = this.resource.value;
+
+  protected onPeriod(value: Period): void {
+    this.period.set(value);
+    this.resource.reload();
+  }
 
   protected onSearch(value: string): void {
     this.search.set(value);

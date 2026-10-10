@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +48,12 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class InvoiceService {
+
+    /**
+     * How far back a list goes when the screen names no period. The browser says it again in
+     * {@code invoice-query.ts}, to place the orders pushed to it: keep the two in step.
+     */
+    public static final int HISTORY_DAYS = 30;
 
     private final InvoiceRepository invoices;
     private final PaymentRepository payments;
@@ -87,7 +94,7 @@ public class InvoiceService {
         LocalDateTime to = todayOnly ? calendar.startOfTomorrow() : null;
         String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
 
-        return withCashTrail(invoices.search(sellerId, paymentStatus, deliveryStatus, from, to).stream()
+        return withCashTrail(invoices.search(sellerId, paymentStatus, deliveryStatus, from, to, false).stream()
                 .filter(invoice -> needle.isEmpty() || matches(invoice, needle))
                 .toList());
     }
@@ -101,16 +108,40 @@ public class InvoiceService {
      * {@link InvoiceAccess}. An account asking for more than its share is not refused: it gets
      * its share, so the same screen serves the cashier and the administrator.
      *
-     * @param mine restrict to the orders {@code reader} sold
+     * <p>The history is read a period at a time, never whole: {@code todayOnly}, else the days
+     * {@code fromDay} to {@code toDay}, else the last {@link #HISTORY_DAYS} days together with
+     * every order still open, however old -- what the till has to collect and the depot to hand
+     * over is work to do, not history.
+     *
+     * @param mine    restrict to the orders {@code reader} sold
+     * @param fromDay first day of the period, or null for no lower bound when {@code toDay} is given
+     * @param toDay   last day of the period, included, or null for no upper bound
      */
     public List<InvoiceResponse> searchFor(UserApp reader, boolean mine, PaymentStatus paymentStatus,
-                                           DeliveryStatus deliveryStatus, boolean todayOnly, String search) {
-        LocalDateTime from = todayOnly ? calendar.startOfToday() : null;
-        LocalDateTime to = todayOnly ? calendar.startOfTomorrow() : null;
+                                           DeliveryStatus deliveryStatus, boolean todayOnly,
+                                           LocalDate fromDay, LocalDate toDay, String search) {
+        if (fromDay != null && toDay != null && toDay.isBefore(fromDay)) {
+            throw new BusinessRuleException("INVALID_PERIOD", "La date de fin est avant la date de debut.");
+        }
+        LocalDateTime from;
+        LocalDateTime to;
+        boolean openToo = false;
+        if (todayOnly) {
+            from = calendar.startOfToday();
+            to = calendar.startOfTomorrow();
+        } else if (fromDay != null || toDay != null) {
+            from = fromDay == null ? null : fromDay.atStartOfDay();
+            to = toDay == null ? null : toDay.plusDays(1).atStartOfDay();
+        } else {
+            from = calendar.startOfDaysAgo(HISTORY_DAYS);
+            to = null;
+            openToo = true;
+        }
         String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         Predicate<Invoice> visible = access.visibleTo(reader);
 
-        return withCashTrail(invoices.search(mine ? reader.getId() : null, paymentStatus, deliveryStatus, from, to)
+        return withCashTrail(invoices
+                .search(mine ? reader.getId() : null, paymentStatus, deliveryStatus, from, to, openToo)
                 .stream()
                 .filter(visible)
                 .filter(invoice -> needle.isEmpty() || matches(invoice, needle))

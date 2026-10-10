@@ -18,6 +18,12 @@ export interface InvoiceQuery {
   paymentStatus?: PaymentStatus;
   deliveryStatus?: DeliveryStatus;
   todayOnly?: boolean;
+  /**
+   * First and last day of the period, `yyyy-MM-dd`, both included. Without them nor `todayOnly`,
+   * the server answers the last 30 days and the orders still open.
+   */
+  from?: string;
+  to?: string;
   search?: string;
 }
 
@@ -38,6 +44,12 @@ export class InvoiceApi {
     }
     if (query.todayOnly) {
       params = params.set('todayOnly', true);
+    }
+    if (query.from) {
+      params = params.set('from', query.from);
+    }
+    if (query.to) {
+      params = params.set('to', query.to);
     }
     if (query.search?.trim()) {
       params = params.set('search', query.search.trim());

@@ -29,11 +29,13 @@ ou entretien.
 - [x] Lecture par rôle : factures, versements, fournisseurs, sorties de stock (partie 2, à commiter)
 - [x] Paiements et bordereaux en double refusés (partie 3)
 - [x] Un panier envoyé deux fois est une seule vente (partie 3)
-- [x] Sorties de stock lues par pages (partie 6, première tranche)
+- [x] Sorties de stock lues par pages (partie 6, première tranche) (`c9c65d8`)
+- [x] Factures lues par période : 30 derniers jours et factures encore ouvertes, ou dates choisies
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
-[`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md).
+[`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md),
+[`05-factures-par-periode.md`](05-factures-par-periode.md).
 
 ---
 
@@ -153,9 +155,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 - [x] **P2 — Sorties de stock chargées en entier.** Lues par pages de 50, recherche et totaux
   faits par la base. *Fait — voir `04-sorties-de-stock-par-pages.md`.*
-- [ ] **P2 — Factures chargées en entier**, puis filtrées en Java (`InvoiceController`).
-  *Piste :* borner l'historique par période (30 jours par défaut) plutôt que par pages, pour
-  garder justes les totaux et la mise à jour en direct.
+- [x] **P2 — Factures chargées en entier.** Lues par période : sans dates, les 30 derniers jours
+  et tout ce qui est encore ouvert ; sinon les dates choisies à l'écran.
+  *Fait — voir `05-factures-par-periode.md`.*
 - [ ] **P3 — Approvisionnements, corrections et produits chargés en entier** (`StockService`,
   `CatalogService`) : listes qui grossissent lentement.
 - [ ] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,

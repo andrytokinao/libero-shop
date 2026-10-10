@@ -4,6 +4,7 @@ import { InvoiceStore } from '../../core/store/invoice.store';
 import { DeliveryStatus, PaymentStatus } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { Period, PeriodFilterComponent } from '../../shared/components/period-filter.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 type InvoiceFilter =
@@ -34,7 +35,7 @@ const DELIVERY_FILTERS: Partial<Record<InvoiceFilter, DeliveryStatus>> = {
 @Component({
   selector: 'app-all-invoices',
   standalone: true,
-  imports: [FormsModule, KpiCardComponent, InvoiceTableComponent, AriaryPipe],
+  imports: [FormsModule, KpiCardComponent, InvoiceTableComponent, PeriodFilterComponent, AriaryPipe],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Factures affichées" [value]="invoices().length" />
@@ -47,7 +48,13 @@ const DELIVERY_FILTERS: Partial<Record<InvoiceFilter, DeliveryStatus>> = {
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Toutes les factures <small>tous vendeurs, toutes dates</small></h2>
+      <h2>
+        Toutes les factures
+        <small>
+          tous vendeurs —
+          {{ period().from || period().to ? 'période choisie' : '30 derniers jours et factures encore ouvertes' }}
+        </small>
+      </h2>
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:300px;">
           <label for="all-invoice-search">Recherche</label>
@@ -77,6 +84,7 @@ const DELIVERY_FILTERS: Partial<Record<InvoiceFilter, DeliveryStatus>> = {
             <option value="CANCELLED">Annulées</option>
           </select>
         </div>
+        <app-period-filter name="all-invoice" (changed)="onPeriod($event)" />
       </div>
       <app-invoice-table
         [invoices]="invoices()"
@@ -93,9 +101,12 @@ export class AllInvoicesComponent {
   protected readonly search = signal('');
   protected readonly filter = signal<InvoiceFilter>('ALL');
 
-  // Search and filter are both server-side; the UI only maps its labels onto the
+  protected readonly period = signal<Period>({});
+
+  // Search, filter and period are all server-side; the UI only maps its labels onto the
   // paymentStatus / deliveryStatus the API already understands.
   protected readonly resource = this.invoiceStore.list(() => ({
+    ...this.period(),
     search: this.search(),
     paymentStatus: PAYMENT_FILTERS[this.filter()],
     deliveryStatus: DELIVERY_FILTERS[this.filter()],
@@ -112,6 +123,11 @@ export class AllInvoicesComponent {
 
   protected onSearch(value: string): void {
     this.search.set(value);
+    this.resource.reload();
+  }
+
+  protected onPeriod(value: Period): void {
+    this.period.set(value);
     this.resource.reload();
   }
 
