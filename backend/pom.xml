@@ -481,13 +481,13 @@
                                     </environmentVariables>
                                     <arguments>
                                         <argument>--name</argument>
-                                        <argument>Liberty Shop</argument>
+                                        <argument>Libero Shop</argument>
                                         <argument>--app-version</argument>
                                         <argument>${installer.version}</argument>
                                         <argument>--vendor</argument>
-                                        <argument>Houssen</argument>
+                                        <argument>Kinga Digital</argument>
                                         <argument>--description</argument>
-                                        <argument>Liberty Shop - point de vente</argument>
+                                        <argument>Libero Shop - point de vente</argument>
                                         <argument>--input</argument>
                                         <argument>${jpackage.input}</argument>
                                         <argument>--main-jar</argument>

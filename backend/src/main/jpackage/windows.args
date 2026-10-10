@@ -3,9 +3,13 @@
 # location; data still goes under ${user.home} (see runtime.args).
 --type
 exe
+# Generated from src/main/resources/desktop/logo.png. Relative to backend/,
+# where Maven runs jpackage.
+--icon
+src/main/jpackage/libero-shop.ico
 --win-menu
 --win-menu-group
-"Liberty Shop"
+"Libero Shop"
 --win-shortcut
 --win-dir-chooser
 --win-per-user-install

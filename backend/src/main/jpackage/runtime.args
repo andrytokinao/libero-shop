@@ -16,3 +16,7 @@
 -Dliberoshop.license.path=${user.home}/.libertyshop/license/libero-shop.lic
 --java-options
 -Dliberoshop.mobile.downloads-dir=${user.home}/.libertyshop/downloads
+# The installed application has no window: show its state and its menu (open,
+# stop, restart, update, quit) in the notification area. See desktop.ServerTray.
+--java-options
+-Dliberoshop.tray.enabled=true

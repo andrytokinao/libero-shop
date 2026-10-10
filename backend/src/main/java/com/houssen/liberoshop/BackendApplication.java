@@ -2,6 +2,7 @@ package com.houssen.liberoshop;
 
 import com.houssen.liberoshop.backup.ApplicationRestarter;
 import com.houssen.liberoshop.backup.StartupDatabaseGuard;
+import com.houssen.liberoshop.desktop.ServerTray;
 import com.houssen.liberoshop.license.LicenseStartupListener;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -14,7 +15,11 @@ public class BackendApplication {
     public static void main(String[] args) {
         // A restore restarts the application in this process: it needs to know how.
         ApplicationRestarter.remember(BackendApplication::start, args);
-        start(args);
+        // Installed, the application has no window: the tray icon is how it is seen and stopped,
+        // so the tray starts the server and outlives it. Anywhere else, start as usual.
+        if (!ServerTray.launch(() -> start(args))) {
+            start(args);
+        }
     }
 
     static ConfigurableApplicationContext start(String[] args) {
@@ -28,6 +33,7 @@ public class BackendApplication {
         application.addListeners(new LicenseStartupListener());
         // Before the database is opened: carries out a pending restore, or copies the file.
         application.addListeners(new StartupDatabaseGuard());
+        ServerTray.watch(application);
         return application.run(args);
     }
 
