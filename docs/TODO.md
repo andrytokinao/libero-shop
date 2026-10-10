@@ -37,7 +37,8 @@ ou entretien.
 - [x] Le menu suit un changement de rôle sans recharger la page (`64014c6`)
 - [x] Sauvegardes hors du dossier public, qui ne sert plus que l'application Android (`5c5a702`)
 - [x] Mots de passe personnels : 8 caractères, « changer mon mot de passe », changement à la première connexion (`6148326`)
-- [x] Serveur derrière un reverse proxy : ralentissement par appareil, adresses locales gardées
+- [x] Serveur derrière un reverse proxy : ralentissement par appareil, adresses locales gardées (`2366854`)
+- [x] Statut de licence public réduit à l'état et aux jours restants
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -49,7 +50,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 [`09-menu-apres-un-changement-de-role.md`](09-menu-apres-un-changement-de-role.md),
 [`10-sauvegardes-hors-du-dossier-public.md`](10-sauvegardes-hors-du-dossier-public.md),
 [`11-mots-de-passe-personnels.md`](11-mots-de-passe-personnels.md),
-[`12-serveur-derriere-un-reverse-proxy.md`](12-serveur-derriere-un-reverse-proxy.md).
+[`12-serveur-derriere-un-reverse-proxy.md`](12-serveur-derriere-un-reverse-proxy.md),
+[`13-statut-de-licence-public-reduit.md`](13-statut-de-licence-public-reduit.md).
 
 ---
 
@@ -95,8 +97,10 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Ralentissement des connexions derrière un reverse proxy.** Avec un proxy déclaré
   (`liberoshop.security.trusted-proxies`), chaque appareil est compté pour lui-même.
   *Fait — voir `12-serveur-derriere-un-reverse-proxy.md`.*
-- [ ] **P3 — Statut de licence public trop bavard.** `/api/license/status` renvoie nom du client,
-  plan, échéance et empreinte machine sans connexion. Ne renvoyer que l'état et les jours restants.
+- [x] **P3 — Statut de licence public trop bavard.** Sans connexion, `/api/license/status` ne
+  donne plus que l'état, l'échéance et les jours restants. *Fait — voir
+  `13-statut-de-licence-public-reduit.md`.* **Décision attendue :** `/api/license/fingerprint` et
+  `/api/license/renewal-code` restent publics (choix d'origine) — les réserver au super-admin ?
 - [x] **P3 — Console H2 livrée dans le jar.** Retirée du jar de l'installeur.
   *Fait — voir `07-jar-de-production-sans-outils-de-developpement.md`.*
 - [x] **P3 — Adresses du réseau local visibles derrière un proxy.** Un visiteur d'Internet

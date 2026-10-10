@@ -3,6 +3,9 @@ package com.houssen.liberoshop.license;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,9 +37,24 @@ public class LicenseController {
         this.renewalService = renewalService;
     }
 
-    /** Current license state, for the renewal banner in the UI. */
+    /**
+     * Current license state, for the renewal banner in the UI. Public, so the login page can
+     * say the shop is read-only -- and for that reason narrowed to the state and the days left
+     * for whoever is not signed in.
+     */
     @GetMapping("/status")
     public LicenseStatusResponse status() {
+        LicenseStatusResponse full = fullStatus();
+        return isSignedIn() ? full : full.forStrangers();
+    }
+
+    /** A valid token was presented; an invalid one never reaches the controllers. */
+    private static boolean isSignedIn() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getPrincipal() instanceof Jwt;
+    }
+
+    private LicenseStatusResponse fullStatus() {
         return licenseService.findStatus()
                 .map(status -> new LicenseStatusResponse(
                         // An installation running on the trial is not a licensed one, and
@@ -134,6 +152,17 @@ public class LicenseController {
             String message,
             String machineFingerprint,
             String integrityWarning) {
+
+        /**
+         * What a caller who is not signed in is told: whether the shop can work and for how
+         * long, which the login page needs for its banner -- not whose licence it is, which
+         * plan, on which machine, nor what its records disagree about.
+         */
+        LicenseStatusResponse forStrangers() {
+            return new LicenseStatusResponse(licensed, state, writesAllowed, null, null, null, expiresOn,
+                    daysUntilExpiry, daysUntilReadOnly,
+                    "Connectez-vous pour voir le detail de la licence.", "", null);
+        }
     }
 
     /** The renewal code plus the wording shown next to it in the UI. */

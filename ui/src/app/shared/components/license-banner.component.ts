@@ -90,8 +90,10 @@ import { PublisherContactComponent } from './publisher-contact.component';
                     <span class="badge red">Refusées — lecture seule</span>
                   }
                 </dd>
+                @if (status.machineFingerprint) {
                 <dt>Empreinte du poste</dt>
                 <dd class="mono">{{ status.machineFingerprint }}</dd>
+                }
               </dl>
 
               <div class="lic-code">

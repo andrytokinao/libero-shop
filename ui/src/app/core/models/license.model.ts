@@ -54,6 +54,7 @@ export interface LicenseStatus {
   daysUntilReadOnly: number;
   /** Written in French by the server, for shop staff. Shown as-is. */
   message: string;
+  /** Empty for a caller who is not signed in: the detail of the licence is the account's. */
   machineFingerprint: string;
 }
 
@@ -65,6 +66,7 @@ export interface RenewalCodeResponse {
 
 /** GET /api/license/fingerprint — for an order dictated over the phone. */
 export interface FingerprintResponse {
+  /** Empty for a caller who is not signed in: the detail of the licence is the account's. */
   machineFingerprint: string;
   instructions: string[];
 }
