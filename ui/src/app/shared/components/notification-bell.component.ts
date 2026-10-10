@@ -111,7 +111,7 @@ import { IconComponent } from './icon.component';
       background: var(--line);
 
       &.online {
-        background: var(--brand);
+        background: var(--green);
       }
 
       &.connecting {

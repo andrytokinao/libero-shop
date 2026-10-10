@@ -166,8 +166,8 @@ let nextTipId = 0;
       padding: 12px;
       border-radius: 12px;
       background: var(--panel, #fff);
-      color: var(--ink, #152420);
-      border: 1px solid var(--line, #dfe6df);
+      color: var(--ink, #241a17);
+      border: 1px solid var(--line, #e7dfd9);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
       font-size: 13px;
       font-weight: 400;
@@ -193,12 +193,12 @@ let nextTipId = 0;
 
     .roles {
       font-size: 12px;
-      color: var(--brand-dark, #123625);
+      color: var(--brand-dark, #6e2817);
     }
 
     .off {
       font-size: 12px;
-      color: var(--red, #a13a2f);
+      color: var(--red, #b4233c);
       font-weight: 600;
     }
 

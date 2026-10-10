@@ -229,8 +229,8 @@ export interface CategoryAssignment {
   `,
   styles: `
     .asg-done {
-      background: var(--brand-soft);
-      color: var(--brand-dark);
+      background: var(--green-soft);
+      color: var(--green);
       border-radius: 7px;
       padding: 8px 11px;
       font-size: 12.5px;

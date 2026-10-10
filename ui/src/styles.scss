@@ -13,32 +13,37 @@
 :root {
   color-scheme: light;
 
-  --ink: #152420;
-  --ink-soft: #4d5f59;
-  --bg: #f2f5f1;
+  --ink: #241a17;
+  --ink-soft: #65564f;
+  --bg: #f6f3f0;
   --panel: #ffffff;
-  --line: #dfe6df;
+  --line: #e7dfd9;
   /* The fill of a quiet element: a grey badge, an empty bar. */
-  --muted-bg: #eceeec;
-  --brand: #22684a;
-  /* A dark green for text and accents on light surfaces — never a background: see --chrome-bg. */
-  --brand-dark: #123625;
-  --brand-soft: #e4f0e8;
+  --muted-bg: #eeeae7;
+  /* The logo's red-orange, toned down to a terracotta that can carry a whole screen. */
+  --brand: #a4472a;
+  /* A dark terracotta for text and accents on light surfaces — never a background: see --chrome-bg. */
+  --brand-dark: #6e2817;
+  --brand-soft: #f7e9e3;
   /* Text on --brand, --red, --chrome-bg: white in both themes. */
   --on-brand: #ffffff;
-  --amber: #b5750f;
+  /* "Done, paid, online": a state, not the brand — it stays green whatever the brand is. */
+  --green: #22684a;
+  --green-soft: #e4f0e8;
+  --amber: #a8730c;
   --amber-soft: #fbeed7;
-  --red: #a13a2f;
-  --red-soft: #fbe6e2;
+  /* A cold crimson, so an error never reads as the warm brand. */
+  --red: #b4233c;
+  --red-soft: #fbe4e8;
   --blue: #1f5c99;
   --blue-soft: #e3eefb;
 
-  /* The chrome — sidebar, phone bar, toasts — stays dark green whatever the theme. */
-  --chrome-bg: #123625;
-  --chrome-ink: #eef4ef;
-  --chrome-ink-soft: #a9c2b5;
-  --chrome-accent: #8fd6ac;
-  --chrome-field: #0f2a1e;
+  /* The chrome — sidebar, phone bar, toasts — stays dark brown whatever the theme. */
+  --chrome-bg: #321b15;
+  --chrome-ink: #f5eeeb;
+  --chrome-ink-soft: #c9b0a7;
+  --chrome-accent: #f0a877;
+  --chrome-field: #26130f;
 
   --side-w: 250px;
   --mobile-bar-h: 52px;
@@ -47,39 +52,43 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --ink: #e3ebe6;
-  --ink-soft: #9db1a8;
-  --bg: #0d1512;
-  --panel: #16211d;
-  --line: #2a3a33;
-  --muted-bg: #23302b;
-  /* Lighter than in the light theme, so a green button still reads on a dark page. */
-  --brand: #2e8a5f;
-  --brand-dark: #8fd6ac;
-  --brand-soft: #1b3428;
+  --ink: #ede6e2;
+  --ink-soft: #b3a39c;
+  --bg: #151110;
+  --panel: #201a18;
+  --line: #3a302c;
+  --muted-bg: #2e2623;
+  /* Lighter than in the light theme, so a brand button still reads on a dark page. */
+  --brand: #b85535;
+  --brand-dark: #f0a988;
+  --brand-soft: #3a211a;
+  --green: #8fd6ac;
+  --green-soft: #1b3428;
   --amber: #e2a63f;
   --amber-soft: #3a2c12;
-  --red: #ef8273;
-  --red-soft: #3d1f1b;
+  --red: #f2798a;
+  --red-soft: #3f1a21;
   --blue: #84b6ea;
   --blue-soft: #18283a;
 
-  --chrome-bg: #0a120f;
-  --chrome-field: #060c0a;
+  --chrome-bg: #100b0a;
+  --chrome-field: #090605;
 }
 
 /* Paper is white: an invoice prints in the light theme whatever the screen shows. */
 @media print {
   :root[data-theme='dark'] {
     color-scheme: light;
-    --ink: #152420;
-    --ink-soft: #4d5f59;
+    --ink: #241a17;
+    --ink-soft: #65564f;
     --bg: #ffffff;
     --panel: #ffffff;
-    --line: #dfe6df;
-    --muted-bg: #eceeec;
-    --brand-dark: #123625;
-    --brand-soft: #e4f0e8;
+    --line: #e7dfd9;
+    --muted-bg: #eeeae7;
+    --brand-dark: #6e2817;
+    --brand-soft: #f7e9e3;
+    --green: #22684a;
+    --green-soft: #e4f0e8;
   }
 }
 
@@ -239,7 +248,7 @@ nav.menu.menu-modules,
   font-weight: 600;
   font-size: 14.5px;
   line-height: 1.25;
-  box-shadow: 0 1px 2px rgba(21, 36, 32, 0.04);
+  box-shadow: 0 1px 2px rgba(36, 26, 23, 0.04);
 
   .ic {
     width: 46px;
@@ -722,8 +731,8 @@ tr:last-child td {
   font-weight: 600;
 
   &.green {
-    background: var(--brand-soft);
-    color: var(--brand-dark);
+    background: var(--green-soft);
+    color: var(--green);
   }
 
   &.amber {
@@ -1120,7 +1129,7 @@ tr.short td {
   font-size: 13px;
   background: var(--amber-soft);
   color: var(--amber);
-  border-bottom: 1px solid rgba(181, 117, 15, 0.25);
+  border-bottom: 1px solid rgba(168, 115, 12, 0.25);
 
   /* A filled disc with the glyph punched out in the banner's own background colour. */
   .ic {
@@ -1139,7 +1148,7 @@ tr.short td {
   &.danger {
     background: var(--red-soft);
     color: var(--red);
-    border-bottom-color: rgba(161, 58, 47, 0.25);
+    border-bottom-color: rgba(180, 35, 60, 0.25);
 
     .ic {
       background: var(--red);
@@ -1193,7 +1202,7 @@ tr.short td {
     background: var(--muted-bg);
 
     &.on.s-ok {
-      background: var(--brand);
+      background: var(--green);
     }
 
     &.on.s-warn {
@@ -1258,7 +1267,7 @@ tr.short td {
   word-break: break-all;
   background: var(--brand-soft);
   color: var(--brand-dark);
-  border: 1px solid rgba(34, 104, 74, 0.2);
+  border: 1px solid rgba(164, 71, 42, 0.2);
   border-radius: 8px;
   padding: 12px 14px;
   user-select: all;
@@ -1315,7 +1324,7 @@ textarea.field {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(21, 36, 32, 0.45);
+  background: rgba(36, 26, 23, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1769,7 +1778,7 @@ textarea.field {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(21, 36, 32, 0.5);
+    background: rgba(36, 26, 23, 0.5);
     z-index: 55;
   }
 

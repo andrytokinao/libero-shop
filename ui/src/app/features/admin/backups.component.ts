@@ -571,7 +571,7 @@ const RESTART_TIMEOUT_MS = 3 * 60_000;
     }
 
     .ok {
-      color: var(--brand-dark);
+      color: var(--green);
       font-weight: 600;
     }
 

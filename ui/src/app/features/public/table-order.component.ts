@@ -259,7 +259,7 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
     :host {
       display: block;
       min-height: 100vh;
-      background: var(--bg, #f3f5f2);
+      background: var(--bg, #f6f3f0);
     }
 
     .units {
@@ -364,8 +364,8 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
       color: var(--amber);
 
       &.served {
-        background: var(--brand-soft);
-        color: var(--brand-dark);
+        background: var(--green-soft);
+        color: var(--green);
       }
 
       &.cancelled {

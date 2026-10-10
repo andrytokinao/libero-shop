@@ -146,8 +146,8 @@ import { ToastService } from '../../core/services/toast.service';
     }
 
     .setup-ok {
-      color: var(--brand);
-      background: var(--brand-soft);
+      color: var(--green);
+      background: var(--green-soft);
       border-radius: 8px;
       padding: 8px 10px;
       font-size: 12.5px;

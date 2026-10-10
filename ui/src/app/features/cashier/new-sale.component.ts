@@ -161,7 +161,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
         position: fixed;
         inset: 0;
         z-index: 59;
-        background: rgba(21, 36, 32, 0.45);
+        background: rgba(36, 26, 23, 0.45);
       }
 
       .sheet-close {
