@@ -42,7 +42,9 @@ public class StockController {
         return stockService.findSupplies();
     }
 
+    /** Everything that left the stock, with its value: the same readers as what came in. */
     @GetMapping("/outputs")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<StockOutputResponse> outputs(@RequestParam(required = false) String search) {
         return stockService.findOutputs(search);
     }

@@ -20,8 +20,9 @@ import java.util.List;
 /**
  * The shop's wholesalers.
  *
- * <p>Read by everyone -- the depot books receipts against this list, and a product import names
- * one on the whole file -- and written by the roles that run the depot.
+ * <p>Read and written by the roles that run the depot: the list is what receipts are booked
+ * against and what a product import names, and it says how much was bought from whom -- which
+ * is not the counter's business any more than the purchase prices are.
  *
  * <p>Writing is only possible through an import today. That is a deliberate stopping point and
  * not a permanent one: the list had no write path at all, which left an installation with the
@@ -43,6 +44,7 @@ public class SupplierController {
 
     /** Each one carrying how much has actually been received from them. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<SupplierResponse> suppliers() {
         return catalogService.findSuppliers();
     }

@@ -9,8 +9,21 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    /**
+     * The orders whose money this account handled: taken from the customer, or counted at the
+     * till when a colleague brought it. What keeps an order readable by the cashier who settled
+     * it once it is neither theirs nor today's -- see {@code InvoiceAccess}.
+     */
+    @Query("""
+            select distinct p.invoice.id from Payment p
+              left join p.cashRemittance r
+            where p.collectedBy.id = :userId or r.confirmedBy.id = :userId
+            """)
+    Set<Long> findInvoiceIdsWhoseCashPassedBy(@Param("userId") Long userId);
 
     /**
      * What a depot agent has collected on hand-over and not brought to the desk yet.

@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.security;
 
+import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +24,7 @@ public class AppUserDetails implements UserDetails {
     private final String username;
     private final String password;
     private final boolean enabled;
+    private final int sessionVersion;
     private final List<GrantedAuthority> authorities;
 
     public AppUserDetails(UserApp user) {
@@ -30,14 +32,26 @@ public class AppUserDetails implements UserDetails {
         this.username = user.getUsername();
         this.password = user.getPassword();
         this.enabled = user.isEnabled();
-        // One authority per role the account holds, so hasRole('CASHIER') answers true for
-        // the owner of a small grocery who is also the depot. "ROLE_" prefix is what
-        // hasRole(...) and @PreAuthorize expect. Sorted, so the token a login mints does not
-        // depend on the order Hibernate happened to read the rows in.
-        this.authorities = user.getRoles().stream()
+        this.sessionVersion = user.sessionVersion();
+        this.authorities = authoritiesOf(user.getRoles());
+    }
+
+    /**
+     * One authority per role the account holds, so hasRole('CASHIER') answers true for the
+     * owner of a small grocery who is also the depot. "ROLE_" prefix is what hasRole(...) and
+     * {@code @PreAuthorize} expect. Sorted, so the answer does not depend on the order Hibernate
+     * happened to read the rows in.
+     */
+    public static List<GrantedAuthority> authoritiesOf(Collection<RoleApp> roles) {
+        return roles.stream()
                 .sorted()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.name()))
                 .toList();
+    }
+
+    /** The account's {@link UserApp#sessionVersion()} when it signed in. */
+    public int getSessionVersion() {
+        return sessionVersion;
     }
 
     public Long getId() {

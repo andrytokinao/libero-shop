@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.entity.RemittanceStatus;
+import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.RemittanceService;
 import com.houssen.liberoshop.web.dto.CashRemittanceResponse;
@@ -36,11 +37,18 @@ public class RemittanceController {
         this.currentUser = currentUser;
     }
 
-    /** @param mine restrict to the slips the caller submitted */
+    /**
+     * The slips. The till counts every one of them, so the cashier and the super-admin read them
+     * all; anyone else reads the ones they handed in, whatever they ask for -- what a colleague
+     * brought to the desk is not theirs to follow.
+     *
+     * @param mine restrict to the slips the caller submitted
+     */
     @GetMapping
     public List<CashRemittanceResponse> search(@RequestParam(required = false) RemittanceStatus status,
                                                @RequestParam(defaultValue = "false") boolean mine) {
-        Long submittedById = mine ? currentUser.require().getId() : null;
+        boolean readsAll = currentUser.hasRole(RoleApp.CASHIER) || currentUser.hasRole(RoleApp.SUPER_ADMIN);
+        Long submittedById = mine || !readsAll ? currentUser.require().getId() : null;
         return remittanceService.search(status, submittedById);
     }
 

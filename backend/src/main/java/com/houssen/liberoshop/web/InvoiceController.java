@@ -34,6 +34,10 @@ public class InvoiceController {
     }
 
     /**
+     * The orders the caller may read -- all of them for whoever runs the shop or the stock, the
+     * day's work for the till and the depot, their own for an order taker: see
+     * {@code InvoiceAccess}.
+     *
      * @param mine when true, restrict to the invoices issued by the caller -- that is how
      *             a cash desk gets "my invoices" without being able to ask for someone else's
      */
@@ -43,13 +47,14 @@ public class InvoiceController {
                                         @RequestParam(required = false) DeliveryStatus deliveryStatus,
                                         @RequestParam(defaultValue = "false") boolean todayOnly,
                                         @RequestParam(required = false) String search) {
-        Long sellerId = mine ? currentUser.require().getId() : null;
-        return invoiceService.search(sellerId, paymentStatus, deliveryStatus, todayOnly, search);
+        return invoiceService.searchFor(currentUser.require(), mine, paymentStatus, deliveryStatus,
+                todayOnly, search);
     }
 
+    /** 403 for an order that exists but is outside what the caller may read. */
     @GetMapping("/{id}")
     public InvoiceResponse byId(@PathVariable Long id) {
-        return invoiceService.findById(id);
+        return invoiceService.findByIdFor(id, currentUser.require());
     }
 
     /**

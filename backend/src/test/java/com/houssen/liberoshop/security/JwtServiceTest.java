@@ -4,8 +4,9 @@ import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,6 +14,8 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import javax.crypto.SecretKey;
 import java.time.Duration;
@@ -29,6 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The token is the whole of the authentication now, so what matters is not that a valid
  * one is accepted -- a broken signature would fail every test in the suite -- but that the
  * three ways of presenting an invalid one are refused.
+ *
+ * <p>What a good token is worth -- which roles, whether its session is still open -- is read
+ * from the account, not from the token: that is {@code AccessRightsTest}'s subject.
  */
 class JwtServiceTest {
 
@@ -38,38 +44,56 @@ class JwtServiceTest {
 
     private final JwtConfiguration configuration = new JwtConfiguration();
 
+    /** Stands for the account lookup: these tests are about the signature, not the account. */
+    private static final Converter<Jwt, AbstractAuthenticationToken> ANY_ACCOUNT = JwtAuthenticationToken::new;
+
     @Test
-    @DisplayName("carries the account id and the role, and reads them back")
+    @DisplayName("carries the account id and its session number, and reads them back")
     void roundTripsTheActor() {
         JwtService service = serviceWith(SECRET, ISSUER);
 
-        String token = service.issue(detailsOf(42L, "fatima", RoleApp.CASHIER)).value();
+        UserApp fatima = accountOf(42L, "fatima", RoleApp.CASHIER);
+        // Her password was changed twice: her tokens are of the third generation.
+        fatima.revokeSessions();
+        fatima.revokeSessions();
+        String token = service.issue(new AppUserDetails(fatima)).value();
         Authentication authentication = service.authenticationOf(token);
 
         Jwt decoded = (Jwt) authentication.getPrincipal();
         assertEquals("fatima", decoded.getSubject());
         // A Number, not a Long: what JSON round-trips is a number of unspecified width,
-        // which is exactly why CurrentUser reads it through Number.longValue().
-        assertEquals(42L, ((Number) decoded.getClaim(JwtService.CLAIM_USER_ID)).longValue());
-        // Contains rather than equals: Spring Security adds FACTOR_BEARER of its own,
-        // saying how the caller authenticated. AuthController drops it before the
-        // session reaches the client -- see the filter there.
-        assertTrue(authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).toList().contains("ROLE_CASHIER"));
+        // which is exactly why the id is read through Number.longValue().
+        assertEquals(42L, JwtService.userIdOf(decoded));
+        assertEquals(2, JwtService.sessionVersionOf(decoded));
+        // Named, so that one device can be signed out without the others.
+        assertTrue(decoded.getId() != null && !decoded.getId().isBlank());
     }
 
     @Test
-    @DisplayName("carries every role of an account that holds several")
-    void carriesEveryRoleOfTheAccount() {
+    @DisplayName("carries no role: what an account may do is read from the account")
+    void carriesNoRole() {
         JwtService service = serviceWith(SECRET, ISSUER);
 
-        // The one-person grocery: she sells at the desk and hands the goods over herself.
         String token = service.issue(detailsOf(7L, "soa", RoleApp.CASHIER, RoleApp.DEPOT_AGENT)).value();
-        List<String> authorities = service.authenticationOf(token).getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
+        Jwt decoded = (Jwt) service.authenticationOf(token).getPrincipal();
 
-        assertTrue(authorities.containsAll(List.of("ROLE_CASHIER", "ROLE_DEPOT_AGENT")));
+        assertTrue(decoded.getClaims().keySet().stream().noneMatch(claim -> claim.contains("auth")),
+                "a role written in the token would outlive its removal from the account");
+    }
+
+    @Test
+    @DisplayName("reports a session closed since as a token that opens nothing")
+    void reportsAClosedSessionAsABadToken() {
+        JwtProperties properties = propertiesWith(SECRET, ISSUER);
+        SecretKey key = configuration.jwtSigningKey(properties);
+        JwtService service = new JwtService(configuration.jwtEncoder(key), configuration.jwtDecoder(key, properties),
+                token -> {
+                    throw new InvalidBearerTokenException("Cette session a ete fermee.");
+                }, properties);
+
+        String token = service.issue(detailsOf(42L, "fatima", RoleApp.CASHIER)).value();
+        // The one exception the WebSocket handshake catches, whatever closed the session.
+        assertThrows(JwtException.class, () -> service.authenticationOf(token));
     }
 
     @Test
@@ -110,14 +134,13 @@ class JwtServiceTest {
                 .expiresAt(expiry)
                 .subject("fatima")
                 .claim(JwtService.CLAIM_USER_ID, 42L)
-                .claim(JwtService.CLAIM_AUTHORITIES, List.of("ROLE_CASHIER"))
                 .build();
         String expired = encoder
                 .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
 
         JwtService service = new JwtService(encoder, configuration.jwtDecoder(key, properties),
-                configuration.jwtAuthenticationConverter(), properties);
+                ANY_ACCOUNT, properties);
         assertThrows(JwtException.class, () -> service.authenticationOf(expired));
     }
 
@@ -152,7 +175,7 @@ class JwtServiceTest {
         JwtProperties properties = propertiesWith(secret, issuer);
         SecretKey key = configuration.jwtSigningKey(properties);
         return new JwtService(configuration.jwtEncoder(key), configuration.jwtDecoder(key, properties),
-                configuration.jwtAuthenticationConverter(), properties);
+                ANY_ACCOUNT, properties);
     }
 
     private static JwtProperties propertiesWith(String secret, String issuer) {
@@ -160,13 +183,17 @@ class JwtServiceTest {
     }
 
     private static AppUserDetails detailsOf(long id, String username, RoleApp... roles) {
-        return new AppUserDetails(UserApp.builder()
+        return new AppUserDetails(accountOf(id, username, roles));
+    }
+
+    private static UserApp accountOf(long id, String username, RoleApp... roles) {
+        return UserApp.builder()
                 .id(id)
                 .fullName("Compte de test")
                 .username(username)
                 .password("{bcrypt}ignore")
                 .roles(EnumSet.copyOf(List.of(roles)))
                 .enabled(true)
-                .build());
+                .build();
     }
 }

@@ -14,8 +14,6 @@ import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -26,6 +24,10 @@ import java.security.SecureRandom;
 
 /**
  * Everything needed to mint and to read an access token.
+ *
+ * <p>What a token is worth once its signature holds -- which account, with which roles, and
+ * whether its session is still open -- is not decided here but by
+ * {@link AccountAuthenticationConverter}, from the database.
  *
  * <p>Symmetric signing (HS256): the same application issues the tokens and verifies them,
  * so a key pair would only add a public key nobody reads. Moving to RS256 is a matter of
@@ -80,24 +82,5 @@ public class JwtConfiguration {
                 new JwtTimestampValidator(),
                 new JwtIssuerValidator(properties.issuer())));
         return decoder;
-    }
-
-    /**
-     * Reads the roles straight off the {@code authorities} claim.
-     *
-     * <p>The claim already carries the {@code ROLE_} prefix, so the prefix the converter
-     * would otherwise add is cleared: the string in the token is the string
-     * {@code hasRole(...)} and {@code @PreAuthorize} compare against, with no translation
-     * step in between to get wrong.
-     */
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-        authorities.setAuthoritiesClaimName(JwtService.CLAIM_AUTHORITIES);
-        authorities.setAuthorityPrefix("");
-
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authorities);
-        return converter;
     }
 }

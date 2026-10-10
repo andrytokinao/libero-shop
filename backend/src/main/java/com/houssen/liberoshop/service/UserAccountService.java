@@ -32,9 +32,10 @@ import java.util.stream.Collectors;
  * <p>An account is created, renamed, given or taken roles, switched off, switched back on
  * and given a new password -- it is never deleted. Every sale, payment and hand-over is
  * signed by an account, and a shop that cannot say who sold what has lost the point of
- * keeping the trail. Disabling is the way out instead: {@code CurrentUser} re-reads the row
- * on every call and refuses a disabled account, so a leaving employee stops acting in the
- * shop's name even while the token in their browser is still cryptographically valid.
+ * keeping the trail. Disabling is the way out instead: the account is re-read on every
+ * request and a disabled one is refused, so a leaving employee stops acting in the shop's
+ * name -- and reading its figures -- even while the token in their browser is still
+ * cryptographically valid.
  *
  * <p>The login handle is fixed once created. The history refers to an account by its id, so
  * renaming the handle would technically break nothing -- but it is how colleagues name each
@@ -125,15 +126,10 @@ public class UserAccountService {
     /**
      * Corrects the person's name and replaces the set of jobs the account may do.
      *
-     * <p>A role change takes effect at the holder's next sign-in, not at once, and that is
-     * worth knowing before relying on it: the authorities {@code @PreAuthorize} tests are
-     * read off the token the person is already carrying, not off this row. A role taken away
-     * here still opens its screens until that token runs out -- see
-     * {@code liberoshop.security.jwt.ttl}, twelve hours by default.
-     *
-     * <p>So this is how duties are reorganised, not how someone is stopped. To cut an access
-     * now, {@link #setEnabled} is the operation: the account's state is re-read from the row
-     * on every call that acts in a user's name, so it bites on the next request.
+     * <p>A role change takes effect on the holder's next request: the authorities
+     * {@code @PreAuthorize} tests are read from this row each time, not from the token the
+     * person is carrying. Their screen follows at its next reload -- until then a menu entry
+     * may still show, and answer "votre role ne vous autorise pas".
      *
      * @param actor the signed-in super-admin doing the edit, taken from the session
      */
@@ -190,14 +186,16 @@ public class UserAccountService {
     /**
      * Hands a new password to an account.
      *
-     * <p>A session already open survives it: the token carries no password, and nothing here
-     * revokes one. Setting a password is how someone is let back in, not how they are cut
-     * off -- for that, {@link #setEnabled} is the operation, and it takes effect at once.
+     * <p>Every session the account has open ends with it: a password is changed because the
+     * old one is known to someone it should not be, and whoever signed in with it must not
+     * stay in. The holder signs in again with the new one -- including the super-admin who
+     * changes their own.
      */
     @Transactional
     public UserResponse setPassword(Long id, SetPasswordRequest request) {
         UserApp user = require(id);
         user.setPassword(passwordEncoder.encode(request.password()));
+        user.revokeSessions();
         return UserResponse.of(user);
     }
 

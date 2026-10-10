@@ -21,6 +21,7 @@ import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -53,10 +55,13 @@ public class InvoiceService {
     private final ShopSettingsService settings;
     private final ProductRepository products;
     private final StockMovementRepository movements;
+    private final InvoiceAccess access;
 
     public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
                           ApplicationEventPublisher events, ShopSettingsService settings,
-                          ProductRepository products, StockMovementRepository movements) {
+                          ProductRepository products, StockMovementRepository movements,
+                          InvoiceAccess access) {
+        this.access = access;
         this.invoices = invoices;
         this.payments = payments;
         this.calendar = calendar;
@@ -67,7 +72,8 @@ public class InvoiceService {
     }
 
     /**
-     * The one query behind every invoice list in the UI.
+     * Every invoice answering the filters, whoever asks: for the figures the server computes
+     * itself. What a screen lists goes through {@link #searchFor}.
      *
      * @param sellerId       restrict to one seller, or null for all
      * @param paymentStatus  null for both
@@ -88,6 +94,40 @@ public class InvoiceService {
 
     public InvoiceResponse findById(Long id) {
         return withCashTrail(List.of(load(id))).getFirst();
+    }
+
+    /**
+     * The list a screen asks for, narrowed to what {@code reader} may read -- see
+     * {@link InvoiceAccess}. An account asking for more than its share is not refused: it gets
+     * its share, so the same screen serves the cashier and the administrator.
+     *
+     * @param mine restrict to the orders {@code reader} sold
+     */
+    public List<InvoiceResponse> searchFor(UserApp reader, boolean mine, PaymentStatus paymentStatus,
+                                           DeliveryStatus deliveryStatus, boolean todayOnly, String search) {
+        LocalDateTime from = todayOnly ? calendar.startOfToday() : null;
+        LocalDateTime to = todayOnly ? calendar.startOfTomorrow() : null;
+        String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        Predicate<Invoice> visible = access.visibleTo(reader);
+
+        return withCashTrail(invoices.search(mine ? reader.getId() : null, paymentStatus, deliveryStatus, from, to)
+                .stream()
+                .filter(visible)
+                .filter(invoice -> needle.isEmpty() || matches(invoice, needle))
+                .toList());
+    }
+
+    /**
+     * One order, for {@code reader}.
+     *
+     * @throws AccessDeniedException when the order exists but is not theirs to read
+     */
+    public InvoiceResponse findByIdFor(Long id, UserApp reader) {
+        Invoice invoice = load(id);
+        if (!access.visibleTo(reader).test(invoice)) {
+            throw new AccessDeniedException("Cette facture n'est pas consultable avec votre role.");
+        }
+        return withCashTrail(List.of(invoice)).getFirst();
     }
 
     /**

@@ -17,7 +17,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -32,13 +31,13 @@ import java.util.List;
  * and the client sends it back in the {@code Authorization} header on every call. Nothing
  * about the caller is kept on the server -- no session, no token table -- so any instance
  * can answer any request, and a restart does not sign anyone out (as long as the signing
- * secret is configured rather than generated).
+ * secret is kept rather than generated). The one thing remembered is the tokens signed out
+ * before their time -- see {@link SessionRevocation}.
  *
- * <p>The price of that is revocation: a token stays valid until it expires, so disabling
- * an account does not cut the current holder off mid-request. {@link CurrentUser} closes
- * the gap for anything that acts in a user's name by re-reading the account and refusing a
- * disabled one; read-only calls keep working until the token runs out. That is the trade
- * this application accepts -- see {@code liberoshop.security.jwt.ttl}.
+ * <p>A signed token cannot be taken back by itself, so the token is only trusted for who it
+ * names: {@link AccountAuthenticationConverter} re-reads the account on every request. A
+ * disabled account, a role taken away, a changed password or a device signed out are refused
+ * on the next call, reads included, rather than when the token runs out.
  *
  * <p>CSRF is off, and that follows from the above rather than being a shortcut: the
  * identity no longer travels in a cookie the browser attaches by itself, and a cross-site
@@ -64,7 +63,7 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    RestAuthenticationHandlers restHandlers,
                                                    JwtDecoder jwtDecoder,
-                                                   JwtAuthenticationConverter jwtAuthenticationConverter)
+                                                   AccountAuthenticationConverter jwtAuthenticationConverter)
             throws Exception {
         http
                 .cors(Customizer.withDefaults())
@@ -72,8 +71,8 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                        // Answers 204 whatever the token's state: signing out must work
-                        // even once the token the client is holding has expired.
+                        // Open, so a client holding no token can still call it; with a
+                        // token still good, that token is closed -- see AuthController.
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()

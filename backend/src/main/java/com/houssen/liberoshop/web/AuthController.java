@@ -6,6 +6,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.security.JwtService.IssuedToken;
 import com.houssen.liberoshop.security.LoginThrottle;
+import com.houssen.liberoshop.security.SessionRevocation;
 import com.houssen.liberoshop.service.RolePolicy;
 import com.houssen.liberoshop.service.ShopSettingsService;
 import com.houssen.liberoshop.web.dto.LoginRequest;
@@ -48,11 +49,13 @@ public class AuthController {
     private final CurrentUser currentUser;
     private final ShopSettingsService settingsService;
     private final LoginThrottle loginThrottle;
+    private final SessionRevocation sessionRevocation;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           CurrentUser currentUser, ShopSettingsService settingsService,
-                          LoginThrottle loginThrottle) {
+                          LoginThrottle loginThrottle, SessionRevocation sessionRevocation) {
         this.loginThrottle = loginThrottle;
+        this.sessionRevocation = sessionRevocation;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.currentUser = currentUser;
@@ -102,13 +105,19 @@ public class AuthController {
     }
 
     /**
-     * Signing out is the client dropping its token; nothing is held here to invalidate.
+     * Signs this device out: the token it sent is refused from now on, so a copy of it -- in a
+     * browser's storage, in a phone's backup -- opens nothing any more. The account's sessions
+     * on other devices stand.
      *
-     * <p>The endpoint is kept all the same so the front end has one place to call and one
-     * thing to change should a revocation list ever be added.
+     * <p>Called without a token it simply answers 204; called with one that is no longer good,
+     * the resource server answers 401 before this method, and the client drops it all the same.
      */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt token) {
+            sessionRevocation.revoke(token);
+        }
         SecurityContextHolder.clearContext();
         return ResponseEntity.noContent().build();
     }

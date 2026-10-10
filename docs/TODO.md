@@ -24,6 +24,9 @@ ou entretien.
 - [x] Données de démo désactivées par défaut, profil `dev` (partie 1, à commiter)
 - [x] Clé de signature des sessions conservée entre deux démarrages (partie 1, à commiter)
 - [x] Écran « Première utilisation » : création du premier administrateur (partie 1, à commiter)
+- [x] Compte relu en base à chaque requête : désactivation et rôles immédiats (partie 2, à commiter)
+- [x] Fermeture des sessions : changement de mot de passe et déconnexion (partie 2, à commiter)
+- [x] Lecture par rôle : factures, versements, fournisseurs, sorties de stock (partie 2, à commiter)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
 
@@ -46,16 +49,21 @@ Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
   *Piste :* procédure de secours utilisable seulement depuis l'ordinateur du serveur.
 - [ ] **P3 — `application-dev.properties` embarqué dans le jar.** À exclure du build de
   production.
-- [ ] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Les rôles sont lus dans le
-  jeton (`security/JwtConfiguration.java`), pas en base ; `UserController` et `BackupController`
-  ne relisent pas le compte.
-  *Piste :* recharger le compte (actif + rôles) à chaque requête.
-- [ ] **P1 — Aucune révocation de jeton.** La déconnexion ne fait rien côté serveur, un changement
-  de mot de passe laisse les sessions ouvertes.
-  *Piste :* un numéro `tokenVersion` sur le compte, vérifié à chaque requête.
-- [ ] **P1 — Tout rôle connecté lit tout.** Pas de contrôle de rôle sur `GET /api/invoices`,
-  `/api/remittances`, `/api/suppliers`, `/api/stock/outputs`.
-  *Piste :* règles par rôle, ou filtre « mes ventes » imposé aux non-responsables.
+- [x] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Le compte (actif + rôles)
+  est relu en base à chaque requête.
+  *Fait — voir `REALISATION.md`, partie 2.*
+- [x] **P1 — Aucune révocation de jeton.** Un changement de mot de passe ferme toutes les
+  sessions du compte, la déconnexion ferme celle de l'appareil.
+  *Fait — voir `REALISATION.md`, partie 2.*
+- [x] **P1 — Tout rôle connecté lit tout.** Factures, versements, fournisseurs et sorties de
+  stock sont limités selon le rôle.
+  *Fait — voir `REALISATION.md`, partie 2.*
+- [ ] **P2 — Les notifications en direct ignorent les rôles.** Le canal WebSocket `orders` envoie
+  chaque commande modifiée à tous les comptes connectés, et une connexion ouverte n'est pas
+  coupée quand le compte est désactivé ou la session fermée.
+  *Piste :* un canal par périmètre ; fermer les connexions d'un compte révoqué.
+- [ ] **P3 — Menu après un changement de rôle.** L'écran déjà ouvert garde l'ancien menu jusqu'au
+  rechargement de la page.
 - [ ] **P2 — Dossier de sauvegarde libre.** `BackupService` accepte n'importe quel chemin, y
   compris le dossier public `downloads` : la base (avec les hachages de mots de passe) serait
   téléchargeable sans connexion.
@@ -221,7 +229,7 @@ Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
 ## Ordre conseillé
 
 1. ~~Configuration de production : données de démo et secret JWT (section 1).~~ Fait.
-2. Droits : rôles relus en base, révocation, lecture par rôle (section 1).
+2. ~~Droits : rôles relus en base, révocation, lecture par rôle (section 1).~~ Fait, à relire.
 3. Argent : doubles paiements et vente en double (section 3).
 4. Retours clients, une fois la décision prise (section 4).
 5. HTTPS ou Wi-Fi séparé — décision d'installation plus que de code (section 1).

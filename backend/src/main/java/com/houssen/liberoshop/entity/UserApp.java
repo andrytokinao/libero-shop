@@ -64,6 +64,26 @@ public class UserApp {
      */
     private Long photoVersion;
 
+    /**
+     * Raised to end every session of the account at once: a token is only accepted while the
+     * number it was signed with is still this one. Null on an account created before the
+     * column existed, read as zero -- the number its tokens carry.
+     */
+    private Integer tokenVersion;
+
+    /** The number a token must carry to be accepted -- see {@link #tokenVersion}. */
+    public int sessionVersion() {
+        return tokenVersion == null ? 0 : tokenVersion;
+    }
+
+    /**
+     * Signs the account out everywhere: every token handed out so far is refused from the next
+     * request on. For what must not leave an old session open behind it -- a changed password.
+     */
+    public void revokeSessions() {
+        tokenVersion = sessionVersion() + 1;
+    }
+
     public boolean hasRole(RoleApp role) {
         return roles.contains(role);
     }

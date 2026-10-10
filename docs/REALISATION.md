@@ -4,12 +4,13 @@ Ce document détaille, partie par partie, ce qui a été réalisé à partir de
 [`TODO.md`](TODO.md) : ce qui change pour l'utilisateur, les fichiers touchés, les choix faits,
 ce qui a été vérifié et ce qui reste ouvert.
 
-Chaque partie est livrée seule, relue, puis commitée avant de passer à la suivante.
+Chaque partie est livrée seule, relue, puis commitée avant de passer à la suivante. Les parties
+sont séparées par une ligne `---`.
 
 | Partie | Sujet | État |
 |---|---|---|
-| 1 | Configuration de production : données de démo et secret JWT | à relire |
-| 2 | Droits : rôles relus en base, révocation, lecture par rôle | à faire |
+| 1 | Configuration de production : données de démo et secret JWT | commitée (`7b6744b`) |
+| 2 | Droits : rôles relus en base, révocation, lecture par rôle | à relire, non commitée |
 | 3 | Argent : doubles paiements et vente en double | à faire |
 | 4 | Retours clients | en attente d'une décision |
 | 5 | HTTPS ou Wi-Fi séparé | décision d'installation |
@@ -196,3 +197,180 @@ Fichiers :
 `catalogue-epicerie-exemple-quantites.xlsx` (à la racine) et `backend/libero-shop.png`
 apparaissent dans `git status` : ils ne viennent pas de ce travail et ne sont pas à inclure
 dans le commit de cette partie.
+
+---
+
+## Partie 2 — Droits : rôles relus en base, révocation, lecture par rôle
+
+Réalisée le 10 octobre 2026. Points de `TODO.md` couverts : section 1, « Un admin désactivé ou
+rétrogradé garde ses droits 12 h », « Aucune révocation de jeton » et « Tout rôle connecté lit
+tout ».
+
+### Ce qui change
+
+**Avant.** Le jeton de session portait les rôles et valait 12 heures quoi qu'il arrive : un
+compte désactivé continuait à lire, un administrateur rétrogradé restait administrateur, un mot
+de passe changé laissait les anciennes sessions ouvertes, et « Déconnexion » ne faisait rien côté
+serveur. Par ailleurs tout compte connecté, même une prise de commande, pouvait lister toutes les
+factures de la boutique, tous les versements, les fournisseurs et les sorties de stock.
+
+**Après.**
+
+1. **Le compte est relu en base à chaque requête.** Désactiver un compte ou lui retirer un rôle
+   prend effet à sa requête suivante, lectures comprises.
+2. **Changer un mot de passe ferme toutes les sessions du compte.**
+3. **« Déconnexion » ferme réellement la session de l'appareil** ; les autres appareils du même
+   compte restent connectés.
+4. **Chaque rôle ne lit que ce qui le concerne** (tableau plus bas).
+
+### 1. Compte relu à chaque requête
+
+Le jeton ne dit plus que **qui** est l'appelant (identifiant du compte). Ce qu'il a le droit de
+faire est lu dans sa ligne en base à chaque requête, par `AccountAuthenticationConverter`.
+
+| Événement | Avant | Après |
+|---|---|---|
+| Compte désactivé | actions refusées, lectures possibles 12 h | tout refusé (401) à la requête suivante |
+| Rôle retiré | conservé jusqu'à la reconnexion | refusé (403) à la requête suivante |
+| Rôle ajouté | reconnexion nécessaire | utilisable tout de suite |
+
+À connaître :
+
+- **Coût** : une lecture du compte par requête, sur une base qui tourne sur le même poste.
+- **L'écran suit au rechargement.** Après un changement de rôle, le menu déjà affiché ne change
+  pas tout seul : une entrée peut rester visible et répondre « Votre rôle ne vous autorise pas »
+  jusqu'au prochain rechargement de la page.
+- **Les rôles ne sont plus écrits dans le jeton.** Les jetons émis avant cette version restent
+  acceptés : personne n'est déconnecté par la mise à jour.
+
+Fichiers :
+
+- `security/AccountAuthenticationConverter.java` (nouveau) — la relecture du compte.
+- `security/JwtService.java`, `security/JwtConfiguration.java`, `security/AppUserDetails.java`,
+  `security/SecurityConfiguration.java`, `security/CurrentUser.java`.
+
+### 2. Fermer une session
+
+Deux mécanismes, vérifiés à chaque requête :
+
+| Besoin | Mécanisme | Effet |
+|---|---|---|
+| Fermer **toutes** les sessions d'un compte | numéro `tokenVersion` sur le compte, recopié dans chaque jeton | un jeton dont le numéro n'est plus celui du compte est refusé |
+| Fermer **une** session (un appareil) | table `revoked_token` : l'identifiant du jeton déconnecté | ce jeton-là est refusé, les autres continuent |
+
+Quand :
+
+- **Changement de mot de passe** (`PUT /api/users/{id}/password`) : toutes les sessions du compte
+  sont fermées. Un super-admin qui change **son propre** mot de passe est donc déconnecté lui
+  aussi, et se reconnecte avec le nouveau.
+- **Déconnexion** (`POST /api/auth/logout`) : le jeton de l'appareil est inscrit dans
+  `revoked_token`. Un jeton resté dans un navigateur ou dans une sauvegarde de téléphone n'ouvre
+  plus rien.
+- **Désactivation** : pas besoin de numéro, le compte désactivé est refusé directement.
+
+Choix fait : la déconnexion ne ferme **que l'appareil**, pas tout le compte. Raison : un même
+compte peut être ouvert sur deux postes (une caisse partagée) ; fermer l'autre poste lui ferait
+perdre son panier en cours, qui n'existe qu'en mémoire.
+
+Base de données :
+
+- colonne `user_app.token_version` (vide sur les comptes existants, lue comme 0) ;
+- table `revoked_token` (identifiant du jeton, échéance). Les lignes des jetons expirés sont
+  supprimées à chaque déconnexion.
+
+Les deux sont créées automatiquement au démarrage (`ddl-auto=update`), sans migration à écrire.
+
+Fichiers :
+
+- `entity/RevokedToken.java`, `repository/RevokedTokenRepository.java`,
+  `security/SessionRevocation.java` (nouveaux).
+- `entity/UserApp.java` — `tokenVersion`, `revokeSessions()`.
+- `web/AuthController.java` — déconnexion ; `service/UserAccountService.java` — mot de passe.
+
+### 3. Lecture par rôle
+
+| Donnée | Avant | Après |
+|---|---|---|
+| Fournisseurs (`GET /api/suppliers`) | tout compte connecté | responsable de dépôt, super-admin |
+| Sorties de stock (`GET /api/stock/outputs`) | tout compte connecté | responsable de dépôt, super-admin |
+| Versements (`GET /api/remittances`) | tout compte connecté | caisse et super-admin : tous ; les autres : seulement ceux qu'ils ont remis |
+| Factures (`GET /api/invoices`, `GET /api/invoices/{id}`) | tout compte connecté | selon le rôle, ci-dessous |
+
+Factures, par rôle (`service/InvoiceAccess.java`) :
+
+| Rôle | Ce qu'il lit |
+|---|---|
+| Super-admin, responsable de dépôt | tout l'historique |
+| Caisse, agent de dépôt | les commandes **du jour**, celles **encore ouvertes** (non payées, argent en route, non remises), et **les siennes** de n'importe quelle date |
+| Prise de commande | uniquement les commandes qu'il a prises |
+
+Précisions :
+
+- **« Les siennes »** : vendues par lui, préparées ou remises par lui, annulées par lui, ou dont
+  l'argent est passé par ses mains (encaissé par lui, ou versement compté par lui à la caisse).
+- **Rôles cumulés** : le rôle le plus large l'emporte. Le gérant d'une petite épicerie qui cumule
+  tout lit tout.
+- **Une liste n'est jamais refusée, elle est réduite** : le même écran sert au caissier et à
+  l'administrateur. Une facture demandée par son numéro et hors périmètre répond 403.
+- **Pourquoi la caisse et le dépôt voient le jour entier** : le caissier encaisse la commande
+  impayée d'un collègue, le magasinier la sert. Ce qui est fermé, c'est l'historique : avant,
+  n'importe quel compte pouvait additionner toutes les ventes de la boutique.
+
+Fichiers :
+
+- `service/InvoiceAccess.java` (nouveau), `service/InvoiceService.java` (`searchFor`,
+  `findByIdFor`), `repository/PaymentRepository.java`.
+- `web/InvoiceController.java`, `web/RemittanceController.java`, `web/SupplierController.java`,
+  `web/StockController.java`.
+
+Aucun écran n'a été modifié : chaque écran demandait déjà des données de son propre rôle.
+
+### Vérifications faites
+
+- **Tests automatiques du serveur : 504, tous verts** (`mvnw -o -DskipFrontend=true test`), dont
+  9 nouveaux :
+  - `AccessRightsTest` (8), à travers la vraie chaîne de sécurité et de vrais jetons : compte
+    désactivé coupé à la requête suivante ; rôle retiré puis rôle ajouté sans reconnexion ;
+    mot de passe changé qui ferme deux sessions du compte et pas celle de l'administrateur ;
+    déconnexion qui ferme un appareil et pas l'autre ; fournisseurs et sorties refusés à la
+    caisse, au dépôt et à la prise de commande ; factures réduites selon le rôle (liste et
+    lecture par numéro) ; rôle le plus large ; versements ;
+  - `JwtServiceTest` : 2 tests remplacés, 1 ajouté (le jeton ne porte plus de rôle, il porte son
+    numéro de session).
+- **Base créée avant ce changement** : simulée (colonne `token_version` et table `revoked_token`
+  retirées d'une base contenant comptes et ventes), puis rouverte avec le nouveau code : les 7
+  comptes sont relus, un jeton est accepté, la déconnexion le refuse, un changement de numéro de
+  session est enregistré.
+
+### Non vérifié
+
+- **Aucun essai dans un navigateur ni sur téléphone** : le comportement de l'écran quand la
+  session est fermée par le serveur (retour à la connexion sur un 401) repose sur le code
+  existant de l'intercepteur, qui n'a pas été rejoué à la main.
+- **Votre base de développement réelle (`data/libertyshop.mv.db`) n'a pas été essayée** : elle
+  était verrouillée par l'application en marche. La vérification ci-dessus porte sur une base
+  simulée.
+- Les tests de l'interface (`ng test`) et `ng build` n'ont pas été relancés : aucun fichier de
+  l'interface n'a changé.
+
+### Pour essayer
+
+1. Se connecter en caissier sur un navigateur, en super-admin sur un autre.
+2. Super-admin : désactiver le caissier. Côté caissier, le clic suivant renvoie à la connexion.
+3. Réactiver, reconnecter le caissier, puis changer son mot de passe : même effet.
+4. Caissier connecté sur deux navigateurs : « Déconnexion » sur l'un, l'autre continue.
+5. Caissier : « Mes factures » ne montre que les siennes ; « À encaisser » montre toujours les
+   impayés de tout le monde.
+
+### Reste ouvert
+
+- **Les notifications en direct (WebSocket) ne suivent pas ces règles.** Le canal `orders`
+  envoie chaque commande modifiée à tous les comptes connectés, quel que soit leur rôle, et une
+  connexion déjà ouverte n'est pas coupée quand le compte est désactivé ou la session fermée
+  (elle l'est à la reconnexion suivante). Une prise de commande reçoit donc encore, en direct,
+  les commandes du jour des autres. À traiter : un canal par périmètre, et la fermeture des
+  connexions d'un compte révoqué.
+- **Tableaux de bord** (`/api/dashboard/...`) : non revus dans cette partie.
+- **Menu après changement de rôle** : suit au rechargement seulement (voir plus haut).
+- **`revoked_token`** n'est nettoyée qu'à l'occasion d'une déconnexion ; sans déconnexion
+  pendant longtemps, des lignes expirées y restent (sans effet, quelques octets chacune).

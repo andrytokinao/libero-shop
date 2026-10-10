@@ -18,9 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
  * cannot remit another agent's cash, because the identity never travels in the payload.
  *
  * <p>The token carries the account id, never the account itself: the row is re-read here
- * on every call. That costs one query and buys two things -- an administrator's edit takes
- * effect immediately instead of at the token's expiry, and a disabled account is refused
- * here even though its token is still cryptographically valid.
+ * on every call, so a service always works with the account as it is now. Whether the caller
+ * may come in at all was decided before, by {@link AccountAuthenticationConverter}; the check
+ * below is kept for the callers that do not come through it.
  */
 @Component
 public class CurrentUser {
