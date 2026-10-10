@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.security.AppUserDetails;
+import com.houssen.liberoshop.security.ClientAddress;
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.security.JwtService.IssuedToken;
@@ -53,11 +54,13 @@ public class AuthController {
     private final LoginThrottle loginThrottle;
     private final SessionRevocation sessionRevocation;
     private final UserAccountService accounts;
+    private final ClientAddress clientAddress;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           CurrentUser currentUser, ShopSettingsService settingsService,
                           LoginThrottle loginThrottle, SessionRevocation sessionRevocation,
-                          UserAccountService accounts) {
+                          UserAccountService accounts, ClientAddress clientAddress) {
+        this.clientAddress = clientAddress;
         this.accounts = accounts;
         this.loginThrottle = loginThrottle;
         this.sessionRevocation = sessionRevocation;
@@ -69,7 +72,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
-        String address = http.getRemoteAddr();
+        String address = clientAddress.of(http);
         loginThrottle.check(address, request.username());
         Authentication credentials;
         try {

@@ -21,13 +21,18 @@ import java.util.Set;
  *                       bundled in the phone, not served by this backend, so every call it makes
  *                       is cross-origin. Kept apart from {@code allowedOrigins} because, unlike
  *                       them, they belong in production.
+ * @param trustedProxies the addresses of the reverse proxies in front of the server, if any:
+ *                       only a request arriving from one of them has its
+ *                       {@code X-Forwarded-For} believed -- see {@link ClientAddress}
  */
 @ConfigurationProperties(prefix = "liberoshop.security")
-public record SecurityProperties(List<String> allowedOrigins, List<String> mobileOrigins) {
+public record SecurityProperties(List<String> allowedOrigins, List<String> mobileOrigins,
+                                 List<String> trustedProxies) {
 
     public SecurityProperties {
         allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
         mobileOrigins = mobileOrigins == null ? List.of() : List.copyOf(mobileOrigins);
+        trustedProxies = trustedProxies == null ? List.of() : List.copyOf(trustedProxies);
     }
 
     /** Every cross-origin caller admitted, by the REST API and the WebSocket alike. */

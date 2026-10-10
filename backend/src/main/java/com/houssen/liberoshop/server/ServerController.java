@@ -68,7 +68,7 @@ public class ServerController {
         String publicUrl = mobile.publicUrl();
         List<ServerConnectionResponse.Address> result = new ArrayList<>();
 
-        if (LocalNetwork.isLocalAddress(request.getRemoteAddr())) {
+        if (LocalNetwork.isLocalCaller(request)) {
             String browsedHost = request.getServerName();
             String browsedUrl = urlOf(scheme, browsedHost, request.getServerPort());
             if (!isLocal(browsedHost) && !browsedUrl.equals(publicUrl)) {

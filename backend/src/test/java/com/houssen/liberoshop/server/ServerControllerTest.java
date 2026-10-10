@@ -62,6 +62,19 @@ class ServerControllerTest {
     }
 
     @Test
+    @DisplayName("keeps them as well from an Internet caller arriving through a relay in the shop")
+    void localAddressesStayLocalBehindARelay() throws Exception {
+        mvc.perform(get("/api/server/connection").with(request -> {
+                    request.setRemoteAddr("127.0.0.1");
+                    request.addHeader("X-Forwarded-For", "203.0.113.7");
+                    request.setServerName("boutique.example.com");
+                    return request;
+                }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addresses").isEmpty());
+    }
+
+    @Test
     @DisplayName("lets the mobile app's web view call across origins, and nobody else")
     void mobileOriginAdmitted() throws Exception {
         mvc.perform(options("/api/server/info")
