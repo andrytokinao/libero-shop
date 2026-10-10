@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +36,7 @@ class BackupServiceTest {
     private JdbcTemplate jdbc;
     private MovableClock clock;
     private BackupService service;
+    private BackupEngine engine;
 
     /** A clock the test moves forward, so backups get distinct names and intervals elapse. */
     static final class MovableClock extends Clock {
@@ -71,7 +73,8 @@ class BackupServiceTest {
         jdbc.update("insert into invoice values (1), (2)");
         jdbc.update("insert into product values (1)");
         clock = new MovableClock();
-        service = new BackupService(Optional.of(database), new H2BackupEngine(dataSource, database, "sa", ""),
+        engine = new H2BackupEngine(dataSource, database, "sa", "");
+        service = new BackupService(Optional.of(database), engine,
                 new BusinessCalendar(clock), new ApplicationRestarter(null));
     }
 
@@ -144,6 +147,26 @@ class BackupServiceTest {
                 () -> service.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, main, main)));
         assertThrows(BusinessRuleException.class,
                 () -> service.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, main, "relative/path")));
+    }
+
+    @Test
+    @DisplayName("a folder the server hands out to anyone is refused, for both locations")
+    void publicFolderRefused() throws Exception {
+        Path downloads = Files.createDirectories(folder.resolve("downloads"));
+        BackupService guarded = new BackupService(Optional.of(database), engine,
+                new BusinessCalendar(clock), new ApplicationRestarter(null), List.of(downloads));
+        String main = BackupConfig.defaults(database).directory();
+        String inside = downloads.resolve("sauvegardes").toString();
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> guarded.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, downloads.toString(), null)));
+        assertEquals("PUBLIC_DIRECTORY", refused.code());
+        assertThrows(BusinessRuleException.class,
+                () -> guarded.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, inside, null)));
+        assertThrows(BusinessRuleException.class,
+                () -> guarded.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, main, inside)));
+        // Beside it is fine.
+        guarded.updateConfig(new BackupConfig(true, 60, 24, 30, 12, 10, main, null));
     }
 
     @Test

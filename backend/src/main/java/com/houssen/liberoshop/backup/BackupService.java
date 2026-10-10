@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.backup;
 
+import com.houssen.liberoshop.server.MobileProperties;
 import com.houssen.liberoshop.service.BusinessCalendar;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
@@ -50,6 +51,9 @@ public class BackupService {
     private final ApplicationRestarter restarter;
     private final ReentrantLock lock = new ReentrantLock();
 
+    /** Folders the server hands out to anyone: a backup must never be written there. */
+    private final List<Path> publicDirectories;
+
     private volatile BackupConfig config;
     private volatile String lastError;
     private volatile LocalDateTime lastErrorAt;
@@ -57,18 +61,26 @@ public class BackupService {
 
     @Autowired
     public BackupService(Environment environment, DataSource dataSource, BusinessCalendar calendar,
-                         ApplicationRestarter restarter) {
+                         ApplicationRestarter restarter, MobileProperties mobile) {
         this(DatabaseFile.fromUrl(environment.getProperty("spring.datasource.url")),
                 DatabaseFile.fromUrl(environment.getProperty("spring.datasource.url"))
                         .map(file -> (BackupEngine) new H2BackupEngine(dataSource, file,
                                 environment.getProperty("spring.datasource.username", "sa"),
                                 environment.getProperty("spring.datasource.password", "")))
                         .orElse(null),
-                calendar, restarter);
+                calendar, restarter, List.of(mobile.downloadsDir()));
     }
 
     BackupService(Optional<DatabaseFile> database, BackupEngine engine, BusinessCalendar calendar,
                   ApplicationRestarter restarter) {
+        this(database, engine, calendar, restarter, List.of());
+    }
+
+    BackupService(Optional<DatabaseFile> database, BackupEngine engine, BusinessCalendar calendar,
+                  ApplicationRestarter restarter, List<Path> publicDirectories) {
+        this.publicDirectories = publicDirectories.stream()
+                .map(directory -> directory.toAbsolutePath().normalize())
+                .toList();
         this.database = database;
         this.engine = engine;
         this.calendar = calendar;
@@ -205,6 +217,7 @@ public class BackupService {
             throw new BusinessRuleException("INVALID_DIRECTORY", "Indiquez le dossier des sauvegardes.");
         }
         Path main = Path.of(c.directory()).toAbsolutePath().normalize();
+        refuseIfPublic(main);
         if (!writable(main)) {
             throw new BusinessRuleException("INVALID_DIRECTORY", "Le dossier " + main + " ne peut pas être écrit.");
         }
@@ -214,9 +227,24 @@ public class BackupService {
                 throw new BusinessRuleException("INVALID_DIRECTORY",
                         "Le second emplacement doit être un chemin complet, par exemple E:\\Sauvegardes.");
             }
+            refuseIfPublic(second.toAbsolutePath().normalize());
             if (second.toAbsolutePath().normalize().equals(main)) {
                 throw new BusinessRuleException("INVALID_DIRECTORY",
                         "Le second emplacement doit être différent du premier : sinon il ne protège de rien.");
+            }
+        }
+    }
+
+    /**
+     * A backup holds the whole database, password hashes included: it is not written in, or
+     * under, a folder the server hands out without asking who is there.
+     */
+    private void refuseIfPublic(Path directory) {
+        for (Path open : publicDirectories) {
+            if (directory.startsWith(open)) {
+                throw new BusinessRuleException("PUBLIC_DIRECTORY",
+                        "Le dossier " + directory + " est public (téléchargement de l'application mobile) : "
+                                + "choisissez un autre emplacement pour les sauvegardes.");
             }
         }
     }

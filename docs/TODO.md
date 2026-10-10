@@ -34,7 +34,8 @@ ou entretien.
 - [x] Mot de passe administrateur perdu : procédure de secours sur l'ordinateur du serveur (`b6d27b2`)
 - [x] Jar de production sans réglages de démo ni console H2 (`ab7a89a`)
 - [x] Notifications en direct selon les droits, connexions fermées quand l'accès change (`0e2805b`)
-- [x] Le menu suit un changement de rôle sans recharger la page
+- [x] Le menu suit un changement de rôle sans recharger la page (`64014c6`)
+- [x] Sauvegardes hors du dossier public, qui ne sert plus que l'application Android
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -43,7 +44,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 [`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md),
 [`07-jar-de-production-sans-outils-de-developpement.md`](07-jar-de-production-sans-outils-de-developpement.md),
 [`08-notifications-en-direct-selon-les-droits.md`](08-notifications-en-direct-selon-les-droits.md),
-[`09-menu-apres-un-changement-de-role.md`](09-menu-apres-un-changement-de-role.md).
+[`09-menu-apres-un-changement-de-role.md`](09-menu-apres-un-changement-de-role.md),
+[`10-sauvegardes-hors-du-dossier-public.md`](10-sauvegardes-hors-du-dossier-public.md).
 
 ---
 
@@ -80,10 +82,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P3 — Menu après un changement de rôle.** L'écran ouvert relit sa session quand le serveur
   ferme sa connexion en direct : nouveau menu, accueil du nouveau rôle, ou page de connexion.
   *Fait — voir `09-menu-apres-un-changement-de-role.md`.*
-- [ ] **P2 — Dossier de sauvegarde libre.** `BackupService` accepte n'importe quel chemin, y
-  compris le dossier public `downloads` : la base (avec les hachages de mots de passe) serait
-  téléchargeable sans connexion.
-  *Piste :* refuser ces chemins, et ne servir que le fichier APK dans `/downloads`.
+- [x] **P2 — Dossier de sauvegarde libre.** Le dossier public `downloads` ne sert plus que le
+  fichier APK, et l'écran « Sauvegardes » refuse ce dossier et ses sous-dossiers.
+  *Fait — voir `10-sauvegardes-hors-du-dossier-public.md`.*
 - [ ] **P2 — Mots de passe.** 6 caractères minimum, et un utilisateur ne peut pas changer le
   sien : l'admin les connaît tous.
   *Piste :* écran « changer mon mot de passe », minimum 8 caractères, changement forcé à la
