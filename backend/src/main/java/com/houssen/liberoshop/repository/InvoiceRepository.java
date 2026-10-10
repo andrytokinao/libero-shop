@@ -17,6 +17,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     boolean existsByInvoiceNumber(String invoiceNumber);
 
+    /** The order a basket became, by the name its till gave it -- see {@code Sale#clientReference}. */
+    @Query("""
+            select i from Invoice i
+              join fetch i.sale s
+              join fetch s.seller
+            where s.clientReference = :reference
+            """)
+    Optional<Invoice> findBySaleReference(@Param("reference") String reference);
+
     /**
      * Single entry point for every invoice list in the UI. Null arguments mean "no
      * filter", so one query backs the cash desk, the depot and the admin screens instead

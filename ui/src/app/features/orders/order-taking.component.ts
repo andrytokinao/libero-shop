@@ -17,6 +17,7 @@ import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { followStock } from '../../core/sale/follow-stock';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
+import { SaleReference } from '../../core/sale/sale-reference';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
@@ -255,6 +256,7 @@ export class OrderTakingComponent {
   protected readonly sending = signal(false);
 
   protected readonly cart = new Cart();
+  private readonly reference = new SaleReference();
   /** The product whose unit buttons are open, before anything of it is in the order. */
   protected readonly unitsOpen = signal<number | null>(null);
 
@@ -326,16 +328,19 @@ export class OrderTakingComponent {
       return;
     }
     this.sending.set(true);
+    const draft = {
+      clientName: this.clientName(),
+      // Paid to an order taker, the server records it as their cash in hand, not as paid.
+      paymentStatus: paid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
+      paymentMethod: PaymentMethod.CASH,
+      lines: this.cart.toSaleLines(),
+    };
     this.invoices
-      .createSale({
-        clientName: this.clientName(),
-        // Paid to an order taker, the server records it as their cash in hand, not as paid.
-        paymentStatus: paid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
-        paymentMethod: PaymentMethod.CASH,
-        lines: this.cart.toSaleLines(),
-      })
+      // A phone loses the Wi-Fi more often than a till: sent again, the same order is one order.
+      .createSale({ ...draft, clientReference: this.reference.for(draft) })
       .subscribe({
         next: (invoice) => {
+          this.reference.renew();
           this.sending.set(false);
           this.reviewing.set(false);
           this.cart.clear();

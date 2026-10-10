@@ -2,6 +2,7 @@ package com.houssen.liberoshop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -31,6 +32,21 @@ public class Invoice {
 
     @Column(nullable = false, unique = true)
     private String invoiceNumber;
+
+    /**
+     * Counts the changes made to the order, so that two of them decided on the same reading
+     * cannot both land: two tills settling it at the same instant, the depot taking its money
+     * while the till does. The second to write finds the count moved and is refused -- with
+     * everything it wrote, its payment included.
+     *
+     * <p>Defaulted in the column, so the orders of a database older than this field start at
+     * zero instead of at nothing.
+     */
+    @Version
+    @Setter(AccessLevel.NONE)
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private long version;
 
     @Column(nullable = false)
     private LocalDateTime invoiceDate;

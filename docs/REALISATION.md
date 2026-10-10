@@ -5,13 +5,14 @@ Ce document détaille, partie par partie, ce qui a été réalisé à partir de
 ce qui a été vérifié et ce qui reste ouvert.
 
 Chaque partie est livrée seule, relue, puis commitée avant de passer à la suivante. Les parties
-sont séparées par une ligne `---`.
+1 et 2 sont ci-dessous, séparées par une ligne `---` ; à partir de la partie 3, chaque partie a
+son propre fichier `REALISATION-partie-N-….md`, lié depuis le tableau.
 
 | Partie | Sujet | État |
 |---|---|---|
 | 1 | Configuration de production : données de démo et secret JWT | commitée (`7b6744b`) |
-| 2 | Droits : rôles relus en base, révocation, lecture par rôle | à relire, non commitée |
-| 3 | Argent : doubles paiements et vente en double | à faire |
+| 2 | Droits : rôles relus en base, révocation, lecture par rôle | commitée (`0c4f6d3`) |
+| 3 | Argent : doubles paiements et vente en double | faite — voir [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md) |
 | 4 | Retours clients | en attente d'une décision |
 | 5 | HTTPS ou Wi-Fi séparé | décision d'installation |
 | 6 | Pagination et Flyway | à faire |

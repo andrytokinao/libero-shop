@@ -18,12 +18,25 @@ import java.util.List;
  * user, and the prices are re-read from the catalogue inside the transaction, so a
  * tampered payload cannot sell at a price of its choosing or under another name.
  *
- * @param paymentMethod ignored when {@code paymentStatus} is UNPAID: nothing is collected yet
+ * @param paymentMethod   ignored when {@code paymentStatus} is UNPAID: nothing is collected yet
+ * @param clientReference a name the till gives this basket, the same on every attempt to post
+ *                        it: a sale already recorded under it is returned instead of being sold
+ *                        a second time. Null from a client that does not send one -- every post
+ *                        is then a sale, as before.
  */
 public record CreateSaleRequest(@Size(max = 120) String clientName,
                                 @NotNull PaymentStatus paymentStatus,
                                 PaymentMethod paymentMethod,
-                                @NotEmpty @Valid List<Line> lines) {
+                                @NotEmpty @Valid List<Line> lines,
+                                @Size(max = MAX_REFERENCE_LENGTH) String clientReference) {
+
+    public static final int MAX_REFERENCE_LENGTH = 64;
+
+    /** A sale without a reference: what every caller posted before there was one. */
+    public CreateSaleRequest(String clientName, PaymentStatus paymentStatus, PaymentMethod paymentMethod,
+                             List<Line> lines) {
+        this(clientName, paymentStatus, paymentMethod, lines, null);
+    }
 
     /**
      * @param packagingId the unit sold -- "kg", "sac" -- or null for the product's base unit

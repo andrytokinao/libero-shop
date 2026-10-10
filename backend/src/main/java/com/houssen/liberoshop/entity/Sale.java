@@ -26,6 +26,14 @@ public class Sale {
     @Column(nullable = false)
     private LocalDateTime saleDate;
 
+    /**
+     * The name the till gave the basket before posting it, the same on every attempt. Unique:
+     * a basket posted twice -- the network dropped before the answer, the cashier touched
+     * "Encaisser" again -- is one sale. Null for a sale posted without one.
+     */
+    @Column(unique = true, length = 64)
+    private String clientReference;
+
     /** A copy of its invoice's, for the revenue queries: moved only by {@link Invoice}. */
     @Setter(AccessLevel.NONE)
     @Enumerated(EnumType.STRING)

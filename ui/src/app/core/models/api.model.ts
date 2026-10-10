@@ -57,6 +57,12 @@ export interface CreateSaleRequest {
    * that unit, to the thousandth.
    */
   lines: { productId: number; packagingId?: number | null; quantity: number }[];
+  /**
+   * The name the till gives this basket, the same on every attempt to post it: a sale already
+   * recorded under it is answered with its invoice instead of being sold twice. See
+   * `SaleReference`.
+   */
+  clientReference?: string;
 }
 
 export interface CreateSupplyRequest {

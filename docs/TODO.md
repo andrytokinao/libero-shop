@@ -27,8 +27,11 @@ ou entretien.
 - [x] Compte relu en base à chaque requête : désactivation et rôles immédiats (partie 2, à commiter)
 - [x] Fermeture des sessions : changement de mot de passe et déconnexion (partie 2, à commiter)
 - [x] Lecture par rôle : factures, versements, fournisseurs, sorties de stock (partie 2, à commiter)
+- [x] Paiements et bordereaux en double refusés (partie 3)
+- [x] Un panier envoyé deux fois est une seule vente (partie 3)
 
-Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
+Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
+dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md).
 
 ---
 
@@ -97,13 +100,14 @@ Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
 
 ## 3. Argent et intégrité des données
 
-- [ ] **P1 — Paiements et remises en double.** Aucun `@Version`, seul `Product` est verrouillé :
-  deux appels simultanés sur `InvoiceService.pay` ou `RemittanceService.submit` créent deux
-  paiements ou deux bordereaux.
-  *Piste :* `@Version` sur `Invoice` et `CashRemittance`, réponse 409 en cas de conflit.
-- [ ] **P1 — Vente en double si le réseau coupe à l'encaissement.** `POST /sales` n'a pas de clé
-  d'idempotence.
-  *Piste :* un identifiant de vente généré par la caisse, dédoublonné par le serveur.
+- [x] **P1 — Paiements et remises en double.** Compteur de modifications sur `Invoice` et
+  `CashRemittance` : le second arrivé est refusé (409) sans rien écrire.
+  *Fait — voir `REALISATION-partie-3-argent.md`.*
+- [x] **P1 — Vente en double si le réseau coupe à l'encaissement.** La caisse nomme chaque
+  panier ; renvoyé, il reçoit la facture déjà faite.
+  *Fait — voir `REALISATION-partie-3-argent.md`.*
+- [ ] **P2 — Commande par QR code envoyée deux fois.** Les commandes passées depuis une table
+  n'envoient pas de référence de panier : une coupure peut encore en créer deux.
 - [ ] **P2 — Le rapport journalier mélange deux dates.** Total par date de vente, répartition par
   date de paiement (`DashboardService`) : un crédit d'hier payé aujourd'hui fausse le
   rapprochement de caisse.
@@ -229,8 +233,8 @@ Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
 ## Ordre conseillé
 
 1. ~~Configuration de production : données de démo et secret JWT (section 1).~~ Fait.
-2. ~~Droits : rôles relus en base, révocation, lecture par rôle (section 1).~~ Fait, à relire.
-3. Argent : doubles paiements et vente en double (section 3).
+2. ~~Droits : rôles relus en base, révocation, lecture par rôle (section 1).~~ Fait.
+3. ~~Argent : doubles paiements et vente en double (section 3).~~ Fait.
 4. Retours clients, une fois la décision prise (section 4).
 5. HTTPS ou Wi-Fi séparé — décision d'installation plus que de code (section 1).
 6. Pagination et Flyway avant que les bases ne grossissent (sections 5 et 6).

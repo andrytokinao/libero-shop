@@ -8,6 +8,7 @@ import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,20 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError(e.code(), e.getMessage(), List.of(), Instant.now(), e.data()));
+    }
+
+    /**
+     * Two people changed the same order or the same slip at the same instant, and this caller
+     * came second: nothing of theirs was written. 409 like a refused rule, with a message that
+     * says what to do -- look again, the other one's change is there.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleConcurrentChange(OptimisticLockingFailureException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError("CONCURRENT_UPDATE",
+                        "Quelqu'un d'autre vient de modifier cette commande au meme moment. "
+                                + "Rien n'a ete enregistre de votre cote : verifiez son etat avant de recommencer.",
+                        List.of(), Instant.now()));
     }
 
     /** The domain refusing a status change: a business rule like the others, same 409. */

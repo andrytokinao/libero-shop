@@ -19,6 +19,7 @@ import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
+import { SaleReference } from '../../core/sale/sale-reference';
 import { ShortcutMap } from '../../core/sale/shortcuts';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
 import { AuthService } from '../../core/services/auth.service';
@@ -461,6 +462,7 @@ export class NewSaleComponent {
   private readonly dialogOpen = computed(() => this.checkoutOpen() || this.sold() !== null);
 
   protected readonly cart = new Cart();
+  private readonly reference = new SaleReference();
   protected readonly held = inject(HeldSales);
 
   protected readonly entry: ProductEntry = new ProductEntry(this.cart, () => this.finder.settled());
@@ -687,10 +689,14 @@ export class NewSaleComponent {
       return;
     }
     this.submitting.set(true);
+    const draft = { clientName: this.clientName(), ...checkout, lines: this.cart.toSaleLines() };
     this.invoices
-      .createSale({ clientName: this.clientName(), ...checkout, lines: this.cart.toSaleLines() })
+      // The same reference if this very basket is posted again after an answer that never
+      // came: the server then returns the invoice it made rather than a second sale.
+      .createSale({ ...draft, clientReference: this.reference.for(draft) })
       .subscribe({
         next: (invoice) => {
+          this.reference.renew();
           this.submitting.set(false);
           this.checkoutOpen.set(false);
           this.cart.clear();

@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 
 /**
@@ -78,6 +79,10 @@ public class SaleService {
      *
      * <p>Guarded by the license module: once the license has expired past its grace
      * period, this call is refused and the installation is read-only.
+     *
+     * <p>A basket carrying a {@link CreateSaleRequest#clientReference() reference} is sold
+     * once: posted again -- the answer was lost on the way, the cashier touched the button a
+     * second time -- it gets the order it already became, and nothing is written.
      */
     @RequiresActiveLicense
     @Transactional
@@ -89,16 +94,25 @@ public class SaleService {
         PaymentStatus status = settledStatusOf(request, seller);
         Map<LineKey, BigDecimal> quantities = mergeLines(request.lines());
         LocalDateTime now = calendar.now();
+        String reference = referenceOf(request);
+
+        // Locked first, and the reference looked up only then: of two posts of one basket
+        // arriving together, the second waits here for the first to commit, and finds its sale.
+        Map<Long, Product> locked = lock(quantities.keySet());
+        Optional<InvoiceResponse> alreadyRecorded = recorded(reference, seller);
+        if (alreadyRecorded.isPresent()) {
+            return alreadyRecorded.get();
+        }
 
         Sale sale = Sale.builder()
                 .saleDate(now)
+                .clientReference(reference)
                 .paymentStatus(status)
                 .seller(seller)
                 .lines(new ArrayList<>())
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
-        Map<Long, Product> locked = lock(quantities.keySet());
         quantities.forEach((key, quantity) -> {
             Product product = locked.get(key.productId());
             SaleUnit unit = SaleUnit.of(product, key.packagingId());
@@ -172,6 +186,35 @@ public class SaleService {
         events.publishEvent(new StockChangedEvent(List.copyOf(locked.keySet())));
 
         return InvoiceResponse.of(invoice);
+    }
+
+    /**
+     * The order a basket already became, if it was posted before under this reference.
+     *
+     * <p>Only ever the seller's own: a reference is drawn at random by each till, so meeting
+     * someone else's is not a retry but a collision or a forgery, and it is refused rather than
+     * answered with a colleague's order.
+     *
+     * @param reference null for a basket posted without one -- never recorded "before"
+     */
+    @Transactional(readOnly = true)
+    public Optional<InvoiceResponse> recorded(String reference, UserApp seller) {
+        if (reference == null) {
+            return Optional.empty();
+        }
+        return invoices.findBySaleReference(reference).map(invoice -> {
+            if (!invoice.getSale().getSeller().getId().equals(seller.getId())) {
+                throw new BusinessRuleException("SALE_REFERENCE_TAKEN",
+                        "Cette vente porte une reference deja utilisee : recommencez la saisie.");
+            }
+            return InvoiceResponse.of(invoice);
+        });
+    }
+
+    /** The basket's reference as stored: trimmed, null when the till sent none. */
+    public static String referenceOf(CreateSaleRequest request) {
+        String reference = request.clientReference();
+        return reference == null || reference.isBlank() ? null : reference.trim();
     }
 
     /** One product in one unit: what two posted lines must share to be folded into one. */
