@@ -20,6 +20,21 @@ export interface FirstAdminRequest {
   password: string;
 }
 
+/** Mirrors AdminRecoveryService.Started. */
+export interface RecoveryStarted {
+  /** The file of the server's computer the code was written in. */
+  file: string;
+  /** How long the code is good for. */
+  minutes: number;
+}
+
+/** Mirrors RecoverAdminRequest. */
+export interface RecoverAdminRequest {
+  code: string;
+  username: string;
+  password: string;
+}
+
 const DONE: SetupStatus = { required: false, allowedHere: false };
 
 /**
@@ -60,5 +75,24 @@ export class SetupApi {
         context: new HttpContext().set(SILENT_ERRORS, true),
       })
       .pipe(tap(() => this.done.set(true)));
+  }
+
+  /**
+   * A lost administrator password, first step: the server writes a code into a file of its own
+   * computer. Refused from any other machine.
+   */
+  startRecovery(): Observable<RecoveryStarted> {
+    return this.http.post<RecoveryStarted>(
+      `${API_BASE_URL}/setup/recovery/code`,
+      {},
+      { context: new HttpContext().set(SILENT_ERRORS, true) },
+    );
+  }
+
+  /** Second step: the code read in that file, and the new password of a super-admin account. */
+  recoverAdmin(request: RecoverAdminRequest): Observable<UserApp> {
+    return this.http.post<UserApp>(`${API_BASE_URL}/setup/recovery/password`, request, {
+      context: new HttpContext().set(SILENT_ERRORS, true),
+    });
   }
 }

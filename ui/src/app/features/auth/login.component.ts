@@ -130,6 +130,10 @@ const SUPPORT_PHONE = '+261 34 05 680 13';
           </div>
         }
         @if (!server.isMobile) {
+          <!-- Only goes through at the server's computer, where a phone never is. -->
+          <div class="login-server muted">
+            <a routerLink="/secours">Mot de passe administrateur oublié ?</a>
+          </div>
           <div class="login-server muted">
             <a routerLink="/application-mobile">Télécharger l'application mobile Android</a>
           </div>

@@ -15,7 +15,8 @@ son propre fichier, nommé d'après la fonctionnalité et lié depuis le tableau
 | 3 | Argent : doubles paiements et vente en double | faite — voir [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md) |
 | 4 | Retours clients | en attente d'une décision |
 | 5 | HTTPS ou Wi-Fi séparé | décision d'installation |
-| 6 | Pagination et Flyway | en cours — sorties de stock : [`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md) (`c9c65d8`) ; factures : [`05-factures-par-periode.md`](05-factures-par-periode.md) ; Flyway à faire |
+| 6 | Pagination et Flyway | en cours — sorties de stock : [`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md) (`c9c65d8`) ; factures : [`05-factures-par-periode.md`](05-factures-par-periode.md) (`4fa4a54`) ; Flyway à faire |
+| — | Hors ordre conseillé, points de `TODO.md` pris un par un | [`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md) |
 
 ---
 

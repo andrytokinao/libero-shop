@@ -20,6 +20,10 @@
 # data/, which a restored backup replaces: a restore must not sign everyone out.
 --java-options
 -Dliberoshop.security.jwt.secret-file=${user.home}/.libertyshop/security/jwt-secret.key
+# The one-time code of the "lost administrator password" procedure: written
+# there for whoever sits at this computer to read, deleted once used.
+--java-options
+-Dliberoshop.security.recovery.code-file=${user.home}/.libertyshop/security/recovery-code.txt
 # The installed application has no window: show its state and its menu (open,
 # stop, restart, update, quit) in the notification area. See desktop.ServerTray.
 --java-options

@@ -33,6 +33,16 @@ export const routes: Routes = [
       import('./features/auth/first-admin.component').then((m) => m.FirstAdminComponent),
   },
 
+  // The administrator's password is lost. Open to anyone not signed in; the server only goes
+  // through with it at its own computer.
+  {
+    path: 'secours',
+    title: 'Mot de passe administrateur oublié',
+    canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
+    loadComponent: () =>
+      import('./features/auth/admin-recovery.component').then((m) => m.AdminRecoveryComponent),
+  },
+
   // Which server the mobile app talks to. Open to everyone, signed in or not: it is the first
   // screen of a fresh install, and the one to reach when the server's address has moved.
   {

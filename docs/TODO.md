@@ -30,12 +30,14 @@ ou entretien.
 - [x] Paiements et bordereaux en double refusés (partie 3)
 - [x] Un panier envoyé deux fois est une seule vente (partie 3)
 - [x] Sorties de stock lues par pages (partie 6, première tranche) (`c9c65d8`)
-- [x] Factures lues par période : 30 derniers jours et factures encore ouvertes, ou dates choisies
+- [x] Factures lues par période : 30 derniers jours et factures encore ouvertes, ou dates choisies (`4fa4a54`)
+- [x] Mot de passe administrateur perdu : procédure de secours sur l'ordinateur du serveur
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
 [`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md),
-[`05-factures-par-periode.md`](05-factures-par-periode.md).
+[`05-factures-par-periode.md`](05-factures-par-periode.md),
+[`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md).
 
 ---
 
@@ -51,9 +53,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P1 — Secret JWT vide.** Chaque installation génère sa clé au premier démarrage et la
   conserve dans un fichier ; `LIBEROSHOP_JWT_SECRET` reste possible.
   *Fait — voir `REALISATION.md`, partie 1.*
-- [ ] **P2 — Mot de passe administrateur perdu.** Aucun moyen de le réinitialiser sans un autre
-  super-admin.
-  *Piste :* procédure de secours utilisable seulement depuis l'ordinateur du serveur.
+- [x] **P2 — Mot de passe administrateur perdu.** Procédure de secours sur l'ordinateur du
+  serveur seulement : un code écrit dans un fichier de cet ordinateur, à retaper.
+  *Fait — voir `06-mot-de-passe-administrateur-perdu.md`.*
 - [ ] **P3 — `application-dev.properties` embarqué dans le jar.** À exclure du build de
   production.
 - [x] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Le compte (actif + rôles)

@@ -80,6 +80,9 @@ public class SecurityConfiguration {
                         // The controller refuses once there is one, and from any other machine.
                         .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/setup/admin").permitAll()
+                        // A lost administrator password: nobody to authenticate either, and held
+                        // to the server's own computer the same way -- see SetupController.
+                        .requestMatchers(HttpMethod.POST, "/api/setup/recovery/*").permitAll()
                         // Asked by the mobile app to test an address before anyone signs in.
                         .requestMatchers(HttpMethod.GET, "/api/server/info").permitAll()
                         // The download page: a phone is equipped before its owner has an account.
