@@ -32,7 +32,7 @@ type Network = 'local' | 'internet';
       <div class="download">
         @if (!auth.isAuthenticated()) {
           <div class="card brand">
-            <div class="mark">Libero <span>Shop</span></div>
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
             <div class="sub">Application mobile Android</div>
           </div>
         }

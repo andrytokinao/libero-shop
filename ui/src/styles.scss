@@ -156,6 +156,15 @@ body {
   }
 }
 
+/* The logo beside the name, wherever the name is written: sized by the text it sits in. */
+.brand-logo {
+  width: 1.7em;
+  height: 1.7em;
+  margin-right: 0.45em;
+  border-radius: 22%;
+  vertical-align: middle;
+}
+
 nav.menu {
   flex: 1;
   padding: 6px 12px;

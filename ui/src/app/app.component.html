@@ -21,7 +21,7 @@
       >
         <app-icon name="menu" [size]="22" />
       </button>
-      <div class="mark">Libero <span>Shop</span></div>
+      <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
       <!-- The bell beside the person, as at the foot of the sidebar on a desktop. -->
       <app-notification-bell />
       @if (auth.currentUser(); as me) {
@@ -38,7 +38,7 @@
 
     <aside class="side" id="app-side">
       <div class="side-head">
-        <div class="mark">Libero <span>Shop</span></div>
+        <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
         <button class="side-close" type="button" aria-label="Fermer le menu" (click)="closeNav()">
           <app-icon name="close" [size]="20" />
         </button>

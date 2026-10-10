@@ -28,7 +28,7 @@ import { ToastService } from '../../core/services/toast.service';
       <form class="card setup-card" (ngSubmit)="testAndSave()">
         @if (!auth.isAuthenticated()) {
           <div class="setup-brand">
-            <div class="mark">Libero <span>Shop</span></div>
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
             <div class="sub">Connexion au serveur de la boutique</div>
           </div>
         }
