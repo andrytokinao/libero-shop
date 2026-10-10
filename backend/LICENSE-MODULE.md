@@ -305,8 +305,15 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 >
 > `LicensePropertyGuard` s'exécute avant toute lecture et **restaure la valeur du jar**
 > pour `enabled`, `clock-guard.enabled` et `trial.system-wide` dès que la clé provient
-> d'ailleurs, en le journalisant. Modifier ces valeurs suppose donc de repackager
-> l'application — c'est-à-dire le niveau d'effort déjà déclaré hors périmètre en §10.
+> d'ailleurs, en le journalisant.
+>
+> **Dans l'application livrée (jar, installeur), le fichier du jar n'est pas cru non
+> plus** : un jar s'ouvre avec 7-Zip, et une ligne ajoutée à son `application.properties`
+> ferait ce que la ligne de commande ne peut plus faire. Dès que les classes ne tournent
+> pas depuis un dossier de build (`target/classes`), les trois interrupteurs sont forcés à
+> `true`, quoi que dise n'importe quelle source. Désactiver le contrôle suppose donc de
+> modifier le code compilé. Conséquence : **aucun jar construit ne peut tourner sans
+> contrôle de licence**, même pour un essai interne.
 >
 > La durée d'essai est traitée à part, par un plafond compilé
 > (`TrialProperties.MAX_DAYS = 40`) : `trial.days` peut la **raccourcir**, jamais
@@ -316,8 +323,11 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 > est un choix de déploiement légitime, et cela ne rapporte rien — la date d'essai vit à
 > plusieurs endroits et c'est la plus ancienne qui gagne.
 
-Le projet utilise `application.properties` ; les valeurs réelles y sont déjà. Voici
-l'équivalent YAML si vous basculez un jour :
+**Aucune de ces clés ne figure dans l'`application.properties` livré**, volontairement :
+le fichier se lit en clair dans le jar, et une ligne `trial.days=40` y désigne à la fois le
+mécanisme et l'endroit où le chercher. Les valeurs ci-dessous sont les **valeurs par
+défaut compilées** dans `LicenseProperties` ; n'ajoutez une clé que pour s'en écarter
+(un chemin, le renouvellement en ligne). En YAML, pour la lisibilité :
 
 ```yaml
 liberoshop:
@@ -353,8 +363,10 @@ liberoshop:
       timeout: 10s
 ```
 
-En développement, désactivez le contrôle **dans le fichier du classpath** —
-`src/main/resources/application.properties`, ou `src/test/resources` où c'est déjà fait.
+En développement (lancement depuis l'IDE ou `spring-boot:run`, jamais depuis un jar),
+désactivez le contrôle **dans le fichier du classpath** — en ajoutant
+`liberoshop.license.enabled=false` à `src/main/resources/application.properties` (sans le
+committer), ou dans `src/test/resources` où c'est déjà fait.
 Passer `--liberoshop.license.enabled=false` en argument de lancement ne fonctionne plus :
 c'est précisément ce que le garde-fou annule.
 

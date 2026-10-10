@@ -6,6 +6,8 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertySource;
 
+import java.net.URL;
+import java.security.CodeSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -28,12 +30,13 @@ import java.util.Objects;
  * unlicensed, so no guesswork is involved either.
  *
  * <p>This guard restores the packaged value whenever one of those keys is supplied from
- * anywhere other than the classpath, and says so in the log. A value inside the jar is
- * still authoritative -- that is how a development build and the test resources keep
- * working -- but changing it there means repacking the application, which is the level of
- * effort this module has always declared out of scope. The difference matters: the point
- * is not to make tampering impossible, it is to stop a one-line command from doing what
- * should require rebuilding the product.
+ * anywhere other than the classpath, and says so in the log. A value on the classpath is
+ * authoritative only while the classes run from a build directory -- that is how a
+ * development run and the test resources keep working. In a delivered application the
+ * packaged file is not believed either: a jar opens with any archive tool, and one line
+ * added to its {@code application.properties} would otherwise do what the command line no
+ * longer can. There, every switch is simply on. The point is not to make tampering
+ * impossible, it is to make it require changing compiled code.
  *
  * <p>Only switches are pinned, not paths. Relocating the license directory is a legitimate
  * deployment choice and buys nothing on its own: the trial date lives in several places at
@@ -57,7 +60,37 @@ final class LicensePropertyGuard {
             "liberoshop.license.clock-guard.enabled", "true",
             "liberoshop.license.trial.system-wide", "true");
 
+    /**
+     * Where a build leaves the classes it has just compiled: what an IDE, Maven and the
+     * tests run from, and the only place the packaged file is still believed.
+     */
+    private static final String BUILD_OUTPUT = "/target/classes/";
+
+    /** Decided once: the classes do not move while the application runs. */
+    private static final boolean DELIVERED = isDelivered();
+
     private LicensePropertyGuard() {
+    }
+
+    /**
+     * Whether these classes run from anything other than a build directory -- the jar, the
+     * installed application.
+     *
+     * <p>The {@code application.properties} inside a jar is one archive tool away from
+     * being edited, no decompiler needed, so in a delivered application it is given no more
+     * say than the command line. Anything unexpected counts as delivered: the doubt must
+     * not be what switches the checks off.
+     */
+    private static boolean isDelivered() {
+        try {
+            CodeSource source = LicensePropertyGuard.class.getProtectionDomain().getCodeSource();
+            URL location = source == null ? null : source.getLocation();
+            return location == null
+                    || !"file".equals(location.getProtocol())
+                    || !location.getPath().endsWith(BUILD_OUTPUT);
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 
     /**
@@ -67,22 +100,34 @@ final class LicensePropertyGuard {
      * created later see the same, corrected environment.
      */
     static void pin(ConfigurableEnvironment environment) {
+        pin(environment, DELIVERED);
+    }
+
+    /**
+     * @param delivered whether this is the application as a customer receives it. Then the
+     *                  packaged file is not trusted either, and every switch is on
+     */
+    static void pin(ConfigurableEnvironment environment, boolean delivered) {
         if (environment.getPropertySources().contains(PINNED)) {
             return;
         }
         Map<String, Object> corrections = new LinkedHashMap<>();
         GUARDED.forEach((key, fallback) -> {
             String effective = environment.getProperty(key);
-            String packaged = packagedValue(environment, key);
+            String packaged = delivered ? null : packagedValue(environment, key);
             if (Objects.equals(effective, packaged)) {
                 return;
             }
             String restored = packaged != null ? packaged : fallback;
+            if (restored.equals(effective)) {
+                return;
+            }
             // The line that tells support somebody tried to switch the licensing off from
             // the command line rather than from the application they were given.
             log.warn("Ignoring '{}={}': this setting may only come from the application's own "
                             + "configuration, not from the command line, the environment or an external "
-                            + "file. Using '{}' instead.",
+                            + "file, and cannot be changed at all in a delivered application. "
+                            + "Using '{}' instead.",
                     key, effective, restored);
             corrections.put(key, restored);
         });
