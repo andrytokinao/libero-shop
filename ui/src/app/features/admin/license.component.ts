@@ -4,6 +4,7 @@ import { LicenseService } from '../../core/services/license.service';
 import { ToastService } from '../../core/services/toast.service';
 import { copyToClipboard } from '../../core/utils/clipboard.util';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { PublisherContactComponent } from '../../shared/components/publisher-contact.component';
 
 /**
  * Licence administration: what is installed, when it ends, and the two ways to renew it.
@@ -20,7 +21,7 @@ import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 @Component({
   selector: 'app-license',
   standalone: true,
-  imports: [KpiCardComponent],
+  imports: [KpiCardComponent, PublisherContactComponent],
   template: `
     @if (license.status(); as status) {
       <div class="grid g4">
@@ -104,6 +105,7 @@ import { KpiCardComponent } from '../../shared/components/kpi-card.component';
           } @else {
             <div class="empty">Chargement du code…</div>
           }
+          <app-publisher-contact />
         </div>
       </div>
 

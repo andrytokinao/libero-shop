@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { PUBLISHER } from '../../core/config/publisher';
 import { ServerConfig } from '../../core/config/server-config.service';
 import { ApiError } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -71,6 +72,12 @@ const SUPPORT_PHONE = '+261 34 05 680 13';
           <div class="label">Équipe support — WhatsApp</div>
           <a [href]="supportLink" target="_blank" rel="noopener">{{ supportPhone }}</a>
           <div class="text">Une question, un blocage ? Écrivez-nous, nous vous répondons.</div>
+        </div>
+
+        <div class="publisher text">
+          Développé par {{ publisher.name }} ·
+          <a [href]="publisher.websiteLink" target="_blank" rel="noopener">{{ publisher.website }}</a>
+          · <a [href]="publisher.emailLink">{{ publisher.email }}</a>
         </div>
       </aside>
 
@@ -240,6 +247,14 @@ const SUPPORT_PHONE = '+261 34 05 680 13';
       }
     }
 
+    .publisher {
+      margin-top: 16px;
+
+      a {
+        color: inherit;
+      }
+    }
+
     /* No room for two columns: the form first, the reading under it. */
     @media (max-width: 900px) {
       .login-page {
@@ -302,6 +317,7 @@ const SUPPORT_PHONE = '+261 34 05 680 13';
 export class LoginComponent {
   protected readonly server = inject(ServerConfig);
   protected readonly highlights = HIGHLIGHTS;
+  protected readonly publisher = PUBLISHER;
   protected readonly supportPhone = SUPPORT_PHONE;
   protected readonly supportLink = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, '')}`;
   private readonly auth = inject(AuthService);

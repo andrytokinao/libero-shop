@@ -16,7 +16,7 @@ n'est stocké en base, donc il n'y a aucun booléen `is_active` à basculer avec
 | Empreinte machine | Nom de machine + numéro de série du volume système | Survit aux changements réseau (dock USB, Wi-Fi, VPN) qui bloqueraient une empreinte MAC |
 | Expiration | Dégradation en lecture seule après 15 jours de grâce | Un supermarché ne doit pas s'arrêter un samedi midi |
 | Recul d'horloge | Fichier d'état authentifié par HMAC | Remettre l'horloge en arrière ne rallonge pas la licence |
-| Absence de licence | Essai de 90 jours, **une seule fois par machine** | Une installation neuve doit pouvoir démarrer ; supprimer le dossier `license/` ne doit pas redonner 90 jours |
+| Absence de licence | Essai de 40 jours, **une seule fois par machine** | Une installation neuve doit pouvoir démarrer ; supprimer le dossier `license/` ne doit pas redonner 40 jours |
 | Mémoire de l'essai | Base de données du client + fichiers + registre | Les fichiers se trouvent en trois minutes avec un moniteur de fichiers ; la base, elle, ne s'efface pas sans effacer les ventes |
 
 ### Format du fichier `.lic`
@@ -203,13 +203,13 @@ consultation et l'authentification restent volontairement non annotés.
 
 ## 4 bis. Période d'essai — accordée une seule fois
 
-Sans fichier `.lic`, l'application ne bloque plus : elle accorde **90 jours d'essai**
+Sans fichier `.lic`, l'application ne bloque plus : elle accorde **40 jours d'essai**
 (`TRIAL`), puis passe en lecture seule (`TRIAL_EXPIRED`). Les deux états sont distincts de
 `ACTIVE` / `READ_ONLY` : `GET /api/license/status` renvoie `licensed: false` pendant
 l'essai, l'interface ne doit jamais présenter une machine non licenciée comme licenciée.
 
 ```
-         1er lancement         +90 jours
+         1er lancement         +40 jours
   ────────────┼───────────────────┼──────────────────►
               │      TRIAL        │   TRIAL_EXPIRED
               │   tout permis     │  écritures refusées
@@ -241,7 +241,7 @@ Les copies fichier et registre ne résistent pas à l'outillage. **Process Monit
 sur `java.exe`, ou un simple diff **RegShot**, affiche en trois minutes tous les chemins
 touchés au premier démarrage — l'attribut « caché » n'y change rien. Multiplier les
 répertoires ne fait donc que transformer un `del` en un script de quatre lignes,
-rejouable tous les 90 jours.
+rejouable tous les 40 jours.
 
 La base est d'une autre nature : c'est là que vivent les ventes, le stock et les factures
 du client. On peut parfaitement la voir depuis ProcMon — mais l'effacer coûte au client
@@ -309,8 +309,8 @@ n'importe qui pourrait recalculer un HMAC valide sans décompiler quoi que ce so
 > l'application — c'est-à-dire le niveau d'effort déjà déclaré hors périmètre en §10.
 >
 > La durée d'essai est traitée à part, par un plafond compilé
-> (`TrialProperties.MAX_DAYS = 90`) : `trial.days` peut la **raccourcir**, jamais
-> l'allonger. Un `--liberoshop.license.trial.days=2000` est ramené à 90 sans bruit.
+> (`TrialProperties.MAX_DAYS = 40`) : `trial.days` peut la **raccourcir**, jamais
+> l'allonger. Un `--liberoshop.license.trial.days=2000` est ramené à 40 sans bruit.
 >
 > Les **chemins** ne sont volontairement pas protégés : relocaliser le dossier de licence
 > est un choix de déploiement légitime, et cela ne rapporte rien — la date d'essai vit à
@@ -337,7 +337,7 @@ liberoshop:
     # strict, l'application refuse de démarrer sans .lic.
     trial:
       enabled: true
-      days: 90
+      days: 40
       # Réplication des copies FICHIER hors du dossier d'installation (profil,
       # ProgramData, XDG, registre). La copie en base est écrite dans tous les cas :
       # elle ne dépend d'aucun système de fichiers et c'est la seule qui dissuade.
@@ -556,7 +556,7 @@ déjà payées ou rendrait des protections inopérantes.
 
 | Ce qui garde l'ancien nom | Où | Conséquence si on le renommait |
 |---|---|---|
-| Contextes de dérivation HMAC `liberty-shop/{clock-guard,trial,renewal-code}/v1` | `ClockGuard`, `TrialRegistry`, `RenewalCode` + `RenewalCodeReader` côté éditeur | Tous les fichiers d'état et d'essai déjà écrits échouent à leur contrôle d'intégrité et sont ignorés : la protection anti-recul d'horloge repart de zéro et **un nouvel essai de 90 jours est accordé** à une machine qui a consommé le sien |
+| Contextes de dérivation HMAC `liberty-shop/{clock-guard,trial,renewal-code}/v1` | `ClockGuard`, `TrialRegistry`, `RenewalCode` + `RenewalCodeReader` côté éditeur | Tous les fichiers d'état et d'essai déjà écrits échouent à leur contrôle d'intégrité et sont ignorés : la protection anti-recul d'horloge repart de zéro et **un nouvel essai de 40 jours est accordé** à une machine qui a consommé le sien |
 | Répertoires et clé de registre `LibertyShop` | `TrialRegistry` (profil utilisateur, données machine, `HKCU\Software\LibertyShop`) | Les marqueurs existants ne sont plus trouvés : même effet, un essai qui recommence |
 | Discriminant `"format": "liberty-shop-license"` | `LicenseFile.LEGACY_FORMAT` | **Accepté en lecture**, jamais écrit. Une licence vendue sous l'ancien nom reste valable ; le générateur n'émet plus que `libero-shop-license` |
 

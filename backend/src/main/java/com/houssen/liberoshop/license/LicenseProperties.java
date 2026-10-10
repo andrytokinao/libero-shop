@@ -109,7 +109,7 @@ public record LicenseProperties(
          * Configuration may still <em>shorten</em> the period, which can only ever work
          * against whoever sets it.
          */
-        public static final int MAX_DAYS = 90;
+        public static final int MAX_DAYS = 40;
 
         public TrialProperties {
             enabled = enabled == null || enabled;

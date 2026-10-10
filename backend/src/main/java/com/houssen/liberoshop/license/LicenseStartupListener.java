@@ -33,6 +33,10 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
 
     private static final Logger log = LoggerFactory.getLogger(LicenseStartupListener.class);
 
+    /** Who the fingerprint goes to. Compiled in: a configured value could be anyone's. */
+    private static final String PUBLISHER_CONTACT =
+            "Kinga Digital - +261 34 19 819 72 - contact@kinga-digital.com - www.kinga-digital.com";
+
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
         // Before anything is read: an enforcement switch turned off from the command line,
@@ -88,6 +92,7 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
         out.println();
         out.println(" Fichier attendu   : " + properties.path().toAbsolutePath());
         out.println(" Empreinte machine : " + fingerprint);
+        out.println(" Editeur           : " + PUBLISHER_CONTACT);
         out.println(rule);
         out.println();
     }

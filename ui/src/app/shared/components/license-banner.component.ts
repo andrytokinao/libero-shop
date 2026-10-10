@@ -6,6 +6,7 @@ import { LicenseService } from '../../core/services/license.service';
 import { ToastService } from '../../core/services/toast.service';
 import { copyToClipboard } from '../../core/utils/clipboard.util';
 import { HasRoleDirective } from '../directives/has-role.directive';
+import { PublisherContactComponent } from './publisher-contact.component';
 
 /**
  * The licence bar in the shell, and the dialog it opens.
@@ -22,7 +23,7 @@ import { HasRoleDirective } from '../directives/has-role.directive';
 @Component({
   selector: 'app-license-banner',
   standalone: true,
-  imports: [DatePipe, RouterLink, HasRoleDirective],
+  imports: [DatePipe, RouterLink, HasRoleDirective, PublisherContactComponent],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     @if (license.bannerVisible()) {
@@ -108,6 +109,7 @@ import { HasRoleDirective } from '../directives/has-role.directive';
                 } @else {
                   <div class="muted">Chargement du code…</div>
                 }
+                <app-publisher-contact />
               </div>
             </div>
 
