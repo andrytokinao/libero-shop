@@ -1,6 +1,7 @@
 import { Component, inject, output } from '@angular/core';
 import { ROLE_LABELS, UserApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
+import { IconComponent } from './icon.component';
 import { ProfilePhotoPickerComponent } from './profile-photo-picker.component';
 import { ThemePickerComponent } from './theme-picker.component';
 
@@ -11,7 +12,7 @@ import { ThemePickerComponent } from './theme-picker.component';
 @Component({
   selector: 'app-profile-dialog',
   standalone: true,
-  imports: [ProfilePhotoPickerComponent, ThemePickerComponent],
+  imports: [IconComponent, ProfilePhotoPickerComponent, ThemePickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     @if (auth.currentUser(); as me) {
@@ -40,6 +41,11 @@ import { ThemePickerComponent } from './theme-picker.component';
             </div>
           </div>
           <div class="modal-foot">
+            <!-- On a phone this is where the face in the top bar leads: the way out is looked
+                 for here before it is looked for at the foot of the menu. -->
+            <button class="btn ghost" type="button" style="margin-right:auto;" (click)="logout.emit()">
+              <app-icon name="logout" [size]="16" /> Se déconnecter
+            </button>
             <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
           </div>
         </div>
@@ -50,6 +56,7 @@ import { ThemePickerComponent } from './theme-picker.component';
 export class ProfileDialogComponent {
   protected readonly auth = inject(AuthService);
   readonly closed = output<void>();
+  readonly logout = output<void>();
 
   protected applied(user: UserApp): void {
     this.auth.applyCurrentUser(user);

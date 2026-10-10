@@ -138,6 +138,9 @@ body {
   top: 0;
   height: 100vh;
   padding-top: env(safe-area-inset-top, 0px);
+  /* On a phone the drawer runs to the bottom edge of the screen: without this, its last
+     entry -- "Se déconnecter" -- sits under the system navigation bar. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .side-head {

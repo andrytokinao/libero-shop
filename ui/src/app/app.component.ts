@@ -134,6 +134,7 @@ export class AppComponent {
 
   protected logout(): void {
     this.navOpen.set(false);
+    this.profileOpen.set(false);
     this.auth.logout().subscribe(() => void this.router.navigateByUrl('/login'));
   }
 }
