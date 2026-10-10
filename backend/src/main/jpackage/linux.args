@@ -1,0 +1,11 @@
+# Linux installer options. --type deb needs dpkg-deb + fakeroot; switch to rpm
+# on Fedora/RHEL (needs rpmbuild). Package names must be lower-case, no spaces.
+--type
+deb
+--linux-package-name
+liberty-shop
+--linux-app-category
+Office
+--linux-shortcut
+--linux-menu-group
+Office

@@ -1,0 +1,38 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Installer Windows (rapide)" type="MavenRunConfiguration" factoryName="Maven">
+    <MavenSettings>
+      <option name="myGeneralSettings" />
+      <option name="myRunnerSettings" />
+      <option name="myRunnerParameters">
+        <MavenRunnerParameters>
+          <option name="cmdOptions" value="" />
+          <option name="profiles">
+            <set>
+              <option value="installer" />
+            </set>
+          </option>
+          <option name="goals">
+            <list>
+              <option value="clean" />
+              <option value="verify" />
+              <option value="-DskipFrontend=true" />
+              <option value="-DskipTests" />
+            </list>
+          </option>
+          <option name="pomFileName" value="" />
+          <option name="profilesMap">
+            <map>
+              <entry key="installer" value="true" />
+            </map>
+          </option>
+          <option name="projectsCmdOptionValues">
+            <list />
+          </option>
+          <option name="resolveToWorkspace" value="false" />
+          <option name="workingDirPath" value="$PROJECT_DIR$/backend" />
+        </MavenRunnerParameters>
+      </option>
+    </MavenSettings>
+    <method v="2" />
+  </configuration>
+</component>

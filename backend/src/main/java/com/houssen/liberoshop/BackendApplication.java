@@ -6,6 +6,7 @@ import com.houssen.liberoshop.license.LicenseStartupListener;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 
 @SpringBootApplication
 public class BackendApplication {
@@ -18,6 +19,11 @@ public class BackendApplication {
 
     static ConfigurableApplicationContext start(String[] args) {
         SpringApplication application = new SpringApplication(BackendApplication.class);
+
+        // Name beans by fully-qualified class name. ProGuard renames scanned
+        // components to short names that can collide once Spring decapitalises
+        // them (e.g. "a" and "A" both become bean "a"); the FQN keeps them unique.
+        application.setBeanNameGenerator(new FullyQualifiedAnnotationBeanNameGenerator());
 
         application.addListeners(new LicenseStartupListener());
         // Before the database is opened: carries out a pending restore, or copies the file.

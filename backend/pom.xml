@@ -389,4 +389,155 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!-- =================================================================
+             Native installer via jpackage, for Windows, macOS and Linux.
+
+               mvn -Pinstaller verify
+
+             jpackage can only build for the OS it runs on (no cross-build), so
+             run it on each target. The os-* profiles below auto-select the
+             right per-OS argfile from src/main/jpackage/. The installer bundles
+             a jlink runtime + the ProGuard-obfuscated fat jar: a real JVM, so
+             POI / the JDBC drivers / the in-process restart all work and the
+             obfuscation is preserved. It is NOT GraalVM native-image.
+
+             Writable state (H2 DB, license, downloads) is redirected to
+             ${user.home}/.libertyshop by runtime.args, so the app runs even
+             when installed read-only. Point ${java.home} at a GraalVM 21 JDK
+             to embed a GraalVM runtime.
+
+             Per-OS native-tool prerequisites on the BUILD machine:
+               Windows exe/msi : WiX Toolset v3
+               Linux   deb     : dpkg-deb + fakeroot   (rpm: rpmbuild)
+               macOS   dmg/pkg : Xcode command line tools (+ signing to ship)
+             ================================================================= -->
+        <profile>
+            <id>installer</id>
+            <properties>
+                <!-- jpackage rejects SNAPSHOT / a 0 major on Windows; keep it numeric. -->
+                <installer.version>1.0.0</installer.version>
+                <jpackage.input>${project.build.directory}/jpackage/input</jpackage.input>
+                <jpackage.dest>${project.build.directory}/jpackage/dist</jpackage.dest>
+                <jpackage.config>${project.basedir}/src/main/jpackage</jpackage.config>
+                <!-- Overridden by the os-* profiles. Left blank so a bare run on an
+                     unrecognised OS fails fast with a missing-argfile error. -->
+                <installer.os></installer.os>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- Stage ONLY the fat jar into a clean input dir: jpackage copies the
+                         whole input dir into the app image, so target/ as-is would drag in
+                         the proguard base jar, loose classes, etc. Bound to verify so the
+                         repackaged (obfuscated) jar already exists. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>stage-jpackage-input</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${jpackage.input}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.build.finalName}.jar</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Run the JDK's own jpackage. OS-agnostic here: the installer type and
+                         the platform GUI flags come from the per-OS @argfile, and the runtime
+                         JVM options (incl. the ${user.home} path redirects) from runtime.args.
+                         @argfiles are read raw by jpackage, so ${user.home} reaches the target
+                         machine unresolved and Spring expands it there. -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/jpackage</executable>
+                                    <arguments>
+                                        <argument>--name</argument>
+                                        <argument>Liberty Shop</argument>
+                                        <argument>--app-version</argument>
+                                        <argument>${installer.version}</argument>
+                                        <argument>--vendor</argument>
+                                        <argument>Houssen</argument>
+                                        <argument>--description</argument>
+                                        <argument>Liberty Shop - point de vente</argument>
+                                        <argument>--input</argument>
+                                        <argument>${jpackage.input}</argument>
+                                        <argument>--main-jar</argument>
+                                        <argument>${project.build.finalName}.jar</argument>
+                                        <argument>--main-class</argument>
+                                        <argument>org.springframework.boot.loader.launch.JarLauncher</argument>
+                                        <argument>--dest</argument>
+                                        <argument>${jpackage.dest}</argument>
+                                        <!-- jlink runtime: java.se pulls every Java SE module; the
+                                             jdk.* extras cover Unsafe, EC/PKCS11 crypto (JWT +
+                                             license signatures), zipfs, locales, management. -->
+                                        <argument>--add-modules</argument>
+                                        <argument>java.se,jdk.unsupported,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.zipfs,jdk.httpserver,jdk.localedata,jdk.management,jdk.security.auth,jdk.net</argument>
+                                        <!-- Shared JVM options + writable-path redirects. -->
+                                        <argument>@${jpackage.config}/runtime.args</argument>
+                                        <!-- Installer type + platform GUI flags (windows|mac|linux). -->
+                                        <argument>@${jpackage.config}/${installer.os}.args</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Auto-selected by the build OS; each only picks the matching argfile.
+             NB: macOS reports both "mac" and "unix"; os-mac is declared after
+             os-linux so it wins there and installer.os resolves to "mac". -->
+        <profile>
+            <id>os-linux</id>
+            <activation>
+                <os><family>unix</family></os>
+            </activation>
+            <properties>
+                <installer.os>linux</installer.os>
+            </properties>
+        </profile>
+        <profile>
+            <id>os-mac</id>
+            <activation>
+                <os><family>mac</family></os>
+            </activation>
+            <properties>
+                <installer.os>mac</installer.os>
+            </properties>
+        </profile>
+        <profile>
+            <id>os-windows</id>
+            <activation>
+                <os><family>windows</family></os>
+            </activation>
+            <properties>
+                <installer.os>windows</installer.os>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

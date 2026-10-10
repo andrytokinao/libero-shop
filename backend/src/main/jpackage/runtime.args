@@ -1,0 +1,18 @@
+# JVM options baked into every installer, all operating systems.
+#
+# ${user.home} is resolved by Spring at RUN TIME on the target machine, not by
+# Maven at build time: this file is read directly by jpackage and never
+# filtered, and jpackage leaves ${...} untouched (verified). Putting the
+# writable state under the user's home lets the app run even when installed in
+# a read-only location (Program Files, /Applications, /opt).
+#
+# Paths may be redirected from outside the jar: LicensePropertyGuard pins only
+# the license *switches*, never paths.
+--java-options
+-Dfile.encoding=UTF-8
+--java-options
+-Dspring.datasource.url=jdbc:h2:file:${user.home}/.libertyshop/data/libertyshop
+--java-options
+-Dliberoshop.license.path=${user.home}/.libertyshop/license/libero-shop.lic
+--java-options
+-Dliberoshop.mobile.downloads-dir=${user.home}/.libertyshop/downloads

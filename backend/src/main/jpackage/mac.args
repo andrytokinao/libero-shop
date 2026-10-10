@@ -1,0 +1,10 @@
+# macOS installer options. --type dmg produces a drag-to-install disk image
+# (no code signing). Use pkg instead for an installer package. Signing /
+# notarization (--mac-sign, --mac-signing-key-user-name) is required before
+# distribution outside your own machines.
+--type
+dmg
+--mac-package-name
+"Liberty Shop"
+--mac-package-identifier
+mg.houssen.libertyshop

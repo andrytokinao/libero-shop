@@ -1,0 +1,11 @@
+# Windows installer options. --type exe/msi needs WiX Toolset v3 on the build
+# machine. Per-user install needs no admin rights and lands in a writable
+# location; data still goes under ${user.home} (see runtime.args).
+--type
+exe
+--win-menu
+--win-menu-group
+"Liberty Shop"
+--win-shortcut
+--win-dir-chooser
+--win-per-user-install
