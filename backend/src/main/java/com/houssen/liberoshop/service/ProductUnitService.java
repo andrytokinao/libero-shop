@@ -46,7 +46,10 @@ public class ProductUnitService {
     @RequiresActiveLicense
     @Transactional
     public ProductUnitsResponse renameBaseUnit(Long productId, BaseUnitRequest request) {
-        Product product = requireProduct(productId);
+        // For update, though the stock is not touched: Hibernate writes every column of the
+        // row, and a sale committing in between would get its quantity overwritten.
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
         String unit = PackagingRules.squeeze(request.unit());
         if (unit != null) {
             rules.refuseBaseUnitTaken(product, unit);

@@ -49,8 +49,9 @@ import java.util.List;
 
 @Component
 @EnableConfigurationProperties(DemoDataProperties.class)
-@ConditionalOnProperty(prefix = "liberoshop.demo-data", name = "enabled", havingValue = "true",
-        matchIfMissing = true)
+// Opt-in: a configuration that says nothing must not hand out accounts whose password is
+// printed in the documentation.
+@ConditionalOnProperty(prefix = "liberoshop.demo-data", name = "enabled", havingValue = "true")
 public class DataInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);

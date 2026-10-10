@@ -68,6 +68,8 @@ class ProductUnitServiceTest {
 
         when(products.findById(anyLong())).thenAnswer(call ->
                 call.getArgument(0).equals(rice.getId()) ? Optional.of(rice) : Optional.empty());
+        when(products.findByIdForUpdate(anyLong())).thenAnswer(call ->
+                call.getArgument(0).equals(rice.getId()) ? Optional.of(rice) : Optional.empty());
         when(products.existsByBarcode(anyString())).thenAnswer(call ->
                 call.getArgument(0).equals(rice.getBarcode()));
         when(packagings.findByProductIdOrderByFactorAsc(anyLong())).thenAnswer(call -> table.stream()

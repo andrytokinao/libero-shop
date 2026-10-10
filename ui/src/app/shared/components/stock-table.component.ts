@@ -53,10 +53,10 @@ import { StockStatusBadgeComponent } from './status-badges.component';
                   <button
                     class="btn small ghost"
                     type="button"
-                    title="Unités de vente : kg, carton, sac…"
+                    title="Nom, prix, code-barres et unités de vente : kg, carton, sac…"
                     (click)="unitsRequested.emit(product)"
                   >
-                    Unités
+                    Modifier
                   </button>
                 </td>
               }
@@ -73,7 +73,7 @@ export class StockTableComponent {
   @Input({ required: true }) products: readonly Product[] = [];
   @Input() emptyMessage = 'Aucun produit à afficher.';
   /**
-   * Offers a "Unités" button per row. Off by default: the table is also the read-only stock of
+   * Offers a "Modifier" button per row, opening the product's sheet and units. Off by default: the table is also the read-only stock of
    * the dashboards, and only the screen of the roles that own the catalogue turns it on.
    */
   @Input() manageUnits = false;

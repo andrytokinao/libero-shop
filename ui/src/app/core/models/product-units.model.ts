@@ -27,6 +27,14 @@ export interface Packaging {
   referenceQuantity: number;
 }
 
+/** A product's name, base price and barcode as the dialog sends them — mirrors UpdateProductRequest. */
+export interface UpdateProductRequest {
+  name: string;
+  /** Of one base unit. */
+  price: number;
+  barcode: string | null;
+}
+
 /** A unit as the dialog sends it, for a creation and an edit alike. */
 export interface PackagingRequest {
   label: string;

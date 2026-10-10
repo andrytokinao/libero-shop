@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signa
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { Packaging, PackagingRequest, ProductUnits } from '../../core/models';
+import { Packaging, PackagingRequest, ProductUnits, UpdateProductRequest } from '../../core/models';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
@@ -16,6 +16,13 @@ interface Draft {
 }
 
 const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', barcode: '' };
+
+/** The product's own name, base price and barcode, as typed. */
+interface Sheet {
+  name: string;
+  price: string;
+  barcode: string;
+}
 
 /**
  * The units a product is sold in: its base unit, and "1 kg = 3.5 kapoka"-style packagings.
@@ -39,7 +46,7 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', 
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="units-title">
         <div class="modal-head">
           <div>
-            <h2 id="units-title">Unités de vente — {{ productName }}</h2>
+            <h2 id="units-title">Produit et unités de vente — {{ units()?.productName ?? productName }}</h2>
             <div class="sub muted">
               Le stock est compté dans l'unité de base, la plus petite. Chaque autre unité s'écrit
               comme sur l'emballage, dans l'unité de votre choix : « sac 25 kg » contient 25 kg.
@@ -52,6 +59,53 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', 
         <div class="modal-body">
           @if (units(); as u) {
             <!-- ---------------------------------------------------- base unit -->
+            <!-- A past ticket keeps the name and price it was sold at: correcting them here only
+                 changes what the next sale reads. -->
+            <form class="un-sheet" (ngSubmit)="saveSheet()">
+              <div class="fld un-sheet-name">
+                <label for="un-name">Nom du produit</label>
+                <input
+                  id="un-name"
+                  name="name"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="255"
+                  [ngModel]="sheet().name"
+                  (ngModelChange)="patchSheet({ name: $event })"
+                />
+              </div>
+              <div class="fld">
+                <label for="un-base-price">Prix (Ar) par {{ baseName() }}</label>
+                <input
+                  id="un-base-price"
+                  name="price"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [ngModel]="sheet().price"
+                  (ngModelChange)="patchSheet({ price: $event })"
+                />
+              </div>
+              <div class="fld">
+                <label for="un-base-barcode">Code-barres</label>
+                <input
+                  id="un-base-barcode"
+                  name="barcode"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="64"
+                  placeholder="facultatif"
+                  [ngModel]="sheet().barcode"
+                  (ngModelChange)="patchSheet({ barcode: $event })"
+                />
+              </div>
+              @if (sheetChanged()) {
+                <button class="btn small" type="submit" [disabled]="busy() || !sheetRequest()">
+                  Enregistrer
+                </button>
+              }
+            </form>
+
             <div class="un-base">
               <div class="fld">
                 <label for="un-base">Unité de base (stock)</label>
@@ -237,6 +291,26 @@ const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', 
     </div>
   `,
   styles: `
+    .un-sheet {
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+
+      .fld {
+        margin-bottom: 0;
+        width: 160px;
+      }
+
+      .un-sheet-name {
+        flex: 1;
+        min-width: 200px;
+      }
+    }
+
     .un-base {
       display: flex;
       align-items: end;
@@ -360,6 +434,29 @@ export class ProductUnitsDialogComponent implements OnInit {
     () => this.baseDraft().trim() !== (this.units()?.baseUnit ?? ''),
   );
 
+  protected readonly sheet = signal<Sheet>({ name: '', price: '', barcode: '' });
+
+  /** The sheet as a request, or null while it cannot be sent. The server still judges it. */
+  protected readonly sheetRequest = computed<UpdateProductRequest | null>(() => {
+    const sheet = this.sheet();
+    const price = parseDecimal(sheet.price);
+    if (!sheet.name.trim() || price === null || price <= 0) {
+      return null;
+    }
+    return { name: sheet.name.trim(), price, barcode: sheet.barcode.trim() || null };
+  });
+
+  protected readonly sheetChanged = computed(() => {
+    const units = this.units();
+    const sheet = this.sheet();
+    return (
+      units !== null &&
+      (sheet.name.trim() !== units.productName ||
+        parseDecimal(sheet.price) !== units.basePrice ||
+        sheet.barcode.trim() !== (units.baseBarcode ?? ''))
+    );
+  });
+
   protected readonly editingLabel = computed(
     () => this.units()?.packagings.find((p) => p.id === this.editingId())?.label ?? '',
   );
@@ -457,6 +554,18 @@ export class ProductUnitsDialogComponent implements OnInit {
     this.draft.update((draft) => ({ ...draft, ...change }));
   }
 
+  protected patchSheet(change: Partial<Sheet>): void {
+    this.sheet.update((sheet) => ({ ...sheet, ...change }));
+  }
+
+  protected saveSheet(): void {
+    const request = this.sheetRequest();
+    if (!request || !this.sheetChanged() || this.busy()) {
+      return;
+    }
+    this.run(this.api.updateProduct(this.productId, request));
+  }
+
   protected saveBase(): void {
     if (!this.baseChanged() || this.busy()) {
       return;
@@ -521,6 +630,11 @@ export class ProductUnitsDialogComponent implements OnInit {
       next: (units) => {
         this.units.set(units);
         this.baseDraft.set(units.baseUnit ?? '');
+        this.sheet.set({
+          name: units.productName,
+          price: String(units.basePrice),
+          barcode: units.baseBarcode ?? '',
+        });
         this.busy.set(false);
         after?.();
         if (write) {

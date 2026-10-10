@@ -2,11 +2,13 @@ package com.houssen.liberoshop.web;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.houssen.liberoshop.entity.StatusTransitionException;
+import com.houssen.liberoshop.security.TooManyLoginAttemptsException;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -94,6 +96,15 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiError("BAD_CREDENTIALS", "Identifiant ou mot de passe incorrect.",
                         List.of(), Instant.now()));
+    }
+
+    /** Answered before the password is looked at -- see {@code LoginThrottle}. */
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<ApiError> handleTooManyLoginAttempts(TooManyLoginAttemptsException e) {
+        log.warn("Connexion ralentie apres trop d'echecs : {} s d'attente", e.waitTime().toSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(Math.max(1, e.waitTime().toSeconds())))
+                .body(new ApiError("TOO_MANY_ATTEMPTS", e.getMessage(), List.of(), Instant.now()));
     }
 
     /**

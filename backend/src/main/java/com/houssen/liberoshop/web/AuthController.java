@@ -5,16 +5,19 @@ import com.houssen.liberoshop.security.AppUserDetails;
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.security.JwtService.IssuedToken;
+import com.houssen.liberoshop.security.LoginThrottle;
 import com.houssen.liberoshop.service.RolePolicy;
 import com.houssen.liberoshop.service.ShopSettingsService;
 import com.houssen.liberoshop.web.dto.LoginRequest;
 import com.houssen.liberoshop.web.dto.LoginResponse;
 import com.houssen.liberoshop.web.dto.SessionResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,9 +47,12 @@ public class AuthController {
     private final JwtService jwtService;
     private final CurrentUser currentUser;
     private final ShopSettingsService settingsService;
+    private final LoginThrottle loginThrottle;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
-                          CurrentUser currentUser, ShopSettingsService settingsService) {
+                          CurrentUser currentUser, ShopSettingsService settingsService,
+                          LoginThrottle loginThrottle) {
+        this.loginThrottle = loginThrottle;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.currentUser = currentUser;
@@ -54,9 +60,18 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        Authentication credentials = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        String address = http.getRemoteAddr();
+        loginThrottle.check(address, request.username());
+        Authentication credentials;
+        try {
+            credentials = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));
+        } catch (AuthenticationException refused) {
+            loginThrottle.failed(address, request.username());
+            throw refused;
+        }
+        loginThrottle.succeeded(address, request.username());
 
         IssuedToken token = jwtService.issue((AppUserDetails) credentials.getPrincipal());
 

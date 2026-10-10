@@ -25,6 +25,7 @@ import {
   SimpleImportResult,
   Supplier,
   UpdateCategoryRequest,
+  UpdateProductRequest,
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -181,6 +182,11 @@ export class CatalogApi {
   /** The base unit and the other units of one product. Every write below answers the same shape. */
   productUnits(productId: number): Observable<ProductUnits> {
     return this.http.get<ProductUnits>(`${API_BASE_URL}/products/${productId}/units`);
+  }
+
+  /** Corrects the name, the base unit's price and the barcode. Past tickets keep what they sold at. */
+  updateProduct(productId: number, request: UpdateProductRequest): Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}`, request);
   }
 
   /** @param unit blank clears it, for a product counted in bare units */
