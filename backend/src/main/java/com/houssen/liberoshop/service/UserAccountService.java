@@ -13,6 +13,7 @@ import com.houssen.liberoshop.web.dto.SetPasswordRequest;
 import com.houssen.liberoshop.web.dto.UpdateUserRequest;
 import com.houssen.liberoshop.web.dto.UserActivityResponse;
 import com.houssen.liberoshop.web.dto.UserResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,10 +62,13 @@ public class UserAccountService {
     private final DashboardService dashboardService;
     private final BusinessCalendar calendar;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher events;
 
     public UserAccountService(UserAppRepository users, PaymentRepository payments,
                               CashRemittanceRepository remittances, DashboardService dashboardService,
-                              BusinessCalendar calendar, PasswordEncoder passwordEncoder) {
+                              BusinessCalendar calendar, PasswordEncoder passwordEncoder,
+                              ApplicationEventPublisher events) {
+        this.events = events;
         this.users = users;
         this.payments = payments;
         this.remittances = remittances;
@@ -152,8 +156,14 @@ public class UserAccountService {
         // Emptied and refilled rather than swapped for a new set: Hibernate follows the
         // collection instance it handed out, and replacing it makes the whole element
         // collection be deleted and re-inserted for what is often a one-role change.
+        boolean rolesChanged = !user.getRoles().equals(roles);
         user.getRoles().clear();
         user.getRoles().addAll(roles);
+        if (rolesChanged) {
+            // The connections it has open were told its old roles: they are closed, and come back
+            // with the new ones.
+            events.publishEvent(new AccountAccessChangedEvent(user.getId()));
+        }
         return UserResponse.of(user);
     }
 
@@ -180,6 +190,9 @@ public class UserAccountService {
                             + "l'administration a tout le monde.");
         }
         user.setEnabled(enabled);
+        if (!enabled) {
+            events.publishEvent(new AccountAccessChangedEvent(user.getId()));
+        }
         return UserResponse.of(user);
     }
 
@@ -196,6 +209,7 @@ public class UserAccountService {
         UserApp user = require(id);
         user.setPassword(passwordEncoder.encode(request.password()));
         user.revokeSessions();
+        events.publishEvent(new AccountAccessChangedEvent(user.getId()));
         return UserResponse.of(user);
     }
 

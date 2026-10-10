@@ -7,8 +7,8 @@ import { RemittanceStore } from '../store/remittance.store';
 import { RealtimeService } from './realtime.service';
 import { Resync } from './resync.service';
 
-/** Mirrors OrderChangePublisher.TOPIC. */
-export const ORDERS_TOPIC = 'orders';
+/** Mirrors OrderChangePublisher.QUEUE: this account's own share of the order changes. */
+export const ORDERS_QUEUE = 'orders';
 
 /** What one kind of change does to the browser's data. */
 type OrderChangeHandler = (change: OrderChange) => void;
@@ -61,7 +61,7 @@ export class OrderEvents {
   readonly changes$: Observable<OrderChange> = this.applied.asObservable();
 
   constructor() {
-    this.realtime.topic<OrderChange>(ORDERS_TOPIC).subscribe((change) => this.apply(change));
+    this.realtime.mine<OrderChange>(ORDERS_QUEUE).subscribe((change) => this.apply(change));
     inject(Resync).resync$.subscribe(() => this.reloadAll());
 
     const auth = inject(AuthService);

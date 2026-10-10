@@ -82,7 +82,12 @@ describe('AppComponent', () => {
         // open a real socket to the test runner's server.
         {
           provide: RealtimeService,
-          useValue: { notifications$: NEVER, topic: () => NEVER, state: signal('offline') },
+          useValue: {
+            notifications$: NEVER,
+            topic: () => NEVER,
+            mine: () => NEVER,
+            state: signal('offline'),
+          },
         },
       ],
     }).compileComponents();

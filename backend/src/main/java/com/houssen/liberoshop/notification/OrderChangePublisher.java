@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.notification;
 
+import com.houssen.liberoshop.service.InvoiceAccess;
 import com.houssen.liberoshop.service.InvoiceService;
 import com.houssen.liberoshop.service.OrderCancelledEvent;
 import com.houssen.liberoshop.service.OrderDeliveredEvent;
@@ -18,6 +19,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Tells every screen showing orders that one of them has changed: a sale recorded, an order
@@ -29,20 +32,23 @@ import java.util.List;
  * one storekeeper must vanish from the others' screens before a second one walks to the shelves
  * for it; and the desk's invoice list must show the depot's cash arriving.
  *
- * <p>A topic rather than a queue per account: orders are the whole shop's -- any signed-in
- * account may already list them all -- and a topic is what any signed-in screen may follow.
+ * <p>A queue per account rather than a topic: a topic hands its messages to whoever subscribes,
+ * and not every account reads every order -- an order taker reads theirs, the till and the depot
+ * the day's and the open ones ({@code InvoiceAccess}). So each connected account is sent its
+ * own share, decided on the account as it is now, not as it was when it connected.
  *
  * <p>Each message carries the orders as they now stand, read back after the commit exactly as
  * {@code GET /api/invoices} serves them, and the slip for a cash change. The browser's stores
  * apply them in place: a hundred screens open on the queue cost one read here, not a hundred
- * reloads. Should that read fail, the message still goes out with the numbers alone, and the
- * screens fall back to reloading -- the REST API stays the source of truth.
+ * reloads. Should that read fail, or should an order have left what the account reads, the
+ * message goes out empty and the screens fall back to reloading -- the REST API stays the
+ * source of truth.
  */
 @Component
 public class OrderChangePublisher {
 
-    /** {@code /topic/orders} on the socket. */
-    public static final String TOPIC = "orders";
+    /** {@code /user/queue/orders} on the socket: each account's own share of the changes. */
+    public static final String QUEUE = "orders";
 
     private static final Logger log = LoggerFactory.getLogger(OrderChangePublisher.class);
 
@@ -95,16 +101,53 @@ public class OrderChangePublisher {
     }
 
     private void publish(String change, List<String> numbers, List<Long> invoiceIds, Long remittanceId) {
-        List<InvoiceResponse> current = List.of();
-        CashRemittanceResponse slip = null;
+        Set<Long> listening = notifications.connectedUserIds();
+        if (listening.isEmpty()) {
+            return;
+        }
+        Map<Long, InvoiceService.Share> shares;
+        CashRemittanceResponse slip;
         try {
-            current = invoices.findAllById(invoiceIds);
+            shares = invoices.sharesOf(invoiceIds, listening);
             slip = remittanceId == null ? null : remittances.findById(remittanceId);
         } catch (RuntimeException e) {
-            // The change is committed whatever happens here: the screens are told without the data.
+            // The change is committed whatever happens here: the screens are told to reload, and
+            // the REST API gives each of them its share.
             log.warn("Orders {} not read back for the {} message: {}", numbers, change, e.getMessage());
+            listening.forEach(userId -> notifications.sendToUserQueue(userId, QUEUE, Change.reload(change)));
+            return;
         }
-        notifications.publish(TOPIC, new Change(change, numbers, current, slip));
+        shares.forEach((userId, share) -> {
+            Change message = messageFor(userId, share, change, slip);
+            if (message != null) {
+                notifications.sendToUserQueue(userId, QUEUE, message);
+            }
+        });
+    }
+
+    /**
+     * What one account is told, or null for nothing.
+     *
+     * <p>Whoever reads everything gets everything. An order taker gets the orders that are
+     * theirs, and hears nothing of the others. The till and the depot read the orders of the day
+     * and the open ones, so an order held back from them may be one that has just left that
+     * set -- an old credit settled at another till: they are told to reload rather than left
+     * showing it as it was.
+     */
+    private static Change messageFor(Long userId, InvoiceService.Share share, String change,
+                                     CashRemittanceResponse slip) {
+        if (!share.complete() && share.scope() == InvoiceAccess.Scope.CURRENT) {
+            return Change.reload(change);
+        }
+        if (share.invoices().isEmpty()) {
+            return null;
+        }
+        boolean readsSlip = slip != null
+                && (share.readsEverySlip() || userId.equals(slip.submittedBy().id()));
+        return new Change(change,
+                share.invoices().stream().map(InvoiceResponse::invoiceNumber).toList(),
+                share.invoices(),
+                readsSlip ? slip : null);
     }
 
     /**
@@ -119,6 +162,12 @@ public class OrderChangePublisher {
                          List<String> invoiceNumbers,
                          List<InvoiceResponse> invoices,
                          CashRemittanceResponse remittance) {
+
+        /** Something of this kind happened, and the screen is to ask the REST API what. */
+        static Change reload(String change) {
+            return new Change(change, List.of(), List.of(), null);
+        }
+
         /** Recorded at the desk: waiting at the depot. */
         public static final String ADDED = "ADDED";
         /** Handed over to the customer. */

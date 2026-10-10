@@ -17,7 +17,7 @@ const RECONNECT_DELAY_MS = 5_000;
 
 export type ConnectionState = 'offline' | 'connecting' | 'online';
 
-/** A topic some part of the app listens to, and the STOMP subscription serving it. */
+/** A destination some part of the app listens to, and the STOMP subscription serving it. */
 interface TopicEntry {
   readonly subject: Subject<unknown>;
   listeners: number;
@@ -50,6 +50,7 @@ export class RealtimeService {
   private readonly server = inject(ServerConfig);
 
   private readonly incoming = new Subject<AppNotification>();
+  /** By destination: `/topic/stock`, `/user/queue/orders`. */
   private readonly topics = new Map<string, TopicEntry>();
   private readonly connection = signal<ConnectionState>('offline');
 
@@ -113,6 +114,20 @@ export class RealtimeService {
    * the socket while at least one caller listens, and renewed after every reconnection.
    */
   topic<T>(name: string): Observable<T> {
+    return this.listen<T>(`/topic/${name}`);
+  }
+
+  /**
+   * What the server sends this account alone on `/user/queue/<name>` — NotificationService
+   * .sendToUserQueue: data each account reads its own part of, such as the orders. Same life as
+   * a {@link topic}.
+   */
+  mine<T>(name: string): Observable<T> {
+    return this.listen<T>(`/user/queue/${name}`);
+  }
+
+  /** One STOMP subscription per destination, shared by its listeners. */
+  private listen<T>(name: string): Observable<T> {
     return new Observable<T>((subscriber) => {
       let entry = this.topics.get(name);
       if (!entry) {
@@ -150,7 +165,7 @@ export class RealtimeService {
   }
 
   private subscribeTopic(name: string, entry: TopicEntry): void {
-    entry.subscription = this.client.subscribe(`/topic/${name}`, (message) => {
+    entry.subscription = this.client.subscribe(name, (message) => {
       const body = parse(message);
       if (body !== undefined) {
         entry.subject.next(body);

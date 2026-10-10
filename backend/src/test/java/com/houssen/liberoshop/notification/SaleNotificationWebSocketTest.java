@@ -12,6 +12,7 @@ import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.service.InvoiceService;
 import com.houssen.liberoshop.service.RemittanceService;
 import com.houssen.liberoshop.service.SaleService;
+import com.houssen.liberoshop.service.UserAccountService;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -80,6 +81,8 @@ class SaleNotificationWebSocketTest {
     @Autowired
     private NotificationService notifications;
     @Autowired
+    private UserAccountService accounts;
+    @Autowired
     private SimpUserRegistry registry;
 
     private WebSocketStompClient client;
@@ -93,7 +96,8 @@ class SaleNotificationWebSocketTest {
 
     @AfterEach
     void tearDown() {
-        sessions.forEach(StompSession::disconnect);
+        // One the server closed itself has nothing left to disconnect.
+        sessions.stream().filter(StompSession::isConnected).forEach(StompSession::disconnect);
         client.stop();
     }
 
@@ -133,6 +137,11 @@ class SaleNotificationWebSocketTest {
      */
     private BlockingQueue<Map<String, Object>> listen(UserApp user) throws Exception {
         return subscribe(user, NotificationService.USER_PREFIX + NotificationService.USER_QUEUE);
+    }
+
+    /** The account's own share of the order changes. */
+    private BlockingQueue<Map<String, Object>> listenOrders(UserApp user) throws Exception {
+        return subscribe(user, NotificationService.USER_PREFIX + "/queue/" + OrderChangePublisher.QUEUE);
     }
 
     private BlockingQueue<Map<String, Object>> listenTopic(UserApp user, String topic) throws Exception {
@@ -203,7 +212,7 @@ class SaleNotificationWebSocketTest {
         UserApp allRounder = account(RoleApp.CASHIER, RoleApp.DEPOT_AGENT);
         Product oil = products.save(Product.builder().name("Huile " + UUID.randomUUID())
                 .price(new BigDecimal("9000")).stockQuantity(qty(10)).build());
-        BlockingQueue<Map<String, Object>> queue = listenTopic(allRounder, OrderChangePublisher.TOPIC);
+        BlockingQueue<Map<String, Object>> queue = listenOrders(allRounder);
 
         InvoiceResponse invoice = saleService.checkout(new CreateSaleRequest("Rina",
                 PaymentStatus.PAID, PaymentMethod.CASH,
@@ -302,6 +311,77 @@ class SaleNotificationWebSocketTest {
         assertNotNull(confirmed, "the storekeeper was never told");
         assertEquals("REMITTANCE_CONFIRMED", confirmed.get("type"));
         assertEquals(List.of(invoice.invoiceNumber()), ((Map<?, ?>) confirmed.get("data")).get("invoiceNumbers"));
+    }
+
+    @Test
+    @DisplayName("an order taker's screen follows their own orders, and hears nothing of a colleague's")
+    void orderChangesFollowWhatEachAccountReads() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp waiter = account(RoleApp.ORDER_TAKER);
+        UserApp owner = account(RoleApp.SUPER_ADMIN);
+        Product tea = products.save(Product.builder().name("The " + UUID.randomUUID())
+                .price(new BigDecimal("1000")).stockQuantity(qty(10)).build());
+        BlockingQueue<Map<String, Object>> waiterScreen = listenOrders(waiter);
+        BlockingQueue<Map<String, Object>> ownerScreen = listenOrders(owner);
+
+        InvoiceResponse atTheTill = saleService.checkout(new CreateSaleRequest("Rina",
+                PaymentStatus.PAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(tea.getId(), qty(1)))), cashier);
+
+        Map<String, Object> seenByOwner = ownerScreen.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(seenByOwner, "whoever runs the shop follows every order");
+        assertEquals(List.of(atTheTill.invoiceNumber()), seenByOwner.get("invoiceNumbers"));
+        assertNull(waiterScreen.poll(1, TimeUnit.SECONDS), "a colleague's sale is not the order taker's to read");
+
+        InvoiceResponse atTheTable = saleService.checkout(new CreateSaleRequest("Table 4",
+                PaymentStatus.UNPAID, null,
+                List.of(new CreateSaleRequest.Line(tea.getId(), qty(1)))), waiter);
+
+        Map<String, Object> seenByWaiter = waiterScreen.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(seenByWaiter, "the order taker never heard of their own order");
+        assertEquals(List.of(atTheTable.invoiceNumber()), seenByWaiter.get("invoiceNumbers"));
+    }
+
+    @Test
+    @DisplayName("nobody may follow the orders on a topic any more: nothing is published there")
+    void ordersAreNotOnATopic() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp waiter = account(RoleApp.ORDER_TAKER);
+        Product tea = products.save(Product.builder().name("The " + UUID.randomUUID())
+                .price(new BigDecimal("1000")).stockQuantity(qty(10)).build());
+        BlockingQueue<Map<String, Object>> eavesdropper = listenTopic(waiter, OrderChangePublisher.QUEUE);
+
+        saleService.checkout(new CreateSaleRequest("Rina", PaymentStatus.PAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(tea.getId(), qty(1)))), cashier);
+
+        assertNull(eavesdropper.poll(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @DisplayName("an account switched off loses its connection, and cannot open another")
+    void disabledAccountIsDisconnected() throws Exception {
+        UserApp owner = account(RoleApp.SUPER_ADMIN);
+        UserApp leaving = account(RoleApp.CASHIER);
+        String token = tokenOf(leaving);
+        StompSession session = connect(token);
+        awaitRegistered(leaving);
+
+        accounts.setEnabled(leaving.getId(), false, owner);
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
+        while (session.isConnected()) {
+            assertTrue(System.nanoTime() < deadline, "the connection stayed open");
+            Thread.sleep(20);
+        }
+        assertThrows(Exception.class, () -> connect(token));
+    }
+
+    private void awaitRegistered(UserApp user) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
+        while (registry.getUser(String.valueOf(user.getId())) == null) {
+            assertTrue(System.nanoTime() < deadline, "connection never registered");
+            Thread.onSpinWait();
+        }
     }
 
     @Test

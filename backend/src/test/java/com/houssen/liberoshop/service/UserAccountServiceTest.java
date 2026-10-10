@@ -66,7 +66,7 @@ class UserAccountServiceTest {
     @BeforeEach
     void setUp() {
         service = new UserAccountService(users, payments, remittances, dashboardService, calendar,
-                passwordEncoder);
+                passwordEncoder, event -> { });
         // Saving hands the entity back, as the repository would once it had an id.
         when(users.save(any(UserApp.class))).thenAnswer(call -> call.getArgument(0));
     }

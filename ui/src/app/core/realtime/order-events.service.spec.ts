@@ -14,11 +14,11 @@ import { AuthService } from '../services/auth.service';
 import { anInvoice } from '../store/invoice.fixture';
 import { InvoiceStore } from '../store/invoice.store';
 import { RemittanceStore } from '../store/remittance.store';
-import { ORDERS_TOPIC, OrderEvents } from './order-events.service';
+import { ORDERS_QUEUE, OrderEvents } from './order-events.service';
 import { RealtimeService } from './realtime.service';
 
 /**
- * The one listener of `/topic/orders`, fed by a fake socket: each kind of change must land in the
+ * The one listener of `/user/queue/orders`, fed by a fake socket: each kind of change must land in the
  * stores the screens read, and a change it cannot apply must make the lists reload.
  */
 describe('OrderEvents', () => {
@@ -39,8 +39,8 @@ describe('OrderEvents', () => {
           provide: RealtimeService,
           useValue: {
             state: signal('online'),
-            topic: (name: string) => {
-              expect(name).toBe(ORDERS_TOPIC);
+            mine: (name: string) => {
+              expect(name).toBe(ORDERS_QUEUE);
               return topic.asObservable();
             },
           },

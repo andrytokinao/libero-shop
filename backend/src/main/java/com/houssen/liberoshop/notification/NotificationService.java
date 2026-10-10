@@ -26,7 +26,9 @@ import java.util.regex.Pattern;
  *       own account, on every tab it has open.</li>
  *   <li><b>to a topic</b> -- {@link #publish}. Delivered on {@code /topic/<name>} to whoever
  *       subscribed. Any signed-in account may subscribe to any topic, so a topic is for what the
- *       whole shop may see; anything meant for one job goes through {@link #sendToRoles}.</li>
+ *       whole shop may see; anything meant for one job goes through {@link #sendToRoles}, and
+ *       data each account reads a different part of -- the orders -- through
+ *       {@link #sendToUserQueue}, one message per account.</li>
  * </ul>
  *
  * <p>Pushing is best effort, and says so. A screen that is closed misses the message -- nothing
@@ -93,6 +95,36 @@ public class NotificationService {
         }
         sendToUsers(recipients, notification);
         return recipients.size();
+    }
+
+    /** The accounts with at least one screen connected, by id. */
+    public Set<Long> connectedUserIds() {
+        Set<Long> ids = new LinkedHashSet<>();
+        for (SimpUser user : connected.getUsers()) {
+            if (user.getPrincipal() instanceof SocketPrincipal principal) {
+                ids.add(principal.userId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * To one account, on {@code /user/queue/<name>}: for data that is not everyone's, where a
+     * topic would hand it to whoever subscribes. Whoever calls decides what this account may
+     * read; the broker only guarantees nobody else receives it.
+     *
+     * @param name a bare queue name such as {@code "orders"}, held to the rule of topic names
+     */
+    public void sendToUserQueue(Long userId, String name, Object payload) {
+        Objects.requireNonNull(userId, "userId");
+        if (name == null || !TOPIC_NAME.matcher(name).matches()) {
+            throw new IllegalArgumentException("Nom de file invalide : " + name);
+        }
+        try {
+            messaging.convertAndSendToUser(String.valueOf(userId), "/queue/" + name, payload);
+        } catch (MessagingException e) {
+            log.warn("Message not pushed to user {} on queue {}: {}", userId, name, e.getMessage());
+        }
     }
 
     /**

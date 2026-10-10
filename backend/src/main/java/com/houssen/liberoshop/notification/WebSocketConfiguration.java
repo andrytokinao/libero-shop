@@ -10,6 +10,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 /**
  * STOMP over a plain WebSocket at {@value #ENDPOINT}.
@@ -39,6 +40,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
 
     private final StompAuthenticationInterceptor authentication;
     private final SecurityProperties security;
+    private final SocketSessions sessions;
     /**
      * The scheduler the messaging configuration already declares, reused for heartbeats rather
      * than a second one this class would have to shut down. Lazy because that bean is defined
@@ -48,10 +50,12 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
 
     public WebSocketConfiguration(StompAuthenticationInterceptor authentication,
                                   SecurityProperties security,
+                                  SocketSessions sessions,
                                   @Lazy @Qualifier("messageBrokerTaskScheduler")
                                   TaskScheduler brokerScheduler) {
         this.authentication = authentication;
         this.security = security;
+        this.sessions = sessions;
         this.brokerScheduler = brokerScheduler;
     }
 
@@ -69,6 +73,12 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
         registry.setUserDestinationPrefix(NotificationService.USER_PREFIX);
         // Nothing is routed to application handlers: the interceptor refuses every SEND.
         registry.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        // Keeps hold of the connections, so an account's can be closed when its access changes.
+        registration.addDecoratorFactory(sessions);
     }
 
     @Override

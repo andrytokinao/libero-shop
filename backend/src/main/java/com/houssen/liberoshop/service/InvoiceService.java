@@ -17,6 +17,7 @@ import com.houssen.liberoshop.repository.InvoiceRepository;
 import com.houssen.liberoshop.repository.PaymentRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
+import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
@@ -30,6 +31,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -63,11 +65,13 @@ public class InvoiceService {
     private final ProductRepository products;
     private final StockMovementRepository movements;
     private final InvoiceAccess access;
+    private final UserAppRepository users;
 
     public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
                           ApplicationEventPublisher events, ShopSettingsService settings,
                           ProductRepository products, StockMovementRepository movements,
-                          InvoiceAccess access) {
+                          InvoiceAccess access, UserAppRepository users) {
+        this.users = users;
         this.access = access;
         this.invoices = invoices;
         this.payments = payments;
@@ -168,6 +172,45 @@ public class InvoiceService {
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public List<InvoiceResponse> findAllById(Collection<Long> ids) {
         return withCashTrail(ids.stream().distinct().map(this::load).toList());
+    }
+
+    /**
+     * What each of {@code readerIds} may be told about these orders -- the rule of
+     * {@link #searchFor}, applied to a message pushed rather than a list asked for. Read in a
+     * transaction of its own, like {@link #findAllById}, and with the accounts as they are now:
+     * one disabled since it connected, or gone, gets no share at all.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public Map<Long, Share> sharesOf(Collection<Long> ids, Collection<Long> readerIds) {
+        List<Invoice> found = ids.stream().distinct().map(this::load).toList();
+        Map<Long, InvoiceResponse> responses = withCashTrail(found).stream()
+                .collect(Collectors.toMap(InvoiceResponse::id, response -> response));
+        Map<Long, Share> shares = new HashMap<>();
+        for (UserApp reader : users.findAllById(readerIds)) {
+            if (!reader.isEnabled()) {
+                continue;
+            }
+            Predicate<Invoice> visible = access.visibleTo(reader);
+            List<InvoiceResponse> theirs = found.stream()
+                    .filter(visible)
+                    .map(invoice -> responses.get(invoice.getId()))
+                    .toList();
+            shares.put(reader.getId(), new Share(InvoiceAccess.scopeOf(reader.getRoles()), theirs,
+                    theirs.size() == found.size(),
+                    reader.hasRole(RoleApp.CASHIER) || reader.hasRole(RoleApp.SUPER_ADMIN)));
+        }
+        return shares;
+    }
+
+    /**
+     * @param scope          how much of the shop's orders the account reads
+     * @param invoices       the orders of the message it may read
+     * @param complete       false when some were held back
+     * @param readsEverySlip the till's rule for cash slips -- see {@code RemittanceController}:
+     *                       everyone else reads only the slips they handed in
+     */
+    public record Share(InvoiceAccess.Scope scope, List<InvoiceResponse> invoices, boolean complete,
+                        boolean readsEverySlip) {
     }
 
     /**

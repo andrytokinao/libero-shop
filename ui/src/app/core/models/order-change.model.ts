@@ -21,7 +21,7 @@ export enum OrderChangeKind {
   CASH_CONFIRMED = 'CASH_CONFIRMED',
 }
 
-/** What the server publishes on `/topic/orders` — mirrors OrderChangePublisher.Change. */
+/** What the server sends each account on `/user/queue/orders` — mirrors OrderChangePublisher.Change. */
 export interface OrderChange {
   change: OrderChangeKind;
   invoiceNumbers: string[];
