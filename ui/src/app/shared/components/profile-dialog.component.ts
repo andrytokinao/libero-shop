@@ -1,4 +1,6 @@
 import { Component, inject, output } from '@angular/core';
+import { Router } from '@angular/router';
+import { CHANGE_PASSWORD_PATH } from '../../core/guards/auth.guard';
 import { ROLE_LABELS, UserApp } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { IconComponent } from './icon.component';
@@ -7,7 +9,7 @@ import { ThemePickerComponent } from './theme-picker.component';
 
 /**
  * "Mon profil": who is signed in, and their photo — the one thing about their account a person
- * changes themself. Name, roles and password stay the administrator's.
+ * changes themself, and the way to their password. Name and roles stay the administrator's.
  */
 @Component({
   selector: 'app-profile-dialog',
@@ -46,6 +48,9 @@ import { ThemePickerComponent } from './theme-picker.component';
             <button class="btn ghost" type="button" style="margin-right:auto;" (click)="logout.emit()">
               <app-icon name="logout" [size]="16" /> Se déconnecter
             </button>
+            <button class="btn ghost" type="button" (click)="changePassword()">
+              Changer mon mot de passe
+            </button>
             <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
           </div>
         </div>
@@ -55,8 +60,15 @@ import { ThemePickerComponent } from './theme-picker.component';
 })
 export class ProfileDialogComponent {
   protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   readonly closed = output<void>();
   readonly logout = output<void>();
+
+  /** Its own page: the three fields do not fit beside the photo, and the guards lead there too. */
+  protected changePassword(): void {
+    this.closed.emit();
+    void this.router.navigateByUrl(CHANGE_PASSWORD_PATH);
+  }
 
   protected applied(user: UserApp): void {
     this.auth.applyCurrentUser(user);

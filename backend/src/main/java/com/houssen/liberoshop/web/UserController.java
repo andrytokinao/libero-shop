@@ -58,7 +58,7 @@ public class UserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
-        return userAccountService.create(request);
+        return userAccountService.createForSomeone(request);
     }
 
     /** Name and roles. The login handle and the password have their own rules elsewhere. */
@@ -84,6 +84,6 @@ public class UserController {
     @PutMapping("/{id}/password")
     public UserResponse setPassword(@PathVariable Long id,
                                     @Valid @RequestBody SetPasswordRequest request) {
-        return userAccountService.setPassword(id, request);
+        return userAccountService.setPassword(id, request, currentUser.require());
     }
 }

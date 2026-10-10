@@ -9,6 +9,8 @@ import com.houssen.liberoshop.security.LoginThrottle;
 import com.houssen.liberoshop.security.SessionRevocation;
 import com.houssen.liberoshop.service.RolePolicy;
 import com.houssen.liberoshop.service.ShopSettingsService;
+import com.houssen.liberoshop.service.UserAccountService;
+import com.houssen.liberoshop.web.dto.ChangePasswordRequest;
 import com.houssen.liberoshop.web.dto.LoginRequest;
 import com.houssen.liberoshop.web.dto.LoginResponse;
 import com.houssen.liberoshop.web.dto.SessionResponse;
@@ -50,10 +52,13 @@ public class AuthController {
     private final ShopSettingsService settingsService;
     private final LoginThrottle loginThrottle;
     private final SessionRevocation sessionRevocation;
+    private final UserAccountService accounts;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           CurrentUser currentUser, ShopSettingsService settingsService,
-                          LoginThrottle loginThrottle, SessionRevocation sessionRevocation) {
+                          LoginThrottle loginThrottle, SessionRevocation sessionRevocation,
+                          UserAccountService accounts) {
+        this.accounts = accounts;
         this.loginThrottle = loginThrottle;
         this.sessionRevocation = sessionRevocation;
         this.authenticationManager = authenticationManager;
@@ -118,6 +123,17 @@ public class AuthController {
         if (authentication != null && authentication.getPrincipal() instanceof Jwt token) {
             sessionRevocation.revoke(token);
         }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * The signed-in person replaces their own password. Every session of the account ends,
+     * this one included: the screen signs in again with the new password.
+     */
+    @PostMapping("/password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        accounts.changeOwnPassword(currentUser.require(), request);
         SecurityContextHolder.clearContext();
         return ResponseEntity.noContent().build();
     }

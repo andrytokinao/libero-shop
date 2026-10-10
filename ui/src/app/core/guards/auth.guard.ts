@@ -12,6 +12,9 @@ import { AuthService } from '../services/auth.service';
  * re-checks every call, and a user who edits the URL gains nothing but a redirect.
  */
 
+/** Where an account chooses its own password — see ChangePasswordComponent. */
+export const CHANGE_PASSWORD_PATH = '/mot-de-passe';
+
 /** Requires a session; sends anonymous visitors to the login page. */
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
@@ -37,6 +40,10 @@ export const roleGuard: CanActivateFn = (route, state) => {
       if (!session.authenticated) {
         return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
       }
+      if (session.mustChangePassword) {
+        // A password handed out by the administrator: replaced before anything else is shown.
+        return router.parseUrl(CHANGE_PASSWORD_PATH);
+      }
       return auth.owns(segment) ? true : router.parseUrl(session.homePath);
     }),
   );
@@ -46,7 +53,13 @@ export const roleGuard: CanActivateFn = (route, state) => {
 export const homeRedirectGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.ensureLoaded().pipe(map((session) => router.parseUrl(session.homePath)));
+  return auth
+    .ensureLoaded()
+    .pipe(
+      map((session) =>
+        router.parseUrl(session.mustChangePassword ? CHANGE_PASSWORD_PATH : session.homePath),
+      ),
+    );
 };
 
 /** Keeps a signed-in user off the login page. */

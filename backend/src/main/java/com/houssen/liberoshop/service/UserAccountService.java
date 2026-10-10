@@ -9,6 +9,7 @@ import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.CreateUserRequest;
+import com.houssen.liberoshop.web.dto.ChangePasswordRequest;
 import com.houssen.liberoshop.web.dto.SetPasswordRequest;
 import com.houssen.liberoshop.web.dto.UpdateUserRequest;
 import com.houssen.liberoshop.web.dto.UserActivityResponse;
@@ -51,8 +52,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class UserAccountService {
 
-    /** Short enough to be typed at a busy counter, long enough not to be a PIN. */
-    public static final int MIN_PASSWORD_LENGTH = 6;
+    /**
+     * Eight, for every account: six could be read over a shoulder at the counter and guessed
+     * from a birthday. Asked of the passwords chosen from now on -- the ones already in use
+     * still sign in.
+     */
+    public static final int MIN_PASSWORD_LENGTH = 8;
     /** BCrypt hashes the first 72 bytes and ignores the rest, so refusing longer is honest. */
     public static final int MAX_PASSWORD_LENGTH = 72;
 
@@ -205,12 +210,51 @@ public class UserAccountService {
      * changes their own.
      */
     @Transactional
-    public UserResponse setPassword(Long id, SetPasswordRequest request) {
+    public UserResponse setPassword(Long id, SetPasswordRequest request, UserApp actor) {
         UserApp user = require(id);
         user.setPassword(passwordEncoder.encode(request.password()));
+        // Chosen by someone else: the holder replaces it at their next sign-in.
+        user.setMustChangePassword(!isSelf(user, actor));
         user.revokeSessions();
         events.publishEvent(new AccountAccessChangedEvent(user.getId()));
         return UserResponse.of(user);
+    }
+
+    /**
+     * An account opened by an administrator for someone else: its holder is asked for a
+     * password of their own at their first sign-in, so the administrator stops knowing it.
+     */
+    @Transactional
+    public UserResponse createForSomeone(CreateUserRequest request) {
+        UserResponse created = create(request);
+        require(created.id()).setMustChangePassword(true);
+        return created;
+    }
+
+    /**
+     * The holder replaces their own password, proving they know the current one: a screen left
+     * open on someone's session does not let a passer-by lock them out.
+     *
+     * <p>Every session of the account ends, this one included -- the screen signs in again with
+     * the new password.
+     *
+     * @throws BusinessRuleException {@code WRONG_PASSWORD}, or {@code SAME_PASSWORD} when the new
+     *                               one is the one being replaced
+     */
+    @Transactional
+    public void changeOwnPassword(UserApp actor, ChangePasswordRequest request) {
+        UserApp user = require(actor.getId());
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new BusinessRuleException("WRONG_PASSWORD", "Le mot de passe actuel n'est pas le bon.");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new BusinessRuleException("SAME_PASSWORD",
+                    "Le nouveau mot de passe doit etre different de l'actuel.");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setMustChangePassword(false);
+        user.revokeSessions();
+        events.publishEvent(new AccountAccessChangedEvent(user.getId()));
     }
 
     // -------------------------------------------------------------------- helpers

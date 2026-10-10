@@ -212,7 +212,7 @@ class UserAccountServiceTest {
         when(users.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> service.setPassword(99L, new SetPasswordRequest("motdepasse")));
+                () -> service.setPassword(99L, new SetPasswordRequest("motdepasse"), account(1L, "mparany", true, RoleApp.SUPER_ADMIN)));
     }
 
     // ------------------------------------------------------------------- password
@@ -224,7 +224,10 @@ class UserAccountServiceTest {
         String before = fatima.getPassword();
         when(users.findById(4L)).thenReturn(Optional.of(fatima));
 
-        service.setPassword(4L, new SetPasswordRequest("nouveaumotdepasse"));
+        service.setPassword(4L, new SetPasswordRequest("nouveaumotdepasse"), account(1L, "mparany", true, RoleApp.SUPER_ADMIN));
+
+        // Chosen by the administrator: the holder is asked for one of their own.
+        assertTrue(fatima.isMustChangePassword());
 
         assertNotEquals(before, fatima.getPassword());
         assertTrue(passwordEncoder.matches("nouveaumotdepasse", fatima.getPassword()));

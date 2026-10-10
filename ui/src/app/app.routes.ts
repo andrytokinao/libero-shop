@@ -4,6 +4,7 @@ import {
   firstAccountGuard,
   homeRedirectGuard,
   roleGuard,
+  authGuard,
 } from './core/guards/auth.guard';
 import { serverConfiguredGuard } from './core/guards/server.guard';
 
@@ -31,6 +32,16 @@ export const routes: Routes = [
     canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
     loadComponent: () =>
       import('./features/auth/first-admin.component').then((m) => m.FirstAdminComponent),
+  },
+
+  // Choosing one's own password: from "Mon profil", or sent here by the guards while the one in
+  // use was handed out by the administrator.
+  {
+    path: 'mot-de-passe',
+    title: 'Mon mot de passe',
+    canActivate: [serverConfiguredGuard, authGuard],
+    loadComponent: () =>
+      import('./features/auth/change-password.component').then((m) => m.ChangePasswordComponent),
   },
 
   // The administrator's password is lost. Open to anyone not signed in; the server only goes

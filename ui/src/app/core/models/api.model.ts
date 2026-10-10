@@ -23,6 +23,11 @@ export interface Session {
   authorities: string[];
   /** How the shop works; null while signed out. */
   settings: ShopSettings | null;
+  /**
+   * The password is one an administrator chose: the holder is sent to choose their own before
+   * anything else. Absent from a server older than this field.
+   */
+  mustChangePassword?: boolean;
 }
 
 /** POST /api/invoices/{id}/pay — the amount is the order's total, read on the server. */
@@ -110,7 +115,7 @@ export interface SetPasswordRequest {
  * Mirrors UserAccountService.MIN_PASSWORD_LENGTH. Checked here only so the screen can say
  * what is wrong before the round trip — the server refuses anything shorter regardless.
  */
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = 8;
 
 /** Mirrors the @Pattern on CreateUserRequest.username: no spaces in something people type. */
 export const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;

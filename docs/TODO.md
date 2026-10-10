@@ -35,7 +35,8 @@ ou entretien.
 - [x] Jar de production sans réglages de démo ni console H2 (`ab7a89a`)
 - [x] Notifications en direct selon les droits, connexions fermées quand l'accès change (`0e2805b`)
 - [x] Le menu suit un changement de rôle sans recharger la page (`64014c6`)
-- [x] Sauvegardes hors du dossier public, qui ne sert plus que l'application Android
+- [x] Sauvegardes hors du dossier public, qui ne sert plus que l'application Android (`5c5a702`)
+- [x] Mots de passe personnels : 8 caractères, « changer mon mot de passe », changement à la première connexion
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -45,7 +46,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 [`07-jar-de-production-sans-outils-de-developpement.md`](07-jar-de-production-sans-outils-de-developpement.md),
 [`08-notifications-en-direct-selon-les-droits.md`](08-notifications-en-direct-selon-les-droits.md),
 [`09-menu-apres-un-changement-de-role.md`](09-menu-apres-un-changement-de-role.md),
-[`10-sauvegardes-hors-du-dossier-public.md`](10-sauvegardes-hors-du-dossier-public.md).
+[`10-sauvegardes-hors-du-dossier-public.md`](10-sauvegardes-hors-du-dossier-public.md),
+[`11-mots-de-passe-personnels.md`](11-mots-de-passe-personnels.md).
 
 ---
 
@@ -85,10 +87,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Dossier de sauvegarde libre.** Le dossier public `downloads` ne sert plus que le
   fichier APK, et l'écran « Sauvegardes » refuse ce dossier et ses sous-dossiers.
   *Fait — voir `10-sauvegardes-hors-du-dossier-public.md`.*
-- [ ] **P2 — Mots de passe.** 6 caractères minimum, et un utilisateur ne peut pas changer le
-  sien : l'admin les connaît tous.
-  *Piste :* écran « changer mon mot de passe », minimum 8 caractères, changement forcé à la
-  première connexion.
+- [x] **P2 — Mots de passe.** 8 caractères minimum, chacun change le sien depuis « Mon profil »,
+  et un mot de passe donné par l'administrateur doit être remplacé à la connexion suivante.
+  *Fait — voir `11-mots-de-passe-personnels.md`.*
 - [ ] **P2 — Ralentissement des connexions derrière un reverse proxy.** Le comptage utilise
   l'adresse vue par le serveur ; derrière un proxy, tous les appareils auraient la même.
   *Piste :* lire `X-Forwarded-For` quand un proxy de confiance est configuré.

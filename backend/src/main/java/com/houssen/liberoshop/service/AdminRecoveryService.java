@@ -149,6 +149,7 @@ public class AdminRecoveryService {
                             "Aucun compte administrateur actif ne porte cet identifiant : "
                                     + "ils sont listes dans le fichier du code."));
             user.setPassword(passwordEncoder.encode(newPassword));
+            user.setMustChangePassword(false);
             user.revokeSessions();
             return UserResponse.of(users.save(user));
         });

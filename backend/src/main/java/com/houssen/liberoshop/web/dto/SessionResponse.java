@@ -13,20 +13,24 @@ import java.util.List;
  *
  * @param homePath landing route of the role, so the front end has no role-to-route table
  * @param settings how the shop works, which hides the screens it does not use; null signed out
+ * @param mustChangePassword the password is one an administrator chose: the screens ask the
+ *                           holder for one of their own before anything else
  */
 public record SessionResponse(boolean authenticated,
                               UserResponse user,
                               String roleLabel,
                               String homePath,
                               List<String> authorities,
-                              ShopSettingsResponse settings) {
+                              ShopSettingsResponse settings,
+                              boolean mustChangePassword) {
 
     public static SessionResponse anonymous() {
-        return new SessionResponse(false, null, null, "/login", List.of(), null);
+        return new SessionResponse(false, null, null, "/login", List.of(), null, false);
     }
 
     public static SessionResponse of(UserApp user, String roleLabel, String homePath,
                                      List<String> authorities, ShopSettingsResponse settings) {
-        return new SessionResponse(true, UserResponse.of(user), roleLabel, homePath, authorities, settings);
+        return new SessionResponse(true, UserResponse.of(user), roleLabel, homePath, authorities, settings,
+                user.isMustChangePassword());
     }
 }

@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, tap } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { API_BASE_URL } from '../api/api.config';
 import {
   DEFAULT_SHOP_SETTINGS,
@@ -16,6 +16,7 @@ import {
   businessTypeInfo,
 } from '../models';
 import { navigationFor, ownsSegment, sectionOfUrl } from '../config/navigation';
+import { SILENT_ERRORS } from '../interceptors/error.interceptor';
 import { TokenStorage } from './token-storage.service';
 
 const ANONYMOUS: Session = {
@@ -112,6 +113,22 @@ export class AuthService {
         this.resolved.set(true);
       }),
     );
+  }
+
+  /**
+   * The signed-in person replaces their own password. The server closes every session of the
+   * account, this one included, so the screen signs in again at once with the new password:
+   * nothing is seen of it but the new session — which no longer asks for a change.
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<Session> {
+    const username = this.currentUser()?.username ?? '';
+    return this.http
+      .post<void>(
+        `${API_BASE_URL}/auth/password`,
+        { currentPassword, newPassword },
+        { context: new HttpContext().set(SILENT_ERRORS, true) },
+      )
+      .pipe(switchMap(() => this.login({ username, password: newPassword })));
   }
 
   /**

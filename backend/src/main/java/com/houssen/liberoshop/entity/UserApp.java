@@ -3,6 +3,7 @@ package com.houssen.liberoshop.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -70,6 +71,17 @@ public class UserApp {
      * column existed, read as zero -- the number its tokens carry.
      */
     private Integer tokenVersion;
+
+    /**
+     * True while the password is one somebody else chose -- the administrator who opened the
+     * account or handed it a new one: the holder is asked to replace it at their next sign-in,
+     * so that nobody but them knows it. Defaulted in the column, so the accounts of a database
+     * older than this field are not asked.
+     */
+    @Builder.Default
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
 
     /** The number a token must carry to be accepted -- see {@link #tokenVersion}. */
     public int sessionVersion() {
