@@ -1,0 +1,221 @@
+# Libero Shop — points à améliorer
+
+État au 10 octobre 2026, branche `develop` (commit `cb95375`).
+
+Cette liste vient d'un audit par lecture du code (backend Spring Boot, interface Angular,
+enveloppe Android, dépôt git). Les points marqués **(à vérifier)** n'ont pas été confirmés par
+un test. Les points marqués **(idée)** ne sont pas des défauts constatés mais des ajouts
+possibles.
+
+Priorités : **P1** avant toute installation chez un client · **P2** important · **P3** confort
+ou entretien.
+
+---
+
+## Déjà fait
+
+- [x] Modifier un produit après création : nom, prix de base, code-barres (`9c0a5c3`)
+- [x] Ralentir les connexions après 5 échecs, par appareil et identifiant (`9c0a5c3`)
+- [x] Données de démo : plus insérées quand la configuration ne dit rien (`9c0a5c3`)
+- [x] Tests du module licence versionnés (règle `.gitignore` corrigée) (`9c0a5c3`)
+- [x] Renommer l'unité de base n'écrase plus le stock d'une vente simultanée (`9c0a5c3`)
+- [x] Corrections de stock : casse, perte, inventaire, avec historique (`cb95375`)
+- [x] Migration des bases existantes pour accepter le mouvement `ADJUSTMENT` (`cb95375`)
+
+---
+
+## 1. Sécurité et configuration
+
+- [ ] **P1 — Tout circule en HTTP clair.** Mots de passe et jetons passent en clair sur le Wi-Fi
+  de la boutique, que les clients utilisent aussi pour commander par QR.
+  *Piste :* TLS sur le serveur (certificat auto-signé ou reverse proxy), puis
+  `androidScheme: 'https'` dans `ui/capacitor.config.ts` ; à défaut, un Wi-Fi invité séparé.
+- [ ] **P1 — Données de démo actives dans le fichier livré.** `application.properties` contient
+  `liberoshop.demo-data.enabled=true` et le mot de passe `vaha2026` : une installation neuve
+  démarre avec le super-admin `mparany/vaha2026`.
+  *Piste :* `false` par défaut, activation par un profil `dev` ; assistant de création du premier
+  administrateur au premier lancement.
+- [ ] **P1 — Secret JWT vide.** Une clé aléatoire est générée à chaque démarrage : chaque
+  redémarrage déconnecte tout le monde.
+  *Piste :* `liberoshop.security.jwt.secret=${LIBEROSHOP_JWT_SECRET:}` et génération à
+  l'installation.
+- [ ] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Les rôles sont lus dans le
+  jeton (`security/JwtConfiguration.java`), pas en base ; `UserController` et `BackupController`
+  ne relisent pas le compte.
+  *Piste :* recharger le compte (actif + rôles) à chaque requête.
+- [ ] **P1 — Aucune révocation de jeton.** La déconnexion ne fait rien côté serveur, un changement
+  de mot de passe laisse les sessions ouvertes.
+  *Piste :* un numéro `tokenVersion` sur le compte, vérifié à chaque requête.
+- [ ] **P1 — Tout rôle connecté lit tout.** Pas de contrôle de rôle sur `GET /api/invoices`,
+  `/api/remittances`, `/api/suppliers`, `/api/stock/outputs`.
+  *Piste :* règles par rôle, ou filtre « mes ventes » imposé aux non-responsables.
+- [ ] **P2 — Dossier de sauvegarde libre.** `BackupService` accepte n'importe quel chemin, y
+  compris le dossier public `downloads` : la base (avec les hachages de mots de passe) serait
+  téléchargeable sans connexion.
+  *Piste :* refuser ces chemins, et ne servir que le fichier APK dans `/downloads`.
+- [ ] **P2 — Mots de passe.** 6 caractères minimum, et un utilisateur ne peut pas changer le
+  sien : l'admin les connaît tous.
+  *Piste :* écran « changer mon mot de passe », minimum 8 caractères, changement forcé à la
+  première connexion.
+- [ ] **P2 — Ralentissement des connexions derrière un reverse proxy.** Le comptage utilise
+  l'adresse vue par le serveur ; derrière un proxy, tous les appareils auraient la même.
+  *Piste :* lire `X-Forwarded-For` quand un proxy de confiance est configuré.
+- [ ] **P3 — Statut de licence public trop bavard.** `/api/license/status` renvoie nom du client,
+  plan, échéance et empreinte machine sans connexion. Ne renvoyer que l'état et les jours restants.
+- [ ] **P3 — Console H2 livrée dans le jar** (`pom.xml`, `spring-boot-h2console`). Désactivée par
+  défaut ; à retirer du build de production.
+- [ ] **P3 — Adresses du réseau local visibles derrière un proxy** (`server/ServerController.java`).
+- [ ] **P3 — Messages d'erreur avec chemins absolus** (sauvegarde, licence ; super-admin seulement).
+
+## 2. Licence
+
+- [ ] **P2 — Essai réinitialisable.** Une base neuve, trois fichiers et une clé de registre
+  supprimés redonnent 40 jours. Seule une activation en ligne le ferme.
+- [ ] **P2 — Garde anti-recul d'horloge fragile.** État dans un seul fichier, échecs d'écriture
+  silencieux, chemin non verrouillé : une horloge figée avant l'échéance n'expire jamais.
+  *Piste :* dupliquer la date haute en base et dans le registre.
+- [ ] **P2 — Contournement possible du garde de propriétés (à vérifier).** Un dossier ajouté au
+  classpath avec `liberoshop.license.enabled=false` pourrait être pris pour le fichier livré.
+  *Piste :* compiler les interrupteurs dans le build de production.
+- [ ] **P3 — Documentation périmée.** `LICENSE-MODULE.md` cite un `tools/license-generator`
+  supprimé, et des commentaires parlent encore de « 30 jours ».
+
+## 3. Argent et intégrité des données
+
+- [ ] **P1 — Paiements et remises en double.** Aucun `@Version`, seul `Product` est verrouillé :
+  deux appels simultanés sur `InvoiceService.pay` ou `RemittanceService.submit` créent deux
+  paiements ou deux bordereaux.
+  *Piste :* `@Version` sur `Invoice` et `CashRemittance`, réponse 409 en cas de conflit.
+- [ ] **P1 — Vente en double si le réseau coupe à l'encaissement.** `POST /sales` n'a pas de clé
+  d'idempotence.
+  *Piste :* un identifiant de vente généré par la caisse, dédoublonné par le serveur.
+- [ ] **P2 — Le rapport journalier mélange deux dates.** Total par date de vente, répartition par
+  date de paiement (`DashboardService`) : un crédit d'hier payé aujourd'hui fausse le
+  rapprochement de caisse.
+- [ ] **P2 — Piste d'audit.** Ni `createdAt`/`updatedBy`, ni journal ; aucune trace de qui a
+  changé un prix ou une unité.
+- [ ] **P2 — Annulation de commande.** Les sorties de stock sont supprimées au lieu d'être
+  contre-passées (`InvoiceService`).
+- [ ] **P3 — Montants non bornés.** Une quantité ou un prix trop grand renvoie une erreur 500 ;
+  l'import accepte un prix à 0.
+- [ ] **P3 — Numéros de facture.** Uniques, mais avec des trous quand une vente échoue.
+- [ ] **P3 — Fuseau horaire.** « Aujourd'hui » dépend de l'horloge et du fuseau du PC serveur, et
+  côté écran de celle du téléphone.
+
+## 4. Fonctions métier manquantes
+
+- [ ] **P1 — Retours et remboursements.** Une vente payée ne s'annule pas.
+  **Décision attendue :** l'argent rendu sort-il de la caisse du jour (et réduit la remise du
+  caissier), ou est-il suivi à part ?
+- [ ] **P2 — Retirer un produit de la vente** (désactivation, sans perdre l'historique).
+- [ ] **P2 — Remises** par ligne ou sur le total.
+- [ ] **P2 — Seuil de stock bas par produit** (aujourd'hui 10 pour tout le catalogue,
+  `StockPolicy`).
+- [ ] **P3 — Corrections de stock dans une autre unité** (« 2 cartons ») : aujourd'hui en unité de
+  base seulement.
+- [ ] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste
+  déroulante complète (même limite sur l'écran d'approvisionnement).
+- [ ] **P3 — Corrections de stock dans le menu du super-admin** (autorisé côté serveur, absent de
+  son menu).
+- [ ] **P3 — Inventaire complet (idée).** Saisir le comptage de tout un rayon en une fois, avec
+  récapitulatif des écarts avant validation.
+- [ ] **P3 — Pertes dans les rapports (idée).** Faire apparaître casse, vol et périmés dans
+  « Bénéfices & stock ».
+- [ ] **P3 — Dates de péremption et lots (idée).**
+- [ ] **P3 — Fiche client et suivi des crédits (idée).** Solde dû par client, historique,
+  plafond de crédit.
+- [ ] **P3 — Exports (idée).** Ventes, stock et caisse en Excel ou PDF pour le comptable.
+- [ ] **P3 — Génération du PDF de facture.** `Invoice.generatePdf()` existe mais n'est pas
+  implémentée.
+
+## 5. Performance
+
+- [ ] **P2 — Aucune pagination.** Factures, mouvements de stock et produits sont chargés en
+  entier puis filtrés en Java (`InvoiceController`, `StockService`, `CatalogService`).
+- [ ] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,
+  listes chargées pour un simple `.size()`.
+- [ ] **P2 — Requêtes en cascade (N+1)** sur les remises et l'activité des utilisateurs.
+- [ ] **P3 — Index manquants** sur les colonnes de date (`sale_date`, `invoice_date`,
+  `payment_date`, `movement_date`).
+- [ ] **P3 — Recherche sans temporisation** sur « Toutes les factures » : une requête par frappe.
+
+## 6. Base de données et déploiement
+
+- [ ] **P2 — Schéma en `ddl-auto=update`.** Les contraintes et colonnes existantes ne sont jamais
+  mises à jour ; chaque évolution demande une migration écrite à la main (cinq à ce jour).
+  *Piste :* Flyway.
+- [ ] **P2 — MySQL/PostgreSQL non testés.** Les migrations utilisent la syntaxe H2 et la
+  sauvegarde ne fonctionne que sur H2. Retirer les deux pilotes ou les tester.
+- [ ] **P2 — Les tests n'utilisent pas la configuration de production (à vérifier).** H2 en
+  mémoire, jamais le fichier ni `ddl-auto=update`.
+- [ ] **P3 — Version `0.0.1-SNAPSHOT`** et métadonnées vides dans `pom.xml`.
+- [ ] **P3 — Sauvegarde hors du poste (idée).** Copie automatique sur clé USB ou stockage
+  distant, avec alerte si la dernière sauvegarde est ancienne.
+
+## 7. Interface et caisse
+
+- [ ] **P2 — Le panier en cours n'existe qu'en mémoire.** Un rechargement, un clic de menu ou une
+  session expirée le perd (`new-sale.component.ts`).
+- [ ] **P2 — Une coupure réseau au démarrage déconnecte l'utilisateur** (`auth.service.ts` efface
+  le jeton sur toute erreur, pas seulement 401/403).
+- [ ] **P2 — Session qui expire sans prévenir** en plein service : ni jeton de rafraîchissement,
+  ni alerte.
+- [ ] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on
+  lit « Aucune facture… ».
+- [ ] **P2 — Aucun mode hors ligne** à la caisse.
+- [ ] **P3 — Écran de licence** : installation et renouvellement sans protection contre le double
+  clic.
+- [ ] **P3 — Textes en français codés en dur**, souvent sans accents côté serveur ; « Ar » codé
+  en dur.
+- [ ] **P3 — Fenêtre « Produit et unités » à vérifier dans un navigateur** : les nouveaux champs
+  (nom, prix, code-barres) et l'écran des corrections ont été compilés, pas essayés à l'écran.
+- [ ] **P3 — Gros fichiers à découper** : `product-import-dialog` (873 lignes), `backups`
+  (822), `new-sale` (726), `supply` (656), `styles.scss` (2029), `ProductImportService` (868).
+- [ ] **P3 — Contraste des couleurs (à vérifier).**
+
+## 8. Application Android
+
+- [ ] **P2 — Mises à jour téléchargées en HTTP sans signature** : un appareil du réseau local
+  peut pousser du JavaScript sur tous les téléphones.
+- [ ] **P2 — `allowBackup="true"`** : le jeton part dans les sauvegardes du téléphone.
+- [ ] **P3 — `minifyEnabled false`** et `versionCode` incrémenté à la main.
+- [ ] **P3 — Sauvegarde du keystore (à vérifier).** Le perdre oblige à réinstaller l'application
+  sur tous les téléphones.
+- [ ] **P3 — Scanner dépendant de Google Play Services (à vérifier)** sur les téléphones sans
+  Play Services ou sans Internet.
+- [ ] **P3 — Paquets de test du modèle Capacitor** (`com.getcapacitor.myapp`) à supprimer.
+
+## 9. Tests et outillage
+
+- [ ] **P2 — Angular 18 n'est plus maintenu.** Planifier `ng update`.
+- [ ] **P2 — Ni lint, ni formateur, ni CI.** Rien ne lance les tests automatiquement.
+- [ ] **P2 — Tests manquants côté serveur** : concurrence, contrôleurs et rôles, rapports du
+  tableau de bord, gestion des erreurs.
+- [ ] **P2 — Tests manquants côté écran** : authentification, intercepteurs, gardes, écran de
+  vente et d'encaissement ; aucun test de bout en bout.
+- [ ] **P3 — Erreurs non prévues** (`ApiExceptionHandler`) : format Spring par défaut au lieu du
+  format de l'application.
+- [ ] **P3 — Code mort** : `SaleRepository.findBySellerIdOrderBySaleDateDesc` (à vérifier).
+
+## 10. Dépôt git
+
+- [ ] **P3 — `backend/libero-shop.png`** : marqué « ajouté » dans git mais supprimé du disque.
+  À retirer de l'index ou à restaurer.
+- [ ] **P3 — Installation accidentelle à la racine** : `package.json`, `package-lock.json` et
+  `node_modules/claude`.
+- [ ] **P3 — Restes** : `front.html` (ancienne maquette), captures de `scratch/screens`,
+  `ui/src/app/release/`.
+- [ ] **P3 — Pas de README à la racine** ; celui de `ui` est le modèle Angular.
+- [ ] **P3 — `backend/.gitignore` ignore `/.mvn/`** alors que `mvnw` en a besoin (à vérifier sur
+  un clone neuf).
+
+---
+
+## Ordre conseillé
+
+1. Configuration de production : données de démo et secret JWT (section 1).
+2. Droits : rôles relus en base, révocation, lecture par rôle (section 1).
+3. Argent : doubles paiements et vente en double (section 3).
+4. Retours clients, une fois la décision prise (section 4).
+5. HTTPS ou Wi-Fi séparé — décision d'installation plus que de code (section 1).
+6. Pagination et Flyway avant que les bases ne grossissent (sections 5 et 6).
