@@ -12,6 +12,11 @@ const ENDPOINT = '/ws';
 const USER_QUEUE = '/user/queue/notifications';
 /** Matches the server's heartbeat, so a dead connection is noticed within the minute. */
 const HEARTBEAT_MS = 20_000;
+/**
+ * The close code the server uses when it ends a connection because the account's access changed
+ * — SocketSessions.closeFor, `CloseStatus.POLICY_VIOLATION`.
+ */
+const ACCESS_CHANGED_CLOSE = 1008;
 /** Pause between two connection attempts while the server is unreachable. */
 const RECONNECT_DELAY_MS = 5_000;
 
@@ -88,9 +93,13 @@ export class RealtimeService {
       console.warn('Notifications en temps réel refusées :', frame.headers['message']);
       void this.client.deactivate();
     },
-    onWebSocketClose: () => {
+    onWebSocketClose: (event: CloseEvent) => {
       this.topics.forEach((entry) => (entry.subscription = undefined));
       this.connection.set(this.client.active ? 'connecting' : 'offline');
+      if (event?.code === ACCESS_CHANGED_CLOSE) {
+        // Closed by the server, not lost: the roles or the session behind it have changed.
+        this.auth.reloadAfterAccessChange();
+      }
     },
   });
 

@@ -33,7 +33,8 @@ ou entretien.
 - [x] Factures lues par période : 30 derniers jours et factures encore ouvertes, ou dates choisies (`4fa4a54`)
 - [x] Mot de passe administrateur perdu : procédure de secours sur l'ordinateur du serveur (`b6d27b2`)
 - [x] Jar de production sans réglages de démo ni console H2 (`ab7a89a`)
-- [x] Notifications en direct selon les droits, connexions fermées quand l'accès change
+- [x] Notifications en direct selon les droits, connexions fermées quand l'accès change (`0e2805b`)
+- [x] Le menu suit un changement de rôle sans recharger la page
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -41,7 +42,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 [`05-factures-par-periode.md`](05-factures-par-periode.md),
 [`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md),
 [`07-jar-de-production-sans-outils-de-developpement.md`](07-jar-de-production-sans-outils-de-developpement.md),
-[`08-notifications-en-direct-selon-les-droits.md`](08-notifications-en-direct-selon-les-droits.md).
+[`08-notifications-en-direct-selon-les-droits.md`](08-notifications-en-direct-selon-les-droits.md),
+[`09-menu-apres-un-changement-de-role.md`](09-menu-apres-un-changement-de-role.md).
 
 ---
 
@@ -75,8 +77,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   que les commandes qu'il peut lire, et ses connexions sont fermées quand son accès change
   (désactivation, rôles, mot de passe, déconnexion).
   *Fait — voir `08-notifications-en-direct-selon-les-droits.md`.*
-- [ ] **P3 — Menu après un changement de rôle.** L'écran déjà ouvert garde l'ancien menu jusqu'au
-  rechargement de la page.
+- [x] **P3 — Menu après un changement de rôle.** L'écran ouvert relit sa session quand le serveur
+  ferme sa connexion en direct : nouveau menu, accueil du nouveau rôle, ou page de connexion.
+  *Fait — voir `09-menu-apres-un-changement-de-role.md`.*
 - [ ] **P2 — Dossier de sauvegarde libre.** `BackupService` accepte n'importe quel chemin, y
   compris le dossier public `downloads` : la base (avec les hachages de mots de passe) serait
   téléchargeable sans connexion.

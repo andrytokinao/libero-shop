@@ -15,7 +15,7 @@ import {
   authorityOf,
   businessTypeInfo,
 } from '../models';
-import { navigationFor, ownsSegment } from '../config/navigation';
+import { navigationFor, ownsSegment, sectionOfUrl } from '../config/navigation';
 import { TokenStorage } from './token-storage.service';
 
 const ANONYMOUS: Session = {
@@ -139,6 +139,25 @@ export class AuthService {
     this.session.update((session) =>
       session.user?.id === user.id ? { ...session, user: { ...session.user, ...user } } : session,
     );
+  }
+
+  /**
+   * The server says what this account may do has just changed — roles edited, account switched
+   * off, session closed: the session is read again now, so the menu follows without a reload of
+   * the page. A screen the account no longer owns is left for its home; an account that can no
+   * longer sign in is sent to the login page.
+   */
+  reloadAfterAccessChange(): void {
+    this.refresh().subscribe((session) => {
+      if (!session.authenticated) {
+        void this.router.navigateByUrl('/login');
+        return;
+      }
+      const section = sectionOfUrl(this.router.url);
+      if (section && !this.owns(section.segment)) {
+        this.goHome();
+      }
+    });
   }
 
   /** Drops the token and the session without calling the server — used on a 401. */
