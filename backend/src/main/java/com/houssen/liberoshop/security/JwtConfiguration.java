@@ -19,7 +19,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 
 /**
@@ -40,16 +42,26 @@ public class JwtConfiguration {
 
     @Bean
     public SecretKey jwtSigningKey(JwtProperties properties) {
-        if (properties.hasGeneratedKey()) {
-            // Loud on purpose: it works, and it silently signs everyone out on restart.
-            log.warn("Aucun secret JWT configure : une cle aleatoire est generee au demarrage. "
-                    + "Les sessions ouvertes seront invalidees a chaque redemarrage. "
-                    + "Renseignez liberoshop.security.jwt.secret sur une installation client.");
-            byte[] generated = new byte[JwtProperties.MIN_SECRET_BYTES];
-            new SecureRandom().nextBytes(generated);
-            return new SecretKeySpec(generated, HMAC_ALGORITHM);
+        if (!properties.hasGeneratedKey()) {
+            return new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
         }
-        return new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
+        if (properties.keepsItsKeyInAFile()) {
+            Path file = Path.of(properties.secretFile());
+            try {
+                return new SecretKeySpec(JwtSecretFile.loadOrCreate(file), HMAC_ALGORITHM);
+            } catch (IOException | RuntimeException e) {
+                // A shop that cannot write its key must still open: it signs with a key of the
+                // day, as below, and says why.
+                log.error("Cle de signature inutilisable dans {} ({}).", file.toAbsolutePath(), e.toString());
+            }
+        }
+        // Loud on purpose: it works, and it silently signs everyone out on restart.
+        log.warn("Aucun secret JWT conserve : une cle aleatoire est generee au demarrage. "
+                + "Les sessions ouvertes seront invalidees a chaque redemarrage. "
+                + "Renseignez liberoshop.security.jwt.secret-file sur une installation client.");
+        byte[] generated = new byte[JwtProperties.MIN_SECRET_BYTES];
+        new SecureRandom().nextBytes(generated);
+        return new SecretKeySpec(generated, HMAC_ALGORITHM);
     }
 
     @Bean

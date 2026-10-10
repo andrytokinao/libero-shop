@@ -77,6 +77,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()
+                        // The first start: nobody can sign in before the first account exists.
+                        // The controller refuses once there is one, and from any other machine.
+                        .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/setup/admin").permitAll()
                         // Asked by the mobile app to test an address before anyone signs in.
                         .requestMatchers(HttpMethod.GET, "/api/server/info").permitAll()
                         // The download page: a phone is equipped before its owner has an account.

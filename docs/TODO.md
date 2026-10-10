@@ -21,6 +21,11 @@ ou entretien.
 - [x] Renommer l'unité de base n'écrase plus le stock d'une vente simultanée (`9c0a5c3`)
 - [x] Corrections de stock : casse, perte, inventaire, avec historique (`cb95375`)
 - [x] Migration des bases existantes pour accepter le mouvement `ADJUSTMENT` (`cb95375`)
+- [x] Données de démo désactivées par défaut, profil `dev` (partie 1, à commiter)
+- [x] Clé de signature des sessions conservée entre deux démarrages (partie 1, à commiter)
+- [x] Écran « Première utilisation » : création du premier administrateur (partie 1, à commiter)
+
+Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md).
 
 ---
 
@@ -30,15 +35,17 @@ ou entretien.
   de la boutique, que les clients utilisent aussi pour commander par QR.
   *Piste :* TLS sur le serveur (certificat auto-signé ou reverse proxy), puis
   `androidScheme: 'https'` dans `ui/capacitor.config.ts` ; à défaut, un Wi-Fi invité séparé.
-- [ ] **P1 — Données de démo actives dans le fichier livré.** `application.properties` contient
-  `liberoshop.demo-data.enabled=true` et le mot de passe `vaha2026` : une installation neuve
-  démarre avec le super-admin `mparany/vaha2026`.
-  *Piste :* `false` par défaut, activation par un profil `dev` ; assistant de création du premier
-  administrateur au premier lancement.
-- [ ] **P1 — Secret JWT vide.** Une clé aléatoire est générée à chaque démarrage : chaque
-  redémarrage déconnecte tout le monde.
-  *Piste :* `liberoshop.security.jwt.secret=${LIBEROSHOP_JWT_SECRET:}` et génération à
-  l'installation.
+- [x] **P1 — Données de démo actives dans le fichier livré.** Désactivées par défaut, réservées
+  au profil `dev` ; une installation neuve demande de créer le premier administrateur.
+  *Fait — voir `REALISATION.md`, partie 1.*
+- [x] **P1 — Secret JWT vide.** Chaque installation génère sa clé au premier démarrage et la
+  conserve dans un fichier ; `LIBEROSHOP_JWT_SECRET` reste possible.
+  *Fait — voir `REALISATION.md`, partie 1.*
+- [ ] **P2 — Mot de passe administrateur perdu.** Aucun moyen de le réinitialiser sans un autre
+  super-admin.
+  *Piste :* procédure de secours utilisable seulement depuis l'ordinateur du serveur.
+- [ ] **P3 — `application-dev.properties` embarqué dans le jar.** À exclure du build de
+  production.
 - [ ] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Les rôles sont lus dans le
   jeton (`security/JwtConfiguration.java`), pas en base ; `UserController` et `BackupController`
   ne relisent pas le compte.
@@ -213,7 +220,7 @@ ou entretien.
 
 ## Ordre conseillé
 
-1. Configuration de production : données de démo et secret JWT (section 1).
+1. ~~Configuration de production : données de démo et secret JWT (section 1).~~ Fait.
 2. Droits : rôles relus en base, révocation, lecture par rôle (section 1).
 3. Argent : doubles paiements et vente en double (section 3).
 4. Retours clients, une fois la décision prise (section 4).

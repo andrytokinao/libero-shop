@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
-import { anonymousOnlyGuard, homeRedirectGuard, roleGuard } from './core/guards/auth.guard';
+import {
+  anonymousOnlyGuard,
+  firstAccountGuard,
+  homeRedirectGuard,
+  roleGuard,
+} from './core/guards/auth.guard';
 import { serverConfiguredGuard } from './core/guards/server.guard';
 
 export const routes: Routes = [
@@ -13,9 +18,19 @@ export const routes: Routes = [
   {
     path: 'login',
     title: 'Connexion',
-    canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
+    canActivate: [serverConfiguredGuard, anonymousOnlyGuard, firstAccountGuard],
     loadComponent: () =>
       import('./features/auth/login.component').then((m) => m.LoginComponent),
+  },
+
+  // A fresh installation: no account yet, so the login page sends here to create the first one.
+  // The screen itself returns to the login page as soon as an account exists.
+  {
+    path: 'installation',
+    title: 'Première utilisation',
+    canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
+    loadComponent: () =>
+      import('./features/auth/first-admin.component').then((m) => m.FirstAdminComponent),
   },
 
   // Which server the mobile app talks to. Open to everyone, signed in or not: it is the first
