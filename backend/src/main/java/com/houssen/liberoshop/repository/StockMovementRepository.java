@@ -4,6 +4,8 @@ import com.houssen.liberoshop.entity.StockAdjustment;
 import com.houssen.liberoshop.entity.StockMovement;
 import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supply;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,14 +35,47 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             """)
     List<Supply> findSupplies();
 
-    @Query("""
+    /**
+     * One page of the outputs, newest first, the words looked for by the database: an output is
+     * written per line sold, so this is the list that grows fastest and it is never read whole.
+     *
+     * @param needle lower-cased, wrapped in {@code %} and with its own {@code %}, {@code _} and
+     *               {@code \} escaped -- see {@code StockService.findOutputs}; null for no filter
+     */
+    @Query(value = """
             select o from StockOutput o
-              join fetch o.product
+              join fetch o.product p
               join fetch o.invoice i
               join fetch o.performedBy
+            where (:needle is null
+                   or lower(p.name) like :needle escape '\\'
+                   or lower(i.invoiceNumber) like :needle escape '\\'
+                   or lower(i.clientName) like :needle escape '\\')
             order by o.movementDate desc, o.id desc
+            """,
+            countQuery = """
+            select count(o) from StockOutput o join o.product p join o.invoice i
+            where (:needle is null
+                   or lower(p.name) like :needle escape '\\'
+                   or lower(i.invoiceNumber) like :needle escape '\\'
+                   or lower(i.clientName) like :needle escape '\\')
             """)
-    List<StockOutput> findOutputs();
+    Page<StockOutput> findOutputs(@Param("needle") String needle, Pageable pageable);
+
+    /**
+     * What all the outputs matching {@code needle} add up to, as {@code [units, value]} -- the
+     * value at each product's current price, like the rows. Summed here because the screen only
+     * holds a page of them.
+     */
+    @Query("""
+            select coalesce(sum(o.quantity), 0), coalesce(sum(o.quantity * p.price), 0)
+            from StockOutput o join o.product p join o.invoice i
+            where (:needle is null
+                   or lower(p.name) like :needle escape '\\'
+                   or lower(i.invoiceNumber) like :needle escape '\\'
+                   or lower(i.clientName) like :needle escape '\\')
+            """)
+    List<Object[]> sumOutputs(@Param("needle") String needle);
 
     @Query("""
             select a from StockAdjustment a

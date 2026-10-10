@@ -1,5 +1,7 @@
 /.idea/
 /ui/.vscode/
+# Personal Claude Code settings for this checkout
+/.claude/settings.local.json
 
 # H2 database written at runtime by spring.datasource.url
 /backend/data/

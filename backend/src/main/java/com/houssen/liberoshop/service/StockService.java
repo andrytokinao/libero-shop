@@ -3,6 +3,7 @@ package com.houssen.liberoshop.service;
 import com.houssen.liberoshop.entity.AdjustmentReason;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.StockAdjustment;
+import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
@@ -16,13 +17,17 @@ import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
+import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Locale;
 
@@ -36,6 +41,9 @@ import java.util.Locale;
 @Service
 @Transactional(readOnly = true)
 public class StockService {
+
+    public static final int DEFAULT_PAGE_SIZE = 50;
+    public static final int MAX_PAGE_SIZE = 200;
 
     private final StockMovementRepository movements;
     private final ProductRepository products;
@@ -57,16 +65,38 @@ public class StockService {
         return movements.findSupplies().stream().map(SupplyResponse::of).toList();
     }
 
-    /** @param search free text on product name, invoice number and client */
-    public List<StockOutputResponse> findOutputs(String search) {
-        String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
-        return movements.findOutputs().stream()
-                .map(StockOutputResponse::of)
-                .filter(output -> needle.isEmpty()
-                        || output.product().name().toLowerCase(Locale.ROOT).contains(needle)
-                        || output.invoice().invoiceNumber().toLowerCase(Locale.ROOT).contains(needle)
-                        || output.invoice().clientName().toLowerCase(Locale.ROOT).contains(needle))
-                .toList();
+    /**
+     * One page of the outputs, newest first, with what all the matching ones add up to.
+     *
+     * @param search free text on product name, invoice number and client; case ignored
+     * @param page   zero-based
+     * @param size   clamped to {@code 1..MAX_PAGE_SIZE}
+     */
+    public StockOutputPageResponse findOutputs(String search, int page, int size) {
+        String needle = likePattern(search);
+        Page<StockOutput> found = movements.findOutputs(needle,
+                PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE)));
+        Object[] sums = movements.sumOutputs(needle).getFirst();
+        return new StockOutputPageResponse(
+                found.getContent().stream().map(StockOutputResponse::of).toList(),
+                found.getTotalElements(),
+                Quantities.scaled((BigDecimal) sums[0]),
+                ((BigDecimal) sums[1]).setScale(2, RoundingMode.HALF_UP),
+                found.getNumber(), found.getSize(), found.hasNext());
+    }
+
+    /**
+     * The words typed, as a {@code like} pattern matching them anywhere: lower-cased, with the
+     * characters {@code like} gives a meaning to escaped, so a search for "50%" finds "50%" and
+     * not everything. Null when nothing was typed.
+     */
+    static String likePattern(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        String escaped = search.trim().toLowerCase(Locale.ROOT)
+                .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return "%" + escaped + "%";
     }
 
     /**

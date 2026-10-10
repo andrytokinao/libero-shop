@@ -38,6 +38,21 @@ export interface Supply extends StockMovementBase {
   totalCost: number | null;
 }
 
+/**
+ * One page of the outputs — mirrors StockOutputPageResponse. The totals cover every output
+ * matching the search, not only the rows of this page.
+ */
+export interface StockOutputPage {
+  items: StockOutput[];
+  /** How many match in all, for "50 sur 1 240". */
+  total: number;
+  totalQuantity: number;
+  totalValue: number;
+  page: number;
+  size: number;
+  hasMore: boolean;
+}
+
 /** Mirrors com.houssen.liberoshop.entity.AdjustmentReason. */
 export type AdjustmentReason = 'BREAKAGE' | 'THEFT' | 'EXPIRED' | 'INVENTORY_COUNT' | 'OTHER';
 

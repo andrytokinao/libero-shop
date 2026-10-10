@@ -6,7 +6,7 @@ import {
   CreateStockAdjustmentRequest,
   CreateSupplyRequest,
   StockAdjustment,
-  StockOutput,
+  StockOutputPage,
   Supply,
 } from '../models';
 
@@ -18,12 +18,21 @@ export class StockApi {
     return this.http.get<Supply[]>(`${API_BASE_URL}/stock/supplies`);
   }
 
-  outputs(search?: string): Observable<StockOutput[]> {
-    let params = new HttpParams();
-    if (search?.trim()) {
+  /**
+   * One page of the outputs, newest first. The list grows by a row per line sold, so it is
+   * never fetched whole: the server searches, cuts and adds up.
+   *
+   * @param size how many rows; the server's default when left out
+   */
+  outputs(search: string, page: number, size?: number): Observable<StockOutputPage> {
+    let params = new HttpParams().set('page', page);
+    if (search.trim()) {
       params = params.set('search', search.trim());
     }
-    return this.http.get<StockOutput[]>(`${API_BASE_URL}/stock/outputs`, { params });
+    if (size != null) {
+      params = params.set('size', size);
+    }
+    return this.http.get<StockOutputPage>(`${API_BASE_URL}/stock/outputs`, { params });
   }
 
   registerSupply(request: CreateSupplyRequest): Observable<Supply> {

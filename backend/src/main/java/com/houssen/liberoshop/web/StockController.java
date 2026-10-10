@@ -5,7 +5,7 @@ import com.houssen.liberoshop.service.StockService;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
-import com.houssen.liberoshop.web.dto.StockOutputResponse;
+import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -42,11 +42,16 @@ public class StockController {
         return stockService.findSupplies();
     }
 
-    /** Everything that left the stock, with its value: the same readers as what came in. */
+    /**
+     * What left the stock, a page at a time, with its value: the same readers as what came in.
+     * The totals cover every output matching the search, not only the page returned.
+     */
     @GetMapping("/outputs")
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
-    public List<StockOutputResponse> outputs(@RequestParam(required = false) String search) {
-        return stockService.findOutputs(search);
+    public StockOutputPageResponse outputs(@RequestParam(required = false) String search,
+                                           @RequestParam(defaultValue = "0") int page,
+                                           @RequestParam(defaultValue = "" + StockService.DEFAULT_PAGE_SIZE) int size) {
+        return stockService.findOutputs(search, page, size);
     }
 
     /** Goods received. Only the depot manager books an entry into the stock. */

@@ -6,7 +6,7 @@ ce qui a été vérifié et ce qui reste ouvert.
 
 Chaque partie est livrée seule, relue, puis commitée avant de passer à la suivante. Les parties
 1 et 2 sont ci-dessous, séparées par une ligne `---` ; à partir de la partie 3, chaque partie a
-son propre fichier `REALISATION-partie-N-….md`, lié depuis le tableau.
+son propre fichier, nommé d'après la fonctionnalité et lié depuis le tableau.
 
 | Partie | Sujet | État |
 |---|---|---|
@@ -15,7 +15,7 @@ son propre fichier `REALISATION-partie-N-….md`, lié depuis le tableau.
 | 3 | Argent : doubles paiements et vente en double | faite — voir [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md) |
 | 4 | Retours clients | en attente d'une décision |
 | 5 | HTTPS ou Wi-Fi séparé | décision d'installation |
-| 6 | Pagination et Flyway | à faire |
+| 6 | Pagination et Flyway | en cours — sorties de stock faites : [`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md) ; factures et Flyway à faire |
 
 ---
 
