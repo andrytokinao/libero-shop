@@ -86,6 +86,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: 'layers', label: 'Catégories', path: '/gestion-depot/categories' },
       { icon: 'stockIn', label: 'Approvisionnement', path: '/gestion-depot/approvisionnement' },
       { icon: 'stockOut', label: 'Sorties', path: '/gestion-depot/sorties' },
+      { icon: 'clipboard', label: 'Corrections de stock', path: '/gestion-depot/corrections' },
       { icon: 'truck', label: 'Fournisseurs', path: '/gestion-depot/fournisseurs' },
     ],
   },

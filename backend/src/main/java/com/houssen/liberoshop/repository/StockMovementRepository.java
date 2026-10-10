@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.repository;
 
+import com.houssen.liberoshop.entity.StockAdjustment;
 import com.houssen.liberoshop.entity.StockMovement;
 import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supply;
@@ -40,6 +41,14 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             order by o.movementDate desc, o.id desc
             """)
     List<StockOutput> findOutputs();
+
+    @Query("""
+            select a from StockAdjustment a
+              join fetch a.product
+              join fetch a.performedBy
+            order by a.movementDate desc, a.id desc
+            """)
+    List<StockAdjustment> findAdjustments();
 
     /** What one order took off the shelves -- given back when it is cancelled before hand-over. */
     @Query("select o from StockOutput o where o.invoice.id = :invoiceId")

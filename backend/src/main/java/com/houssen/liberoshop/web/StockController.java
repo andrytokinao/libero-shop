@@ -2,7 +2,9 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
+import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
 import jakarta.validation.Valid;
@@ -51,5 +53,23 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public SupplyResponse registerSupply(@Valid @RequestBody CreateSupplyRequest request) {
         return stockService.registerSupply(request, currentUser.require());
+    }
+
+    /** The corrections made by hand, with what each loss cost -- hence the same roles as receipts. */
+    @GetMapping("/adjustments")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public List<StockAdjustmentResponse> adjustments() {
+        return stockService.findAdjustments();
+    }
+
+    /**
+     * Breakage, loss, or a shelf counted. Reserved to those who answer for the stock: a
+     * correction is the one movement nothing else vouches for.
+     */
+    @PostMapping("/adjustments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public StockAdjustmentResponse registerAdjustment(@Valid @RequestBody CreateStockAdjustmentRequest request) {
+        return stockService.registerAdjustment(request, currentUser.require());
     }
 }

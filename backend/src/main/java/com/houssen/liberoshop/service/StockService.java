@@ -1,6 +1,8 @@
 package com.houssen.liberoshop.service;
 
+import com.houssen.liberoshop.entity.AdjustmentReason;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.StockAdjustment;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
@@ -11,7 +13,9 @@ import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
+import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
+import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,7 +27,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Stock movements: goods in (SUPPLY) and goods out (OUTPUT).
+ * Stock movements: goods in (SUPPLY), goods out (OUTPUT) and corrections by hand (ADJUSTMENT).
  *
  * <p>Outputs are never written here -- they are produced by {@link SaleService} as part of
  * the checkout transaction. This service only reads them, which keeps a single place able
@@ -104,6 +108,78 @@ public class StockService {
 
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return SupplyResponse.of(supply);
+    }
+
+    public List<StockAdjustmentResponse> findAdjustments() {
+        return movements.findAdjustments().stream().map(StockAdjustmentResponse::of).toList();
+    }
+
+    /**
+     * Corrects the stock by hand and records why: the only way it moves without a receipt or
+     * a sale behind it, which is exactly why each correction is kept, signed and named.
+     *
+     * <p>A loss is said as what left -- "3 cassees" -- and refused beyond what the stock holds.
+     * A count is said as what is on the shelf -- "il en reste 37" -- and the difference is
+     * worked out here, on the locked row, so a sale rung up while the shelf was being counted
+     * is not counted twice.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public StockAdjustmentResponse registerAdjustment(CreateStockAdjustmentRequest request, UserApp author) {
+        Product product = products.findByIdForUpdate(request.productId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", request.productId()));
+        if (Quantities.tooPrecise(request.quantity())) {
+            throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
+                    "Une quantite se saisit au millieme au plus (" + request.quantity() + ").");
+        }
+        String comment = PackagingRules.squeeze(request.comment());
+        if (request.reason() == AdjustmentReason.OTHER && comment == null) {
+            throw new BusinessRuleException("ADJUSTMENT_COMMENT_REQUIRED",
+                    "Precisez en commentaire la raison de cette correction.");
+        }
+
+        StockAdjustment adjustment = StockAdjustment.builder()
+                .quantity(Quantities.scaled(differenceOf(request, product)))
+                .movementDate(calendar.now())
+                .product(product)
+                .performedBy(author)
+                .reason(request.reason())
+                .comment(comment)
+                .build();
+        product.adjustStock(adjustment.getQuantity());
+        movements.save(adjustment);
+
+        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
+        return StockAdjustmentResponse.of(adjustment);
+    }
+
+    /** What the stock moves by: minus what was lost, or the count minus what the stock says. */
+    private static BigDecimal differenceOf(CreateStockAdjustmentRequest request, Product product) {
+        BigDecimal stock = product.getStockQuantity();
+        if (request.reason().isCount()) {
+            BigDecimal difference = request.quantity().subtract(stock);
+            if (difference.signum() == 0) {
+                throw new BusinessRuleException("ADJUSTMENT_NOTHING_TO_CORRECT",
+                        "Le stock de \"" + product.getName() + "\" est deja de " + plain(stock)
+                                + " : il n'y a rien a corriger.");
+            }
+            return difference;
+        }
+        if (request.quantity().signum() <= 0) {
+            throw new BusinessRuleException("ADJUSTMENT_QUANTITY_INVALID",
+                    "La quantite perdue doit etre superieure a zero.");
+        }
+        if (request.quantity().compareTo(stock) > 0) {
+            throw new BusinessRuleException("ADJUSTMENT_EXCEEDS_STOCK",
+                    "Le stock de \"" + product.getName() + "\" n'est que de " + plain(stock)
+                            + " : impossible d'en retirer " + plain(request.quantity())
+                            + ". Si le rayon a ete compte, saisissez un inventaire.");
+        }
+        return request.quantity().negate();
+    }
+
+    private static String plain(BigDecimal quantity) {
+        return quantity.signum() == 0 ? "0" : quantity.stripTrailingZeros().toPlainString();
     }
 
     public long countSuppliesLastWeek() {

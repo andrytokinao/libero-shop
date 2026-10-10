@@ -229,6 +229,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'corrections',
+        title: 'Corrections de stock',
+        loadComponent: () =>
+          import('./features/depot-manager/stock-adjustments.component').then(
+            (m) => m.StockAdjustmentsComponent,
+          ),
+      },
+      {
         path: 'fournisseurs',
         title: 'Fournisseurs',
         loadComponent: () =>
