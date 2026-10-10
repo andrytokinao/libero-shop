@@ -423,6 +423,9 @@
                 <!-- Overridden by the os-* profiles. Left blank so a bare run on an
                      unrecognised OS fails fast with a missing-argfile error. -->
                 <installer.os></installer.os>
+                <!-- PATH handed to jpackage. os-windows prepends the WiX folder so the
+                     build does not depend on the PATH the IDE was started with. -->
+                <jpackage.path>${env.PATH}</jpackage.path>
             </properties>
             <build>
                 <plugins>
@@ -473,6 +476,9 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/jpackage</executable>
+                                    <environmentVariables>
+                                        <PATH>${jpackage.path}</PATH>
+                                    </environmentVariables>
                                     <arguments>
                                         <argument>--name</argument>
                                         <argument>Liberty Shop</argument>
@@ -536,6 +542,10 @@
             </activation>
             <properties>
                 <installer.os>windows</installer.os>
+                <!-- WiX Toolset v3 binaries (candle.exe, light.exe). Override with
+                     -Dwix.home=... if WiX lives elsewhere. -->
+                <wix.home>${env.LOCALAPPDATA}\WiX Toolset v3.14</wix.home>
+                <jpackage.path>${wix.home};${env.PATH}</jpackage.path>
             </properties>
         </profile>
     </profiles>
