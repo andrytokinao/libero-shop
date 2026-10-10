@@ -31,13 +31,15 @@ ou entretien.
 - [x] Un panier envoyé deux fois est une seule vente (partie 3)
 - [x] Sorties de stock lues par pages (partie 6, première tranche) (`c9c65d8`)
 - [x] Factures lues par période : 30 derniers jours et factures encore ouvertes, ou dates choisies (`4fa4a54`)
-- [x] Mot de passe administrateur perdu : procédure de secours sur l'ordinateur du serveur
+- [x] Mot de passe administrateur perdu : procédure de secours sur l'ordinateur du serveur (`b6d27b2`)
+- [x] Jar de production sans réglages de démo ni console H2
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
 [`04-sorties-de-stock-par-pages.md`](04-sorties-de-stock-par-pages.md),
 [`05-factures-par-periode.md`](05-factures-par-periode.md),
-[`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md).
+[`06-mot-de-passe-administrateur-perdu.md`](06-mot-de-passe-administrateur-perdu.md),
+[`07-jar-de-production-sans-outils-de-developpement.md`](07-jar-de-production-sans-outils-de-developpement.md).
 
 ---
 
@@ -56,8 +58,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Mot de passe administrateur perdu.** Procédure de secours sur l'ordinateur du
   serveur seulement : un code écrit dans un fichier de cet ordinateur, à retaper.
   *Fait — voir `06-mot-de-passe-administrateur-perdu.md`.*
-- [ ] **P3 — `application-dev.properties` embarqué dans le jar.** À exclure du build de
-  production.
+- [x] **P3 — `application-dev.properties` embarqué dans le jar.** Exclu du jar de l'installeur
+  (profil Maven `installer`). *Fait — voir `07-jar-de-production-sans-outils-de-developpement.md`.*
 - [x] **P1 — Un admin désactivé ou rétrogradé garde ses droits 12 h.** Le compte (actif + rôles)
   est relu en base à chaque requête.
   *Fait — voir `REALISATION.md`, partie 2.*
@@ -86,8 +88,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   *Piste :* lire `X-Forwarded-For` quand un proxy de confiance est configuré.
 - [ ] **P3 — Statut de licence public trop bavard.** `/api/license/status` renvoie nom du client,
   plan, échéance et empreinte machine sans connexion. Ne renvoyer que l'état et les jours restants.
-- [ ] **P3 — Console H2 livrée dans le jar** (`pom.xml`, `spring-boot-h2console`). Désactivée par
-  défaut ; à retirer du build de production.
+- [x] **P3 — Console H2 livrée dans le jar.** Retirée du jar de l'installeur.
+  *Fait — voir `07-jar-de-production-sans-outils-de-developpement.md`.*
 - [ ] **P3 — Adresses du réseau local visibles derrière un proxy** (`server/ServerController.java`).
 - [ ] **P3 — Messages d'erreur avec chemins absolus** (sauvegarde, licence ; super-admin seulement).
 

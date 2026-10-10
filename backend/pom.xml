@@ -429,6 +429,34 @@
             </properties>
             <build>
                 <plugins>
+                    <!-- What a customer installation must not carry. The "dev" profile's
+                         settings (demonstration accounts and their password) stay out of
+                         the jar: asking for that profile on an installed shop then changes
+                         nothing. Excluded here rather than from the resources, so a
+                         target/classes left by an earlier plain build cannot bring it back. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>application-dev.properties</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                    <!-- The H2 web console is a developer's tool, off by default. Left out of
+                         the installed jar, no setting can switch it on there. -->
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-h2console</artifactId>
+                                </exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
                     <!-- Stage ONLY the fat jar into a clean input dir: jpackage copies the
                          whole input dir into the app image, so target/ as-is would drag in
                          the proguard base jar, loose classes, etc. Bound to verify so the
