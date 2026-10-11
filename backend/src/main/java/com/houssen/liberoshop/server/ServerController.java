@@ -88,13 +88,13 @@ public class ServerController {
         return new ServerConnectionResponse(ConnectionCode.SCHEME, result, internet, publishedApk());
     }
 
-    /** The APK in the downloads folder, or null when none has been published yet. */
+    /** The APK the phones get, or null when this server has none to hand out. */
     private ServerConnectionResponse.Apk publishedApk() {
-        Path file = mobile.apkPath();
+        Path file = mobile.publishedApk().orElse(null);
+        if (file == null) {
+            return null;
+        }
         try {
-            if (!Files.isRegularFile(file)) {
-                return null;
-            }
             return new ServerConnectionResponse.Apk(DownloadsConfiguration.PATH + mobile.apkFile(),
                     Files.size(file), Files.getLastModifiedTime(file).toInstant());
         } catch (IOException e) {

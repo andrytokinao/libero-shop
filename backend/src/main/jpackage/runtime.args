@@ -16,6 +16,11 @@
 -Dliberoshop.license.path=${user.home}/.libertyshop/license/libero-shop.lic
 --java-options
 -Dliberoshop.mobile.downloads-dir=${user.home}/.libertyshop/downloads
+# The APK staged beside the jar by the "installer" Maven profile, so that the
+# download page works on a fresh installation. $APPDIR is replaced by the
+# launcher, at run time, with the folder the jar is installed in.
+--java-options
+-Dliberoshop.mobile.bundled-apk=$APPDIR/libero-shop.apk
 # The key signing the sessions, generated at the first start. Kept apart from
 # data/, which a restored backup replaces: a restore must not sign everyone out.
 --java-options

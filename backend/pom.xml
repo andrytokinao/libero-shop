@@ -457,7 +457,7 @@
                             </excludes>
                         </configuration>
                     </plugin>
-                    <!-- Stage ONLY the fat jar into a clean input dir: jpackage copies the
+                    <!-- Stage ONLY the fat jar (and the Android app) into a clean input dir: jpackage copies the
                          whole input dir into the app image, so target/ as-is would drag in
                          the proguard base jar, loose classes, etc. Bound to verify so the
                          repackaged (obfuscated) jar already exists. -->
@@ -478,6 +478,17 @@
                                             <directory>${project.build.directory}</directory>
                                             <includes>
                                                 <include>${project.build.finalName}.jar</include>
+                                            </includes>
+                                        </resource>
+                                        <!-- The Android app, where ui/build-apk.cmd publishes it:
+                                             delivered with the server, so the download page
+                                             works on a fresh installation (see
+                                             liberoshop.mobile.bundled-apk in runtime.args).
+                                             Absent, the installer is built without it. -->
+                                        <resource>
+                                            <directory>${project.basedir}/downloads</directory>
+                                            <includes>
+                                                <include>libero-shop.apk</include>
                                             </includes>
                                         </resource>
                                     </resources>

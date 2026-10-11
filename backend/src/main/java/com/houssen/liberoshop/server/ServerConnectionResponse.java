@@ -12,7 +12,8 @@ import java.util.List;
  *                  visitor from the Internet has no use for them and no business mapping them
  * @param internet  the address configured for phones away from the shop, or null when the server
  *                  is not published on the Internet
- * @param apk       the published APK, or null when none has been copied to the downloads folder
+ * @param apk       the published APK, or null when the server has none: nothing in the downloads folder and
+ *                  no copy delivered with the installer
  */
 public record ServerConnectionResponse(String scheme, List<Address> addresses, Address internet, Apk apk) {
 

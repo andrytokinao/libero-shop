@@ -2,16 +2,17 @@ package com.houssen.liberoshop.server;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
-import java.io.IOException;
-
 /**
- * Serves the Android app, from {@code liberoshop.mobile.downloads-dir}, under {@code /downloads/}.
+ * Serves the Android app under {@code /downloads/}: the copy in
+ * {@code liberoshop.mobile.downloads-dir} or the one delivered with the installer, see
+ * {@link MobileProperties#publishedApk()}.
  *
  * <p>That one file and nothing else: the folder is open to anyone who can reach the server, and
  * whatever else ends up in it -- a backup of the database, a spreadsheet left there -- must not
@@ -44,21 +45,27 @@ public class DownloadsConfiguration implements WebMvcConfigurer {
                 .addResourceLocations(mobile.downloadsDir().toAbsolutePath().toUri().toString())
                 .setCacheControl(CacheControl.noCache())
                 .resourceChain(false)
-                .addResolver(new OnlyTheApk(mobile.apkFile()));
+                .addResolver(new OnlyTheApk(mobile));
     }
 
     /** Finds the published APK under its own name, and nothing under any other. */
     private static final class OnlyTheApk extends PathResourceResolver {
 
+        private final MobileProperties mobile;
         private final String apkFile;
 
-        private OnlyTheApk(String apkFile) {
-            this.apkFile = apkFile;
+        private OnlyTheApk(MobileProperties mobile) {
+            this.mobile = mobile;
+            this.apkFile = mobile.apkFile();
         }
 
         @Override
-        protected Resource getResource(String resourcePath, Resource location) throws IOException {
-            return apkFile.equals(resourcePath) ? super.getResource(resourcePath, location) : null;
+        protected Resource getResource(String resourcePath, Resource location) {
+            if (!apkFile.equals(resourcePath)) {
+                return null;
+            }
+            // Not looked up under the location: the installer's copy lives outside the folder.
+            return mobile.publishedApk().<Resource>map(FileSystemResource::new).orElse(null);
         }
     }
 }

@@ -120,9 +120,9 @@ type Network = 'local' | 'internet';
                   </div>
                   @if (isAdmin()) {
                     <div class="muted small">
-                      Copiez le fichier <code>libero-shop.apk</code> dans le dossier
-                      <code>downloads</code> à côté du serveur (voir
-                      <code>docs/mobile-android.md</code>), puis rechargez cette page.
+                      Cet installateur a été construit sans l'application mobile. Demandez à
+                      l'éditeur le fichier <code>libero-shop.apk</code> et copiez-le dans le dossier
+                      <code>downloads</code> du serveur, puis rechargez cette page.
                     </div>
                   }
                 }

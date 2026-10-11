@@ -187,6 +187,11 @@ Copiez l'APK dans le dossier de téléchargement du serveur, **sous le nom `libe
 - Le dossier et le nom se règlent dans `application.properties` :
   `liberoshop.mobile.downloads-dir` et `liberoshop.mobile.apk-file`.
 - **Pas de redémarrage** : le fichier est servi tel quel à l'adresse `/downloads/libero-shop.apk`.
+- **Application installée** : l'installateur contient déjà l'APK présente dans
+  `backenddownloadsibero-shop.apk` au moment où il a été construit ; le téléchargement
+  fonctionne sans rien copier. Une APK copiée ensuite dans `~.libertyshopdownloads` la remplace
+  si elle est plus récente. Construire l'APK **avant** l'installateur. Voir
+  `15-application-mobile-livree-avec-l-installateur.md`.
 - L'APK n'est **pas** dans le jar : publier une nouvelle version de l'app ne demande pas de
   reconstruire le serveur, et le jar ne grossit pas.
 
