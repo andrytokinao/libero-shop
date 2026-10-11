@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { apiResource } from '../../core/api/api-resource';
 import { ServerApi } from '../../core/api/server.api';
+import { SUPPORT } from '../../core/config/publisher';
 import { RoleApp, ServerAddress, ServerConnection } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { QrCodeComponent } from '../../shared/components/qr-code.component';
@@ -143,13 +144,18 @@ type Network = 'local' | 'internet';
               @if (network() === 'internet') {
                 Le serveur n'est pas accessible depuis Internet : l'application ne fonctionne que
                 dans la boutique, sur son Wi-Fi.
-                @if (isAdmin()) {
-                  <div class="muted small">
-                    Pour l'ouvrir sur Internet, publiez le serveur (redirection de port sur la box
-                    ou reverse proxy), puis renseignez son adresse dans
-                    <code>liberoshop.mobile.public-url</code>.
+                <!-- Opening a server to the Internet is a box, a name and a certificate: not
+                     something a shop does alone, so it is told who does it for them. -->
+                <div class="support">
+                  Pour utiliser l'application partout, contactez le support de Libero Shop : il
+                  rend votre serveur accessible depuis Internet.
+                  <div>
+                    Support — WhatsApp :
+                    <a [href]="support.whatsappLink" target="_blank" rel="noopener">{{
+                      support.phone
+                    }}</a>
                   </div>
-                }
+                </div>
               } @else {
                 Les adresses du Wi-Fi de la boutique ne s'affichent que sur un appareil connecté à ce
                 Wi-Fi. Ouvrez cette page depuis un ordinateur ou un téléphone de la boutique.
@@ -252,6 +258,16 @@ type Network = 'local' | 'internet';
       font-size: 12px;
     }
 
+    .support {
+      margin-top: 12px;
+      font-size: 13.5px;
+
+      div {
+        margin-top: 6px;
+        font-weight: 600;
+      }
+    }
+
     .step {
       display: flex;
       flex-direction: column;
@@ -273,6 +289,7 @@ type Network = 'local' | 'internet';
 export class MobileDownloadComponent {
   private readonly api = inject(ServerApi);
   protected readonly auth = inject(AuthService);
+  protected readonly support = SUPPORT;
 
   protected readonly connection = apiResource<ServerConnection | null>(null, () =>
     this.api.connection(),
