@@ -28,7 +28,8 @@ import java.util.Locale;
  * to hand out a new one.
  *
  * <p>Nobody is signed in, so the proof asked is of another kind: being able to read a file on
- * the server's own disk. Starting the procedure writes a code into {@code codeFile}; whoever
+ * the server's own disk. Starting the procedure writes a code into {@code codeFile}, a place the
+ * screen does not name and the publisher's support gives on the phone; whoever
  * types that code back may give a super-admin account a new password. The web layer adds that
  * both steps are accepted only from the server's computer -- see {@code SetupController}. A
  * phone on the shop's Wi-Fi can do neither, and something on the machine that merely relays
@@ -73,8 +74,12 @@ public class AdminRecoveryService {
     }
 
     /**
-     * Draws a code and writes it, with the names of the accounts it can reopen, into the file
-     * the caller is told to open. A code already out is replaced.
+     * Draws a code and writes it, with the names of the accounts it can reopen, into the code
+     * file. A code already out is replaced.
+     *
+     * <p>Where that file is goes to the log and is not answered: the link to this procedure is
+     * on the login page, in front of whoever sits at the till. The shop gets the location from
+     * the publisher's support, on the phone -- which is one more person who has to agree.
      *
      * @throws BusinessRuleException {@code RECOVERY_UNAVAILABLE} when the file cannot be written
      */
@@ -109,13 +114,14 @@ public class AdminRecoveryService {
         } catch (IOException e) {
             log.error("Code de secours impossible a ecrire dans {} ({}).", target, e.toString());
             throw new BusinessRuleException("RECOVERY_UNAVAILABLE",
-                    "Le fichier du code de secours n'a pas pu etre ecrit sur cet ordinateur.");
+                    "Le fichier du code de secours n'a pas pu etre ecrit sur cet ordinateur. "
+                            + "Appelez le support de Libero Shop.");
         }
         code = drawn;
         expiresAt = calendar.now().plus(VALIDITY);
         wrongGuesses = 0;
         log.warn("Procedure de secours demarree : code ecrit dans {}.", target);
-        return new Started(target.toString(), VALIDITY.toMinutes());
+        return new Started(VALIDITY.toMinutes());
     }
 
     /**
@@ -171,9 +177,8 @@ public class AdminRecoveryService {
     }
 
     /**
-     * @param file    where the code was written, for the person at the server to open
      * @param minutes how long the code is good for
      */
-    public record Started(String file, long minutes) {
+    public record Started(long minutes) {
     }
 }

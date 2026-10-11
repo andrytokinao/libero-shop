@@ -22,8 +22,6 @@ export interface FirstAdminRequest {
 
 /** Mirrors AdminRecoveryService.Started. */
 export interface RecoveryStarted {
-  /** The file of the server's computer the code was written in. */
-  file: string;
   /** How long the code is good for. */
   minutes: number;
 }

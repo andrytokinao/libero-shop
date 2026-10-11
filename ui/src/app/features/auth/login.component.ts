@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { PUBLISHER } from '../../core/config/publisher';
+import { PUBLISHER, SUPPORT } from '../../core/config/publisher';
 import { ServerConfig } from '../../core/config/server-config.service';
 import { ApiError } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -38,8 +38,6 @@ const HIGHLIGHTS: readonly Highlight[] = [
     text: 'Un compte par personne selon son rôle, et des sauvegardes sur votre propre poste.',
   },
 ];
-
-const SUPPORT_PHONE = '+261 34 05 680 13';
 
 @Component({
   selector: 'app-login',
@@ -322,8 +320,8 @@ export class LoginComponent {
   protected readonly server = inject(ServerConfig);
   protected readonly highlights = HIGHLIGHTS;
   protected readonly publisher = PUBLISHER;
-  protected readonly supportPhone = SUPPORT_PHONE;
-  protected readonly supportLink = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, '')}`;
+  protected readonly supportPhone = SUPPORT.phone;
+  protected readonly supportLink = SUPPORT.whatsappLink;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

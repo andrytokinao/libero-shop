@@ -70,7 +70,8 @@ class AdminRecoveryTest {
     void recoversAtTheServer() throws Exception {
         mvc.perform(post("/api/setup/recovery/code").with(from(SERVER)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.file").isNotEmpty())
+                // Where the code is, the support says: the answer does not.
+                .andExpect(jsonPath("$.file").doesNotExist())
                 .andExpect(jsonPath("$.minutes").value(15));
         String written = Files.readString(Path.of(CODE_FILE));
         String code = codeIn(written);

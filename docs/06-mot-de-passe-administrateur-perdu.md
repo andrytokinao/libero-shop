@@ -4,6 +4,10 @@ Réalisée le 10 octobre 2026.
 
 Point de [`TODO.md`](TODO.md) concerné : section 1, « Mot de passe administrateur perdu ».
 
+> **Modifié le 11 octobre 2026** : la page n'affiche plus l'emplacement du fichier du code, c'est
+> le support qui l'indique. Voir
+> [`16-mot-de-passe-oublie-avec-le-support.md`](16-mot-de-passe-oublie-avec-le-support.md).
+
 ---
 
 ## Ce qui change

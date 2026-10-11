@@ -63,8 +63,8 @@ public class SetupController {
     }
 
     /**
-     * A lost administrator password, first step: writes a code into a file on this computer and
-     * says where. Reading it back is the proof asked by {@link #recover}.
+     * A lost administrator password, first step: writes a code into a file on this computer,
+     * without saying where -- the publisher's support does. Reading it back is the proof asked by {@link #recover}.
      */
     @PostMapping("/recovery/code")
     public AdminRecoveryService.Started startRecovery(HttpServletRequest request) {

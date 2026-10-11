@@ -13,3 +13,12 @@ export const PUBLISHER = {
   website: 'www.kinga-digital.com',
   websiteLink: 'https://www.kinga-digital.com',
 } as const;
+
+/**
+ * The support team's line, a WhatsApp number: who a shop calls when it is stuck, and who says
+ * where the recovery code of a lost administrator password is to be read.
+ */
+export const SUPPORT = {
+  phone: '+261 34 05 680 13',
+  whatsappLink: 'https://wa.me/261340568013',
+} as const;

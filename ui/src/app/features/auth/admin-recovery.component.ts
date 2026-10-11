@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { RecoveryStarted, SetupApi } from '../../core/api/setup.api';
+import { SUPPORT } from '../../core/config/publisher';
 import { ApiError } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -16,6 +17,9 @@ const MIN_PASSWORD_LENGTH = 8;
  * <p>Two steps, both accepted only at the server's computer: the server writes a code into a
  * file of that computer, then the code typed back lets a new password be chosen. From any other
  * device the page only explains where to go.
+ *
+ * <p>The page does not say where that file is: its link is on the login page, in front of
+ * anyone at the till. The support team says it on the phone.
  */
 @Component({
   selector: 'app-admin-recovery',
@@ -40,14 +44,20 @@ const MIN_PASSWORD_LENGTH = 8;
           <p class="setup-lead">Ouvrez Libero Shop sur cet ordinateur et revenez sur cette page.</p>
         } @else if (started()) {
           <p class="setup-lead">
-            Un code à 8 chiffres vient d'être écrit dans ce fichier de l'ordinateur. Ouvrez-le
-            (avec le Bloc-notes), il contient aussi les identifiants des administrateurs :
+            Un code à 8 chiffres vient d'être écrit dans un fichier de cet ordinateur, avec les
+            identifiants des administrateurs.
           </p>
-          <p class="setup-file">{{ started()?.file }}</p>
+          <p class="setup-lead">
+            <strong>Appelez le support de Libero Shop</strong> : il vous indiquera où lire ce code.
+          </p>
+          <p class="setup-support">
+            Support — WhatsApp :
+            <a [href]="support.whatsappLink" target="_blank" rel="noopener">{{ support.phone }}</a>
+          </p>
           <p class="setup-lead muted">Le code est valable {{ started()?.minutes }} minutes, une seule fois.</p>
 
           <div class="fld">
-            <label for="recovery-code">Code du fichier</label>
+            <label for="recovery-code">Code de secours</label>
             <input
               id="recovery-code"
               name="code"
@@ -112,6 +122,11 @@ const MIN_PASSWORD_LENGTH = 8;
           <p class="setup-lead">
             Cette procédure remplace le mot de passe d'un compte administrateur. Elle ne fonctionne
             que sur l'ordinateur où Libero Shop est installé.
+          </p>
+          <p class="setup-lead">
+            Elle se fait avec le support de Libero Shop, qui vous guidera au téléphone :
+            <a [href]="support.whatsappLink" target="_blank" rel="noopener">{{ support.phone }}</a>
+            (WhatsApp).
           </p>
           <p class="setup-lead">
             Pour un autre compte (caisse, dépôt…), demandez plutôt un nouveau mot de passe à
@@ -180,11 +195,9 @@ const MIN_PASSWORD_LENGTH = 8;
       margin: 0 0 14px;
     }
 
-    .setup-file {
-      font-family: monospace;
-      font-size: 12.5px;
-      word-break: break-all;
-      user-select: all;
+    .setup-support {
+      font-size: 13.5px;
+      font-weight: 600;
       margin: 0 0 14px;
     }
 
@@ -219,6 +232,7 @@ export class AdminRecoveryComponent {
   private readonly router = inject(Router);
 
   protected readonly minPasswordLength = MIN_PASSWORD_LENGTH;
+  protected readonly support = SUPPORT;
 
   protected readonly started = signal<RecoveryStarted | null>(null);
   /** The server said this device is not its own computer. */
