@@ -15,7 +15,10 @@ import org.springframework.stereotype.Service;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
@@ -114,10 +117,10 @@ public class BackupService {
             lastErrorAt = check.readable() ? null : now;
             return entry;
         } catch (IOException | UncheckedIOException e) {
-            lastError = e.getMessage();
+            lastError = reasonOf(e);
             lastErrorAt = calendar.now();
             log.error("Sauvegarde ({}) impossible.", kind, e);
-            throw new BusinessRuleException("BACKUP_FAILED", "Sauvegarde impossible : " + e.getMessage());
+            throw new BusinessRuleException("BACKUP_FAILED", "Sauvegarde impossible : " + reasonOf(e));
         } finally {
             lock.unlock();
         }
@@ -249,6 +252,26 @@ public class BackupService {
         }
     }
 
+    /**
+     * Why a file operation failed, in words for the screen. The exception's own message is the
+     * path the system tripped on, often with more of the disk's layout than the screen needs:
+     * it goes to the log, where whoever maintains the machine reads it.
+     */
+    static String reasonOf(Exception failure) {
+        Throwable cause = failure instanceof UncheckedIOException unchecked ? unchecked.getCause() : failure;
+        if (cause instanceof NoSuchFileException) {
+            return "fichier ou dossier introuvable.";
+        }
+        if (cause instanceof AccessDeniedException) {
+            return "accès refusé au dossier ou au fichier.";
+        }
+        if (cause instanceof FileAlreadyExistsException) {
+            return "un fichier du même nom existe déjà.";
+        }
+        return "erreur de lecture ou d'écriture sur le disque (disque plein, débranché ou protégé ?). "
+                + "Le détail est dans le journal du serveur.";
+    }
+
     private static void requireRange(String what, int value, int min, int max) {
         if (value < min || value > max) {
             throw new BusinessRuleException("INVALID_RETENTION",
@@ -280,7 +303,9 @@ public class BackupService {
             Files.copy(source, staging, StandardCopyOption.REPLACE_EXISTING);
             PendingRestore.request(db, staging);
         } catch (IOException e) {
-            throw new BusinessRuleException("RESTORE_FAILED", "Préparation de la restauration impossible : " + e.getMessage());
+            log.error("Preparation de la restauration de {} impossible.", fileName, e);
+            throw new BusinessRuleException("RESTORE_FAILED",
+                    "Préparation de la restauration impossible : " + reasonOf(e));
         }
         log.warn("Restauration de {} programmee : redemarrage.", fileName);
         restarter.restartSoon();

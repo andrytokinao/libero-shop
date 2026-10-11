@@ -150,6 +150,23 @@ class BackupServiceTest {
     }
 
     @Test
+    @DisplayName("a failure is told in words, never with the path the system tripped on")
+    void failureReasonCarriesNoPath() {
+        String secret = folder.resolve("coffre").resolve("base.zip").toString();
+
+        for (Exception failure : List.of(
+                new java.nio.file.NoSuchFileException(secret),
+                new java.nio.file.AccessDeniedException(secret),
+                new java.io.IOException("No space left on device: " + secret),
+                new java.io.UncheckedIOException(new java.nio.file.AccessDeniedException(secret)))) {
+            String reason = BackupService.reasonOf(failure);
+            assertFalse(reason.contains("coffre"), reason);
+            assertFalse(reason.isBlank());
+        }
+        assertTrue(BackupService.reasonOf(new java.nio.file.AccessDeniedException(secret)).contains("refusé"));
+    }
+
+    @Test
     @DisplayName("a folder the server hands out to anyone is refused, for both locations")
     void publicFolderRefused() throws Exception {
         Path downloads = Files.createDirectories(folder.resolve("downloads"));

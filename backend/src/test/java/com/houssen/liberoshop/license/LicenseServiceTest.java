@@ -111,9 +111,10 @@ class LicenseServiceTest {
 
         LicenseNotFoundException failure = assertThrows(LicenseNotFoundException.class, service::getStatus);
 
-        // Both facts the customer needs in order to be helped without a call back.
-        assertTrue(failure.getMessage().contains(licensePath.toAbsolutePath().toString()));
+        // The fingerprint is what the customer has to pass on. Where the file belongs on the
+        // server goes to the log, not to whoever reads the message.
         assertTrue(failure.getMessage().contains(DEFAULT_FINGERPRINT));
+        assertFalse(failure.getMessage().contains(licensePath.toAbsolutePath().toString()));
     }
 
     @Test

@@ -307,8 +307,9 @@ public class LicenseService {
         try {
             return Files.readAllBytes(path);
         } catch (IOException e) {
-            throw new LicenseInvalidException(
-                    "Le fichier de licence " + path.toAbsolutePath() + " n'a pas pu etre lu.", e);
+            // Where it is goes to the log: the message is read by whoever was refused a sale.
+            log.error("Fichier de licence illisible : {}.", path.toAbsolutePath(), e);
+            throw new LicenseInvalidException("Le fichier de licence n'a pas pu etre lu sur le serveur.", e);
         }
     }
 
@@ -338,8 +339,9 @@ public class LicenseService {
 
     /** Raised only when the trial is switched off, which is the strict configuration. */
     private LicenseNotFoundException licenseNotFound() {
+        log.warn("Aucun fichier de licence a l'emplacement {}.", properties.path().toAbsolutePath());
         return new LicenseNotFoundException(
-                "Aucun fichier de licence trouve a l'emplacement " + properties.path().toAbsolutePath() + ". "
+                "Aucun fichier de licence n'est installe sur le serveur. "
                         + "Merci de communiquer l'empreinte de cette machine a l'editeur pour obtenir "
                         + "une licence : " + fingerprint);
     }
@@ -368,9 +370,9 @@ public class LicenseService {
                 Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException e) {
+            log.error("Fichier de licence non enregistre dans {}.", target.toAbsolutePath(), e);
             throw new LicenseInvalidException(
-                    "Le nouveau fichier de licence n'a pas pu etre enregistre dans " + target.toAbsolutePath()
-                            + ".", e);
+                    "Le nouveau fichier de licence n'a pas pu etre enregistre sur le serveur.", e);
         }
     }
 }
