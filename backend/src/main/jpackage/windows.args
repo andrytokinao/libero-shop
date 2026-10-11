@@ -7,6 +7,10 @@ exe
 # where Maven runs jpackage.
 --icon
 src/main/jpackage/libero-shop.ico
+# main.wxs there replaces jpackage's own: it starts the application when the
+# installation ends, and at every Windows logon. Relative to backend/ as well.
+--resource-dir
+src/main/jpackage/windows
 --win-menu
 --win-menu-group
 "Libero Shop"
