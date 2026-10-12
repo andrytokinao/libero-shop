@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import {
   anonymousOnlyGuard,
-  firstAccountGuard,
   homeRedirectGuard,
   roleGuard,
   authGuard,
@@ -19,19 +18,9 @@ export const routes: Routes = [
   {
     path: 'login',
     title: 'Connexion',
-    canActivate: [serverConfiguredGuard, anonymousOnlyGuard, firstAccountGuard],
-    loadComponent: () =>
-      import('./features/auth/login.component').then((m) => m.LoginComponent),
-  },
-
-  // A fresh installation: no account yet, so the login page sends here to create the first one.
-  // The screen itself returns to the login page as soon as an account exists.
-  {
-    path: 'installation',
-    title: 'Première utilisation',
     canActivate: [serverConfiguredGuard, anonymousOnlyGuard],
     loadComponent: () =>
-      import('./features/auth/first-admin.component').then((m) => m.FirstAdminComponent),
+      import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
 
   // Choosing one's own password: from "Mon profil", or sent here by the guards while the one in

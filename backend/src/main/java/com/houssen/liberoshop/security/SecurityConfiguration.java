@@ -76,10 +76,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/session").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_LICENSE_ENDPOINTS).permitAll()
-                        // The first start: nobody can sign in before the first account exists.
-                        // The controller refuses once there is one, and from any other machine.
+                        // The first start: asked by the login page, before anyone has signed in.
+                        // The controller gives the first password at the server's computer only.
                         .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/setup/admin").permitAll()
                         // A lost administrator password: nobody to authenticate either, and held
                         // to the server's own computer the same way -- see SetupController.
                         .requestMatchers(HttpMethod.POST, "/api/setup/recovery/*").permitAll()

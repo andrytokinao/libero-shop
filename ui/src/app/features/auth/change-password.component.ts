@@ -31,8 +31,8 @@ import { ToastService } from '../../core/services/toast.service';
 
         @if (forced()) {
           <p class="setup-lead">
-            Votre mot de passe a été choisi par l'administrateur. Choisissez maintenant le vôtre :
-            vous serez seul à le connaître.
+            Votre mot de passe actuel est provisoire : il vous a été donné. Choisissez maintenant
+            le vôtre, vous serez seul à le connaître.
           </p>
         } @else {
           <p class="setup-lead">

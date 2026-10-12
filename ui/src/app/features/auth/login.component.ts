@@ -2,6 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SetupApi, SetupStatus } from '../../core/api/setup.api';
 import { PUBLISHER, SUPPORT } from '../../core/config/publisher';
 import { ServerConfig } from '../../core/config/server-config.service';
 import { ApiError } from '../../core/models';
@@ -84,6 +86,27 @@ const HIGHLIGHTS: readonly Highlight[] = [
           <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
           <div class="sub">Gestion supermarche</div>
         </div>
+
+        <!-- A new installation: the server opened the administrator account itself. Its
+             password is told at the server's computer only, and until it has been replaced. -->
+        @if (first(); as f) {
+          <div class="login-first" role="status">
+            <div class="title">Première connexion</div>
+            @if (f.password) {
+              <div>Identifiant : <strong class="value">{{ f.username }}</strong></div>
+              <div>Mot de passe : <strong class="value">{{ f.password }}</strong></div>
+              <div class="text">
+                Après la connexion, il vous sera demandé de le remplacer par le vôtre. Ce message
+                disparaît ensuite.
+              </div>
+            } @else {
+              <div class="text">
+                L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
+                l'ordinateur où Libero Shop est installé.
+              </div>
+            }
+          </div>
+        }
 
         <div class="form-row" style="flex-direction:column; align-items:stretch;">
           <div class="fld">
@@ -306,6 +329,32 @@ const HIGHLIGHTS: readonly Highlight[] = [
       text-align: center;
     }
 
+    .login-first {
+      background: var(--brand-soft);
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+
+      .title {
+        font-weight: 700;
+        color: var(--brand-dark);
+      }
+
+      .value {
+        font-family: monospace;
+        font-size: 15px;
+        user-select: all;
+      }
+
+      .text {
+        font-size: 12px;
+        color: var(--ink-soft);
+        margin-top: 4px;
+      }
+    }
+
     .login-error {
       background: var(--red-soft);
       color: var(--red);
@@ -330,6 +379,25 @@ export class LoginComponent {
   protected readonly password = signal('');
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
+
+  /** The first password of a new installation, while it is the one in service; else null. */
+  protected readonly first = signal<SetupStatus | null>(null);
+
+  constructor() {
+    inject(SetupApi)
+      .status()
+      .pipe(takeUntilDestroyed())
+      .subscribe((status) => {
+        if (!status.firstPassword) {
+          return;
+        }
+        this.first.set(status);
+        // Read just above: one field less to type, the password stays to be copied by hand.
+        if (status.username && !this.username()) {
+          this.username.set(status.username);
+        }
+      });
+  }
 
   protected canSubmit(): boolean {
     return !this.submitting() && this.username().trim().length > 0 && this.password().length > 0;

@@ -7,17 +7,12 @@ import { API_BASE_URL } from './api.config';
 
 /** Mirrors SetupController.SetupStatus. */
 export interface SetupStatus {
-  /** No account exists yet: nobody can sign in. */
-  required: boolean;
-  /** The first account can be created from this device — only the server's own computer. */
-  allowedHere: boolean;
-}
-
-/** The first account, as its owner fills it in — mirrors CreateFirstAdminRequest. */
-export interface FirstAdminRequest {
-  fullName: string;
-  username: string;
-  password: string;
+  /** The administrator account opened at installation still has its first password. */
+  firstPassword: boolean;
+  /** That account — only told to the server's own computer. */
+  username?: string | null;
+  /** Its password, likewise. */
+  password?: string | null;
 }
 
 /** Mirrors AdminRecoveryService.Started. */
@@ -33,15 +28,15 @@ export interface RecoverAdminRequest {
   password: string;
 }
 
-const DONE: SetupStatus = { required: false, allowedHere: false };
+const DONE: SetupStatus = { firstPassword: false };
 
 /**
- * The first start of an installation: is there an account yet, and the call that creates the
- * first one.
+ * The first start of an installation: the server opened an administrator account by itself, and
+ * says with which password for as long as it has not been replaced.
  *
- * <p>An installation only ever goes from "nobody" to "somebody", so the answer "not required" is
- * kept for good and the question is not asked again; "required" is asked again each time, since
- * someone at the server may have created the account meanwhile.
+ * <p>A first password is only ever replaced, never put back, so the answer "none" is kept for
+ * good and the question is not asked again; "there is one" is asked again each time, since its
+ * holder may have replaced it meanwhile.
  */
 @Injectable({ providedIn: 'root' })
 export class SetupApi {
@@ -49,7 +44,7 @@ export class SetupApi {
   private readonly done = signal(false);
 
   /**
-   * A server that cannot be reached, or one from before this endpoint, answers "not required":
+   * A server that cannot be reached, or one from before this endpoint, answers "none":
    * the login page then shows as it always did and says what is wrong in its own words.
    */
   status(): Observable<SetupStatus> {
@@ -62,17 +57,8 @@ export class SetupApi {
       })
       .pipe(
         catchError(() => of(DONE)),
-        tap((status) => this.done.set(!status.required)),
+        tap((status) => this.done.set(!status.firstPassword)),
       );
-  }
-
-  /** Refused by the server once any account exists, and from any machine but its own. */
-  createFirstAdmin(request: FirstAdminRequest): Observable<UserApp> {
-    return this.http
-      .post<UserApp>(`${API_BASE_URL}/setup/admin`, request, {
-        context: new HttpContext().set(SILENT_ERRORS, true),
-      })
-      .pipe(tap(() => this.done.set(true)));
   }
 
   /**

@@ -9,80 +9,101 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A shipped installation: no demonstration accounts, so nobody to sign in as. The first account
- * is created from the server's own computer, once, and then signs in like any other.
+ * A shipped installation: no demonstration accounts. The server opens the administrator account
+ * itself, shows its password at its own computer, and stops as soon as it has been replaced.
  */
-@SpringBootTest(properties = "liberoshop.demo-data.enabled=false")
+@SpringBootTest(properties = {
+        "liberoshop.demo-data.enabled=false",
+        "liberoshop.security.first-password-file=" + SetupControllerTest.PASSWORD_FILE
+})
 @AutoConfigureMockMvc
 class SetupControllerTest {
 
-    private static final String OWNER = """
-            {"fullName":"Rivo Rakoto","username":"Rivo","password":"motdepasse-long"}""";
+    static final String PASSWORD_FILE = "target/setup-test/first-password.txt";
+
+    private static final String SERVER = "127.0.0.1";
+    private static final String PHONE = "192.168.1.42";
 
     @Autowired
     private MockMvc mvc;
 
-    @Test
-    @DisplayName("premier demarrage : le compte se cree sur le serveur, une fois, puis se connecte")
-    void firstStart() throws Exception {
-        // Nobody yet: the form is offered at the server's computer, explained elsewhere.
-        mvc.perform(get("/api/setup/status").with(from("127.0.0.1")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.required").value(true))
-                .andExpect(jsonPath("$.allowedHere").value(true));
-        mvc.perform(get("/api/setup/status").with(from("192.168.1.42")))
-                .andExpect(jsonPath("$.required").value(true))
-                .andExpect(jsonPath("$.allowedHere").value(false));
+    private final ObjectMapper json = new ObjectMapper();
 
-        // A phone on the Wi-Fi does not get to make itself administrator...
-        mvc.perform(creation(OWNER).with(from("192.168.1.42")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("SETUP_ONLY_ON_SERVER"));
+    @Test
+    @DisplayName("premier demarrage : mot de passe de depart affiche sur le serveur, a remplacer, puis plus rien")
+    void firstStart() throws Exception {
+        JsonNode shown = json.readTree(mvc.perform(get("/api/setup/status").with(from(SERVER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstPassword").value(true))
+                .andExpect(jsonPath("$.username").value("admin"))
+                .andReturn().getResponse().getContentAsString());
+        String password = shown.get("password").asString();
+        assertEquals(10, password.length());
+
+        // A phone on the Wi-Fi learns that there is one, not what it is...
+        mvc.perform(get("/api/setup/status").with(from(PHONE)))
+                .andExpect(jsonPath("$.firstPassword").value(true))
+                .andExpect(jsonPath("$.username").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
         // ...nor does anyone arriving through a relay running on the server.
-        mvc.perform(creation(OWNER).with(request -> {
-                    request.setRemoteAddr("127.0.0.1");
-                    request.addHeader("X-Forwarded-For", "192.168.1.42");
+        mvc.perform(get("/api/setup/status").with(request -> {
+                    request.setRemoteAddr(SERVER);
+                    request.addHeader("X-Forwarded-For", PHONE);
                     return request;
                 }))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("SETUP_ONLY_ON_SERVER"));
-        // The account that opens everything is not protected by six characters.
-        mvc.perform(creation("""
-                        {"fullName":"Rivo Rakoto","username":"rivo","password":"court1"}""")
-                        .with(from("127.0.0.1")))
-                .andExpect(status().isBadRequest());
-
-        mvc.perform(creation(OWNER).with(from("127.0.0.1")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("rivo"))
-                .andExpect(jsonPath("$.roles[0]").value("SUPER_ADMIN"));
-
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .andExpect(jsonPath("$.password").doesNotExist());
+        // The form that used to create the first account is gone.
+        mvc.perform(post("/api/setup/admin").with(from(SERVER)).contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"rivo","password":"motdepasse-long"}"""))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+                                {"fullName":"Un Autre","username":"autre","password":"motdepasse-long"}"""))
+                .andExpect(status().is4xxClientError());
 
-        // The door is closed for good, at the server's computer included.
-        mvc.perform(get("/api/setup/status").with(from("127.0.0.1")))
-                .andExpect(jsonPath("$.required").value(false))
-                .andExpect(jsonPath("$.allowedHere").value(false));
-        mvc.perform(creation("""
-                        {"fullName":"Un Autre","username":"autre","password":"motdepasse-long"}""")
-                        .with(from("127.0.0.1")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("SETUP_ALREADY_DONE"));
+        // It signs in, as a super-admin who is asked for a password of their own.
+        String token = "Bearer " + json.readTree(mvc.perform(login("admin", password))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("accessToken").asString();
+        mvc.perform(get("/api/auth/session").header("Authorization", token))
+                .andExpect(jsonPath("$.user.roles[0]").value("SUPER_ADMIN"))
+                .andExpect(jsonPath("$.mustChangePassword").value(true));
+        // Signing in is not replacing it: still shown.
+        mvc.perform(get("/api/setup/status").with(from(SERVER)))
+                .andExpect(jsonPath("$.password").value(password));
+
+        mvc.perform(post("/api/auth/password").header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword":"%s","newPassword":"mon-propre-secret"}""".formatted(password)))
+                .andExpect(status().isNoContent());
+
+        // Replaced: nothing to show any more, at the server's computer included, and no file left.
+        assertTrue(Files.exists(Path.of(PASSWORD_FILE)));
+        mvc.perform(get("/api/setup/status").with(from(SERVER)))
+                .andExpect(jsonPath("$.firstPassword").value(false))
+                .andExpect(jsonPath("$.password").doesNotExist());
+        assertFalse(Files.exists(Path.of(PASSWORD_FILE)));
+        mvc.perform(login("admin", password)).andExpect(status().isUnauthorized());
+        mvc.perform(login("admin", "mon-propre-secret")).andExpect(status().isOk());
     }
 
-    private static MockHttpServletRequestBuilder creation(String body) {
-        return post("/api/setup/admin").contentType(MediaType.APPLICATION_JSON).content(body);
+    private static MockHttpServletRequestBuilder login(String username, String password) {
+        return post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"%s","password":"%s"}""".formatted(username, password));
     }
 
     private static RequestPostProcessor from(String address) {

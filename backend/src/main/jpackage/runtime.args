@@ -29,6 +29,10 @@
 # there for whoever sits at this computer to read, deleted once used.
 --java-options
 -Dliberoshop.security.recovery.code-file=${user.home}/.libertyshop/security/recovery-code.txt
+# The password of the administrator account a new installation opens by itself:
+# shown on the login page of this computer until it has been replaced.
+--java-options
+-Dliberoshop.security.first-password-file=${user.home}/.libertyshop/security/first-password.txt
 # The installed application has no window: show its state and its menu (open,
 # stop, restart, update, quit) in the notification area. See desktop.ServerTray.
 --java-options

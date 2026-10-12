@@ -1,7 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import { SetupApi } from '../api/setup.api';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -69,16 +68,4 @@ export const anonymousOnlyGuard: CanActivateFn = () => {
   return auth.ensureLoaded().pipe(
     map((session) => (session.authenticated ? router.parseUrl(session.homePath) : true)),
   );
-};
-
-/**
- * A fresh installation has no account to sign in with: its login page gives way to the screen
- * that creates the first one. Asked of the server each time until it answers "somebody exists",
- * which is then remembered — see {@link SetupApi}.
- */
-export const firstAccountGuard: CanActivateFn = () => {
-  const router = inject(Router);
-  return inject(SetupApi)
-    .status()
-    .pipe(map((status) => (status.required ? router.parseUrl('/installation') : true)));
 };

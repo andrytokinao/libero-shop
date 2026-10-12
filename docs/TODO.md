@@ -24,6 +24,8 @@ ou entretien.
 - [x] Données de démo désactivées par défaut, profil `dev` (partie 1, à commiter)
 - [x] Clé de signature des sessions conservée entre deux démarrages (partie 1, à commiter)
 - [x] Écran « Première utilisation » : création du premier administrateur (partie 1, à commiter)
+  — remplacé le 12 octobre par un mot de passe de départ affiché à la connexion
+  (`18-mot-de-passe-de-depart-de-l-administrateur.md`)
 - [x] Compte relu en base à chaque requête : désactivation et rôles immédiats (partie 2, à commiter)
 - [x] Fermeture des sessions : changement de mot de passe et déconnexion (partie 2, à commiter)
 - [x] Lecture par rôle : factures, versements, fournisseurs, sorties de stock (partie 2, à commiter)
