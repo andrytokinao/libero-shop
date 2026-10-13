@@ -177,7 +177,7 @@ class SaleNotificationWebSocketTest {
     // --------------------------------------------------------------------- tests
 
     @Test
-    @DisplayName("a sale reaches the depot staff connected, and not the counter")
+    @DisplayName("an unpaid sale reaches the depot to prepare it and the other tills to collect it")
     void saleReachesTheDepot() throws Exception {
         UserApp cashier = account(RoleApp.CASHIER);
         UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
@@ -201,8 +201,32 @@ class SaleNotificationWebSocketTest {
         assertEquals(invoice.invoiceNumber(), data.get("invoiceNumber"));
         assertEquals(2, ((Number) data.get("units")).intValue());
 
+        Map<String, Object> toCollect = counter.poll(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull(toCollect, "the other till was never told there is money to take");
+        assertEquals("ORDER_TO_COLLECT", toCollect.get("type"));
+        assertTrue(((String) toCollect.get("message")).contains("25000 Ar a encaisser"));
+        assertEquals(invoice.invoiceNumber(), ((Map<?, ?>) toCollect.get("data")).get("invoiceNumber"));
+
         assertNull(seller.poll(1, TimeUnit.SECONDS), "the seller is not told about their own sale");
         assertNull(counter.poll(1, TimeUnit.SECONDS), "the counter is not the depot's audience");
+    }
+
+    @Test
+    @DisplayName("a sale paid at the desk asks nothing of the other tills")
+    void paidSaleIsNotAnnouncedToTheTills() throws Exception {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
+        UserApp otherCashier = account(RoleApp.CASHIER);
+        Product rice = products.save(Product.builder().name("Riz " + UUID.randomUUID())
+                .price(new BigDecimal("12500")).stockQuantity(qty(40)).build());
+        BlockingQueue<Map<String, Object>> depot = listen(storekeeper);
+        BlockingQueue<Map<String, Object>> counter = listen(otherCashier);
+
+        saleService.checkout(new CreateSaleRequest("Rina", PaymentStatus.PAID, PaymentMethod.CASH,
+                List.of(new CreateSaleRequest.Line(rice.getId(), qty(1)))), cashier);
+
+        assertNotNull(depot.poll(WAIT_SECONDS, TimeUnit.SECONDS), "the storekeeper was never told");
+        assertNull(counter.poll(1, TimeUnit.SECONDS), "a paid sale leaves the till nothing to do");
     }
 
     @Test

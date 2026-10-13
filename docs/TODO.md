@@ -41,6 +41,8 @@ ou entretien.
 - [x] Mots de passe personnels : 8 caractères, « changer mon mot de passe », changement à la première connexion (`6148326`)
 - [x] Serveur derrière un reverse proxy : ralentissement par appareil, adresses locales gardées (`2366854`)
 - [x] Statut de licence public réduit à l'état et aux jours restants
+- [x] La caisse est prévenue d'une commande laissée impayée
+  (`20-caisse-prevenue-des-commandes-a-encaisser.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),

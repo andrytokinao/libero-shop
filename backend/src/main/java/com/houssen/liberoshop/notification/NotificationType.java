@@ -11,6 +11,9 @@ public enum NotificationType {
     /** A sale was recorded at the counter: goods are waiting to leave the depot. */
     SALE_CREATED,
 
+    /** An order was taken and left unpaid: a cashier has its money to take. */
+    ORDER_TO_COLLECT,
+
     /** An order was handed over at the depot: its seller learns the customer has the goods. */
     ORDER_DELIVERED,
 

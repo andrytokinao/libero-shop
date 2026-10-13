@@ -4,6 +4,8 @@ import { PaymentStatus } from './enums';
 export enum NotificationType {
   /** A sale was recorded at the counter: goods are waiting to leave the depot. */
   SALE_CREATED = 'SALE_CREATED',
+  /** An order was taken and left unpaid: a cashier has its money to take. */
+  ORDER_TO_COLLECT = 'ORDER_TO_COLLECT',
   /** An order was handed over at the depot: its seller learns the customer has the goods. */
   ORDER_DELIVERED = 'ORDER_DELIVERED',
   /** A storekeeper brought cash to the desk: a cashier has to count it and confirm. */
@@ -30,7 +32,7 @@ export interface AppNotification<T = unknown> {
   data: T;
 }
 
-/** `data` of a SALE_CREATED notification — mirrors SaleNotifier.SaleCreated. */
+/** `data` of a SALE_CREATED or ORDER_TO_COLLECT notification — mirrors SaleNotifier.SaleCreated. */
 export interface SaleCreatedData {
   invoiceId: number;
   invoiceNumber: string;

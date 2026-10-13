@@ -2,6 +2,7 @@ package com.houssen.liberoshop.notification;
 
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.RoleApp;
+import com.houssen.liberoshop.entity.ShopFeatures;
 import com.houssen.liberoshop.service.SaleRecordedEvent;
 import com.houssen.liberoshop.service.ShopSettingsService;
 import org.springframework.stereotype.Component;
@@ -15,12 +16,16 @@ import java.math.RoundingMode;
 import java.util.Set;
 
 /**
- * Tells the depot that a sale is waiting.
+ * Tells whoever a sale sets to work: the depot that it is waiting, the till that it is unpaid.
  *
  * <p>The storekeepers are the ones a sale sets to work -- the goods have to be picked and handed
- * over -- and the depot manager watches what leaves the stock. The seller is left out: they
- * have just made the sale, and in a one-person shop they would otherwise be told about it by
- * their own screen.
+ * over -- and the depot manager watches what leaves the stock. The cashiers are told of an order
+ * left unpaid -- a waiter's, a receptionist's, a colleague's: its money is theirs to take, and
+ * without a word the order would wait in "A encaisser" until someone looked. A sale paid at the
+ * desk asks nothing of the till, and is not announced there.
+ *
+ * <p>The seller is left out of both: they have just made the sale, and in a one-person shop they
+ * would otherwise be told about it by their own screen.
  *
  * <p>Runs after the commit, so a checkout that fails and rolls back never announces a sale that
  * does not exist. A notification that cannot be pushed is logged by {@link NotificationService};
@@ -29,8 +34,10 @@ import java.util.Set;
 @Component
 public class SaleNotifier {
 
-    /** Who is told about a new sale. */
-    static final Set<RoleApp> AUDIENCE = Set.of(RoleApp.DEPOT_AGENT, RoleApp.DEPOT_MANAGER);
+    /** Who is told a sale is waiting to be handed over. */
+    static final Set<RoleApp> DEPOT = Set.of(RoleApp.DEPOT_AGENT, RoleApp.DEPOT_MANAGER);
+    /** Who is told an order is waiting to be paid. */
+    static final Set<RoleApp> DESK = Set.of(RoleApp.CASHIER);
 
     private final NotificationService notifications;
     private final ShopSettingsService settings;
@@ -42,12 +49,14 @@ public class SaleNotifier {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSaleRecorded(SaleRecordedEvent sale) {
+        ShopFeatures features = settings.features();
         // A counter hands the goods over with the sale: nobody is left to prepare anything.
-        if (!settings.features().separateDelivery()) {
-            return;
+        if (features.separateDelivery()) {
+            notifications.sendToRoles(DEPOT, notificationOf(sale, features.payAtDepot()), sale.sellerId());
         }
-        notifications.sendToRoles(AUDIENCE, notificationOf(sale, settings.features().payAtDepot()),
-                sale.sellerId());
+        if (sale.paymentStatus() == PaymentStatus.UNPAID) {
+            notifications.sendToRoles(DESK, toCollectOf(sale, features.payAtDepot()), sale.sellerId());
+        }
     }
 
     static Notification notificationOf(SaleRecordedEvent sale, boolean payAtDepot) {
@@ -61,6 +70,17 @@ public class SaleNotifier {
                 + Quantities.format(sale.units()) + " article(s), " + amount(sale.totalAmount()) + " Ar, "
                 + settlement + ". Vendu par " + sale.sellerName() + ".";
         return Notification.of(NotificationType.SALE_CREATED, "Nouvelle vente a preparer",
+                message, SaleCreated.of(sale));
+    }
+
+    /** For the till: an order somebody else took, and nobody has paid. */
+    static Notification toCollectOf(SaleRecordedEvent sale, boolean payAtDepot) {
+        // Where the depot takes money, the customer may still choose to pay at the desk.
+        String where = payAtDepot ? "a la caisse ou a la remise" : "a la caisse";
+        String message = sale.invoiceNumber() + " - " + sale.clientName() + " - "
+                + amount(sale.totalAmount()) + " Ar a encaisser " + where
+                + ". Pris par " + sale.sellerName() + ".";
+        return Notification.of(NotificationType.ORDER_TO_COLLECT, "Nouvelle commande a encaisser",
                 message, SaleCreated.of(sale));
     }
 

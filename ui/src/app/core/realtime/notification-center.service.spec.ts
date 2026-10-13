@@ -87,6 +87,14 @@ describe('NotificationCenterService', () => {
     expect(center.linkOf(sale('1'))).toBeNull();
   });
 
+  it('sends a cashier to the orders to collect', () => {
+    const toCollect = { ...sale('1'), type: NotificationType.ORDER_TO_COLLECT };
+    expect(center.linkOf(toCollect)).toBeNull();
+
+    roles = [RoleApp.CASHIER];
+    expect(center.linkOf(toCollect)).toBe('/caisse/a-encaisser');
+  });
+
   it('forgets everything on sign-out, so the next account starts clean', () => {
     incoming.next(sale('1'));
 
