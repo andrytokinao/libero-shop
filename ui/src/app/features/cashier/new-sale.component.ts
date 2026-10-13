@@ -22,7 +22,9 @@ import { ProductFinder } from '../../core/sale/product-finder';
 import { SaleReference } from '../../core/sale/sale-reference';
 import { ShortcutMap } from '../../core/sale/shortcuts';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
+import { parseScanEntry } from '../../core/sale/scan-entry';
 import { AuthService } from '../../core/services/auth.service';
+import { CatalogViewService } from '../../core/services/catalog-view.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
@@ -32,6 +34,8 @@ import {
   FEATURED,
 } from '../../shared/components/catalog-navigator.component';
 import { CatalogGridComponent, GridUnitPicked } from '../../shared/components/catalog-grid.component';
+import { CatalogListComponent } from '../../shared/components/catalog-list.component';
+import { CatalogViewToggleComponent } from '../../shared/components/catalog-view-toggle.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -64,6 +68,8 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     CartLineQuantityComponent,
     CatalogNavigatorComponent,
     CatalogGridComponent,
+    CatalogListComponent,
+    CatalogViewToggleComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -264,24 +270,44 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
             aria-label="Rechercher un produit ou un rayon, ou scanner un code"
             placeholder="Rechercher ou scanner…"
             [ngModel]="entry.text()"
-            (ngModelChange)="entry.text.set($event)"
-            (keydown.enter)="entry.submit()"
+            (ngModelChange)="onTyped($event)"
+            (keydown.enter)="onEnter()"
+            (keydown.arrowDown)="moveInList(1, $event)"
+            (keydown.arrowUp)="moveInList(-1, $event)"
           />
           <app-camera-scan-button (scanned)="entry.submit($event)" />
+          <app-catalog-view-toggle />
         </div>
         <app-catalog-navigator [categories]="rayons()" [scope]="scope()" (scopeChange)="scope.set($event)" />
-        <app-catalog-grid
-          [folders]="finder.folders()"
-          [products]="finder.products()"
-          [cart]="cart"
-          [showFavorites]="scope().kind === 'featured' && !entry.term()"
-          [pending]="finder.pending()"
-          [emptyMessage]="emptyMessage()"
-          (folderOpened)="openFolder($event)"
-          (favoritesOpened)="scope.set({ kind: 'favorites' })"
-          (tapped)="focusProductField()"
-          (unitPicked)="onUnitPicked($event)"
-        />
+        <!-- Tiles or lines, as the seller chose: the same products, folders and basket either way. -->
+        @if (catalogView.view() === 'list') {
+          <app-catalog-list
+            [folders]="finder.folders()"
+            [products]="finder.products()"
+            [cart]="cart"
+            [showFavorites]="scope().kind === 'featured' && !entry.term()"
+            [pending]="finder.pending()"
+            [emptyMessage]="emptyMessage()"
+            [keyboardHint]="true"
+            (folderOpened)="openFolder($event)"
+            (favoritesOpened)="scope.set({ kind: 'favorites' })"
+            (tapped)="focusProductField()"
+            (unitPicked)="onUnitPicked($event)"
+          />
+        } @else {
+          <app-catalog-grid
+            [folders]="finder.folders()"
+            [products]="finder.products()"
+            [cart]="cart"
+            [showFavorites]="scope().kind === 'featured' && !entry.term()"
+            [pending]="finder.pending()"
+            [emptyMessage]="emptyMessage()"
+            (folderOpened)="openFolder($event)"
+            (favoritesOpened)="scope.set({ kind: 'favorites' })"
+            (tapped)="focusProductField()"
+            (unitPicked)="onUnitPicked($event)"
+          />
+        }
         @if (finder.hasMore()) {
           <!-- A big rayon comes a page at a time: the rest is one tap away, never a scroll of 300. -->
           <button
@@ -447,6 +473,7 @@ export class NewSaleComponent {
   private readonly invoices = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
+  protected readonly catalogView = inject(CatalogViewService);
 
   /** For whom — asked at checkout, kept here so a sale put on hold keeps it. */
   protected readonly clientName = signal('');
@@ -490,6 +517,8 @@ export class NewSaleComponent {
    * a till that must always be here.
    */
   private readonly productField = viewChild.required<ElementRef<HTMLInputElement>>('productField');
+  /** The products as lines, when the seller chose them: the arrows of the field move in it. */
+  private readonly list = viewChild(CatalogListComponent);
 
   /** Not with a line in red: the server would only refuse it again. */
   protected readonly canValidate = computed(
@@ -569,6 +598,40 @@ export class NewSaleComponent {
     }
     return scope.kind === 'rayon' ? 'Aucun produit dans ce rayon.' : 'Aucun produit au catalogue.';
   });
+
+  /** Words typed or a code scanned: the line the arrows were on belongs to the list they replace. */
+  protected onTyped(text: string): void {
+    this.entry.text.set(text);
+    this.list()?.clearActive();
+  }
+
+  /** ↓ and ↑ in the field walk the lines; with tiles the keys stay the field's own. */
+  protected moveInList(delta: 1 | -1, event: Event): void {
+    const list = this.list();
+    if (list) {
+      // Otherwise ↑ sends the cursor to the start of the text.
+      event.preventDefault();
+      list.move(delta);
+    }
+  }
+
+  /**
+   * Enter adds the line the arrows are on — "3*riz", ↓, Enter is three of it — and without one
+   * it is the till's Enter: the code scanned or typed.
+   */
+  protected onEnter(): void {
+    const quantity = parseScanEntry(this.entry.text())?.quantity ?? 1;
+    const picked = this.list()?.pickActive(quantity);
+    if (!picked) {
+      this.entry.submit();
+    } else if (picked.added < quantity) {
+      this.toasts.show(
+        picked.added
+          ? `${picked.product.name} : ${formatQuantity(picked.added)} ajouté(s) seulement, le stock ne suffit pas.`
+          : `${picked.product.name} : stock épuisé.`,
+      );
+    }
+  }
 
   /** A folder tapped in the grid: the grid goes into it, and the words typed have done their job. */
   protected openFolder(folder: CatalogFolder): void {

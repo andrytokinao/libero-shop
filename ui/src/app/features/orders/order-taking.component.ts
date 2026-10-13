@@ -29,6 +29,9 @@ import {
   CatalogScope,
   FEATURED,
 } from '../../shared/components/catalog-navigator.component';
+import { CatalogListComponent } from '../../shared/components/catalog-list.component';
+import { CatalogViewToggleComponent } from '../../shared/components/catalog-view-toggle.component';
+import { CatalogViewService } from '../../core/services/catalog-view.service';
 import { FavoritesStore } from '../../core/store/favorites.store';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -52,6 +55,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     UnitPickerComponent,
     CatalogNavigatorComponent,
     FolderTileComponent,
+    CatalogListComponent,
+    CatalogViewToggleComponent,
   ],
   template: `
     <div class="order-top">
@@ -80,10 +85,26 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         />
       </div>
       <app-camera-scan-button class="scan" (scanned)="entry.submit($event)" />
+      <app-catalog-view-toggle class="scan" />
     </div>
 
     <app-catalog-navigator [categories]="tree.value()" [scope]="scope()" (scopeChange)="scope.set($event)" />
 
+    <!-- Tiles or lines, as the seller chose: the same products, folders and order either way. -->
+    @if (catalogView.view() === 'list') {
+      <app-catalog-list
+        style="margin-top:12px;"
+        [folders]="finder.folders()"
+        [products]="finder.products()"
+        [cart]="cart"
+        [showFavorites]="scope().kind === 'featured' && !entry.term()"
+        [pending]="finder.pending()"
+        [emptyMessage]="scope().kind === 'favorites' ? 'Aucun favori : touchez ☆ sur un produit ou un rayon.' : 'Aucun produit ne correspond.'"
+        (folderOpened)="openFolder($event)"
+        (favoritesOpened)="scope.set({ kind: 'favorites' })"
+        (unitPicked)="onUnitPicked($event.product, $event.picked)"
+      />
+    } @else {
     <div class="tiles">
       <!-- An explorer: the favourites and the rayons as folders first, then the products. -->
       @if (scope().kind === 'featured' && !entry.term() && favorites.any()) {
@@ -140,6 +161,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         }
       }
     </div>
+    }
     @if (finder.hasMore()) {
       <button
         type="button"
@@ -247,6 +269,7 @@ export class OrderTakingComponent {
   private readonly invoices = inject(InvoiceStore);
   private readonly toasts = inject(ToastService);
   protected readonly auth = inject(AuthService);
+  protected readonly catalogView = inject(CatalogViewService);
 
   /** Where the tiles are: best sellers, favourites, or inside a rayon (with the ones below it). */
   protected readonly scope = signal<CatalogScope>(FEATURED);
