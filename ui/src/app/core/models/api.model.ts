@@ -72,7 +72,8 @@ export interface CreateSaleRequest {
 
 export interface CreateSupplyRequest {
   productId: number;
-  supplierId: number;
+  /** Who delivered, or null when no supplier is named — goods bought at the market. */
+  supplierId: number | null;
   /** The unit the goods came in — "sac 50 kg" — or null for the base unit. */
   packagingId: number | null;
   /** In that unit: 10 for ten sacks. */

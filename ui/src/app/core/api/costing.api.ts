@@ -13,6 +13,11 @@ export class CostingApi {
     return this.http.get<ProductCost[]>(`${API_BASE_URL}/costing/products`);
   }
 
+  /** One product's average cost and last price paid, for the sheet that corrects them. */
+  productCost(productId: number): Observable<ProductCost> {
+    return this.http.get<ProductCost>(`${API_BASE_URL}/costing/products/${productId}`);
+  }
+
   /** What each supplier has charged for one product, cheapest on average first. */
   supplierPrices(productId: number): Observable<SupplierPrice[]> {
     return this.http.get<SupplierPrice[]>(`${API_BASE_URL}/costing/products/${productId}/suppliers`);

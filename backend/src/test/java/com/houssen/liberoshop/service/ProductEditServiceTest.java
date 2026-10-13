@@ -1,8 +1,11 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.Category;
+import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
@@ -19,6 +22,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,6 +50,10 @@ class ProductEditServiceTest {
     @Mock
     private ProductPackagingRepository packagings;
     @Mock
+    private CategoryRepository categories;
+    @Mock
+    private StockMovementRepository movements;
+    @Mock
     private ApplicationEventPublisher events;
 
     private ProductEditService service;
@@ -53,7 +61,8 @@ class ProductEditServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProductEditService(products, packagings, new PackagingRules(products, packagings), events);
+        service = new ProductEditService(products, packagings, categories, movements,
+                new PackagingRules(products, packagings), new BusinessCalendar(Clock.systemDefaultZone()), events);
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 
@@ -70,7 +79,7 @@ class ProductEditServiceTest {
     @DisplayName("Le nom, le prix et le code-barres sont corriges, le stock ne bouge pas")
     void editsTheSheet() {
         ProductUnitsResponse response = service.edit(1L,
-                new UpdateProductRequest("  Riz   rose ", new BigDecimal("950"), " 444 "));
+                new UpdateProductRequest("  Riz   rose ", new BigDecimal("950"), " 444 ", null, null));
 
         assertEquals("Riz rose", rice.getName());
         assertEquals(new BigDecimal("950"), rice.getPrice());
@@ -83,7 +92,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Les ecrans ouverts sont prevenus du nouveau prix")
     void tellsTheScreens() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111"));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null));
 
         ArgumentCaptor<StockChangedEvent> event = ArgumentCaptor.forClass(StockChangedEvent.class);
         verify(events).publishEvent(event.capture());
@@ -93,7 +102,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Garder son propre code-barres n'est pas le prendre a un autre")
     void keepsItsOwnBarcode() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111"));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null));
 
         assertEquals("111", rice.getBarcode());
     }
@@ -101,7 +110,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Un code-barres vide retire le code")
     void blankBarcodeClearsIt() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "  "));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "  ", null, null));
 
         assertNull(rice.getBarcode());
     }
@@ -111,7 +120,7 @@ class ProductEditServiceTest {
     void refusesATakenBarcode() {
         for (String taken : List.of("222", "333")) {
             BusinessRuleException refused = assertThrows(BusinessRuleException.class, () ->
-                    service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), taken)));
+                    service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), taken, null, null)));
             assertEquals("BARCODE_TAKEN", refused.code());
         }
         assertEquals("111", rice.getBarcode());
@@ -123,7 +132,7 @@ class ProductEditServiceTest {
     void refusesANonPositivePrice() {
         for (String price : List.of("0", "-5")) {
             BusinessRuleException refused = assertThrows(BusinessRuleException.class, () ->
-                    service.edit(1L, new UpdateProductRequest("Riz blanc", new BigDecimal(price), "111")));
+                    service.edit(1L, new UpdateProductRequest("Riz blanc", new BigDecimal(price), "111", null, null)));
             assertEquals("PRODUCT_PRICE_INVALID", refused.code());
         }
         assertEquals("Riz", rice.getName());
@@ -131,9 +140,37 @@ class ProductEditServiceTest {
     }
 
     @Test
+    @DisplayName("Le rayon et le prix d'achat se corrigent avec le reste ; sans prix d'achat saisi, le cout moyen reste")
+    void editsTheRayonAndThePurchaseCost() {
+        Category drinks = Category.builder().id(7L).name("Boissons").build();
+        when(categories.findById(7L)).thenReturn(Optional.of(drinks));
+
+        ProductUnitsResponse response = service.edit(1L,
+                new UpdateProductRequest("Riz", new BigDecimal("900"), "111", 7L, new BigDecimal("650")));
+
+        assertEquals(drinks, rice.getCategory());
+        assertEquals(new BigDecimal("650.00"), rice.getAverageCost());
+        assertEquals("Boissons", response.category().name());
+
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "111", null, null));
+
+        assertNull(rice.getCategory());
+        assertEquals(new BigDecimal("650.00"), rice.getAverageCost());
+        assertEquals(qty(1750), rice.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("Un rayon inconnu est refuse, rien n'est ecrit")
+    void refusesAnUnknownRayon() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.edit(1L, new UpdateProductRequest("Riz rose", new BigDecimal("900"), "111", 99L, null)));
+        assertEquals("Riz", rice.getName());
+    }
+
+    @Test
     @DisplayName("Un produit inconnu repond introuvable")
     void unknownProduct() {
         assertThrows(ResourceNotFoundException.class, () ->
-                service.edit(99L, new UpdateProductRequest("Riz", new BigDecimal("900"), null)));
+                service.edit(99L, new UpdateProductRequest("Riz", new BigDecimal("900"), null, null, null)));
     }
 }

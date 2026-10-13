@@ -9,6 +9,7 @@ import {
   CategoryNode,
   CategoryStock,
   CreateCategoryRequest,
+  CreateProductRequest,
   DeletedCategory,
   ImportFormat,
   PackagingRequest,
@@ -184,7 +185,12 @@ export class CatalogApi {
     return this.http.get<ProductUnits>(`${API_BASE_URL}/products/${productId}/units`);
   }
 
-  /** Corrects the name, the base unit's price and the barcode. Past tickets keep what they sold at. */
+  /** A product typed in by hand, with what is already on the shelf. Answers it as the lists show it. */
+  createProduct(request: CreateProductRequest): Observable<Product> {
+    return this.http.post<Product>(`${API_BASE_URL}/products`, request);
+  }
+
+  /** Corrects the sheet: name, price, barcode, rayon, purchase cost. Past tickets keep what they sold at. */
   updateProduct(productId: number, request: UpdateProductRequest): Observable<ProductUnits> {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}`, request);
   }

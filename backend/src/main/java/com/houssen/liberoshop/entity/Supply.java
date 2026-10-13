@@ -11,12 +11,12 @@ import java.math.RoundingMode;
 /**
  * Goods coming in: the stock rose, and this says by how much, when and at whose hand.
  *
- * <p>{@code supplier} is nullable, and the null carries meaning. A receipt booked through
- * {@code StockService.registerSupply} always names one -- that path still refuses to run
- * without it -- so the only entries without a supplier are the ones a product import wrote.
- * The distinction is therefore in the data rather than in a second movement class: "stock
- * entered from an inventory file" and "stock received from a wholesaler" are the same event
- * to the shelf, and differ only in whether anybody delivered it.
+ * <p>{@code supplier} is nullable, and the null carries meaning: nobody is named as having
+ * delivered these goods. That is the stock a product import counted in, the stock a product
+ * created by hand started with, and a receipt booked without saying who it came from -- a shop
+ * that buys at the market has no supplier list to pick from. The distinction is in the data
+ * rather than in a second movement class: "stock counted in" and "stock received from a
+ * wholesaler" are the same event to the shelf, and differ only in whether a supplier is named.
  *
  * <p>Two consequences worth knowing before querying this. The supplier has to be joined with a
  * LEFT join, or import entries silently vanish from the supplies list; and any aggregation by
@@ -40,7 +40,7 @@ public class Supply extends StockMovement {
     /** The two places of the cost columns, here and on the product's average. */
     private static final int COST_SCALE = 2;
 
-    /** Who delivered it, or null when the stock was entered by an import. */
+    /** Who delivered it, or null when no supplier was named. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
@@ -69,8 +69,8 @@ public class Supply extends StockMovement {
     @Column(precision = 12, scale = ProductPackaging.FACTOR_SCALE)
     private BigDecimal unitFactor;
 
-    /** True when nobody delivered these goods: they were counted in, not received. */
-    public boolean isFromImport() {
+    /** True when no supplier is named: counted in, or received without saying from whom. */
+    public boolean isWithoutSupplier() {
         return supplier == null;
     }
 

@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * One repository for the whole {@code stock_movement} single table. The subtype queries
@@ -34,6 +35,30 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             order by s.movementDate desc, s.id desc
             """)
     List<Supply> findSupplies();
+
+    /**
+     * One page of everything that moved one product's stock, newest first -- receipts, sales and
+     * corrections together, which is what explains the figure on its line.
+     */
+    @Query(value = """
+            select m from StockMovement m
+              join fetch m.performedBy
+            where m.product.id = :productId
+            order by m.movementDate desc, m.id desc
+            """,
+            countQuery = "select count(m) from StockMovement m where m.product.id = :productId")
+    Page<StockMovement> findByProduct(@Param("productId") Long productId, Pageable pageable);
+
+    /** The last receipt of one product that stated a cost -- see {@link #findLatestCostedSupplyPerProduct}. */
+    @Query("""
+            select s from Supply s
+              left join fetch s.supplier
+            where s.product.id = :productId
+              and s.unitCost is not null
+              and s.id = (select max(t.id) from Supply t
+                          where t.product.id = :productId and t.unitCost is not null)
+            """)
+    Optional<Supply> findLatestCostedSupplyOf(@Param("productId") Long productId);
 
     /**
      * One page of the outputs, newest first, the words looked for by the database: an output is

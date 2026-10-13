@@ -19,10 +19,10 @@ interface StockMovementBase {
 /**
  * Mirrors com.houssen.liberoshop.entity.Supply — goods coming in.
  *
- * <p>`supplier` is null exactly when the entry came from a product import: nobody delivered
- * those goods, they were counted in. A receipt booked at the depot always names one. Screens
- * label that case rather than showing a blank — "nobody delivered this" is information, an
- * empty cell looks like missing data.
+ * <p>`supplier` is null when no supplier is named: the stock an import counted in, the starting
+ * stock of a product created by hand, a receipt booked without one. Screens label that case
+ * rather than showing a blank — "no supplier named" is information, an empty cell looks like
+ * missing data.
  */
 export interface Supply extends StockMovementBase {
   /** The same goods as received: 10 for "10 sacs" (`quantity` is in base units: 1 750). */
@@ -31,7 +31,7 @@ export interface Supply extends StockMovementBase {
   unitLabel: string | null;
   supplier: { id: number; name: string } | null;
   /** Said outright by the server so a screen does not have to infer it from the null. */
-  fromImport: boolean;
+  withoutSupplier: boolean;
   /** Purchase price of one unit as received — the sack's — or null when it was not given. */
   unitCost: number | null;
   /** unitCost × receivedQuantity, the supplier invoice's line, or null with it. */
@@ -82,6 +82,40 @@ export interface CreateStockAdjustmentRequest {
   /** What was counted for an inventory, what was lost for every other reason — in base units. */
   quantity: number;
   comment: string | null;
+}
+
+/** What kind of movement a line of a product's history is. */
+export type ProductMovementType = 'SUPPLY' | 'OUTPUT' | 'ADJUSTMENT';
+
+/**
+ * One line of a product's stock history, whatever moved it — mirrors ProductMovementResponse.
+ */
+export interface ProductMovement {
+  id: number;
+  type: ProductMovementType;
+  /** In base units and signed: +20 received, −3 sold. */
+  quantity: number;
+  movementDate: string;
+  /** Full name of who booked it. */
+  performedBy: string;
+  /** On a SUPPLY: who delivered, or null when no supplier was named. */
+  supplierName: string | null;
+  /** On a SUPPLY: what one base unit cost, or null when it was not given. */
+  unitCost: number | null;
+  /** On an OUTPUT: the invoice the goods left against. */
+  invoiceNumber: string | null;
+  /** On an ADJUSTMENT. */
+  reason: AdjustmentReason | null;
+  comment: string | null;
+}
+
+/** One page of a product's history, newest first. */
+export interface ProductMovementPage {
+  items: ProductMovement[];
+  total: number;
+  page: number;
+  size: number;
+  hasMore: boolean;
 }
 
 /** Mirrors com.houssen.liberoshop.entity.StockOutput — goods leaving against an invoice. */

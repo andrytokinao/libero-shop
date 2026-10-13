@@ -103,6 +103,73 @@ class AccessRightsTest {
         mvc.perform(get("/api/suppliers").header("Authorization", bearer(cashier))).andExpect(status().isOk());
     }
 
+    // ------------------------------------------------------------- the catalogue, by hand
+
+    @Test
+    @DisplayName("creer ou modifier un produit : le stock et l'administration, jamais la caisse")
+    void onlyTheCatalogueOwnersWriteProducts() throws Exception {
+        String product = """
+                {"name":"Savon des droits","price":1500,"unit":"piece","initialStock":3}""";
+
+        mvc.perform(post("/api/products").header("Authorization", bearer(signIn("fatima")))
+                        .contentType(MediaType.APPLICATION_JSON).content(product))
+                .andExpect(status().isForbidden());
+
+        MvcResult created = mvc.perform(post("/api/products").header("Authorization", bearer(signIn("mparany")))
+                        .contentType(MediaType.APPLICATION_JSON).content(product))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.stockQuantity").value(3))
+                .andReturn();
+        long id = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+
+        String sheet = """
+                {"name":"Savon des droits","price":1600,"barcode":null,"categoryId":null,"purchaseCost":900}""";
+        mvc.perform(put("/api/products/{id}", id).header("Authorization", bearer(signIn("hary")))
+                        .contentType(MediaType.APPLICATION_JSON).content(sheet))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/products/{id}", id).header("Authorization", bearer(signIn("nadia")))
+                        .contentType(MediaType.APPLICATION_JSON).content(sheet))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.basePrice").value(1600));
+    }
+
+    @Test
+    @DisplayName("ajouter du stock : le responsable du depot seul ; l'historique d'un produit : pas la caisse")
+    void onlyTheDepotManagerAddsStock() throws Exception {
+        String admin = signIn("mparany");
+        MvcResult created = mvc.perform(post("/api/products").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"name":"Bougie des droits","price":500}"""))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long id = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        String entry = "{\"productId\":" + id + ",\"quantity\":12,\"unitCost\":300}";
+
+        mvc.perform(post("/api/stock/supplies").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(entry))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/stock/supplies").header("Authorization", bearer(signIn("fatima")))
+                        .contentType(MediaType.APPLICATION_JSON).content(entry))
+                .andExpect(status().isForbidden());
+        // No supplier named: the entry goes in all the same.
+        mvc.perform(post("/api/stock/supplies").header("Authorization", bearer(signIn("nadia")))
+                        .contentType(MediaType.APPLICATION_JSON).content(entry))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.withoutSupplier").value(true));
+
+        mvc.perform(get("/api/stock/products/{id}/movements", id).header("Authorization", bearer(signIn("fatima"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/stock/products/{id}/movements", id).header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].quantity").value(12));
+        mvc.perform(get("/api/costing/products/{id}", id).header("Authorization", bearer(signIn("hary"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/costing/products/{id}", id).header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.averageCost").value(300));
+    }
+
     // ------------------------------------------------------------------- sessions closed
 
     @Test

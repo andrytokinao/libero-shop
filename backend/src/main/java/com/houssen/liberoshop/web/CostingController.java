@@ -36,6 +36,12 @@ public class CostingController {
         return costingService.findProductCosts();
     }
 
+    @GetMapping("/products/{productId}")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public ProductCostResponse productCost(@PathVariable Long productId) {
+        return costingService.productCostOf(productId);
+    }
+
     @GetMapping("/products/{productId}/suppliers")
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<SupplierPriceResponse> supplierPrices(@PathVariable Long productId) {

@@ -628,7 +628,7 @@ class ProductImportServiceTest {
         assertQuantity(30, ledger.get(1).getQuantity());
         assertTrue(ledger.stream().allMatch(entry -> entry.getPerformedBy() == operator),
                 "a stock that went up must always name somebody");
-        assertTrue(ledger.stream().allMatch(Supply::isFromImport));
+        assertTrue(ledger.stream().allMatch(Supply::isWithoutSupplier));
         assertNull(result.supplierName());
     }
 
@@ -644,7 +644,7 @@ class ProductImportServiceTest {
         assertEquals("Grossiste Analakely", result.supplierName());
         assertEquals(1, ledger.size());
         assertSame(grossiste, ledger.getFirst().getSupplier());
-        assertFalse(ledger.getFirst().isFromImport());
+        assertFalse(ledger.getFirst().isWithoutSupplier());
     }
 
     @Test

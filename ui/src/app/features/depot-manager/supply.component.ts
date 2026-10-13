@@ -68,6 +68,8 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
               [ngModel]="selectedSupplierId()"
               (ngModelChange)="supplierId.set($event)"
             >
+              <!-- Goods bought at the market, or a shop that keeps no supplier list. -->
+              <option [ngValue]="null">Sans fournisseur</option>
               @for (supplier of suppliers(); track supplier.id) {
                 <option [ngValue]="supplier.id">{{ supplier.name }}</option>
               }
@@ -337,10 +339,13 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
                     @if (supply.supplier; as supplier) {
                       {{ supplier.name }}
                     } @else {
-                      <!-- An import entry. Named rather than left blank: the stock did rise,
+                      <!-- No supplier named. Said rather than left blank: the stock did rise,
                            and an empty cell would read as a supplier gone missing. -->
-                      <span class="badge grey" title="Stock saisi par import de produits">
-                        Import
+                      <span
+                        class="badge grey"
+                        title="Stock entré sans fournisseur : import, stock de départ d'un produit ou entrée saisie à la main"
+                      >
+                        Sans fournisseur
                       </span>
                     }
                   </td>
@@ -420,7 +425,8 @@ export class SupplyComponent {
 
   protected readonly RoleApp = RoleApp;
   protected readonly productId = signal<number | null>(null);
-  protected readonly supplierId = signal<number | null>(null);
+  /** Undefined until one is picked — the first of the list then; null once "Sans fournisseur" is. */
+  protected readonly supplierId = signal<number | null | undefined>(undefined);
   protected readonly quantity = signal<number | string>(10);
   /** The unit picked, by packaging id; null is the base unit. Reset with the product. */
   protected readonly unitId = signal<number | null>(null);
@@ -454,9 +460,10 @@ export class SupplyComponent {
   protected readonly selectedProductId = computed(
     () => this.productId() ?? this.products()[0]?.id ?? null,
   );
-  protected readonly selectedSupplierId = computed(
-    () => this.supplierId() ?? this.suppliers()[0]?.id ?? null,
-  );
+  protected readonly selectedSupplierId = computed(() => {
+    const picked = this.supplierId();
+    return picked === undefined ? (this.suppliers()[0]?.id ?? null) : picked;
+  });
 
   protected readonly selectedProduct = computed(() =>
     this.products().find((p) => p.id === this.selectedProductId()),
@@ -612,7 +619,6 @@ export class SupplyComponent {
     return (
       !this.busy() &&
       this.selectedProductId() !== null &&
-      this.selectedSupplierId() !== null &&
       this.quantityNumber() > 0 &&
       (cost === null || cost >= 0)
     );
@@ -635,7 +641,7 @@ export class SupplyComponent {
     this.stock
       .registerSupply({
         productId: this.selectedProductId()!,
-        supplierId: this.selectedSupplierId()!,
+        supplierId: this.selectedSupplierId(),
         packagingId: this.selectedUnit()?.packagingId ?? null,
         quantity: this.quantityNumber(),
         unitCost: this.unitCost(),

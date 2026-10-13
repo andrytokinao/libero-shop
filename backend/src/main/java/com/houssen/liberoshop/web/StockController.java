@@ -4,6 +4,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.StockService;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
+import com.houssen.liberoshop.web.dto.ProductMovementResponse;
 import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,6 +54,18 @@ public class StockController {
                                            @RequestParam(defaultValue = "0") int page,
                                            @RequestParam(defaultValue = "" + StockService.DEFAULT_PAGE_SIZE) int size) {
         return stockService.findOutputs(search, page, size);
+    }
+
+    /**
+     * Everything that moved one product's stock -- receipts, sales, corrections -- a page at a
+     * time. Receipts carry purchase prices, hence the same readers as the lists above.
+     */
+    @GetMapping("/products/{productId}/movements")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public ProductMovementResponse.Page movementsOf(@PathVariable Long productId,
+                                                    @RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "30") int size) {
+        return stockService.findMovementsOf(productId, page, size);
     }
 
     /** Goods received. Only the depot manager books an entry into the stock. */

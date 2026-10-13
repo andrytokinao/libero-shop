@@ -11,6 +11,8 @@ import java.math.BigDecimal;
  * Goods received at the depot, as the supplier's invoice says it. The receiving agent is the
  * authenticated user.
  *
+ * @param supplierId  who delivered, or null when no supplier is named -- goods bought at the
+ *                    market, or a shop that keeps no supplier list
  * @param packagingId the unit the goods came in -- "sac 50 kg" -- or null for the base unit
  * @param quantity    in that unit: 10 for ten sacks
  * @param unitCost    what one of that unit cost from this supplier on this delivery: the sack's
@@ -19,7 +21,7 @@ import java.math.BigDecimal;
  *                    average cost nothing.
  */
 public record CreateSupplyRequest(@NotNull Long productId,
-                                  @NotNull Long supplierId,
+                                  Long supplierId,
                                   Long packagingId,
                                   @NotNull @Positive
                                   @Digits(integer = 11, fraction = 3)

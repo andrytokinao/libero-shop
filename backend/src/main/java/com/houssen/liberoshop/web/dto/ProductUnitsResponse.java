@@ -14,6 +14,7 @@ import java.util.List;
  * touched, so the screen re-renders from what the server holds and never has to merge.
  *
  * @param baseUnit null for a product counted in bare units
+ * @param category the rayon it is filed under, or null for none
  */
 public record ProductUnitsResponse(Long productId,
                                    String productName,
@@ -21,6 +22,7 @@ public record ProductUnitsResponse(Long productId,
                                    BigDecimal basePrice,
                                    String baseBarcode,
                                    BigDecimal stockQuantity,
+                                   CategoryResponse category,
                                    List<Packaging> packagings) {
 
     public static ProductUnitsResponse of(Product product, List<ProductPackaging> packagings) {
@@ -31,6 +33,7 @@ public record ProductUnitsResponse(Long productId,
                 product.getPrice(),
                 product.getBarcode(),
                 product.getStockQuantity(),
+                CategoryResponse.of(product.getCategory()),
                 packagings.stream().map(Packaging::of).toList());
     }
 }

@@ -43,6 +43,8 @@ ou entretien.
 - [x] Statut de licence public réduit à l'état et aux jours restants
 - [x] La caisse est prévenue d'une commande laissée impayée
   (`20-caisse-prevenue-des-commandes-a-encaisser.md`)
+- [x] Produits créés à la main, stock ajouté et corrigé depuis le menu « ⋮ » du produit, historique
+  par produit, catégorie et prix d'achat modifiables (`22-produits-et-stock-a-la-main.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),

@@ -25,6 +25,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByBarcode(String barcode);
 
+    /** Whether a product is already called that, capitals aside. */
+    boolean existsByNameIgnoreCase(String name);
+
     /** {@link #findByBarcode} with the rayon already loaded, for a response built straight away. */
     @Query("select p from Product p left join fetch p.category where p.barcode = :barcode")
     Optional<Product> findWithCategoryByBarcode(@Param("barcode") String barcode);

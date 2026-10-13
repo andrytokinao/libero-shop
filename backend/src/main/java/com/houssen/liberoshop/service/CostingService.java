@@ -89,6 +89,13 @@ public class CostingService {
                 .toList();
     }
 
+    /** One product's costs, for the sheet that corrects them. */
+    public ProductCostResponse productCostOf(Long productId) {
+        Product product = products.findById(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
+        return costOf(product, movements.findLatestCostedSupplyOf(productId).orElse(null));
+    }
+
     private static ProductCostResponse costOf(Product product, Supply latest) {
         BigDecimal average = product.getAverageCost();
         BigDecimal unitMargin = average == null ? null : product.getPrice().subtract(average);

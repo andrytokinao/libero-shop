@@ -11,10 +11,11 @@ import java.time.LocalDateTime;
  * @param quantity         what the stock rose by, in base units: 1 750 kapoka
  * @param receivedQuantity the same goods as received: 10 for "10 sacs"
  * @param unitLabel        the unit they came in -- "sac 50 kg" -- or null for the base unit
- * @param supplier         who delivered, or null when the entry came from a product import. The UI
- *                         labels that case rather than showing a blank, since "nobody delivered
- *                         this" is information and an empty cell looks like missing data.
- * @param fromImport       said outright so a screen does not have to infer it from a null
+ * @param supplier         who delivered, or null when none was named -- an import, the starting
+ *                         stock of a product created by hand, a receipt booked without one. The UI
+ *                         labels that case rather than showing a blank, since "no supplier named"
+ *                         is information and an empty cell looks like missing data.
+ * @param withoutSupplier  said outright so a screen does not have to infer it from a null
  * @param unitCost         what one unit as received cost -- the sack's price -- or null when it
  *                         was not given
  * @param totalCost        {@code unitCost × receivedQuantity}, the supplier invoice's line, or null
@@ -27,7 +28,7 @@ public record SupplyResponse(Long id,
                              ProductResponse product,
                              UserResponse performedBy,
                              SupplierRefResponse supplier,
-                             boolean fromImport,
+                             boolean withoutSupplier,
                              BigDecimal unitCost,
                              BigDecimal totalCost) {
 
@@ -43,7 +44,7 @@ public record SupplyResponse(Long id,
                 supply.getSupplier() == null ? null
                         : new SupplierRefResponse(supply.getSupplier().getId(),
                                 supply.getSupplier().getName()),
-                supply.isFromImport(),
+                supply.isWithoutSupplier(),
                 supply.getUnitCost(),
                 supply.totalCost());
     }

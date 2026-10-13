@@ -1,3 +1,5 @@
+import { Category } from './category.model';
+
 /**
  * Every way a product is sold, as served by ProductUnitsResponse: the base unit, which the stock
  * is counted in, then the other units, smallest first.
@@ -10,6 +12,8 @@ export interface ProductUnits {
   basePrice: number;
   baseBarcode: string | null;
   stockQuantity: number;
+  /** The rayon it is filed under, or null for none. */
+  category: Category | null;
   packagings: Packaging[];
 }
 
@@ -27,12 +31,31 @@ export interface Packaging {
   referenceQuantity: number;
 }
 
-/** A product's name, base price and barcode as the dialog sends them — mirrors UpdateProductRequest. */
+/** A product's sheet as the dialog sends it — mirrors UpdateProductRequest. */
 export interface UpdateProductRequest {
   name: string;
   /** Of one base unit. */
   price: number;
   barcode: string | null;
+  /** The rayon, or null for none: the dialog always sends the one it shows. */
+  categoryId: number | null;
+  /** Purchase cost of one base unit, corrected by hand; null leaves it as the receipts made it. */
+  purchaseCost: number | null;
+}
+
+/** A product typed in by hand — mirrors CreateProductRequest. */
+export interface CreateProductRequest {
+  name: string;
+  /** Of one base unit. */
+  price: number;
+  /** How the shelf counts it; null for bare units. */
+  unit: string | null;
+  barcode: string | null;
+  categoryId: number | null;
+  /** What one base unit costs the shop, or null when it is not known yet. */
+  purchaseCost: number | null;
+  /** Already on the shelf, in base units; booked as an entry without a supplier. */
+  initialStock: number | null;
 }
 
 /** A unit as the dialog sends it, for a creation and an edit alike. */

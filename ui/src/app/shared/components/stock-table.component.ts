@@ -1,13 +1,15 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { Product } from '../../core/models';
 import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { ProductMenuComponent } from './product-menu.component';
 import { StockStatusBadgeComponent } from './status-badges.component';
 
 @Component({
   selector: 'app-stock-table',
   standalone: true,
-  imports: [AriaryPipe, StockStatusBadgeComponent],
+  imports: [AriaryPipe, ProductMenuComponent, StockStatusBadgeComponent],
   template: `
     @if (products.length) {
       <div class="table-scroll">
@@ -22,7 +24,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
               <th class="num">Prix unitaire</th>
               <th class="num">Valeur stock</th>
               <th></th>
-              @if (manageUnits) {
+              @if (manage) {
                 <th></th>
               }
             </tr>
@@ -49,16 +51,9 @@ import { StockStatusBadgeComponent } from './status-badges.component';
                     [lowStock]="product.lowStock"
                   />
                 </td>
-                @if (manageUnits) {
-                  <td>
-                    <button
-                      class="btn small ghost"
-                      type="button"
-                      title="Nom, prix, code-barres et unités de vente : kg, carton, sac…"
-                      (click)="unitsRequested.emit(product)"
-                    >
-                      Modifier
-                    </button>
+                @if (manage) {
+                  <td class="num">
+                    <app-product-menu [product]="product" (action)="action.emit($event)" />
                   </td>
                 }
               </tr>
@@ -75,11 +70,13 @@ export class StockTableComponent {
   @Input({ required: true }) products: readonly Product[] = [];
   @Input() emptyMessage = 'Aucun produit à afficher.';
   /**
-   * Offers a "Modifier" button per row, opening the product's sheet and units. Off by default: the table is also the read-only stock of
-   * the dashboards, and only the screen of the roles that own the catalogue turns it on.
+   * Offers a "⋮" menu per row — add stock, edit, correct, history, whichever the account may do.
+   * Off by default: the table is also the read-only stock of the dashboards, and only the
+   * screens where the catalogue is managed turn it on.
    */
-  @Input() manageUnits = false;
-  @Output() readonly unitsRequested = new EventEmitter<Product>();
+  @Input() manage = false;
+  /** What a row's menu was asked; the screen hands it to `app-product-dialogs`. */
+  @Output() readonly action = new EventEmitter<ProductDialogRequest>();
 
   protected readonly formatQuantity = formatQuantity;
   protected readonly stockLabel = stockLabel;

@@ -5,6 +5,7 @@ import { API_BASE_URL } from './api.config';
 import {
   CreateStockAdjustmentRequest,
   CreateSupplyRequest,
+  ProductMovementPage,
   StockAdjustment,
   StockOutputPage,
   Supply,
@@ -33,6 +34,14 @@ export class StockApi {
       params = params.set('size', size);
     }
     return this.http.get<StockOutputPage>(`${API_BASE_URL}/stock/outputs`, { params });
+  }
+
+  /** Everything that moved one product's stock — receipts, sales, corrections — newest first. */
+  productMovements(productId: number, page: number): Observable<ProductMovementPage> {
+    return this.http.get<ProductMovementPage>(
+      `${API_BASE_URL}/stock/products/${productId}/movements`,
+      { params: { page } },
+    );
   }
 
   registerSupply(request: CreateSupplyRequest): Observable<Supply> {

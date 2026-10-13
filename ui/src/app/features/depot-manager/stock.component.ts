@@ -2,14 +2,21 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { CategoryNode, Product } from '../../core/models';
+import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
+import { CategoryNode } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ProductCardComponent } from '../../shared/components/product-card.component';
+import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { ProductImportComponent } from './product-import.component';
-import { ProductUnitsDialogComponent } from './product-units-dialog.component';
+
+/** A table, which says the most per line, or cards, which a thumb reads better. */
+type StockView = 'list' | 'cards';
+
+const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
 
 @Component({
   selector: 'app-stock',
@@ -18,8 +25,9 @@ import { ProductUnitsDialogComponent } from './product-units-dialog.component';
     FormsModule,
     CategoryPickerComponent,
     KpiCardComponent,
+    ProductCardComponent,
+    ProductDialogsComponent,
     ProductImportComponent,
-    ProductUnitsDialogComponent,
     StockTableComponent,
     AriaryPipe,
   ],
@@ -33,7 +41,15 @@ import { ProductUnitsDialogComponent } from './product-units-dialog.component';
     <div class="card" style="margin-top:16px;">
       <div class="head-row">
         <h2>Stock du dépôt</h2>
-        <app-product-import (imported)="onImported()" />
+        <div class="st-actions">
+          <!-- One product at a time, by hand: no file needed. -->
+          @if (rights.canEdit()) {
+            <button class="btn small" type="button" (click)="asked.set({ action: 'create' })">
+              ＋ Nouveau produit
+            </button>
+          }
+          <app-product-import (imported)="onChanged()" />
+        </div>
       </div>
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:280px;">
@@ -69,38 +85,89 @@ import { ProductUnitsDialogComponent } from './product-units-dialog.component';
             <option [ngValue]="true">Alertes uniquement</option>
           </select>
         </div>
+        <div class="st-view" role="radiogroup" aria-label="Affichage des produits">
+          <button
+            type="button"
+            role="radio"
+            class="btn small"
+            [class.ghost]="view() !== 'list'"
+            [attr.aria-checked]="view() === 'list'"
+            (click)="choose('list')"
+          >
+            Liste
+          </button>
+          <button
+            type="button"
+            role="radio"
+            class="btn small"
+            [class.ghost]="view() !== 'cards'"
+            [attr.aria-checked]="view() === 'cards'"
+            (click)="choose('cards')"
+          >
+            Cartes
+          </button>
+        </div>
       </div>
-      <app-stock-table
-        [products]="products()"
-        [manageUnits]="true"
-        emptyMessage="Aucun produit ne correspond aux filtres."
-        (unitsRequested)="unitsOf.set($event)"
-      />
+      @if (view() === 'list') {
+        <app-stock-table
+          [products]="products()"
+          [manage]="true"
+          emptyMessage="Aucun produit ne correspond aux filtres."
+          (action)="asked.set($event)"
+        />
+      } @else {
+        <div class="st-cards">
+          @for (product of products(); track product.id) {
+            <app-product-card [product]="product" [manage]="true" (action)="asked.set($event)" />
+          } @empty {
+            <div class="empty">Aucun produit ne correspond aux filtres.</div>
+          }
+        </div>
+      }
     </div>
 
-    @if (unitsOf(); as product) {
-      <app-product-units-dialog
-        [productId]="product.id"
-        [productName]="product.name"
-        (changed)="resource.reload()"
-        (closed)="unitsOf.set(null)"
-      />
+    <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
+  `,
+  styles: `
+    .st-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .st-view {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .st-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+
+      .empty {
+        grid-column: 1 / -1;
+      }
     }
   `,
 })
 export class StockComponent {
   private readonly api = inject(CatalogApi);
+  protected readonly rights = inject(ProductRights);
 
   protected readonly search = signal('');
   protected readonly categoryId = signal<number | null>(null);
   protected readonly onlyLowStock = signal(false);
+  protected readonly view = signal<StockView>(storedView());
+
+  /** What a product's menu or "Nouveau produit" asked for, or null while no dialog is open. */
+  protected readonly asked = signal<ProductDialogRequest | null>(null);
 
   // The three filters are applied by the server, so the browser never holds the
   // whole catalogue just to narrow it down; the store keeps the figures current — a sale at
   // the till lowers the count here.
-  /** The product whose sale units are being edited, or null while the dialog is closed. */
-  protected readonly unitsOf = signal<Product | null>(null);
-
   protected readonly resource = inject(ProductStore).list(() => ({
     search: this.search(),
     categoryId: this.categoryId(),
@@ -134,12 +201,31 @@ export class StockComponent {
     this.resource.reload();
   }
 
+  /** Kept on this device: the phone behind the counter and the office laptop each keep theirs. */
+  protected choose(view: StockView): void {
+    this.view.set(view);
+    try {
+      localStorage.setItem(STOCK_VIEW_STORAGE_KEY, view);
+    } catch {
+      // Private browsing: the choice lasts as long as the screen.
+    }
+  }
+
   /**
-   * Both lists after an import: it adds references and quantities, and it may have created the
-   * rayons the file named — which the filter above has to offer straight away.
+   * Both lists after an import, a creation or an edit: any of them may add references, move
+   * quantities or rename a unit, and an import may have created the rayons its file named —
+   * which the filter above has to offer straight away.
    */
-  protected onImported(): void {
+  protected onChanged(): void {
     this.resource.reload();
     this.categoryResource.reload();
+  }
+}
+
+function storedView(): StockView {
+  try {
+    return localStorage.getItem(STOCK_VIEW_STORAGE_KEY) === 'cards' ? 'cards' : 'list';
+  } catch {
+    return 'list';
   }
 }

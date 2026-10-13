@@ -1,11 +1,13 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
+import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { DashboardApi } from '../../core/api/dashboard.api';
 import { CategoryStock, StockDashboard } from '../../core/models';
 import { reloadOnStockChange } from '../../core/realtime/reload-on';
 import { ProductStore } from '../../core/store/product.store';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -23,7 +25,7 @@ const EMPTY: StockDashboard = {
 @Component({
   selector: 'app-global-stock',
   standalone: true,
-  imports: [KpiCardComponent, StockTableComponent, AriaryPipe],
+  imports: [KpiCardComponent, ProductDialogsComponent, StockTableComponent, AriaryPipe],
   template: `
     <div class="grid g4">
       <app-kpi-card label="Valeur du stock" [value]="summary().stockValue | ariary" />
@@ -76,8 +78,12 @@ const EMPTY: StockDashboard = {
 
     <div class="card" style="margin-top:16px;">
       <h2>Stock global <small>toutes catégories</small></h2>
-      <app-stock-table [products]="products()" />
+      <!-- The menu offers the administrator what the server lets him do: edit a product, correct
+           its stock, read its history — booking goods in stays the stock manager's. -->
+      <app-stock-table [products]="products()" [manage]="true" (action)="asked.set($event)" />
     </div>
+
+    <app-product-dialogs [request]="asked()" (changed)="productList.reload()" (closed)="asked.set(null)" />
   `,
 })
 export class GlobalStockComponent {
@@ -90,7 +96,10 @@ export class GlobalStockComponent {
   private readonly categoryResource = apiResource<CategoryStock[]>([], () =>
     this.catalogApi.stockByCategory(),
   );
-  private readonly productList = inject(ProductStore).list();
+  protected readonly productList = inject(ProductStore).list();
+
+  /** What a product's menu asked for, or null while no dialog is open. */
+  protected readonly asked = signal<ProductDialogRequest | null>(null);
 
   protected readonly summary = this.summaryResource.value;
   protected readonly byCategory = this.categoryResource.value;

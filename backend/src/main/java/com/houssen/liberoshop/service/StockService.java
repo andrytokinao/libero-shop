@@ -3,6 +3,7 @@ package com.houssen.liberoshop.service;
 import com.houssen.liberoshop.entity.AdjustmentReason;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.StockAdjustment;
+import com.houssen.liberoshop.entity.StockMovement;
 import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supplier;
 import com.houssen.liberoshop.entity.Supply;
@@ -16,6 +17,7 @@ import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
+import com.houssen.liberoshop.web.dto.ProductMovementResponse;
 import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import com.houssen.liberoshop.web.dto.StockOutputResponse;
@@ -112,8 +114,10 @@ public class StockService {
     public SupplyResponse registerSupply(CreateSupplyRequest request, UserApp receiver) {
         Product product = products.findByIdForUpdate(request.productId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", request.productId()));
-        Supplier supplier = suppliers.findById(request.supplierId())
-                .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
+        // No supplier named is allowed: the entry is kept all the same, only nobody is credited.
+        Supplier supplier = request.supplierId() == null ? null
+                : suppliers.findById(request.supplierId())
+                        .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
         if (Quantities.tooPrecise(request.quantity())) {
             throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
                     "Une quantite se saisit au millieme au plus (" + request.quantity() + ").");
@@ -138,6 +142,23 @@ public class StockService {
 
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return SupplyResponse.of(supply);
+    }
+
+    /**
+     * One page of everything that moved one product's stock, newest first.
+     *
+     * @param page zero-based
+     * @param size clamped to {@code 1..MAX_PAGE_SIZE}
+     */
+    public ProductMovementResponse.Page findMovementsOf(Long productId, int page, int size) {
+        if (!products.existsById(productId)) {
+            throw ResourceNotFoundException.of("Produit", productId);
+        }
+        Page<StockMovement> found = movements.findByProduct(productId,
+                PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE)));
+        return new ProductMovementResponse.Page(
+                found.getContent().stream().map(ProductMovementResponse::of).toList(),
+                found.getTotalElements(), found.getNumber(), found.getSize(), found.hasNext());
     }
 
     public List<StockAdjustmentResponse> findAdjustments() {

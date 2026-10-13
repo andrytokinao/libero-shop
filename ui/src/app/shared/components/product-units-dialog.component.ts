@@ -1,9 +1,18 @@
 import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
+import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
-import { Packaging, PackagingRequest, ProductUnits, UpdateProductRequest } from '../../core/models';
-import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { CostingApi } from '../../core/api/costing.api';
+import {
+  CategoryNode,
+  Packaging,
+  PackagingRequest,
+  ProductUnits,
+  UpdateProductRequest,
+} from '../../core/models';
+import { AriaryPipe } from '../pipes/ariary.pipe';
+import { CategoryPickerComponent } from './category-picker.component';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -17,15 +26,22 @@ interface Draft {
 
 const EMPTY_DRAFT: Draft = { label: '', factor: '', reference: null, price: '', barcode: '' };
 
-/** The product's own name, base price and barcode, as typed. */
+/** The product's own sheet, as typed. */
 interface Sheet {
   name: string;
   price: string;
   barcode: string;
+  categoryId: number | null;
+  /** Purchase cost of one base unit; empty while none is known. */
+  cost: string;
 }
 
+const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null, cost: '' };
+
 /**
- * The units a product is sold in: its base unit, and "1 kg = 3.5 kapoka"-style packagings.
+ * A product's sheet — name, price, barcode, rayon, purchase cost — and the units it is sold in:
+ * its base unit, and "1 kg = 3.5 kapoka"-style packagings. Everything about it but its stock,
+ * which moves only by a receipt, a sale or a correction.
  *
  * <p>Talks to the server itself rather than through its parent, unlike the import dialogs: it
  * edits one product's units and nothing else, every write answers the whole set of units, and the
@@ -39,14 +55,14 @@ interface Sheet {
 @Component({
   selector: 'app-product-units-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe],
+  imports: [FormsModule, AriaryPipe, CategoryPickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="units-title">
         <div class="modal-head">
           <div>
-            <h2 id="units-title">Produit et unités de vente — {{ units()?.productName ?? productName }}</h2>
+            <h2 id="units-title">Modifier le produit — {{ units()?.productName ?? productName }}</h2>
             <div class="sub muted">
               Le stock est compté dans l'unité de base, la plus petite. Chaque autre unité s'écrit
               comme sur l'emballage, dans l'unité de votre choix : « sac 25 kg » contient 25 kg.
@@ -97,6 +113,31 @@ interface Sheet {
                   placeholder="facultatif"
                   [ngModel]="sheet().barcode"
                   (ngModelChange)="patchSheet({ barcode: $event })"
+                />
+              </div>
+              <div class="fld">
+                <label for="un-category">Catégorie</label>
+                <app-category-picker
+                  fieldId="un-category"
+                  noneLabel="Sans catégorie"
+                  [categories]="categories()"
+                  [value]="sheet().categoryId"
+                  (valueChange)="patchSheet({ categoryId: $event })"
+                />
+              </div>
+              <div class="fld">
+                <!-- What the stock on hand cost, per base unit: the figure the margins are
+                     computed from. Receipts move it; this corrects it when none said it right. -->
+                <label for="un-cost">Prix d'achat (Ar) par {{ baseName() }}</label>
+                <input
+                  id="un-cost"
+                  name="cost"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="inconnu"
+                  [ngModel]="sheet().cost"
+                  (ngModelChange)="patchSheet({ cost: $event })"
                 />
               </div>
               @if (sheetChanged()) {
@@ -412,6 +453,7 @@ interface Sheet {
 })
 export class ProductUnitsDialogComponent implements OnInit {
   private readonly api = inject(CatalogApi);
+  private readonly costing = inject(CostingApi);
 
   @Input({ required: true }) productId!: number;
   /** Shown while the units load, so the title never flashes empty. */
@@ -434,16 +476,30 @@ export class ProductUnitsDialogComponent implements OnInit {
     () => this.baseDraft().trim() !== (this.units()?.baseUnit ?? ''),
   );
 
-  protected readonly sheet = signal<Sheet>({ name: '', price: '', barcode: '' });
+  protected readonly sheet = signal<Sheet>(EMPTY_SHEET);
+
+  /** The purchase cost the server holds, to tell a correction from a field left as it was. */
+  private readonly knownCost = signal<number | null>(null);
+
+  private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
+  protected readonly categories = this.categoryResource.value;
 
   /** The sheet as a request, or null while it cannot be sent. The server still judges it. */
   protected readonly sheetRequest = computed<UpdateProductRequest | null>(() => {
     const sheet = this.sheet();
     const price = parseDecimal(sheet.price);
-    if (!sheet.name.trim() || price === null || price <= 0) {
+    const cost = sheet.cost.trim() ? parseDecimal(sheet.cost) : null;
+    if (!sheet.name.trim() || price === null || price <= 0 || (sheet.cost.trim() && cost === null)) {
       return null;
     }
-    return { name: sheet.name.trim(), price, barcode: sheet.barcode.trim() || null };
+    return {
+      name: sheet.name.trim(),
+      price,
+      barcode: sheet.barcode.trim() || null,
+      categoryId: sheet.categoryId,
+      // An emptied field is not "free": the average stays as the receipts made it.
+      purchaseCost: cost,
+    };
   });
 
   protected readonly sheetChanged = computed(() => {
@@ -453,7 +509,9 @@ export class ProductUnitsDialogComponent implements OnInit {
       units !== null &&
       (sheet.name.trim() !== units.productName ||
         parseDecimal(sheet.price) !== units.basePrice ||
-        sheet.barcode.trim() !== (units.baseBarcode ?? ''))
+        sheet.barcode.trim() !== (units.baseBarcode ?? '') ||
+        sheet.categoryId !== (units.category?.id ?? null) ||
+        (sheet.cost.trim() !== '' && parseDecimal(sheet.cost) !== this.knownCost()))
     );
   });
 
@@ -546,6 +604,17 @@ export class ProductUnitsDialogComponent implements OnInit {
     this.run(this.api.productUnits(this.productId), false);
   }
 
+  /**
+   * The purchase cost is served apart from the units, which every role reads: it is fetched
+   * after each answer, since a save may just have changed it.
+   */
+  private loadCost(): void {
+    this.costing.productCost(this.productId).subscribe((cost) => {
+      this.knownCost.set(cost.averageCost);
+      this.patchSheet({ cost: cost.averageCost === null ? '' : String(cost.averageCost) });
+    });
+  }
+
   protected formatFactor(factor: number): string {
     return factor.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
   }
@@ -630,11 +699,14 @@ export class ProductUnitsDialogComponent implements OnInit {
       next: (units) => {
         this.units.set(units);
         this.baseDraft.set(units.baseUnit ?? '');
-        this.sheet.set({
+        this.sheet.update((sheet) => ({
+          ...sheet,
           name: units.productName,
           price: String(units.basePrice),
           barcode: units.baseBarcode ?? '',
-        });
+          categoryId: units.category?.id ?? null,
+        }));
+        this.loadCost();
         this.busy.set(false);
         after?.();
         if (write) {
