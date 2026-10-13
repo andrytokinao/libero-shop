@@ -420,6 +420,16 @@
                 <jpackage.input>${project.build.directory}/jpackage/input</jpackage.input>
                 <jpackage.dest>${project.build.directory}/jpackage/dist</jpackage.dest>
                 <jpackage.config>${project.basedir}/src/main/jpackage</jpackage.config>
+                <!-- Cosmetic disguise: the obfuscated fat jar is staged under this
+                     neutral name instead of liberoshop-*.jar, so the installed folder
+                     does not advertise "Java application". jpackage copies it verbatim
+                     and writes app.classpath=$APPDIR/${jpackage.mainjar} into the .cfg;
+                     the JVM opens the archive by content, not by extension, so the
+                     launcher runs it unchanged (verified). NB: this only hides the
+                     file name; the bundled jlink runtime/ folder is still obviously a
+                     JVM, and the archive is still a ZIP a curious user can open. The
+                     real protection is the ProGuard obfuscation above, not this name. -->
+                <jpackage.mainjar>libero-shop.dll</jpackage.mainjar>
                 <!-- Overridden by the os-* profiles. Left blank so a bare run on an
                      unrecognised OS fails fast with a missing-argfile error. -->
                 <installer.os></installer.os>
@@ -497,6 +507,31 @@
                         </executions>
                     </plugin>
 
+                    <!-- Rename the staged fat jar to the neutral ${jpackage.mainjar}
+                         (see the property above). Bound to verify and declared AFTER the
+                         resources staging but BEFORE jpackage, so same-phase execution
+                         order is: stage jar -> rename -> jpackage. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>disguise-jpackage-mainjar</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <move file="${jpackage.input}/${project.build.finalName}.jar"
+                                              tofile="${jpackage.input}/${jpackage.mainjar}"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
                     <!-- Run the JDK's own jpackage. OS-agnostic here: the installer type and
                          the platform GUI flags come from the per-OS @argfile, and the runtime
                          JVM options (incl. the ${user.home} path redirects) from runtime.args.
@@ -530,7 +565,7 @@
                                         <argument>--input</argument>
                                         <argument>${jpackage.input}</argument>
                                         <argument>--main-jar</argument>
-                                        <argument>${project.build.finalName}.jar</argument>
+                                        <argument>${jpackage.mainjar}</argument>
                                         <argument>--main-class</argument>
                                         <argument>org.springframework.boot.loader.launch.JarLauncher</argument>
                                         <argument>--dest</argument>
