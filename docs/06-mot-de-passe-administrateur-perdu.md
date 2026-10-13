@@ -7,6 +7,10 @@ Point de [`TODO.md`](TODO.md) concerné : section 1, « Mot de passe administrat
 > **Modifié le 11 octobre 2026** : la page n'affiche plus l'emplacement du fichier du code, c'est
 > le support qui l'indique. Voir
 > [`16-mot-de-passe-oublie-avec-le-support.md`](16-mot-de-passe-oublie-avec-le-support.md).
+>
+> **Modifié le 13 octobre 2026** : le lien de la page de connexion est retiré, le support donne
+> l'adresse de la page. Voir
+> [`19-mot-de-passe-oublie-lien-retire.md`](19-mot-de-passe-oublie-lien-retire.md).
 
 ---
 

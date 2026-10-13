@@ -151,10 +151,8 @@ const HIGHLIGHTS: readonly Highlight[] = [
           </div>
         }
         @if (!server.isMobile) {
-          <!-- Only goes through at the server's computer, where a phone never is. -->
-          <div class="login-server muted">
-            <a routerLink="/secours">Mot de passe administrateur oublié ?</a>
-          </div>
+          <!-- No link to /secours on purpose: the lost administrator password page is still
+               there, but it is the support team that gives its address, on the phone. -->
           <div class="login-server muted">
             <a routerLink="/application-mobile">Télécharger l'application mobile Android</a>
           </div>

@@ -18,8 +18,8 @@ const MIN_PASSWORD_LENGTH = 8;
  * file of that computer, then the code typed back lets a new password be chosen. From any other
  * device the page only explains where to go.
  *
- * <p>The page does not say where that file is: its link is on the login page, in front of
- * anyone at the till. The support team says it on the phone.
+ * <p>Nothing leads here: the login page has no link to it, and the page does not say where that
+ * file is. The support team gives both on the phone, the address of this page first.
  */
 @Component({
   selector: 'app-admin-recovery',

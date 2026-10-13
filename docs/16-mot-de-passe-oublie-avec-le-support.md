@@ -73,5 +73,5 @@ Fichiers : `service/AdminRecoveryService.java`, `web/SetupController.java`, test
   support fournisse lui-même un code que le logiciel vérifie (comme pour la licence), au lieu
   d'indiquer un fichier. À faire si le risque le justifie.
 - La session Windows du poste serveur protégée par un mot de passe reste la meilleure parade.
-- Le lien reste visible sur la page de connexion : sans lui, un administrateur bloqué ne saurait
-  pas que la procédure existe.
+- ~~Le lien reste visible sur la page de connexion~~ — retiré le 13 octobre 2026, voir
+  [`19-mot-de-passe-oublie-lien-retire.md`](19-mot-de-passe-oublie-lien-retire.md).
