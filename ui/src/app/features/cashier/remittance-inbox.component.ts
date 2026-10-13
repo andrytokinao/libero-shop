@@ -53,43 +53,45 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <small>argent apporté par le dépôt ou la prise de commande</small>
       </h2>
       @if (pending().length) {
-        <table class="inv-table">
-          <thead>
-            <tr>
-              <th>N° versement</th>
-              <th>Agent</th>
-              <th>Date</th>
-              <th>Commandes</th>
-              <th class="num">Montant</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (remittance of pending(); track remittance.id) {
+        <div class="table-scroll">
+          <table class="inv-table">
+            <thead>
               <tr>
-                <td>V-{{ remittance.id }}</td>
-                <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
-                <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
-                <td>
-                  <!-- What to count against: each order and its amount. -->
-                  @for (invoice of remittance.invoices; track invoice.invoiceId) {
-                    <div class="small">
-                      {{ invoice.invoiceNumber }} · {{ invoice.clientName }} ·
-                      {{ invoice.amount | ariary }}
-                    </div>
-                  }
-                </td>
-                <td class="num"><strong>{{ remittance.amount | ariary }}</strong></td>
-                <td>
-                  <ng-container
-                    [ngTemplateOutlet]="confirmControls"
-                    [ngTemplateOutletContext]="{ $implicit: remittance }"
-                  />
-                </td>
+                <th>N° versement</th>
+                <th>Agent</th>
+                <th>Date</th>
+                <th>Commandes</th>
+                <th class="num">Montant</th>
+                <th></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (remittance of pending(); track remittance.id) {
+                <tr>
+                  <td>V-{{ remittance.id }}</td>
+                  <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
+                  <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
+                  <td>
+                    <!-- What to count against: each order and its amount. -->
+                    @for (invoice of remittance.invoices; track invoice.invoiceId) {
+                      <div class="small">
+                        {{ invoice.invoiceNumber }} · {{ invoice.clientName }} ·
+                        {{ invoice.amount | ariary }}
+                      </div>
+                    }
+                  </td>
+                  <td class="num"><strong>{{ remittance.amount | ariary }}</strong></td>
+                  <td>
+                    <ng-container
+                      [ngTemplateOutlet]="confirmControls"
+                      [ngTemplateOutletContext]="{ $implicit: remittance }"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
         <!-- Same slips, phone layout. Hidden by CSS above the breakpoint. -->
         <ul class="inv-cards">
@@ -155,33 +157,35 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card" style="margin-top:16px;">
       <h2>Versements confirmés</h2>
       @if (confirmed().length) {
-        <table class="inv-table">
-          <thead>
-            <tr>
-              <th>N° versement</th>
-              <th>Agent</th>
-              <th>Date</th>
-              <th class="num">Montant</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (remittance of confirmed(); track remittance.id) {
+        <div class="table-scroll">
+          <table class="inv-table">
+            <thead>
               <tr>
-                <td>V-{{ remittance.id }}</td>
-                <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
-                <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
-                <td class="num">{{ remittance.amount | ariary }}</td>
-                <td>
-                  <app-remittance-status-badge
-                    [status]="remittance.status"
-                    [confirmedBy]="remittance.confirmedBy"
-                  />
-                </td>
+                <th>N° versement</th>
+                <th>Agent</th>
+                <th>Date</th>
+                <th class="num">Montant</th>
+                <th>Statut</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (remittance of confirmed(); track remittance.id) {
+                <tr>
+                  <td>V-{{ remittance.id }}</td>
+                  <td><app-user-avatar [user]="remittance.submittedBy" size="xs" [showName]="true" /></td>
+                  <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
+                  <td class="num">{{ remittance.amount | ariary }}</td>
+                  <td>
+                    <app-remittance-status-badge
+                      [status]="remittance.status"
+                      [confirmedBy]="remittance.confirmedBy"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
         <ul class="inv-cards">
           @for (remittance of confirmed(); track remittance.id) {

@@ -10,60 +10,62 @@ import { StockStatusBadgeComponent } from './status-badges.component';
   imports: [AriaryPipe, StockStatusBadgeComponent],
   template: `
     @if (products.length) {
-      <table>
-        <thead>
-          <tr>
-            <th>Produit</th>
-            <th>Catégorie</th>
-            <th>Code-barres</th>
-            <th class="num">Stock</th>
-            <th>Unité</th>
-            <th class="num">Prix unitaire</th>
-            <th class="num">Valeur stock</th>
-            <th></th>
-            @if (manageUnits) {
-              <th></th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (product of products; track product.id) {
+      <div class="table-scroll">
+        <table>
+          <thead>
             <tr>
-              <td>{{ product.name }}</td>
-              <td class="muted">{{ product.category?.name ?? '—' }}</td>
-              <td class="muted">{{ product.barcode ?? '—' }}</td>
-              <td class="num">
-                {{ formatQuantity(product.stockQuantity) }}
-                <!-- Sold in several units: also in the one that reads best, "≈ 9,96 sac". -->
-                @if (product.packagings?.length) {
-                  <div class="muted" style="font-size:11px;">≈ {{ stockLabel(product) }}</div>
-                }
-              </td>
-              <td class="muted">{{ product.unit ?? '—' }}</td>
-              <td class="num">{{ product.price | ariary }}</td>
-              <td class="num">{{ product.stockValue | ariary }}</td>
-              <td>
-                <app-stock-status-badge
-                  [quantity]="product.stockQuantity"
-                  [lowStock]="product.lowStock"
-                />
-              </td>
+              <th>Produit</th>
+              <th>Catégorie</th>
+              <th>Code-barres</th>
+              <th class="num">Stock</th>
+              <th>Unité</th>
+              <th class="num">Prix unitaire</th>
+              <th class="num">Valeur stock</th>
+              <th></th>
               @if (manageUnits) {
-                <td>
-                  <button
-                    class="btn small ghost"
-                    type="button"
-                    title="Nom, prix, code-barres et unités de vente : kg, carton, sac…"
-                    (click)="unitsRequested.emit(product)"
-                  >
-                    Modifier
-                  </button>
-                </td>
+                <th></th>
               }
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (product of products; track product.id) {
+              <tr>
+                <td>{{ product.name }}</td>
+                <td class="muted">{{ product.category?.name ?? '—' }}</td>
+                <td class="muted">{{ product.barcode ?? '—' }}</td>
+                <td class="num">
+                  {{ formatQuantity(product.stockQuantity) }}
+                  <!-- Sold in several units: also in the one that reads best, "≈ 9,96 sac". -->
+                  @if (product.packagings?.length) {
+                    <div class="muted" style="font-size:11px;">≈ {{ stockLabel(product) }}</div>
+                  }
+                </td>
+                <td class="muted">{{ product.unit ?? '—' }}</td>
+                <td class="num">{{ product.price | ariary }}</td>
+                <td class="num">{{ product.stockValue | ariary }}</td>
+                <td>
+                  <app-stock-status-badge
+                    [quantity]="product.stockQuantity"
+                    [lowStock]="product.lowStock"
+                  />
+                </td>
+                @if (manageUnits) {
+                  <td>
+                    <button
+                      class="btn small ghost"
+                      type="button"
+                      title="Nom, prix, code-barres et unités de vente : kg, carton, sac…"
+                      (click)="unitsRequested.emit(product)"
+                    >
+                      Modifier
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     } @else {
       <div class="empty">{{ emptyMessage }}</div>
     }

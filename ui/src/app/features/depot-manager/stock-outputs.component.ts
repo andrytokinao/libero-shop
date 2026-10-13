@@ -39,32 +39,34 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
       </div>
       @if (outputs().length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Produit</th>
-              <th class="num">Quantité</th>
-              <th>Facture</th>
-              <th>Client</th>
-              <th class="num">Valeur</th>
-              <th>Remise</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (output of outputs(); track output.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td class="muted">{{ output.movementDate | date: 'dd/MM HH:mm' }}</td>
-                <td>{{ output.product.name }}</td>
-                <td class="num">−{{ output.quantity }}</td>
-                <td>{{ output.invoice.invoiceNumber }}</td>
-                <td>{{ output.invoice.clientName }}</td>
-                <td class="num">{{ output.value | ariary }}</td>
-                <td><app-delivery-status-badge [status]="output.invoice.deliveryStatus" /></td>
+                <th>Date</th>
+                <th>Produit</th>
+                <th class="num">Quantité</th>
+                <th>Facture</th>
+                <th>Client</th>
+                <th class="num">Valeur</th>
+                <th>Remise</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (output of outputs(); track output.id) {
+                <tr>
+                  <td class="muted">{{ output.movementDate | date: 'dd/MM HH:mm' }}</td>
+                  <td>{{ output.product.name }}</td>
+                  <td class="num">−{{ output.quantity }}</td>
+                  <td>{{ output.invoice.invoiceNumber }}</td>
+                  <td>{{ output.invoice.clientName }}</td>
+                  <td class="num">{{ output.value | ariary }}</td>
+                  <td><app-delivery-status-badge [status]="output.invoice.deliveryStatus" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         <div class="more-row">
           <span class="muted">{{ outputs().length }} sur {{ total() }}</span>
           @if (hasMore()) {

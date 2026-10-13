@@ -18,28 +18,30 @@ import { SimpleImportComponent } from '../../shared/components/simple-import.com
         <app-simple-import [kind]="importKind" (imported)="resource.reload()" />
       </div>
       @if (suppliers().length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Contact</th>
-              <th>Produits fournis</th>
-              <th class="num">Livraisons</th>
-              <th class="num">Unités reçues</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (supplier of suppliers(); track supplier.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td>{{ supplier.name }}</td>
-                <td>{{ supplier.contact ?? '—' }}</td>
-                <td class="muted">{{ supplier.suppliedProducts ?? '—' }}</td>
-                <td class="num">{{ supplier.deliveryCount }}</td>
-                <td class="num">{{ supplier.unitsReceived }}</td>
+                <th>Nom</th>
+                <th>Contact</th>
+                <th>Produits fournis</th>
+                <th class="num">Livraisons</th>
+                <th class="num">Unités reçues</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (supplier of suppliers(); track supplier.id) {
+                <tr>
+                  <td>{{ supplier.name }}</td>
+                  <td>{{ supplier.contact ?? '—' }}</td>
+                  <td class="muted">{{ supplier.suppliedProducts ?? '—' }}</td>
+                  <td class="num">{{ supplier.deliveryCount }}</td>
+                  <td class="num">{{ supplier.unitsReceived }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty">
           Aucun fournisseur enregistré. Importez votre carnet de contacts : sans fournisseur, le

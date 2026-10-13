@@ -18,33 +18,35 @@ import { CashInHandComponent } from './cash-in-hand.component';
       <div class="card">
         <h2>Mes versements <small>confirmés par le caissier une fois l'argent compté</small></h2>
         @if (myRemittances().length) {
-          <table class="inv-table">
-            <thead>
-              <tr>
-                <th>N° versement</th>
-                <th>Commandes</th>
-                <th>Date</th>
-                <th class="num">Montant</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (remittance of myRemittances(); track remittance.id) {
+          <div class="table-scroll">
+            <table class="inv-table">
+              <thead>
                 <tr>
-                  <td>V-{{ remittance.id }}</td>
-                  <td class="muted">{{ invoiceNumbers(remittance) }}</td>
-                  <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
-                  <td class="num">{{ remittance.amount | ariary }}</td>
-                  <td>
-                    <app-remittance-status-badge
-                      [status]="remittance.status"
-                      [confirmedBy]="remittance.confirmedBy"
-                    />
-                  </td>
+                  <th>N° versement</th>
+                  <th>Commandes</th>
+                  <th>Date</th>
+                  <th class="num">Montant</th>
+                  <th>Statut</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (remittance of myRemittances(); track remittance.id) {
+                  <tr>
+                    <td>V-{{ remittance.id }}</td>
+                    <td class="muted">{{ invoiceNumbers(remittance) }}</td>
+                    <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
+                    <td class="num">{{ remittance.amount | ariary }}</td>
+                    <td>
+                      <app-remittance-status-badge
+                        [status]="remittance.status"
+                        [confirmedBy]="remittance.confirmedBy"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
 
           <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
           <ul class="inv-cards">

@@ -29,79 +29,81 @@ import { UserAvatarComponent } from './user-avatar.component';
   ],
   template: `
     @if (invoices.length) {
-      <table class="inv-table">
-        <thead>
-          <tr>
-            <th>N° facture</th>
-            @if (showDate) {
-              <th>Date</th>
-            }
-            <th>Client</th>
-            @if (showSeller) {
-              <th>Vendeur</th>
-            }
-            <th class="num">Articles</th>
-            <th class="num">Montant</th>
-            <th>Paiement</th>
-            <th>Remise</th>
-            @if (showDetail) {
-              <th class="col-detail"></th>
-            }
-            @if (actionLabel) {
-              <th></th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (invoice of invoices; track invoice.id) {
+      <div class="table-scroll">
+        <table class="inv-table">
+          <thead>
             <tr>
-              <td>{{ invoice.invoiceNumber }}</td>
+              <th>N° facture</th>
               @if (showDate) {
-                <td class="muted">{{ invoice.invoiceDate | date: 'dd/MM HH:mm' }}</td>
+                <th>Date</th>
               }
-              <td>{{ invoice.clientName }}</td>
+              <th>Client</th>
               @if (showSeller) {
-                <td><app-user-avatar [user]="invoice.sale.seller" size="xs" [showName]="true" /></td>
+                <th>Vendeur</th>
               }
-              <td class="num">{{ invoice.itemCount }}</td>
-              <td class="num">{{ invoice.sale.totalAmount | ariary }}</td>
-              <td><app-payment-status-badge [status]="invoice.paymentStatus" /></td>
-              <td>
-                <app-delivery-status-badge [status]="invoice.deliveryStatus" />
-                <app-handler-chip [invoice]="invoice" />
-              </td>
+              <th class="num">Articles</th>
+              <th class="num">Montant</th>
+              <th>Paiement</th>
+              <th>Remise</th>
               @if (showDetail) {
-                <td class="col-detail">
-                  <button
-                    class="lnk-detail"
-                    type="button"
-                    [attr.aria-label]="'Articles de la facture ' + invoice.invoiceNumber"
-                    (click)="openDetail(invoice)"
-                  >
-                    Détail
-                  </button>
-                </td>
+                <th class="col-detail"></th>
               }
               @if (actionLabel) {
-                <td>
-                  @if (actionLabel(invoice); as label) {
-                    <button
-                      class="btn small"
-                      type="button"
-                      [disabled]="busy"
-                      (click)="action.emit(invoice)"
-                    >
-                      {{ label }}
-                    </button>
-                  } @else {
-                    —
-                  }
-                </td>
+                <th></th>
               }
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (invoice of invoices; track invoice.id) {
+              <tr>
+                <td>{{ invoice.invoiceNumber }}</td>
+                @if (showDate) {
+                  <td class="muted">{{ invoice.invoiceDate | date: 'dd/MM HH:mm' }}</td>
+                }
+                <td>{{ invoice.clientName }}</td>
+                @if (showSeller) {
+                  <td><app-user-avatar [user]="invoice.sale.seller" size="xs" [showName]="true" /></td>
+                }
+                <td class="num">{{ invoice.itemCount }}</td>
+                <td class="num">{{ invoice.sale.totalAmount | ariary }}</td>
+                <td><app-payment-status-badge [status]="invoice.paymentStatus" /></td>
+                <td>
+                  <app-delivery-status-badge [status]="invoice.deliveryStatus" />
+                  <app-handler-chip [invoice]="invoice" />
+                </td>
+                @if (showDetail) {
+                  <td class="col-detail">
+                    <button
+                      class="lnk-detail"
+                      type="button"
+                      [attr.aria-label]="'Articles de la facture ' + invoice.invoiceNumber"
+                      (click)="openDetail(invoice)"
+                    >
+                      Détail
+                    </button>
+                  </td>
+                }
+                @if (actionLabel) {
+                  <td>
+                    @if (actionLabel(invoice); as label) {
+                      <button
+                        class="btn small"
+                        type="button"
+                        [disabled]="busy"
+                        (click)="action.emit(invoice)"
+                      >
+                        {{ label }}
+                      </button>
+                    } @else {
+                      —
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
       <ul class="inv-cards">

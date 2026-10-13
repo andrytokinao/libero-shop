@@ -159,66 +159,68 @@ const RESTART_TIMEOUT_MS = 3 * 60_000;
           </div>
 
           @if (visible().length) {
-            <table class="inv-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th class="num">Taille</th>
-                  <th>Contrôle</th>
-                  <th>2e support</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (b of visible(); track b.fileName) {
+            <div class="table-scroll">
+              <table class="inv-table">
+                <thead>
                   <tr>
-                    <td>
-                      <strong>{{ b.createdAt | date: 'dd/MM/y HH:mm' }}</strong>
-                    </td>
-                    <td>
-                      <span
-                        class="badge"
-                        [class]="'badge ' + kindColour(b.kind)"
-                        >{{ kindLabels[b.kind] }}</span
-                      >
-                    </td>
-                    <td class="num">{{ size(b.sizeBytes) }}</td>
-                    <td>
-                      @if (b.verified) {
-                        <span class="ok">✓ lisible</span>
-                        <span class="muted small">
-                          · {{ b.invoiceCount }} factures,
-                          {{ b.productCount }} produits</span
-                        >
-                      } @else {
-                        <span class="ko" [title]="b.note ?? ''"
-                          >✗ non vérifiée</span
-                        >
-                      }
-                    </td>
-                    <td>{{ b.inSecondary ? '✓' : '—' }}</td>
-                    <td class="row-actions">
-                      <button
-                        class="btn small ghost"
-                        type="button"
-                        (click)="download(b)"
-                      >
-                        Télécharger
-                      </button>
-                      <button
-                        class="btn small ghost"
-                        type="button"
-                        [disabled]="!s.canRestore || !b.verified"
-                        (click)="restoring.set(b)"
-                      >
-                        Restaurer
-                      </button>
-                    </td>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th class="num">Taille</th>
+                    <th>Contrôle</th>
+                    <th>2e support</th>
+                    <th></th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (b of visible(); track b.fileName) {
+                    <tr>
+                      <td>
+                        <strong>{{ b.createdAt | date: 'dd/MM/y HH:mm' }}</strong>
+                      </td>
+                      <td>
+                        <span
+                          class="badge"
+                          [class]="'badge ' + kindColour(b.kind)"
+                          >{{ kindLabels[b.kind] }}</span
+                        >
+                      </td>
+                      <td class="num">{{ size(b.sizeBytes) }}</td>
+                      <td>
+                        @if (b.verified) {
+                          <span class="ok">✓ lisible</span>
+                          <span class="muted small">
+                            · {{ b.invoiceCount }} factures,
+                            {{ b.productCount }} produits</span
+                          >
+                        } @else {
+                          <span class="ko" [title]="b.note ?? ''"
+                            >✗ non vérifiée</span
+                          >
+                        }
+                      </td>
+                      <td>{{ b.inSecondary ? '✓' : '—' }}</td>
+                      <td class="row-actions">
+                        <button
+                          class="btn small ghost"
+                          type="button"
+                          (click)="download(b)"
+                        >
+                          Télécharger
+                        </button>
+                        <button
+                          class="btn small ghost"
+                          type="button"
+                          [disabled]="!s.canRestore || !b.verified"
+                          (click)="restoring.set(b)"
+                        >
+                          Restaurer
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
 
             <ul class="inv-cards">
               @for (b of visible(); track b.fileName) {

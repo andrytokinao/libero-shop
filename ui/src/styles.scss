@@ -514,6 +514,12 @@ table {
   font-size: 13px;
 }
 
+/* Around every table of a page. A table is never narrower than its columns: in a card too
+   small for them it would stick out and widen the whole page, so it scrolls in here instead. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 th {
   text-align: left;
   color: var(--ink-soft);
@@ -521,6 +527,7 @@ th {
   font-size: 11.5px;
   padding: 0 10px 8px;
   border-bottom: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 td {
@@ -536,6 +543,8 @@ tr:last-child td {
 .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  /* An amount cut over two lines reads as two amounts. */
+  white-space: nowrap;
 }
 
 .muted {
@@ -830,6 +839,15 @@ select.field {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  /* A list is as wide as its longest entry: without these a long product name pushes the
+     field, and the page with it, past the edge of its card. */
+  min-width: 0;
+  max-width: 100%;
+
+  select {
+    min-width: 0;
+    max-width: 100%;
+  }
 
   label {
     font-size: 11.5px;

@@ -137,24 +137,26 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
         Répartition des rôles
         <small>un compte peut en cumuler plusieurs et apparaître sur plusieurs lignes</small>
       </h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Rôle</th>
-            <th class="num">Comptes actifs</th>
-            <th>Utilisateurs</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (role of roles; track role) {
+      <div class="table-scroll">
+        <table>
+          <thead>
             <tr>
-              <td>{{ roleLabels[role] }}</td>
-              <td class="num">{{ enabledCountOf(role) }}</td>
-              <td class="muted">{{ namesOf(role) || '—' }}</td>
+              <th>Rôle</th>
+              <th class="num">Comptes actifs</th>
+              <th>Utilisateurs</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (role of roles; track role) {
+              <tr>
+                <td>{{ roleLabels[role] }}</td>
+                <td class="num">{{ enabledCountOf(role) }}</td>
+                <td class="muted">{{ namesOf(role) || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
       @if (uncoveredRoles().length) {
         <div class="gap-warn">
           Plus aucun compte actif pour :
@@ -185,10 +187,6 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
   `,
   styles: `
     /* Nine columns do not fit a laptop once the buttons are there. */
-    .table-scroll {
-      overflow-x: auto;
-    }
-
     .col-actions {
       width: 1%;
       white-space: nowrap;

@@ -45,28 +45,30 @@ const EMPTY: StockDashboard = {
         </small>
       </h2>
       @if (byCategory().length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Catégorie</th>
-              <th class="num">Références</th>
-              <th class="num">Unités</th>
-              <th class="num">Valeur</th>
-              <th class="num">Part</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of byCategory(); track row.category.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td>{{ row.path }}</td>
-                <td class="num">{{ row.references }}</td>
-                <td class="num">{{ row.units }}</td>
-                <td class="num">{{ row.value | ariary }}</td>
-                <td class="num">{{ row.sharePercent }} %</td>
+                <th>Catégorie</th>
+                <th class="num">Références</th>
+                <th class="num">Unités</th>
+                <th class="num">Valeur</th>
+                <th class="num">Part</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (row of byCategory(); track row.category.id) {
+                <tr>
+                  <td>{{ row.path }}</td>
+                  <td class="num">{{ row.references }}</td>
+                  <td class="num">{{ row.units }}</td>
+                  <td class="num">{{ row.value | ariary }}</td>
+                  <td class="num">{{ row.sharePercent }} %</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty">Aucune catégorie enregistrée.</div>
       }

@@ -126,37 +126,39 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
       <div class="card" style="margin-top:16px;">
         <h2>Bénéfice par produit <small>du plus fort au plus faible</small></h2>
         @if (r.byProduct.length) {
-          <table>
-            <thead>
-              <tr>
-                <th>Produit</th>
-                <th class="num">Unités</th>
-                <th class="num">Chiffre d'affaires</th>
-                <th class="num">Coût d'achat</th>
-                <th class="num">Bénéfice</th>
-                <th class="num">Taux</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of r.byProduct; track row.productId) {
+          <div class="table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    {{ row.name }}
-                    @if (!row.fullyCosted) {
-                      <span class="badge amber" title="Une partie des ventes n'a pas de prix d'achat connu">
-                        partiel
-                      </span>
-                    }
-                  </td>
-                  <td class="num">{{ row.unitsSold }}</td>
-                  <td class="num">{{ row.revenue | ariary }}</td>
-                  <td class="num">{{ row.costOfGoodsSold | ariary }}</td>
-                  <td class="num" [class.loss]="row.grossMargin < 0">{{ row.grossMargin | ariary }}</td>
-                  <td class="num">{{ percent(row.marginRate) }}</td>
+                  <th>Produit</th>
+                  <th class="num">Unités</th>
+                  <th class="num">Chiffre d'affaires</th>
+                  <th class="num">Coût d'achat</th>
+                  <th class="num">Bénéfice</th>
+                  <th class="num">Taux</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (row of r.byProduct; track row.productId) {
+                  <tr>
+                    <td>
+                      {{ row.name }}
+                      @if (!row.fullyCosted) {
+                        <span class="badge amber" title="Une partie des ventes n'a pas de prix d'achat connu">
+                          partiel
+                        </span>
+                      }
+                    </td>
+                    <td class="num">{{ row.unitsSold }}</td>
+                    <td class="num">{{ row.revenue | ariary }}</td>
+                    <td class="num">{{ row.costOfGoodsSold | ariary }}</td>
+                    <td class="num" [class.loss]="row.grossMargin < 0">{{ row.grossMargin | ariary }}</td>
+                    <td class="num">{{ percent(row.marginRate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         } @else {
           <div class="empty">Aucune vente sur cette période.</div>
         }
@@ -205,42 +207,44 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
         }
 
         @if (v.byCategory.length) {
-          <table style="margin-top:12px;">
-            <thead>
-              <tr>
-                <th>Catégorie</th>
-                <th class="num">Unités</th>
-                <th class="num">Valeur d'achat</th>
-                <th class="num">Valeur de vente</th>
-                <th class="num">Bénéfice potentiel</th>
-                <th class="num">Taux</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of v.byCategory; track row.categoryId) {
+          <div class="table-scroll">
+            <table style="margin-top:12px;">
+              <thead>
                 <tr>
-                  <td>
-                    {{ row.path }}
-                    @if (row.uncostedUnits > 0) {
-                      <span
-                        class="badge amber"
-                        [title]="row.uncostedUnits + ' unité(s) sans prix d’achat'"
-                      >
-                        partiel
-                      </span>
-                    }
-                  </td>
-                  <td class="num">{{ row.units }}</td>
-                  <td class="num">{{ row.costValue | ariary }}</td>
-                  <td class="num">{{ row.saleValue | ariary }}</td>
-                  <td class="num" [class.loss]="row.potentialMargin < 0">
-                    {{ row.potentialMargin | ariary }}
-                  </td>
-                  <td class="num">{{ percent(row.potentialMarginRate) }}</td>
+                  <th>Catégorie</th>
+                  <th class="num">Unités</th>
+                  <th class="num">Valeur d'achat</th>
+                  <th class="num">Valeur de vente</th>
+                  <th class="num">Bénéfice potentiel</th>
+                  <th class="num">Taux</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (row of v.byCategory; track row.categoryId) {
+                  <tr>
+                    <td>
+                      {{ row.path }}
+                      @if (row.uncostedUnits > 0) {
+                        <span
+                          class="badge amber"
+                          [title]="row.uncostedUnits + ' unité(s) sans prix d’achat'"
+                        >
+                          partiel
+                        </span>
+                      }
+                    </td>
+                    <td class="num">{{ row.units }}</td>
+                    <td class="num">{{ row.costValue | ariary }}</td>
+                    <td class="num">{{ row.saleValue | ariary }}</td>
+                    <td class="num" [class.loss]="row.potentialMargin < 0">
+                      {{ row.potentialMargin | ariary }}
+                    </td>
+                    <td class="num">{{ percent(row.potentialMarginRate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         } @else {
           <div class="empty">Aucun produit en stock.</div>
         }

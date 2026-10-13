@@ -47,24 +47,26 @@ const EMPTY: RevenueReport = {
     <div class="card" style="margin-top:16px;">
       <h2>Répartition par mode de paiement <small>encaissements du jour</small></h2>
       @if (report().byPaymentMethod.length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Mode de paiement</th>
-              <th class="num">Encaissements</th>
-              <th class="num">Montant</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of report().byPaymentMethod; track row.paymentMethod) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td>{{ methodLabels[row.paymentMethod] }}</td>
-                <td class="num">{{ row.count }}</td>
-                <td class="num">{{ row.amount | ariary }}</td>
+                <th>Mode de paiement</th>
+                <th class="num">Encaissements</th>
+                <th class="num">Montant</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (row of report().byPaymentMethod; track row.paymentMethod) {
+                <tr>
+                  <td>{{ methodLabels[row.paymentMethod] }}</td>
+                  <td class="num">{{ row.count }}</td>
+                  <td class="num">{{ row.amount | ariary }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty">Aucun encaissement aujourd'hui.</div>
       }

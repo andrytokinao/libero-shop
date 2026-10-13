@@ -259,37 +259,39 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
           <small>{{ selectedProduct()?.name ?? '' }} — du moins cher au plus cher, en moyenne</small>
         </h2>
         @if (supplierPrices().length) {
-          <table>
-            <thead>
-              <tr>
-                <th>Fournisseur</th>
-                <th class="num">Coût moyen / {{ baseName() }}</th>
-                <th class="num">Dernier prix</th>
-                <th class="num">Min – max</th>
-                <th class="num">Unités</th>
-                <th>Dernière livraison</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (price of supplierPrices(); track price.supplierId; let first = $first) {
+          <div class="table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    {{ price.supplierName }}
-                    @if (first && supplierPrices().length > 1) {
-                      <span class="badge green">le moins cher</span>
-                    }
-                  </td>
-                  <td class="num">{{ price.averageCost | ariary }}</td>
-                  <td class="num">{{ price.lastUnitCost | ariary }}</td>
-                  <td class="num muted">
-                    {{ price.lowestCost | ariary }} – {{ price.highestCost | ariary }}
-                  </td>
-                  <td class="num">{{ formatQuantity(price.units) }}</td>
-                  <td class="muted">{{ price.lastPurchaseDate | date: 'dd/MM/yyyy' }}</td>
+                  <th>Fournisseur</th>
+                  <th class="num">Coût moyen / {{ baseName() }}</th>
+                  <th class="num">Dernier prix</th>
+                  <th class="num">Min – max</th>
+                  <th class="num">Unités</th>
+                  <th>Dernière livraison</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (price of supplierPrices(); track price.supplierId; let first = $first) {
+                  <tr>
+                    <td>
+                      {{ price.supplierName }}
+                      @if (first && supplierPrices().length > 1) {
+                        <span class="badge green">le moins cher</span>
+                      }
+                    </td>
+                    <td class="num">{{ price.averageCost | ariary }}</td>
+                    <td class="num">{{ price.lastUnitCost | ariary }}</td>
+                    <td class="num muted">
+                      {{ price.lowestCost | ariary }} – {{ price.highestCost | ariary }}
+                    </td>
+                    <td class="num">{{ formatQuantity(price.units) }}</td>
+                    <td class="muted">{{ price.lastPurchaseDate | date: 'dd/MM/yyyy' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         } @else {
           <div class="empty">Aucun prix d'achat enregistré pour ce produit.</div>
         }
@@ -299,54 +301,56 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
     <div class="card" style="margin-top:16px;">
       <h2>Derniers approvisionnements</h2>
       @if (supplies().length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th class="num">Quantité</th>
-              <th class="num">Prix d'achat</th>
-              <th class="num">Total</th>
-              <th>Fournisseur</th>
-              <th>Date</th>
-              <th>Par</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (supply of supplies(); track supply.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td>{{ supply.product.name }}</td>
-                <td class="num">
-                  +{{ formatAmount(supply.receivedQuantity, supply.unitLabel) }}
-                  @if (supply.unitLabel) {
-                    <div class="muted small-note">{{ formatAmount(supply.quantity, supply.product.unit) }}</div>
-                  }
-                </td>
-                <td class="num">
-                  {{ supply.unitCost === null ? '—' : (supply.unitCost | ariary) }}
-                  @if (supply.unitCost !== null && supply.unitLabel) {
-                    <span class="muted"> / {{ supply.unitLabel }}</span>
-                  }
-                </td>
-                <td class="num">
-                  {{ supply.totalCost === null ? '—' : (supply.totalCost | ariary) }}
-                </td>
-                <td>
-                  @if (supply.supplier; as supplier) {
-                    {{ supplier.name }}
-                  } @else {
-                    <!-- An import entry. Named rather than left blank: the stock did rise,
-                         and an empty cell would read as a supplier gone missing. -->
-                    <span class="badge grey" title="Stock saisi par import de produits">
-                      Import
-                    </span>
-                  }
-                </td>
-                <td class="muted">{{ supply.movementDate | date: 'dd/MM HH:mm' }}</td>
-                <td>{{ supply.performedBy.fullName }}</td>
+                <th>Produit</th>
+                <th class="num">Quantité</th>
+                <th class="num">Prix d'achat</th>
+                <th class="num">Total</th>
+                <th>Fournisseur</th>
+                <th>Date</th>
+                <th>Par</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (supply of supplies(); track supply.id) {
+                <tr>
+                  <td>{{ supply.product.name }}</td>
+                  <td class="num">
+                    +{{ formatAmount(supply.receivedQuantity, supply.unitLabel) }}
+                    @if (supply.unitLabel) {
+                      <div class="muted small-note">{{ formatAmount(supply.quantity, supply.product.unit) }}</div>
+                    }
+                  </td>
+                  <td class="num">
+                    {{ supply.unitCost === null ? '—' : (supply.unitCost | ariary) }}
+                    @if (supply.unitCost !== null && supply.unitLabel) {
+                      <span class="muted"> / {{ supply.unitLabel }}</span>
+                    }
+                  </td>
+                  <td class="num">
+                    {{ supply.totalCost === null ? '—' : (supply.totalCost | ariary) }}
+                  </td>
+                  <td>
+                    @if (supply.supplier; as supplier) {
+                      {{ supplier.name }}
+                    } @else {
+                      <!-- An import entry. Named rather than left blank: the stock did rise,
+                           and an empty cell would read as a supplier gone missing. -->
+                      <span class="badge grey" title="Stock saisi par import de produits">
+                        Import
+                      </span>
+                    }
+                  </td>
+                  <td class="muted">{{ supply.movementDate | date: 'dd/MM HH:mm' }}</td>
+                  <td>{{ supply.performedBy.fullName }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty">Aucun approvisionnement enregistré.</div>
       }

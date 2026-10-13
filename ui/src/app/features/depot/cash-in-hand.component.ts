@@ -37,37 +37,39 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       />
 
       @if (payments().length) {
-        <table class="inv-table" style="margin-top:14px;">
-          <thead>
-            <tr>
-              <th>N° facture</th>
-              <th>Client</th>
-              <th>Encaissée le</th>
-              <th class="num">Montant</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (payment of payments(); track payment.id) {
+        <div class="table-scroll">
+          <table class="inv-table" style="margin-top:14px;">
+            <thead>
               <tr>
-                <td>{{ payment.invoice.invoiceNumber }}</td>
-                <td>{{ payment.invoice.clientName }}</td>
-                <td class="muted">{{ payment.paymentDate | date: 'dd/MM HH:mm' }}</td>
-                <td class="num">{{ payment.amount | ariary }}</td>
-                <td>
-                  <button
-                    class="btn small"
-                    type="button"
-                    [disabled]="busy()"
-                    (click)="remit([payment.invoice.id])"
-                  >
-                    {{ remitLabel() }}
-                  </button>
-                </td>
+                <th>N° facture</th>
+                <th>Client</th>
+                <th>Encaissée le</th>
+                <th class="num">Montant</th>
+                <th></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (payment of payments(); track payment.id) {
+                <tr>
+                  <td>{{ payment.invoice.invoiceNumber }}</td>
+                  <td>{{ payment.invoice.clientName }}</td>
+                  <td class="muted">{{ payment.paymentDate | date: 'dd/MM HH:mm' }}</td>
+                  <td class="num">{{ payment.amount | ariary }}</td>
+                  <td>
+                    <button
+                      class="btn small"
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="remit([payment.invoice.id])"
+                    >
+                      {{ remitLabel() }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
         <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
         <ul class="inv-cards" style="margin-top:14px;">

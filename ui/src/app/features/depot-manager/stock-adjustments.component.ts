@@ -108,38 +108,40 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <small>un mouvement ADJUSTMENT par correction</small>
       </h2>
       @if (adjustments().length) {
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Produit</th>
-              <th>Motif</th>
-              <th class="num">Écart</th>
-              <th class="num">Valeur d'achat</th>
-              <th>Par</th>
-              <th>Commentaire</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (adjustment of adjustments(); track adjustment.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td class="muted">{{ adjustment.movementDate | date: 'dd/MM/yy HH:mm' }}</td>
-                <td>{{ adjustment.product.name }}</td>
-                <td>{{ reasonLabel(adjustment.reason) }}</td>
-                <td class="num">{{ signed(adjustment) }}</td>
-                <td class="num">
-                  @if (adjustment.costValue !== null) {
-                    {{ adjustment.costValue | ariary }}
-                  } @else {
-                    <span class="muted">—</span>
-                  }
-                </td>
-                <td>{{ adjustment.performedBy.fullName }}</td>
-                <td class="muted">{{ adjustment.comment ?? '—' }}</td>
+                <th>Date</th>
+                <th>Produit</th>
+                <th>Motif</th>
+                <th class="num">Écart</th>
+                <th class="num">Valeur d'achat</th>
+                <th>Par</th>
+                <th>Commentaire</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (adjustment of adjustments(); track adjustment.id) {
+                <tr>
+                  <td class="muted">{{ adjustment.movementDate | date: 'dd/MM/yy HH:mm' }}</td>
+                  <td>{{ adjustment.product.name }}</td>
+                  <td>{{ reasonLabel(adjustment.reason) }}</td>
+                  <td class="num">{{ signed(adjustment) }}</td>
+                  <td class="num">
+                    @if (adjustment.costValue !== null) {
+                      {{ adjustment.costValue | ariary }}
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                  <td>{{ adjustment.performedBy.fullName }}</td>
+                  <td class="muted">{{ adjustment.comment ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty">Aucune correction de stock pour l'instant.</div>
       }
