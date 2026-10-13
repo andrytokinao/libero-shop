@@ -420,16 +420,20 @@
                 <jpackage.input>${project.build.directory}/jpackage/input</jpackage.input>
                 <jpackage.dest>${project.build.directory}/jpackage/dist</jpackage.dest>
                 <jpackage.config>${project.basedir}/src/main/jpackage</jpackage.config>
-                <!-- Cosmetic disguise: the obfuscated fat jar is staged under this
-                     neutral name instead of liberoshop-*.jar, so the installed folder
-                     does not advertise "Java application". jpackage copies it verbatim
-                     and writes app.classpath=$APPDIR/${jpackage.mainjar} into the .cfg;
-                     the JVM opens the archive by content, not by extension, so the
-                     launcher runs it unchanged (verified). NB: this only hides the
-                     file name; the bundled jlink runtime/ folder is still obviously a
-                     JVM, and the archive is still a ZIP a curious user can open. The
-                     real protection is the ProGuard obfuscation above, not this name. -->
-                <jpackage.mainjar>libero-shop.dll</jpackage.mainjar>
+                <!-- Application name. Used both for the jpackage name flag and to locate
+                     the produced app-image folder (target/jpackage/dist/<name>/). -->
+                <installer.name>Libero Shop</installer.name>
+                <!-- Disguise of the obfuscated fat jar (see the "hide-payload-in-runtime"
+                     antrun step below). On Windows the jar is moved OUT of app/ INTO
+                     runtime/lib/ under this neutral name and extension, so nothing in the
+                     installed folder looks like "the Java application": app/ shows only a
+                     .cfg, and the payload sits among the JVM's own files. The JVM opens
+                     the archive by content, not by extension, so the launcher runs it
+                     unchanged. NB: a determined attacker can still find it; it is the
+                     only outsized file in runtime/lib/ and remains a ZIP. The real
+                     protection against decompilation is the ProGuard obfuscation above;
+                     this only makes the source harder to spot at a glance. -->
+                <jpackage.payload>resources.bin</jpackage.payload>
                 <!-- Overridden by the os-* profiles. Left blank so a bare run on an
                      unrecognised OS fails fast with a missing-argfile error. -->
                 <installer.os></installer.os>
@@ -507,31 +511,6 @@
                         </executions>
                     </plugin>
 
-                    <!-- Rename the staged fat jar to the neutral ${jpackage.mainjar}
-                         (see the property above). Bound to verify and declared AFTER the
-                         resources staging but BEFORE jpackage, so same-phase execution
-                         order is: stage jar -> rename -> jpackage. -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <version>3.1.0</version>
-                        <executions>
-                            <execution>
-                                <id>disguise-jpackage-mainjar</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <move file="${jpackage.input}/${project.build.finalName}.jar"
-                                              tofile="${jpackage.input}/${jpackage.mainjar}"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
                     <!-- Run the JDK's own jpackage. OS-agnostic here: the installer type and
                          the platform GUI flags come from the per-OS @argfile, and the runtime
                          JVM options (incl. the ${user.home} path redirects) from runtime.args.
@@ -555,7 +534,7 @@
                                     </environmentVariables>
                                     <arguments>
                                         <argument>--name</argument>
-                                        <argument>Libero Shop</argument>
+                                        <argument>${installer.name}</argument>
                                         <argument>--app-version</argument>
                                         <argument>${installer.version}</argument>
                                         <argument>--vendor</argument>
@@ -565,7 +544,7 @@
                                         <argument>--input</argument>
                                         <argument>${jpackage.input}</argument>
                                         <argument>--main-jar</argument>
-                                        <argument>${jpackage.mainjar}</argument>
+                                        <argument>${project.build.finalName}.jar</argument>
                                         <argument>--main-class</argument>
                                         <argument>org.springframework.boot.loader.launch.JarLauncher</argument>
                                         <argument>--dest</argument>
@@ -580,6 +559,55 @@
                                         <!-- Installer type + platform GUI flags (windows|mac|linux). -->
                                         <argument>@${jpackage.config}/${installer.os}.args</argument>
                                     </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Hide the payload: move the fat jar OUT of app/ INTO runtime/lib/
+                         under the neutral ${jpackage.payload} name, and rewrite the .cfg
+                         classpath to point there ($APPDIR\..\runtime\lib\...). After this,
+                         app/ holds only a .cfg and the application archive is buried among
+                         the JVM's own files. Declared AFTER the jpackage exec above, same
+                         "verify" phase, so it runs once the app-image exists.
+
+                         Windows only: the .cfg uses backslash separators there, and the
+                         shipped Windows installer (Inno Setup, see src/main/innosetup) is
+                         built from this very app-image, so it inherits the relocation. The
+                         guard also skips it when jpackage produced an installer file rather
+                         than an app-image folder (e.g. a one-shot WiX exe installer build),
+                         leaving that output untouched. Other OSes keep the jar in app/. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>hide-payload-in-runtime</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target xmlns:if="ant:if">
+                                        <condition property="appimage.windows">
+                                            <and>
+                                                <os family="windows"/>
+                                                <available file="${jpackage.dest}/${installer.name}/app" type="dir"/>
+                                            </and>
+                                        </condition>
+                                        <move if:set="appimage.windows"
+                                              file="${jpackage.dest}/${installer.name}/app/${project.build.finalName}.jar"
+                                              tofile="${jpackage.dest}/${installer.name}/runtime/lib/${jpackage.payload}"/>
+                                        <!-- Literal replace (not regexp): keeps the backslashes
+                                             of the Windows path, which Ant's replaceregexp would
+                                             eat as escapes. $APPDIR is the launcher's own token,
+                                             left untouched (no ${...}, so Maven/Ant ignore it). -->
+                                        <replace if:set="appimage.windows"
+                                                 file="${jpackage.dest}/${installer.name}/app/${installer.name}.cfg"
+                                                 token="app.classpath=$APPDIR\${project.build.finalName}.jar"
+                                                 value="app.classpath=$APPDIR\..\runtime\lib\${jpackage.payload}"/>
+                                    </target>
                                 </configuration>
                             </execution>
                         </executions>
