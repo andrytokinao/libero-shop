@@ -45,6 +45,8 @@ ou entretien.
   (`20-caisse-prevenue-des-commandes-a-encaisser.md`)
 - [x] Produits créés à la main, stock ajouté et corrigé depuis le menu « ⋮ » du produit, historique
   par produit, catégorie et prix d'achat modifiables (`22-produits-et-stock-a-la-main.md`)
+- [x] Mise à jour de l'application sans réinstaller : envoi manuel sur page cachée, bouton en ligne,
+  automatique avec confirmation des postes, paquet `.lsu` signé (`23-mise-a-jour-de-l-application.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),

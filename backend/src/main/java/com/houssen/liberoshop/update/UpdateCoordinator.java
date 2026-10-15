@@ -4,6 +4,7 @@ import com.houssen.liberoshop.notification.NotificationService;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -36,6 +37,7 @@ public class UpdateCoordinator {
 
     private Round round; // guarded by this
 
+    @Autowired
     public UpdateCoordinator(NotificationService notifications) {
         this(notifications, Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "liberoshop-update-confirm");
