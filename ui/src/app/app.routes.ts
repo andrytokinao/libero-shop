@@ -345,6 +345,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/license.component').then((m) => m.LicenseComponent),
       },
+      // Hidden like 'licence': no menu entry (see navigation.ts). Reached by typing
+      // /admin/mise-a-jour. Lets the owner install a new version without reinstalling.
+      {
+        path: 'mise-a-jour',
+        title: 'Mise à jour',
+        loadComponent: () =>
+          import('./features/admin/update.component').then((m) => m.UpdateComponent),
+      },
     ],
   },
 

@@ -111,6 +111,8 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       },
       // No 'Licence' entry: the page stays reachable at /admin/licence, and the licence
       // bar links to it once expiry is within LICENSE_BANNER_DAYS.
+      // No 'Mise à jour' entry either, on purpose: the update page stays hidden and is
+      // reached only by typing /admin/mise-a-jour.
     ],
   },
 };

@@ -70,10 +70,65 @@ public class UpdateInstaller {
      * @param verifiedPackage a package already checked by {@link UpdateVerifier}
      */
     public void apply(UpdatePackage verifiedPackage) {
-        InstallLayout layout = layout().orElseThrow(() -> new BusinessRuleException(
-                "UPDATE_UNAVAILABLE", unavailableReason()));
+        InstallLayout layout = requireLayout();
         Path script = prepare(verifiedPackage, layout);
         log.warn("Mise a jour prete : remplacement de {} puis relance de {}.", layout.payload(), layout.launcherExe());
+        scheduleRelaunch(script);
+    }
+
+    /** Whether a previous version is kept and can be put back. */
+    public boolean canRollback() {
+        return layout().map(l -> Files.isRegularFile(l.backup())).orElse(false);
+    }
+
+    /**
+     * Puts the previous payload back and relaunches. The kept {@code .bak} becomes the staged
+     * source, so the very same swap applies: the current (faulty) payload is moved aside and the
+     * previous one takes its place.
+     */
+    public void rollback() {
+        InstallLayout layout = requireLayout();
+        if (!Files.isRegularFile(layout.backup())) {
+            throw new BusinessRuleException("UPDATE_NO_BACKUP",
+                    "Aucune version precedente conservee : rien a restaurer.");
+        }
+        try {
+            Files.copy(layout.backup(), layout.staged(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        Path script = writeSwapScript(layout);
+        log.warn("Retour a la version precedente : restauration de {} puis relance.", layout.payload());
+        scheduleRelaunch(script);
+    }
+
+    private InstallLayout requireLayout() {
+        return layout().orElseThrow(() -> new BusinessRuleException("UPDATE_UNAVAILABLE", unavailableReason()));
+    }
+
+    /** Stages the payload beside the current one and writes the swap script. Returns the script path. */
+    Path prepare(UpdatePackage verifiedPackage, InstallLayout layout) {
+        try {
+            Path staged = layout.staged();
+            Files.deleteIfExists(staged);
+            verifiedPackage.copyPayloadTo(staged);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return writeSwapScript(layout);
+    }
+
+    private Path writeSwapScript(InstallLayout layout) {
+        try {
+            Path script = Files.createTempFile("liberoshop-update-", ".cmd");
+            Files.writeString(script, swapScript(layout), StandardCharsets.US_ASCII);
+            return script;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void scheduleRelaunch(Path script) {
         Thread relaunch = new Thread(() -> {
             try {
                 Thread.sleep(GRACE_MILLIS);
@@ -91,20 +146,6 @@ public class UpdateInstaller {
         }, "liberoshop-update");
         relaunch.setDaemon(false);
         relaunch.start();
-    }
-
-    /** Stages the payload beside the current one and writes the swap script. Returns the script path. */
-    Path prepare(UpdatePackage verifiedPackage, InstallLayout layout) {
-        try {
-            Path staged = layout.staged();
-            Files.deleteIfExists(staged);
-            verifiedPackage.copyPayloadTo(staged);
-            Path script = Files.createTempFile("liberoshop-update-", ".cmd");
-            Files.writeString(script, swapScript(layout), StandardCharsets.US_ASCII);
-            return script;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     private void launch(Path script) {
