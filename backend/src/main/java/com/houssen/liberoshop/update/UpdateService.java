@@ -26,13 +26,15 @@ public class UpdateService {
 
     private final UpdateVerifier verifier;
     private final UpdateInstaller installer;
+    private final UpdateSource source;
     private final UpdateProperties properties;
     private final String currentVersion;
 
-    public UpdateService(UpdateVerifier verifier, UpdateInstaller installer, UpdateProperties properties,
-                         ObjectProvider<BuildProperties> build) {
+    public UpdateService(UpdateVerifier verifier, UpdateInstaller installer, UpdateSource source,
+                         UpdateProperties properties, ObjectProvider<BuildProperties> build) {
         this.verifier = verifier;
         this.installer = installer;
+        this.source = source;
         this.properties = properties;
         BuildProperties info = build.getIfAvailable();
         // Absent when run from the IDE without a Maven build: said, not invented, as elsewhere.
@@ -81,6 +83,43 @@ public class UpdateService {
         } finally {
             // apply() has already staged the payload; the uploaded copy is no longer needed.
             deleteQuietly(temp);
+        }
+    }
+
+    /** Looks at the configured URL and reports whether a newer version is published there. */
+    public UpdateCheckResponse checkOnline() {
+        RemoteUpdateInfo info = source.fetchManifest();
+        return new UpdateCheckResponse(
+                Versions.isNewer(info.latestVersion(), currentVersion),
+                info.latestVersion(),
+                info.releasedOn(),
+                info.notes(),
+                currentVersion);
+    }
+
+    /**
+     * Downloads the latest {@code .lsu} from the configured URL and, if it is genuinely newer and
+     * can be applied here, applies it. The downloaded copy is verified exactly like an uploaded
+     * one -- the manifest only says where to look, never what to trust.
+     */
+    public UpdateManifest applyOnline() {
+        RemoteUpdateInfo info = source.fetchManifest();
+        if (!Versions.isNewer(info.latestVersion(), currentVersion)) {
+            throw new BusinessRuleException("UPDATE_UP_TO_DATE",
+                    "L'application est deja a jour (version " + currentVersion + ").");
+        }
+        if (!installer.canApply()) {
+            throw new BusinessRuleException("UPDATE_UNAVAILABLE", installer.unavailableReason());
+        }
+        Path lsu = source.download(info);
+        try {
+            UpdatePackage pkg = UpdatePackage.open(lsu);
+            UpdateManifest manifest = verifier.verifyNewerThan(pkg, currentVersion);
+            installer.apply(pkg);
+            log.warn("Mise a jour {} acceptee depuis le serveur de mise a jour.", manifest.appVersion());
+            return manifest;
+        } finally {
+            deleteQuietly(lsu);
         }
     }
 

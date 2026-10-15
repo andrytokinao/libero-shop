@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.web;
 
+import com.houssen.liberoshop.update.UpdateCheckResponse;
 import com.houssen.liberoshop.update.UpdateManifest;
 import com.houssen.liberoshop.update.UpdateService;
 import com.houssen.liberoshop.update.UpdateStatusResponse;
@@ -39,6 +40,20 @@ public class UpdateController {
     @PostMapping("/upload")
     public Map<String, String> upload(@RequestParam("file") MultipartFile file) {
         UpdateManifest manifest = updates.applyUploaded(file);
+        return Map.of("message", "Mise a jour vers la version " + manifest.appVersion()
+                + " : le serveur redemarre.", "version", manifest.appVersion());
+    }
+
+    /** Looks at the configured URL for a newer version. Does not install anything. */
+    @PostMapping("/check")
+    public UpdateCheckResponse check() {
+        return updates.checkOnline();
+    }
+
+    /** Downloads and installs the latest version from the configured URL, then restarts. */
+    @PostMapping("/online")
+    public Map<String, String> online() {
+        UpdateManifest manifest = updates.applyOnline();
         return Map.of("message", "Mise a jour vers la version " + manifest.appVersion()
                 + " : le serveur redemarre.", "version", manifest.appVersion());
     }

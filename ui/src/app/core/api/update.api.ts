@@ -15,6 +15,15 @@ export interface UpdateStatus {
   requireConfirmation: boolean;
 }
 
+/** The outcome of looking at the configured update URL. Mirrors UpdateCheckResponse. */
+export interface UpdateCheck {
+  available: boolean;
+  latestVersion: string;
+  releasedOn: string | null;
+  notes: string | null;
+  currentVersion: string;
+}
+
 /**
  * Updating the application. Super-admin only, and the page has no menu entry — reached at
  * /admin/mise-a-jour, like the licence page. Applying or rolling back restarts the server, so
@@ -36,6 +45,16 @@ export class UpdateApi {
       `${API_BASE_URL}/update/upload`,
       body,
     );
+  }
+
+  /** Looks at the configured URL for a newer version. Installs nothing. */
+  check(): Observable<UpdateCheck> {
+    return this.http.post<UpdateCheck>(`${API_BASE_URL}/update/check`, {});
+  }
+
+  /** Downloads and installs the latest version from the configured URL, then restarts. */
+  online(): Observable<{ message: string; version: string }> {
+    return this.http.post<{ message: string; version: string }>(`${API_BASE_URL}/update/online`, {});
   }
 
   rollback(): Observable<{ message: string }> {

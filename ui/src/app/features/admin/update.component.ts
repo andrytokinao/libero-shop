@@ -1,7 +1,7 @@
 import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api/api.config';
-import { UpdateApi, UpdateStatus } from '../../core/api/update.api';
+import { UpdateApi, UpdateCheck, UpdateStatus } from '../../core/api/update.api';
 import { SILENT_ERRORS } from '../../core/interceptors/error.interceptor';
 
 /** How long to wait for the server to come back after an update before saying so. */
@@ -94,7 +94,44 @@ const RESTART_TIMEOUT_MS = 3 * 60_000;
         }
       </div>
 
-      <!-- 2 — roll back to the previous version -->
+      <!-- 2 — check online and install from the configured URL -->
+      @if (s.urlConfigured) {
+        <div class="card" style="margin-top:16px;">
+          <h2>Vérifier en ligne</h2>
+          <p class="muted">
+            Interroge l'adresse de mise à jour configurée pour savoir si une version plus récente
+            existe, puis la télécharge et l'installe. Le fichier téléchargé est vérifié de la même
+            façon qu'un fichier choisi à la main.
+          </p>
+          <div class="row">
+            <button class="btn ghost" type="button" [disabled]="busy()" (click)="check()">
+              {{ busy() ? 'Vérification…' : '↺ Vérifier maintenant' }}
+            </button>
+            @if (lastCheck(); as c) {
+              @if (c.available) {
+                <span class="muted">
+                  Version {{ c.latestVersion }} disponible (installée : {{ c.currentVersion }}).
+                  @if (c.notes) {
+                    — {{ c.notes }}
+                  }
+                </span>
+                <button
+                  class="btn"
+                  type="button"
+                  [disabled]="busy() || !s.canApply"
+                  (click)="installOnline()"
+                >
+                  Télécharger et installer
+                </button>
+              } @else {
+                <span class="muted">À jour (version {{ c.currentVersion }}).</span>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- 3 — roll back to the previous version -->
       @if (s.canRollback) {
         <div class="card" style="margin-top:16px;">
           <h2>Revenir à la version précédente</h2>
@@ -165,6 +202,7 @@ export class UpdateComponent {
 
   protected readonly status = signal<UpdateStatus | null>(null);
   protected readonly chosen = signal<File | null>(null);
+  protected readonly lastCheck = signal<UpdateCheck | null>(null);
   protected readonly busy = signal(false);
   protected readonly waitingForRestart = signal(false);
   protected readonly restartMessage = signal('');
@@ -192,6 +230,38 @@ export class UpdateComponent {
     }
     this.busy.set(true);
     this.api.upload(file).subscribe({
+      next: (r) => {
+        this.busy.set(false);
+        this.waitForRestart(`Installation de la version ${r.version}. Ne fermez pas cette page.`);
+      },
+      error: () => this.busy.set(false),
+    });
+  }
+
+  protected check(): void {
+    if (this.busy()) {
+      return;
+    }
+    this.busy.set(true);
+    this.api.check().subscribe({
+      next: (c) => {
+        this.busy.set(false);
+        this.lastCheck.set(c);
+      },
+      error: () => this.busy.set(false),
+    });
+  }
+
+  protected installOnline(): void {
+    const c = this.lastCheck();
+    if (this.busy() || !c?.available) {
+      return;
+    }
+    if (!confirm(`Télécharger et installer la version ${c.latestVersion} ? Le serveur va redémarrer.`)) {
+      return;
+    }
+    this.busy.set(true);
+    this.api.online().subscribe({
       next: (r) => {
         this.busy.set(false);
         this.waitForRestart(`Installation de la version ${r.version}. Ne fermez pas cette page.`);
