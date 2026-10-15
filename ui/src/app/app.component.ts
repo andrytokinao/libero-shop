@@ -20,6 +20,7 @@ import { AuthService } from './core/services/auth.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { ThemeService } from './core/services/theme.service';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
+import { MaintenanceWatcherComponent } from './shared/components/maintenance-watcher.component';
 import { NotificationBellComponent } from './shared/components/notification-bell.component';
 import { IconComponent } from './shared/components/icon.component';
 import { ProfileDialogComponent } from './shared/components/profile-dialog.component';
@@ -40,6 +41,7 @@ import { UserAvatarComponent } from './shared/components/user-avatar.component';
     UserAvatarComponent,
     ProfileDialogComponent,
     IconComponent,
+    MaintenanceWatcherComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

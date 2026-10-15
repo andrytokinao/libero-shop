@@ -60,4 +60,21 @@ export class UpdateApi {
   rollback(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${API_BASE_URL}/update/rollback`, {});
   }
+
+  /** This screen agrees to be cut off for a pending update. */
+  confirm(): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/update/confirm`, {});
+  }
+
+  /** This screen refuses the cut now; the update is left for later. */
+  decline(): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/update/decline`, {});
+  }
+}
+
+/** What the server broadcasts around a maintenance update, on the `maintenance` topic. */
+export interface MaintenanceNotice {
+  kind: 'CONFIRM_REQUEST' | 'APPLYING' | 'CANCELLED';
+  version: string | null;
+  message: string;
 }
