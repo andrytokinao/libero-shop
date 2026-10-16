@@ -20,6 +20,7 @@ import {
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
 import { ProductPickerComponent } from '../../shared/components/product-picker.component';
+import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -34,10 +35,21 @@ interface NewUnitDraft {
 
 const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price: '' };
 
+/** The list's last entry: not a supplier id, the way to add one. */
+const NEW_SUPPLIER = -1;
+
 @Component({
   selector: 'app-supply',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, HasRoleDirective, AriaryPipe, ProductPickerComponent],
+  imports: [
+    FormsModule,
+    DatePipe,
+    DecimalPipe,
+    HasRoleDirective,
+    AriaryPipe,
+    ProductPickerComponent,
+    SupplierCreateDialogComponent,
+  ],
   template: `
     <div class="grid g2">
       <div class="card">
@@ -62,13 +74,15 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
               id="supply-supplier"
               class="field"
               [ngModel]="selectedSupplierId()"
-              (ngModelChange)="supplierId.set($event)"
+              (ngModelChange)="pickSupplier($event, supplierSelect)"
+              #supplierSelect
             >
               <!-- Goods bought at the market, or a shop that keeps no supplier list. -->
               <option [ngValue]="null">Sans fournisseur</option>
               @for (supplier of suppliers(); track supplier.id) {
                 <option [ngValue]="supplier.id">{{ supplier.name }}</option>
               }
+              <option [ngValue]="NEW_SUPPLIER">＋ Nouveau fournisseur…</option>
             </select>
           </div>
           <div class="fld">
@@ -356,6 +370,13 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
         <div class="empty">Aucun approvisionnement enregistré.</div>
       }
     </div>
+
+    @if (creatingSupplier()) {
+      <app-supplier-create-dialog
+        (created)="onSupplierCreated($event)"
+        (closed)="creatingSupplier.set(false)"
+      />
+    }
   `,
   styles: `
     .cost-hint {
@@ -420,6 +441,8 @@ export class SupplyComponent {
   private readonly toasts = inject(ToastService);
 
   protected readonly RoleApp = RoleApp;
+  protected readonly NEW_SUPPLIER = NEW_SUPPLIER;
+  protected readonly creatingSupplier = signal(false);
   protected readonly productId = signal<number | null>(null);
   /** Undefined until one is picked — the first of the list then; null once "Sans fournisseur" is. */
   protected readonly supplierId = signal<number | null | undefined>(undefined);
@@ -575,6 +598,26 @@ export class SupplyComponent {
     this.typedCost.set(undefined);
     this.unitId.set(packagingId);
     this.creatingUnit.set(false);
+  }
+
+  /**
+   * "+ Nouveau fournisseur…" is not a supplier: it opens the form, and the list shows the one
+   * picked before until the new one exists.
+   */
+  protected pickSupplier(id: number | null, select: HTMLSelectElement): void {
+    if (id !== NEW_SUPPLIER) {
+      this.supplierId.set(id);
+      return;
+    }
+    this.creatingSupplier.set(true);
+    // The model has not moved, so the list would keep showing the entry: put it back by hand.
+    const current = this.selectedSupplierId();
+    select.selectedIndex = current === null ? 0 : 1 + this.suppliers().findIndex((s) => s.id === current);
+  }
+
+  protected onSupplierCreated(supplier: Supplier): void {
+    this.supplierResource.reload();
+    this.supplierId.set(supplier.id);
   }
 
   protected sayUnknown(code: string): void {

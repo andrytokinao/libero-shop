@@ -132,6 +132,12 @@ export interface Supplier {
   unitsReceived: number;
 }
 
+/** POST /api/suppliers — mirrors CreateSupplierRequest. */
+export interface CreateSupplierRequest {
+  name: string;
+  contact: string | null;
+}
+
 /** POST /api/invoices/{id}/deliver — the wording comes from the server. */
 export interface DeliveryResult {
   invoice: Invoice;

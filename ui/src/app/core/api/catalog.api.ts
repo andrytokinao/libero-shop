@@ -10,6 +10,7 @@ import {
   CategoryStock,
   CreateCategoryRequest,
   CreateProductRequest,
+  CreateSupplierRequest,
   DeletedCategory,
   ImportFormat,
   PackagingRequest,
@@ -220,6 +221,11 @@ export class CatalogApi {
 
   suppliers(): Observable<Supplier[]> {
     return this.http.get<Supplier[]>(`${API_BASE_URL}/suppliers`);
+  }
+
+  /** Refused (409) when a supplier of that name, however written, is already on the list. */
+  createSupplier(request: CreateSupplierRequest): Observable<Supplier> {
+    return this.http.post<Supplier>(`${API_BASE_URL}/suppliers`, request);
   }
 
   stockByCategory(): Observable<CategoryStock[]> {

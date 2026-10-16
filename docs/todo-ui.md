@@ -21,7 +21,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   produit » (code prérempli) pour qui peut modifier le catalogue ; recherche par nom sinon.
 - [x] **UI-30** — Sélecteur de produit partagé (recherche dès 2 lettres, douchette, caméra, stock
   affiché) à la place des listes déroulantes d'Approvisionnement et de Corrections.
-- [ ] **UI-32** — « ＋ Nouveau fournisseur… » en fin de liste des fournisseurs (mini-fenêtre nom,
+- [x] **UI-32** — « ＋ Nouveau fournisseur… » en fin de liste des fournisseurs (mini-fenêtre nom,
   téléphone ; choisi d'office). (serveur : création de fournisseur)
 - [ ] **UI-50** — Numéro de facture cliquable (sorties, versements, historique du stock) →
   `invoice-detail-dialog`.
