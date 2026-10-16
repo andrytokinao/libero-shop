@@ -188,7 +188,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
             [flat]="true"
             label="Valeur de vente du stock"
             [value]="v.saleValue | ariary"
-            hint="ce qu'il rapporterait vendu au prix actuel"
+            hint="vendu au détail, au prix actuel de l'unité de base"
           />
           <app-kpi-card
             [flat]="true"

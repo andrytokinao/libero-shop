@@ -140,7 +140,9 @@ base**.
   - `receivedQuantity()` = `quantity / facteur` (les 2 sacs d'origine) ;
   - `baseUnitCost()` = `unitCost / facteur` (le prix d'achat d'un kapoka) ;
   - `totalCost()` = `unitCost × receivedQuantity`.
-- **`StockOutput`** : une sortie par ligne de facture, en unités de base.
+- **`StockOutput`** : une sortie par ligne de facture, en unités de base, avec `saleValue` =
+  le total de la ligne de vente (ce que ces marchandises ont été vendues). Null sur les sorties
+  antérieures, valorisées alors au prix actuel de l'unité de base (`StockOutput.value()`).
 - **`StockAdjustment`** (correction) : quantité **signée** (l'écart, pas le chiffre compté),
   motif (`BREAKAGE`, `THEFT`, `EXPIRED`, `INVENTORY_COUNT`, `OTHER`), commentaire.
 
@@ -336,7 +338,8 @@ Service : `B/service/CostingService.java`.
 |---|---|---|
 | **Marge sur période** (`GET /api/costing/margin`, super-admin) — page « Bénéfices & stock » | Par produit : quantité en unités de base, chiffre d'affaires `Σ unitPrice × quantity`, coût `Σ unitCost × quantity`. Ventes payées et non payées, sans les annulées. Les lignes sans coût connu sont comptées à part (`uncostedRevenue`, taux de couverture). Taux de marque = marge / CA. | **Valeurs figées** des lignes de vente. |
 | **Coût par produit** (`/api/costing/products`) | Marge unitaire = `price − averageCost`, dernier coût de réception, comparaison des fournisseurs par unité de base. | Prix et moyenne **actuels**, unité de base. |
-| **Valeur du stock** (`/api/costing/stock-valuation`) | Par catégorie : `stock × price` et `stock × averageCost`. | Prix et moyenne **actuels**, unité de base. |
+| **Valeur du stock** (`/api/costing/stock-valuation`) | Par catégorie : `stock × price` (valeur de vente, au détail) et `stock × averageCost` (valeur d'achat). | Prix et moyenne **actuels**, unité de base. |
+| **Sorties de stock** (`/api/stock/outputs`) | Valeur de chaque sortie et total de la recherche. | **Montant figé** de la ligne de vente (`saleValue`). |
 | **Stock bas** (`StockPolicy`) | Stock < 10 unités de base, seuil unique pour tout le catalogue. | — |
 
 ---
@@ -399,15 +402,18 @@ super-admin).
 
 ## 10. Limites et écarts relevés
 
-Constatés à la lecture du code, non corrigés :
+Constatés à la lecture du code. Les deux premiers ont été traités le 16 octobre 2026
+(`27-valeur-des-sorties-au-prix-de-vente.md`) ; les autres restent ouverts.
 
-1. **Coût par produit et valeur du stock ignorent le prix des conditionnements.** Ils utilisent
-   le prix de l'unité de base × stock. Un produit surtout vendu en sac à prix de gros est valorisé
-   au prix du détail. (Le rapport de marge, lui, utilise les prix réellement vendus.)
-2. **Valeur des sorties de stock au prix du jour.** `StockOutputResponse.value` et
-   `StockMovementRepository.sumOutputs` multiplient par le prix **actuel** de l'unité de base, pas
-   par le prix figé de la vente : ces totaux ne correspondent pas aux factures pour les ventes
-   en conditionnement ou après un changement de prix.
+1. **Valeur du stock au prix de détail — convention assumée.** La valeur de vente du stock et
+   le coût par produit utilisent le prix de l'unité de base : la part du stock qui partira en
+   sac ou au détail n'est pas connue d'avance. L'écran « Bénéfices & stock » l'indique désormais
+   (« vendu au détail, au prix actuel de l'unité de base »). La valeur d'achat, elle, ne dépend
+   d'aucune convention. (Le rapport de marge utilise les prix réellement vendus.)
+2. **Valeur des sorties de stock — corrigé.** Chaque sortie garde le montant de sa ligne de
+   vente (`StockOutput.saleValue`, colonne `sale_value`) : prix et unité de la vente, insensible
+   aux changements de prix. Les sorties enregistrées avant gardent l'ancien calcul (prix actuel
+   de l'unité de base × quantité).
 3. **Valeur d'une correction au coût du jour.** `StockAdjustmentResponse.costValue` utilise la
    moyenne actuelle, pas celle du moment de la correction.
 4. **Réceptions en unité de base renommées après coup.** Un `Supply` reçu en unité de base garde

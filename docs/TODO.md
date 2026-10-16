@@ -53,6 +53,8 @@ ou entretien.
 - [x] Session gardée quand le serveur ne répond pas au démarrage
   (`25-session-gardee-quand-le-serveur-ne-repond-pas.md`)
 - [x] Commande par QR code enregistrée une seule fois (`26-commande-qr-envoyee-une-seule-fois.md`)
+- [x] Sorties de stock valorisées au prix de la vente ; valeur du stock annoncée « au détail »
+  (`27-valeur-des-sorties-au-prix-de-vente.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),

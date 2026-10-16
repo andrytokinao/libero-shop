@@ -17,6 +17,7 @@ import com.houssen.liberoshop.service.exception.InsufficientStockException;
 import com.houssen.liberoshop.web.dto.CreateSaleRequest;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import com.houssen.liberoshop.web.dto.SaleLineResponse;
+import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,8 @@ class SaleByUnitTest {
     @Autowired
     private SaleService saleService;
     @Autowired
+    private StockService stockService;
+    @Autowired
     private ProductRepository products;
     @Autowired
     private ProductPackagingRepository packagings;
@@ -72,7 +75,7 @@ class SaleByUnitTest {
         kilo = packagings.save(ProductPackaging.builder().product(rice).label("kg")
                 .factor(new BigDecimal("3.500")).price(new BigDecimal("3000")).build());
         sack = packagings.save(ProductPackaging.builder().product(rice).label("sac 50 kg")
-                .factor(new BigDecimal("175.000")).price(new BigDecimal("145000")).build());
+                .factor(new BigDecimal("175.000")).price(new BigDecimal("6000")).build());
         String handle = "c" + UUID.randomUUID().toString().substring(0, 8);
         cashier = users.save(UserApp.builder().fullName("Caisse " + handle).username(handle).password("x")
                 .enabled(true).roles(EnumSet.of(RoleApp.CASHIER)).build());
@@ -103,6 +106,22 @@ class SaleByUnitTest {
         assertQuantity(92, stock());
         // What left the shelf is written in base units, so the history adds up with the stock.
         assertQuantity(7, movements.findOutputsOfInvoice(invoice.id()).getFirst().getQuantity());
+    }
+
+    @Test
+    @DisplayName("an output is worth what it was sold for: 2 kg at the kilo price, not 7 kapoka")
+    void outputValuedAtTheSale() {
+        InvoiceResponse invoice = sell(new CreateSaleRequest.Line(rice.getId(), kilo.getId(), new BigDecimal("2")));
+        // A later price change does not reprice what already left.
+        Product repriced = products.findById(rice.getId()).orElseThrow();
+        repriced.setPrice(new BigDecimal("1000"));
+        products.save(repriced);
+
+        assertEquals(0, new BigDecimal("6000")
+                .compareTo(movements.findOutputsOfInvoice(invoice.id()).getFirst().getSaleValue()));
+        StockOutputPageResponse page = stockService.findOutputs(rice.getName(), 0, 50);
+        assertEquals(0, new BigDecimal("6000").compareTo(page.items().getFirst().value()));
+        assertEquals(0, new BigDecimal("6000").compareTo(page.totalValue()));
     }
 
     @Test

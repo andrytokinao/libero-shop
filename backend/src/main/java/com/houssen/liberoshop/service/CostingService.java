@@ -212,6 +212,10 @@ public class CostingService {
      * <p>The difference is the profit waiting on the shelves. Like the margin report it is only
      * claimed where the cost is known; products never costed are counted in the sale value and
      * reported as such, never assumed to have been free.
+     *
+     * <p>The sale value is the retail one: the stock at the price of its base unit. Packaging
+     * prices are left out on purpose: how much of the stock will go by the sack and how much by
+     * the kapoka is not known in advance, and the screen says which convention it uses.
      */
     public StockValuationResponse stockValuation() {
         Map<Long, String> paths = new HashMap<>();

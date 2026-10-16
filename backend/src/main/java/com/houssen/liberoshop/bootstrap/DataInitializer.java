@@ -333,6 +333,7 @@ public class DataInitializer implements ApplicationRunner {
                     .product(line.getProduct())
                     .performedBy(seller)
                     .invoice(invoice)
+                    .saleValue(line.lineTotal())
                     .build());
         }
         return invoice;

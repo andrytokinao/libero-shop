@@ -155,6 +155,7 @@ public class SaleService {
                     .product(line.getProduct())
                     .performedBy(seller)
                     .invoice(invoice)
+                    .saleValue(line.lineTotal())
                     .build());
         }
 
