@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libero Shop — facilité d'utilisation : tout faire depuis l'objet</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+
+/* ---- propres à ce document : repères, priorités, maquettes ---- */
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.p { display:inline-block; font-size:11.5px; font-weight:700; border-radius:10px; padding:1px 8px; margin-left:4px; vertical-align:2px; }
+.p1 { background:var(--ko-soft); color:var(--ko); }
+.p2 { background:var(--warn-soft); color:var(--warn); }
+.p3 { background:var(--code); color:var(--muted); }
+.tag { display:inline-block; font-size:11.5px; border:1px solid var(--line); border-radius:10px; padding:0 7px; color:var(--muted); margin-left:4px; }
+.done { color:var(--ok); font-weight:600; }
+.mock-row { display:flex; flex-wrap:wrap; gap:22px; justify-content:center; align-items:flex-start; margin:16px 0; text-align:left; }
+.mock-menu { width:250px; border:1px solid var(--line); border-radius:10px; background:#fff; box-shadow:0 10px 28px rgba(0,0,0,.14);
+             padding:6px; font-size:13px; }
+.mock-menu .grp { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:8px 10px 2px; }
+.mock-menu .it { padding:7px 10px; border-radius:7px; display:flex; justify-content:space-between; gap:8px; }
+.mock-menu .it:hover { background:var(--brand-soft); }
+.mock-menu .it small { color:var(--muted); }
+.mock-menu .sep { height:1px; background:var(--line); margin:5px 4px; }
+.mock-menu .dng { color:var(--ko); }
+.mock-menu .off { color:#a9b2ba; }
+.mock-menu .new { color:var(--brand); font-weight:600; }
+.mock-dlg { width:420px; max-width:100%; border:1px solid var(--line); border-radius:12px; background:#fff;
+            box-shadow:0 14px 34px rgba(0,0,0,.16); font-size:13px; overflow:hidden; }
+.mock-dlg .hd { padding:12px 16px; border-bottom:1px solid var(--line); font-weight:700; display:flex; justify-content:space-between; }
+.mock-dlg .tabs { display:flex; gap:2px; padding:0 10px; border-bottom:1px solid var(--line); background:#fafcfb; }
+.mock-dlg .tabs span { padding:7px 10px; color:var(--muted); }
+.mock-dlg .tabs span.on { color:var(--brand); font-weight:700; border-bottom:2px solid var(--brand); }
+.mock-dlg .bd { padding:12px 16px; }
+.mock-dlg .fld { margin:0 0 9px; }
+.mock-dlg .fld b { display:block; font-size:12px; color:var(--muted); font-weight:600; }
+.mock-dlg .in { border:1px solid var(--line); border-radius:7px; padding:5px 9px; background:#fff; display:flex; justify-content:space-between; }
+.mock-dlg .hint { color:var(--muted); font-size:12px; background:var(--brand-soft); border-radius:7px; padding:6px 9px; }
+.mock-dlg .ft { padding:10px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; }
+.mock-dlg .btn { border:1px solid var(--line); border-radius:7px; padding:4px 12px; }
+.mock-dlg .btn.pri { background:var(--brand); color:#fff; border-color:var(--brand); }
+.mock-toast { display:inline-flex; gap:16px; align-items:center; background:#1e252b; color:#fff; border-radius:8px; padding:8px 14px; font-size:13px; }
+.mock-toast u { color:#8fd9c2; text-decoration:none; font-weight:700; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card, .mock-row { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Facilité d'utilisation : tout faire depuis l'objet</h1>
+<p class="meta">16 octobre 2026 · branche <code>develop</code> · liste de travail : <code>docs/todo-ui.md</code></p>
+<p class="meta">Propositions d'amélioration de l'interface. Rien n'est encore codé : chaque point porte un repère
+  (<span class="id">UI-01</span>) repris dans <code>docs/todo-ui.md</code> pour être traité et coché un par un.</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé en 6 points</div>
+  <ol>
+    <li><strong>Une règle :</strong> on agit là où on voit la chose. Chaque produit, réception, fournisseur, rayon,
+      facture, utilisateur ou table a son menu <strong>« ⋮ »</strong> ; une saisie s'ouvre dans une <strong>fenêtre</strong>,
+      jamais dans une autre page.</li>
+    <li><strong>Le même menu partout :</strong> un produit offre les mêmes actions sur Stock, Prix et unités, les tableaux
+      de bord, Bénéfices &amp; stock et Stock global. Aujourd'hui le menu n'existe que sur deux de ces écrans.</li>
+    <li><strong>Configuration complète depuis le « ⋮ » du produit :</strong> prix de vente, prix d'entrée, unités et
+      packaging, codes-barres, rayon, seuil d'alerte, retrait de la vente — chaque entrée ouvre directement le bon onglet.</li>
+    <li><strong>Ne jamais être bloqué par ce qui manque :</strong> un fournisseur, un rayon ou une unité absents se créent
+      dans la liste même où on les cherche (« ＋ Nouveau… ») ; un code-barres inconnu propose de l'associer ou de créer le produit.</li>
+    <li><strong>Choisir un produit = chercher ou scanner</strong>, partout (réception, corrections), à la place des longues
+      listes déroulantes de tout le catalogue.</li>
+    <li><strong>Pas de formation :</strong> chiffres cliquables, listes vides qui proposent l'action, phrases qui relisent
+      la saisie, confirmations cohérentes et un « Annuler » dans le message après une action réversible.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème aujourd'hui</a></li>
+  <li><a href="#regles">2. Les règles retenues</a></li>
+  <li><a href="#produit">3. Le menu « ⋮ » du produit</a></li>
+  <li><a href="#config">4. Configuration du produit en fenêtre</a></li>
+  <li><a href="#codes">5. Codes-barres</a></li>
+  <li><a href="#stock">6. Réceptions, corrections, fournisseurs</a></li>
+  <li><a href="#rayons">7. Rayons (catégories)</a></li>
+  <li><a href="#vente">8. Vente, commandes, factures</a></li>
+  <li><a href="#tableaux">9. Tableaux de bord et chiffres</a></li>
+  <li><a href="#admin">10. Utilisateurs, tables, configuration</a></li>
+  <li><a href="#partout">11. Partout : aide, confirmations, annuler</a></li>
+  <li><a href="#technique">12. Pour le développeur</a></li>
+  <li><a href="#decisions">13. Décisions attendues</a></li>
+  <li><a href="#recap">14. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<!-- ================================================================== -->
+<h2 id="probleme">1. Le problème aujourd'hui</h2>
+<p>La boutique a déjà fait un grand pas (compte rendu <code>22-produits-et-stock-a-la-main.md</code>) : sur l'écran
+  <strong>Stock</strong>, chaque produit a un menu « ⋮ » avec <em>Ajouter du stock</em>, <em>Configurer (prix, unités)</em>,
+  <em>Corriger le stock</em> et <em>Historique du stock</em>. Mais ce menu reste une exception.</p>
+<ul>
+  <li>Sur le <strong>tableau de bord du stock</strong> et la <strong>vue d'ensemble</strong>, la liste « à réapprovisionner »
+    n'a pas de « ⋮ » : on voit le produit en alerte, puis il faut aller ailleurs pour le réapprovisionner.</li>
+  <li><strong>Prix et unités</strong> montre deux boutons (« Configurer », « ＋ Stock ») au lieu du même « ⋮ » : le même
+    produit ne se manipule pas pareil d'un écran à l'autre.</li>
+  <li><strong>Approvisionnement</strong> et <strong>Corrections</strong> sont des pages entières, avec une liste déroulante
+    de <em>tout</em> le catalogue, sans recherche ni scan ; une réception ne prend qu'un produit à la fois.</li>
+  <li>Un <strong>fournisseur</strong> ne se crée que par import de fichier : impossible de l'ajouter pendant une réception.</li>
+  <li>Sur <strong>Bénéfices &amp; stock</strong>, le badge « prix d'achat inconnu » ne mène nulle part.</li>
+  <li>Les <strong>numéros de facture</strong> des sorties et des versements sont du texte : il faut aller chercher la facture.</li>
+  <li>Les <strong>chiffres</strong> des tableaux de bord (« Produits en alerte »…) ne sont pas cliquables.</li>
+  <li>Les <strong>confirmations</strong> sont inégales : remettre l'argent demande confirmation dans la facture, pas dans
+    « Argent en main » ; désactiver un utilisateur ne demande rien.</li>
+</ul>
+
+<div class="figure">
+<svg viewBox="0 0 900 300" width="900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Avant et après : détour par une autre page ou menu sur la ligne">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .h { font: bold 14px "Segoe UI", sans-serif; }
+    .pg { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .pk { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+    .po { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ar { stroke:#b23b3b; stroke-width:2; fill:none; marker-end:url(#ak); }
+    .ag { stroke:#1f6f5c; stroke-width:2; fill:none; marker-end:url(#ag); }
+  </style>
+  <defs>
+    <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b23b3b"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker>
+  </defs>
+  <text class="h" x="20" y="24" fill="#b23b3b">Aujourd'hui : 4 gestes, 3 écrans</text>
+  <rect class="pg" x="20" y="40" width="190" height="90" rx="8"/>
+  <text class="t" x="34" y="62">Tableau de bord</text>
+  <text class="s" x="34" y="84">Riz 25 kg — 3 sacs</text>
+  <text class="s" x="34" y="102">(en alerte, aucun bouton)</text>
+  <path class="ar" d="M210,85 L245,85"/>
+  <rect class="pk" x="250" y="40" width="190" height="90" rx="8"/>
+  <text class="t" x="264" y="62">① Menu → Approvisionnement</text>
+  <text class="s" x="264" y="84">nouvelle page</text>
+  <path class="ar" d="M345,130 L345,160"/>
+  <rect class="pk" x="250" y="165" width="190" height="90" rx="8"/>
+  <text class="t" x="264" y="187">② Liste de 800 produits</text>
+  <text class="s" x="264" y="207">faire défiler jusqu'au riz</text>
+  <path class="ar" d="M440,210 L475,210"/>
+  <rect class="pk" x="480" y="165" width="190" height="90" rx="8"/>
+  <text class="t" x="494" y="187">③ Fournisseur absent</text>
+  <text class="s" x="494" y="207">il faut un import Excel</text>
+  <text class="s" x="494" y="225">→ ④ abandon ou détour</text>
+
+  <line x1="690" y1="30" x2="690" y2="280" stroke="#dde3e8" stroke-dasharray="4 4"/>
+
+  <text class="h" x="710" y="24" fill="#1f6f5c">Proposé : 2 gestes, 0 page</text>
+  <rect class="pg" x="710" y="40" width="175" height="90" rx="8"/>
+  <text class="t" x="722" y="62">Tableau de bord</text>
+  <text class="s" x="722" y="84">Riz 25 kg — 3 sacs  ⋮</text>
+  <path class="ag" d="M797,130 L797,160"/>
+  <rect class="po" x="710" y="165" width="175" height="100" rx="8"/>
+  <text class="t" x="722" y="187">① ⋮ → Ajouter du stock</text>
+  <text class="s" x="722" y="207">fenêtre, produit déjà choisi</text>
+  <text class="s" x="722" y="225">② fournisseur : « ＋ Nouveau »</text>
+  <text class="s" x="722" y="243">dans la liste même</text>
+</svg>
+<div class="caption">Figure 1 — Réapprovisionner un produit en alerte : aujourd'hui (à gauche) et proposé (à droite).</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="regles">2. Les règles retenues</h2>
+<p>Ces huit règles servent à juger chaque écran, existant ou futur. Un écran qui les respecte n'a pas besoin d'être expliqué.</p>
+<div class="cards">
+  <div class="card"><h4><span class="letter">1</span>On agit sur place</h4>
+    Chaque ligne ou carte a un « ⋮ ». Pas de bouton « aller à la page X pour… ».</div>
+  <div class="card"><h4><span class="letter">2</span>Même objet, même menu</h4>
+    Un produit a le même « ⋮ » sur tous les écrans ; seuls les droits du rôle retirent des entrées.</div>
+  <div class="card"><h4><span class="letter">3</span>Une fenêtre, pas une page</h4>
+    Toute saisie (réception, correction, prix, fournisseur) s'ouvre en fenêtre, au-dessus de ce qu'on regardait.</div>
+  <div class="card"><h4><span class="letter">4</span>Créer ce qui manque sur place</h4>
+    Chaque liste de choix finit par « ＋ Nouveau… » (fournisseur, rayon, unité).</div>
+  <div class="card"><h4><span class="letter">5</span>Chercher ou scanner</h4>
+    Choisir un produit = taper deux lettres ou scanner. Jamais une liste de tout le catalogue.</div>
+  <div class="card"><h4><span class="letter">6</span>Les chiffres mènent aux choses</h4>
+    Un compteur, un badge, un numéro de facture s'ouvrent au clic.</div>
+  <div class="card"><h4><span class="letter">7</span>L'écran explique</h4>
+    Liste vide = phrase + bouton d'action. Saisie = phrase qui relit (« 1 carton = 24 pièces, soit 125 Ar la pièce »).</div>
+  <div class="card"><h4><span class="letter">8</span>Sûr sans être lourd</h4>
+    Confirmation pour l'argent et ce qui ne se rattrape pas ; « Annuler » dans le message pour le reste.</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="produit">3. Le menu « ⋮ » du produit</h2>
+
+<h3><span class="id">UI-01</span>Le « ⋮ » sur tous les écrans qui montrent un produit <span class="p p1">P1</span></h3>
+<p>Le composant existe (<code>app-product-menu</code>, avec <code>app-product-dialogs</code> pour les fenêtres) : il suffit de
+  le brancher là où il manque.</p>
+<div class="table-wrap"><table>
+  <tr><th>Écran</th><th>Aujourd'hui</th><th>Proposé</th></tr>
+  <tr><td>Tableau de bord du stock</td><td><code>app-stock-table</code> sans <code>[manage]</code> : pas de « ⋮ »</td><td><code>[manage]="true"</code> + <code>app-product-dialogs</code></td></tr>
+  <tr><td>Vue d'ensemble (admin)</td><td>idem</td><td>idem</td></tr>
+  <tr><td>Prix et unités</td><td>boutons « Configurer » et « ＋ Stock »</td><td>le même « ⋮ » (boutons gardés en raccourci si on le souhaite)</td></tr>
+  <tr><td>Bénéfices &amp; stock</td><td>aucune action</td><td>« ⋮ » sur chaque produit ; badge « prix d'achat inconnu » cliquable (UI-61)</td></tr>
+  <tr><td>Stock global</td><td>« ⋮ » présent</td><td class="done">déjà conforme</td></tr>
+  <tr><td>Stock</td><td>« ⋮ » présent</td><td class="done">déjà conforme</td></tr>
+</table></div>
+
+<h3><span class="id">UI-02</span>Un menu plus complet, rangé par familles <span class="p p2">P2</span></h3>
+<p>Aujourd'hui quatre entrées. Proposé : les entrées regroupées sous de petits titres, chacune ouvrant directement la bonne
+  fenêtre ou le bon onglet. Le rôle retire ce qu'il ne peut pas faire, comme maintenant (<code>ProductRights</code>).</p>
+
+<div class="figure">
+<div class="mock-row">
+  <div class="mock-menu" aria-label="Maquette du menu produit">
+    <div class="grp">Stock</div>
+    <div class="it">Ajouter du stock <small>réception</small></div>
+    <div class="it">Corriger le stock <small>casse, perte…</small></div>
+    <div class="it">Compter ce produit <small>inventaire</small></div>
+    <div class="it">Historique du stock</div>
+    <div class="sep"></div>
+    <div class="grp">Configuration</div>
+    <div class="it">Nom et rayon</div>
+    <div class="it">Prix de vente et d'entrée</div>
+    <div class="it">Unités et packaging</div>
+    <div class="it">Codes-barres</div>
+    <div class="it">Seuil d'alerte <small>10 sacs</small></div>
+    <div class="sep"></div>
+    <div class="grp">Autres</div>
+    <div class="it">Dupliquer le produit</div>
+    <div class="it">Imprimer une étiquette</div>
+    <div class="it dng">Retirer de la vente</div>
+  </div>
+  <div style="max-width:330px; font-size:13.5px;">
+    <p><strong>Lecture de la maquette</strong></p>
+    <ol>
+      <li>Les titres gris (Stock, Configuration, Autres) aident l'œil : on ne lit pas 13 lignes, on lit 3 familles.</li>
+      <li>Le petit texte à droite dit ce que fait l'entrée, ou montre la valeur actuelle (« 10 sacs »).</li>
+      <li>Les entrées de <em>Configuration</em> ouvrent toutes la même fenêtre (UI-10), sur l'onglet voulu.</li>
+      <li>En rouge : l'entrée qui retire quelque chose.</li>
+      <li>Un caissier n'a qu'« Historique du stock » ou rien : le menu disparaît s'il n'y a aucune entrée (déjà le cas).</li>
+    </ol>
+  </div>
+</div>
+<div class="caption">Figure 2 — Maquette du menu « ⋮ » d'un produit, vu par le responsable de dépôt.</div>
+</div>
+
+<div class="table-wrap"><table>
+  <tr><th>Entrée</th><th>Ce qu'elle ouvre</th><th>Existe ?</th></tr>
+  <tr><td>Ajouter du stock</td><td>fenêtre de réception (<code>stock-entry-dialog</code>)</td><td class="done">oui</td></tr>
+  <tr><td>Corriger le stock</td><td><code>stock-adjust-dialog</code></td><td class="done">oui</td></tr>
+  <tr><td>Compter ce produit</td><td>petite fenêtre « J'ai compté : ___ » ; l'écart devient une correction « inventaire »</td><td>raccourci de la correction</td></tr>
+  <tr><td>Historique du stock</td><td><code>stock-history-dialog</code></td><td class="done">oui</td></tr>
+  <tr><td>Nom et rayon · Prix · Unités · Codes-barres</td><td>fenêtre de configuration, sur l'onglet correspondant (UI-10)</td><td>fenêtre unique aujourd'hui</td></tr>
+  <tr><td>Seuil d'alerte</td><td>un champ ; remplace le 10 commun à tout le catalogue (<code>StockPolicy</code>, TODO §4)</td><td>non — serveur à faire</td></tr>
+  <tr><td>Dupliquer le produit</td><td>« Nouveau produit » prérempli (rayon, unités, prix) : idéal pour « Riz 50 kg » d'après « Riz 25 kg »</td><td>non</td></tr>
+  <tr><td>Imprimer une étiquette</td><td>nom, prix, code-barres, pour le rayon</td><td>non — idée</td></tr>
+  <tr><td>Retirer de la vente / Remettre en vente</td><td>confirmation courte, l'historique est gardé (TODO §4, P2)</td><td>non — serveur à faire</td></tr>
+</table></div>
+
+<h3><span class="id">UI-03</span>Clic sur la ligne = fiche rapide <span class="p p3">P3</span></h3>
+<p>Toucher le nom d'un produit (hors vente) ouvre une petite fiche en lecture : stock par unité, prix, bénéfice,
+  dernier fournisseur, dernières entrées. Les actions du « ⋮ » y sont reprises en boutons. Sur téléphone, c'est plus
+  facile à viser qu'un « ⋮ ».</p>
+
+<!-- ================================================================== -->
+<h2 id="config">4. Configuration du produit en fenêtre</h2>
+
+<h3><span class="id">UI-10</span>La fenêtre « Configuration » en onglets <span class="p p2">P2</span></h3>
+<p>La fenêtre actuelle (<code>product-units-dialog</code>, 937 lignes) montre tout d'un coup : fiche, prix, unité de base,
+  tableau des unités, formulaire d'ajout. Proposé : quatre onglets, et le menu ouvre directement le bon.</p>
+
+<div class="figure">
+<div class="mock-row">
+  <div class="mock-dlg">
+    <div class="hd"><span>Riz 25 kg — configuration</span><span>✕</span></div>
+    <div class="tabs"><span>Fiche</span><span class="on">Prix</span><span>Unités et packaging</span><span>Codes-barres</span></div>
+    <div class="bd">
+      <div class="fld"><b>Prix d'entrée</b><div class="in"><span>62 500 Ar</span><span>par sac ▾</span></div></div>
+      <div class="hint">1 sac = 25 kg : soit 2 500 Ar le kg.</div>
+      <div class="fld" style="margin-top:10px"><b>Prix de vente</b></div>
+      <table style="font-size:12.5px">
+        <tr><th>Unité</th><th>Vente</th><th>Bénéfice</th></tr>
+        <tr><td>kg</td><td>3 000 Ar</td><td>500 Ar · 20 %</td></tr>
+        <tr><td>sac</td><td>70 000 Ar</td><td>7 500 Ar · 12 %</td></tr>
+        <tr><td>kapoka</td><td style="color:#b23b3b">700 Ar</td><td style="color:#b23b3b">−50 Ar · à perte</td></tr>
+      </table>
+      <div class="hint" style="margin-top:8px">Proposer les prix avec une marge de <b>20 %</b> → <u>appliquer</u></div>
+    </div>
+    <div class="ft"><span class="btn">＋ Ajouter du stock</span><span class="btn pri">Enregistrer</span></div>
+  </div>
+</div>
+<div class="caption">Figure 3 — Maquette de l'onglet « Prix » : prix d'entrée dans l'unité d'achat, bénéfice relu par unité, perte en rouge.</div>
+</div>
+
+<div class="table-wrap"><table>
+  <tr><th>Onglet</th><th>Contenu</th><th>Améliorations</th></tr>
+  <tr><td>Fiche</td><td>nom, rayon (avec « ＋ Nouveau rayon »), seuil d'alerte, en vente oui/non</td><td>rayon choisi dans l'arbre, pas dans une liste plate</td></tr>
+  <tr><td>Prix</td><td>prix d'entrée dans l'unité d'achat, prix de vente de chaque unité, bénéfice et marge</td>
+    <td>prix modifiable directement dans le tableau ; bouton « proposer avec une marge de X % » <span class="tag">idée</span></td></tr>
+  <tr><td>Unités et packaging</td><td>unité de base, unités (« 1 carton contient 24 pièces »), unité d'achat</td>
+    <td>pastilles toutes prêtes : <em>carton, sac, paquet, douzaine, kg, litre</em> ; la phrase relue reste</td></tr>
+  <tr><td>Codes-barres</td><td>un code par unité</td><td>voir UI-20</td></tr>
+</table></div>
+<div class="note"><strong>Pourquoi des onglets et pas des fenêtres séparées ?</strong> Le prix dépend des unités : on doit pouvoir
+  ajouter « tonne » puis taper le prix par tonne sans fermer quoi que ce soit. Une seule fenêtre, plusieurs onglets, garde
+  ce lien tout en montrant moins de choses à la fois.</div>
+
+<h3><span class="id">UI-11</span>Modifier un prix directement dans « Prix et unités » <span class="p p3">P3</span></h3>
+<p>Sur la page qui liste tous les prix, un clic sur un prix le transforme en champ (Entrée = enregistrer, Échap = annuler),
+  avec le bénéfice recalculé à côté. Pour corriger vingt prix après une hausse, c'est vingt clics au lieu de vingt fenêtres.</p>
+
+<h3><span class="id">UI-12</span>Nouveau produit : l'essentiel d'abord <span class="p p2">P2</span></h3>
+<p>La fenêtre « Nouveau produit » demande seulement <strong>nom, prix, unité</strong> (déjà les seuls obligatoires) ; le reste
+  est replié sous « Plus de détails ». À l'enregistrement, le message propose la suite :
+  <span class="mock-toast">Produit « Riz 25 kg » créé <u>Ajouter du stock</u> <u>Codes-barres</u></span></p>
+
+<!-- ================================================================== -->
+<h2 id="codes">5. Codes-barres</h2>
+
+<h3><span class="id">UI-20</span>Onglet « Codes-barres » : scanner pour associer <span class="p p2">P2</span></h3>
+<p>Une ligne par unité (pièce, paquet, carton…) avec son code et un bouton <strong>« Scanner »</strong> (douchette ou caméra du
+  téléphone). Le code déjà pris par un autre produit est signalé tout de suite, avec son nom.</p>
+
+<h3><span class="id">UI-21</span>Code inconnu : on ne reste pas bloqué <span class="p p1">P1</span></h3>
+<p>Quand un code scanné n'existe pas, au lieu d'un simple « introuvable », une fenêtre propose quoi faire, selon le rôle.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 270" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre de décision pour un code-barres inconnu">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .bx { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .q { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ok { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ln { stroke:#5d6873; stroke-width:1.5; fill:none; marker-end:url(#m3); }
+  </style>
+  <defs><marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5d6873"/></marker></defs>
+  <rect class="bx" x="20" y="105" width="150" height="54" rx="8"/>
+  <text class="t" x="34" y="128">Code scanné</text>
+  <text class="s" x="34" y="146">inconnu</text>
+  <path class="ln" d="M170,132 L215,132"/>
+  <rect class="q" x="220" y="100" width="170" height="64" rx="8"/>
+  <text class="t" x="234" y="124">Peut modifier le</text>
+  <text class="t" x="234" y="142">catalogue ?</text>
+  <path class="ln" d="M390,118 L450,60"/>
+  <text class="s" x="404" y="78">oui</text>
+  <path class="ln" d="M390,148 L450,210"/>
+  <text class="s" x="404" y="196">non</text>
+  <rect class="ok" x="455" y="20" width="385" height="90" rx="8"/>
+  <text class="t" x="470" y="44">① L'ajouter à un produit existant</text>
+  <text class="s" x="490" y="62">recherche par nom, puis choix de l'unité (pièce, carton…)</text>
+  <text class="t" x="470" y="84">② Créer le produit</text>
+  <text class="s" x="490" y="100">« Nouveau produit » avec le code déjà rempli</text>
+  <rect class="bx" x="455" y="165" width="385" height="80" rx="8"/>
+  <text class="t" x="470" y="189">Caisse, commandes : chercher par nom</text>
+  <text class="s" x="470" y="208">la vente continue ; le code est signalé au</text>
+  <text class="s" x="470" y="226">responsable de dépôt (notification) <tspan font-style="italic">— décision attendue</tspan></text>
+</svg>
+<div class="caption">Figure 4 — Ce que propose la fenêtre « Code inconnu » selon le rôle.</div>
+</div>
+
+<h3><span class="id">UI-22</span>Scanner dans la recherche du stock <span class="p p2">P2</span></h3>
+<p>Le champ de recherche de <strong>Stock</strong>, <strong>Prix et unités</strong> et <strong>Corrections</strong> accepte la douchette
+  et le bouton caméra (aujourd'hui réservés à la vente et aux commandes). Un produit trouvé par son code s'ouvre avec son « ⋮ » déplié.</p>
+
+<!-- ================================================================== -->
+<h2 id="stock">6. Réceptions, corrections, fournisseurs</h2>
+
+<h3><span class="id">UI-30</span>Un sélecteur de produit unique : chercher ou scanner <span class="p p1">P1</span></h3>
+<p>Les pages <strong>Approvisionnement</strong> et <strong>Corrections</strong> utilisent une liste déroulante de tout le catalogue.
+  Proposé : un champ « Produit » qui cherche dès deux lettres, accepte le code-barres et la caméra, et montre le stock
+  actuel à côté de chaque résultat. Le même composant sert partout où l'on choisit un produit
+  (déjà au TODO §4, P3 — remonté ici en P1 car il bloque les boutiques au catalogue fourni).</p>
+
+<h3><span class="id">UI-31</span>Réception de plusieurs produits en une fenêtre <span class="p p2">P2</span></h3>
+<p>Un livreur apporte dix produits : aujourd'hui dix envois de formulaire. Proposé : un bouton <strong>« ＋ Réception »</strong>
+  dans l'en-tête de Stock, qui ouvre une fenêtre « bon de livraison » : un fournisseur, puis une ligne par produit
+  (scanner, quantité, unité, prix d'achat prérempli au dernier payé), un total en bas, un seul « Enregistrer ».
+  La page Approvisionnement garde l'historique et le tableau « Prix par fournisseur ».</p>
+
+<h3><span class="id">UI-32</span>« ＋ Nouveau fournisseur » dans la liste des fournisseurs <span class="p p1">P1</span></h3>
+<p>La liste de choix du fournisseur finit par « ＋ Nouveau fournisseur… » : une mini-fenêtre (nom, téléphone) s'ouvre
+  par-dessus, et le fournisseur créé est choisi d'office. <em>Le serveur n'a aujourd'hui que la lecture et l'import
+  (<code>SupplierController</code>) : il faut une création.</em></p>
+
+<div class="figure">
+<div class="mock-row">
+  <div class="mock-menu" style="width:260px">
+    <div class="grp">Fournisseur</div>
+    <div class="it">Sans fournisseur</div>
+    <div class="it">Grossiste Analakely <small>il y a 3 j</small></div>
+    <div class="it">SOCOLAIT</div>
+    <div class="sep"></div>
+    <div class="it new">＋ Nouveau fournisseur…</div>
+  </div>
+  <div class="mock-menu" style="width:260px">
+    <div class="grp">Rayon</div>
+    <div class="it">Épicerie › Riz</div>
+    <div class="it">Épicerie › Huile</div>
+    <div class="it">Boissons</div>
+    <div class="sep"></div>
+    <div class="it new">＋ Nouveau rayon…</div>
+  </div>
+  <div class="mock-menu" style="width:260px">
+    <div class="grp">Unité</div>
+    <div class="it">pièce <small>base</small></div>
+    <div class="it">carton <small>24 pièces</small></div>
+    <div class="sep"></div>
+    <div class="it new">＋ Nouvelle unité…</div>
+  </div>
+</div>
+<div class="caption">Figure 5 — Règle 4 : chaque liste de choix permet de créer ce qui manque, sans quitter la fenêtre.</div>
+</div>
+
+<h3><span class="id">UI-33</span>« ⋮ » sur les réceptions et les corrections passées <span class="p p2">P2</span></h3>
+<p>Les lignes de « Derniers approvisionnements » et de l'historique des corrections n'ont aucune action. Proposé :
+  <em>Voir le produit</em> (son « ⋮ »), <em>Imprimer le bon</em>, et <em>Annuler cette saisie</em> — qui ne supprime rien mais écrit
+  une correction inverse, pour garder l'historique (règle du compte rendu 22).</p>
+
+<h3><span class="id">UI-34</span>Page Fournisseurs avec un « ⋮ » <span class="p p2">P2</span></h3>
+<p>Bouton « ＋ Nouveau fournisseur » et, par ligne : <em>Modifier</em>, <em>Ses prix</em> (ce qu'on lui a acheté et à combien),
+  <em>Nouvelle réception de ce fournisseur</em>, <em>Ne plus proposer</em>. La phrase de la liste vide propose le bouton au lieu
+  de renvoyer à l'import.</p>
+
+<h3><span class="id">UI-35</span>Corriger le stock dans une autre unité <span class="p p3">P3</span></h3>
+<p>« 2 cartons cassés » au lieu de « 48 pièces » : la fenêtre de correction propose les unités du produit et relit
+  « 2 cartons = 48 pièces » (TODO §4, P3).</p>
+
+<h3><span class="id">UI-36</span>Inventaire d'un rayon <span class="p p3">P3</span></h3>
+<p>Depuis le « ⋮ » d'un rayon : « Compter ce rayon » ouvre la liste de ses produits avec une case « compté » ; les écarts
+  sont résumés avant validation, puis écrits en corrections « inventaire » (TODO §4, idée).</p>
+
+<!-- ================================================================== -->
+<h2 id="rayons">7. Rayons (catégories)</h2>
+
+<h3><span class="id">UI-40</span>Un « ⋮ » par rayon <span class="p p2">P2</span></h3>
+<p>Remplace les boutons Modifier / Supprimer : <em>Renommer</em>, <em>Changer l'image</em>, <em>Ajouter un sous-rayon</em>,
+  <em>Voir ses produits</em>, <em>Déplacer ses produits vers…</em>, <em>Compter ce rayon</em> (UI-36), <em>Supprimer</em> (la fenêtre
+  actuelle, qui demande où mettre les produits, est gardée).</p>
+
+<h3><span class="id">UI-41</span>Voir et ranger les produits d'un rayon <span class="p p2">P2</span></h3>
+<p>« Voir ses produits » ouvre une fenêtre : la liste du rayon, une recherche « Ajouter un produit à ce rayon », et sur chaque
+  ligne « Changer de rayon ». Aujourd'hui on ne range un produit que depuis sa fiche ou pendant un import.</p>
+
+<!-- ================================================================== -->
+<h2 id="vente">8. Vente, commandes, factures</h2>
+
+<h3><span class="id">UI-50</span>Numéro de facture cliquable partout <span class="p p1">P1</span></h3>
+<p>Dans les sorties de stock, les versements, l'historique du stock : le numéro ouvre la fenêtre de la facture
+  (<code>invoice-detail-dialog</code>, déjà existante).</p>
+
+<h3><span class="id">UI-51</span>« ⋮ » sur les factures <span class="p p3">P3</span></h3>
+<p>La fenêtre de facture a déjà ses actions (encaisser, servir, imprimer, annuler…). Le « ⋮ » de la ligne reprend les
+  mêmes, lues de <code>invoice-actions.ts</code> : imprimer ou encaisser sans ouvrir le détail.</p>
+
+<h3><span class="id">UI-52</span>« ⋮ » sur une ligne du panier <span class="p p3">P3</span></h3>
+<p><em>Changer d'unité</em>, <em>Changer la quantité</em>, <em>Retirer</em> — et plus tard <em>Remise</em> (TODO §4, décision attendue).
+  Les gestes actuels restent ; le menu les rend visibles à qui ne les connaît pas.</p>
+
+<h3><span class="id">UI-53</span>Pendant la vente, l'info utile sur le produit <span class="p p3">P3</span></h3>
+<p>Un appui long (ou clic droit) sur un produit montre sa fiche courte : stock restant par unité, prix de chaque unité.
+  Pour le responsable qui vend aussi, les entrées de son « ⋮ » produit y sont. <em>À trancher : ce que voit un caissier
+  (voir § 13).</em></p>
+
+<h3><span class="id">UI-54</span>Légende des touches toujours accessible <span class="p p3">P3</span></h3>
+<p>La légende F2 / F4 / F8 / F9 / F10 se cache sous 980 px. Un petit bouton « ⌨ » l'ouvre en fenêtre à la demande.</p>
+
+<!-- ================================================================== -->
+<h2 id="tableaux">9. Tableaux de bord et chiffres</h2>
+
+<h3><span class="id">UI-60</span>Les compteurs s'ouvrent au clic <span class="p p2">P2</span></h3>
+<div class="table-wrap"><table>
+  <tr><th>Compteur</th><th>Le clic ouvre</th></tr>
+  <tr><td>Produits en alerte (caisse, dépôt, admin)</td><td>la liste des produits en alerte, chacun avec son « ⋮ »</td></tr>
+  <tr><td>Commandes à remettre / à encaisser</td><td>la liste correspondante, filtrée</td></tr>
+  <tr><td>Produits sans prix d'entrée (Prix et unités)</td><td>le filtre « Sans prix d'entrée » appliqué</td></tr>
+  <tr><td>Produits vendus à perte</td><td>le filtre « Vendus à perte » appliqué</td></tr>
+</table></div>
+
+<h3><span class="id">UI-61</span>Badge « prix d'achat inconnu » → onglet Prix <span class="p p1">P1</span></h3>
+<p>Sur Bénéfices &amp; stock, le badge ouvre la configuration du produit sur l'onglet <em>Prix</em>, curseur dans le prix d'entrée.
+  Le bénéfice se recalcule à la fermeture.</p>
+
+<!-- ================================================================== -->
+<h2 id="admin">10. Utilisateurs, tables, configuration</h2>
+
+<h3><span class="id">UI-70</span>« ⋮ » des utilisateurs <span class="p p2">P2</span></h3>
+<p>Les trois boutons de chaque ligne deviennent un « ⋮ » : <em>Modifier</em>, <em>Rôles</em>, <em>Changer le mot de passe</em>,
+  <em>Désactiver</em> (en rouge, <strong>avec confirmation</strong> : « Marie ne pourra plus se connecter. Ses ventes sont gardées. »).</p>
+
+<h3><span class="id">UI-71</span>« ⋮ » des tables et QR codes <span class="p p3">P3</span></h3>
+<p><em>Renommer</em> (impossible aujourd'hui), <em>Copier le lien</em>, <em>Imprimer le QR</em>, <em>Nouveau code</em>, <em>Supprimer</em>.</p>
+
+<h3><span class="id">UI-72</span>Configuration de la boutique : dire ce qui change <span class="p p2">P2</span></h3>
+<p>Chaque interrupteur porte une phrase « Ce que ça change » (« Les caissiers verront “À encaisser” »). À l'enregistrement,
+  une fenêtre résume les écrans ajoutés ou retirés pour chaque rôle avant de valider : ces réglages changent le menu de
+  tout le personnel.</p>
+
+<!-- ================================================================== -->
+<h2 id="partout">11. Partout : aide, confirmations, annuler</h2>
+
+<h3><span class="id">UI-80</span>Listes vides qui proposent l'action <span class="p p1">P1</span></h3>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div><p>« Aucun fournisseur. Sans fournisseur, aucun approvisionnement ne peut être enregistré. »</p></div>
+  <div class="good"><div class="good-title">Attendu</div><p>« Aucun fournisseur pour l'instant. » <strong>[＋ Nouveau fournisseur]</strong> <strong>[Importer un fichier]</strong></p></div>
+</div>
+
+<h3><span class="id">UI-81</span>« Chargement… » distinct de « Aucun… » <span class="p p2">P2</span></h3>
+<p>Sur les tableaux de factures, de stock, fournisseurs, utilisateurs et les tableaux de bord, on lit « Aucune facture » pendant
+  le chargement ou après une erreur (TODO §7, P2). Trois états : <em>chargement</em>, <em>vide</em> (avec action), <em>erreur</em>
+  (avec « Réessayer »).</p>
+
+<h3><span class="id">UI-82</span>Confirmations cohérentes <span class="p p1">P1</span></h3>
+<div class="table-wrap"><table>
+  <tr><th>Geste</th><th>Aujourd'hui</th><th>Proposé</th></tr>
+  <tr><td>Remettre l'argent depuis « Argent en main », « Tout remettre »</td><td>immédiat</td><td>confirmation avec le montant, comme dans la facture</td></tr>
+  <tr><td>Désactiver un utilisateur</td><td>immédiat</td><td>confirmation (UI-70)</td></tr>
+  <tr><td>Enregistrer la configuration de la boutique</td><td>immédiat</td><td>résumé des changements (UI-72)</td></tr>
+  <tr><td>Mise à jour, retour arrière</td><td><code>window.confirm()</code> du navigateur</td><td>fenêtre de l'application, comme la restauration de sauvegarde</td></tr>
+  <tr><td>Réception, correction</td><td>immédiat</td><td>pas de confirmation, mais « Annuler » dans le message (UI-83)</td></tr>
+</table></div>
+
+<h3><span class="id">UI-83</span>« Annuler » dans le message <span class="p p2">P2</span></h3>
+<p>Après un geste qui se rattrape, le message du bas d'écran garde un bouton pendant quelques secondes :</p>
+<p style="text-align:center"><span class="mock-toast">Stock ajouté : 20 sacs de Riz 25 kg <u>Annuler</u></span></p>
+<p>« Annuler » écrit le mouvement inverse : rien ne s'efface, l'historique reste juste. Le service de messages
+  (<code>toast.service.ts</code>) n'a aujourd'hui pas de bouton : à ajouter.</p>
+
+<h3><span class="id">UI-84</span>Premiers pas guidés <span class="p p2">P2</span></h3>
+<p>Pour l'administrateur et le responsable de dépôt d'une boutique neuve, une carte « Votre boutique est prête à 40 % » sur le
+  tableau de bord, avec des cases qui se cochent seules :</p>
+<ul>
+  <li>☑ créer un premier produit · ☐ lui donner un prix d'entrée · ☐ ajouter un code-barres · ☐ ajouter du stock ·
+    ☐ créer un compte caissier · ☐ faire une première vente.</li>
+</ul>
+<p>Chaque case ouvre la fenêtre correspondante. La carte disparaît quand tout est coché, ou sur « Masquer ».</p>
+
+<h3><span class="id">UI-85</span>Une phrase d'aide par fenêtre <span class="p p3">P3</span></h3>
+<p>Un « ? » discret dans l'en-tête de chaque fenêtre déplie deux ou trois phrases et un exemple de la boutique
+  (« Le prix d'entrée est ce que vous payez au fournisseur… »). Pas de page d'aide séparée.</p>
+
+<h3><span class="id">UI-86</span>Sur téléphone : appui long et menu du bas <span class="p p3">P3</span></h3>
+<p>Un appui long sur une ligne ou une carte ouvre son « ⋮ ». Sous 600 px, le menu s'ouvre en panneau depuis le bas de l'écran
+  (plus facile au pouce) au lieu d'une petite liste sous le bouton.</p>
+
+<!-- ================================================================== -->
+<h2 id="technique">12. Pour le développeur</h2>
+<p>Tout part de l'existant ; aucune réécriture. Ce qui est à étendre :</p>
+<div class="table-wrap"><table>
+  <tr><th>Élément</th><th>Extension proposée</th><th>Points</th></tr>
+  <tr><td><code>shared/components/action-menu.component.ts</code></td>
+    <td>champs facultatifs dans <code>MenuAction</code> : <code>group</code> (titre), <code>hint</code> (petit texte à droite),
+      <code>disabledReason</code> (entrée grisée avec explication) ; panneau du bas sous 600 px ; appui long sur l'hôte</td><td>UI-02, UI-86</td></tr>
+  <tr><td><code>core/catalog/product-rights.ts</code></td><td>nouvelles entrées de <code>ProductAction</code>, toujours filtrées par rôle</td><td>UI-02</td></tr>
+  <tr><td><code>shared/components/product-dialogs.component.ts</code></td><td>nouveaux <code>@case</code> ; un <code>tab</code> transmis à la configuration</td><td>UI-02, UI-10, UI-61</td></tr>
+  <tr><td><code>product-units-dialog.component.ts</code></td><td>découpage en onglets (un composant par onglet), entrée <code>initialTab</code></td><td>UI-10, UI-20</td></tr>
+  <tr><td>nouveau <code>shared/components/product-picker.component.ts</code></td><td>recherche + douchette + caméra, réutilise <code>core/sale/product-finder.ts</code> et <code>scan-entry.ts</code></td><td>UI-30, UI-31</td></tr>
+  <tr><td>nouveau <code>shared/components/create-option</code> (« ＋ Nouveau… »)</td><td>dernière ligne d'une liste de choix qui ouvre une mini-fenêtre</td><td>UI-32, UI-12</td></tr>
+  <tr><td><code>core/services/toast.service.ts</code></td><td>bouton d'action facultatif (libellé + fonction), durée allongée dans ce cas</td><td>UI-12, UI-83</td></tr>
+  <tr><td><code>stock-table</code> sur les tableaux de bord</td><td><code>[manage]="true"</code> + <code>app-product-dialogs</code></td><td>UI-01</td></tr>
+  <tr><td>Serveur</td><td>création/modification de fournisseur ; seuil d'alerte par produit ; produit actif/retiré ; réception multi-lignes ; mouvement inverse</td><td>UI-32, UI-02, UI-31, UI-33, UI-83</td></tr>
+</table></div>
+<div class="compare">
+<div class="bad"><div class="bad-title">À éviter : un menu par écran</div>
+<pre><code>// prix-et-unites : boutons à part
+&lt;button (click)="configure(p)"&gt;Configurer&lt;/button&gt;
+&lt;button (click)="addStock(p)"&gt;＋ Stock&lt;/button&gt;</code></pre></div>
+<div class="good"><div class="good-title">Attendu : le menu partagé</div>
+<pre><code>&lt;app-product-menu [product]="p"
+  (action)="asked.set($event)" /&gt;
+&lt;app-product-dialogs [request]="asked()" … /&gt;</code></pre></div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="decisions">13. Décisions attendues</h2>
+<ul>
+  <li><strong>Code inconnu à la caisse</strong> (UI-21) : prévenir le responsable de dépôt par notification, ou seulement continuer la vente ?</li>
+  <li><strong>Ce que voit un caissier</strong> d'un produit pendant la vente (UI-53) : le stock restant, oui ou non ?</li>
+  <li><strong>Pages cachées</strong> (Sauvegardes, Mise à jour, Licence) : laissées hors menu exprès (comptes rendus 23 et 24). Les proposer dans
+    un menu « ⚙ » de l'administrateur, ou garder le choix actuel ?</li>
+  <li><strong>Prix proposés par marge</strong> (UI-10) et changement de prix de plusieurs produits à la fois : voulus ?</li>
+  <li><strong>Remise</strong> sur une ligne du panier (UI-52) : dépend de la décision du TODO §4.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="recap">14. Tableau récapitulatif</h2>
+<p>Ordre conseillé : les <span class="p p1">P1</span> d'abord (peu de code, gain immédiat), puis les <span class="p p2">P2</span>.</p>
+<div class="table-wrap"><table>
+  <tr><th>Repère</th><th>Amélioration</th><th>Priorité</th><th>Serveur ?</th></tr>
+  <tr><td>UI-01</td><td>« ⋮ » produit sur tableaux de bord, Prix et unités, Bénéfices &amp; stock</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-02</td><td>Menu produit complet, rangé par familles</td><td><span class="p p2">P2</span></td><td>en partie</td></tr>
+  <tr><td>UI-03</td><td>Fiche rapide au clic sur le produit</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-10</td><td>Configuration en onglets, ouverte sur le bon</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-11</td><td>Prix modifiable dans le tableau « Prix et unités »</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-12</td><td>Nouveau produit : l'essentiel d'abord, suite proposée</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-20</td><td>Onglet Codes-barres avec « Scanner »</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-21</td><td>Fenêtre « Code inconnu »</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-22</td><td>Scanner dans la recherche du stock</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-30</td><td>Sélecteur de produit : chercher ou scanner</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-31</td><td>Réception multi-produits en fenêtre</td><td><span class="p p2">P2</span></td><td>oui</td></tr>
+  <tr><td>UI-32</td><td>« ＋ Nouveau fournisseur » dans la liste</td><td><span class="p p1">P1</span></td><td>oui</td></tr>
+  <tr><td>UI-33</td><td>« ⋮ » sur réceptions et corrections passées</td><td><span class="p p2">P2</span></td><td>oui</td></tr>
+  <tr><td>UI-34</td><td>Page Fournisseurs avec « ⋮ »</td><td><span class="p p2">P2</span></td><td>oui</td></tr>
+  <tr><td>UI-35</td><td>Correction dans une autre unité</td><td><span class="p p3">P3</span></td><td>à vérifier</td></tr>
+  <tr><td>UI-36</td><td>Inventaire d'un rayon</td><td><span class="p p3">P3</span></td><td>oui</td></tr>
+  <tr><td>UI-40</td><td>« ⋮ » par rayon</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-41</td><td>Voir et ranger les produits d'un rayon</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-50</td><td>Numéro de facture cliquable partout</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-51</td><td>« ⋮ » sur les factures</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-52</td><td>« ⋮ » sur une ligne du panier</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-53</td><td>Fiche courte du produit pendant la vente</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-54</td><td>Légende des touches à la demande</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-60</td><td>Compteurs cliquables</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-61</td><td>Badge « prix d'achat inconnu » → onglet Prix</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-70</td><td>« ⋮ » des utilisateurs, désactivation confirmée</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-71</td><td>« ⋮ » des tables, renommer</td><td><span class="p p3">P3</span></td><td>oui</td></tr>
+  <tr><td>UI-72</td><td>Configuration boutique : ce qui change</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-80</td><td>Listes vides avec bouton d'action</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-81</td><td>Chargement / vide / erreur distincts</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-82</td><td>Confirmations cohérentes</td><td><span class="p p1">P1</span></td><td>non</td></tr>
+  <tr><td>UI-83</td><td>« Annuler » dans le message</td><td><span class="p p2">P2</span></td><td>oui</td></tr>
+  <tr><td>UI-84</td><td>Premiers pas guidés</td><td><span class="p p2">P2</span></td><td>non</td></tr>
+  <tr><td>UI-85</td><td>« ? » d'aide par fenêtre</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+  <tr><td>UI-86</td><td>Téléphone : appui long, menu du bas</td><td><span class="p p3">P3</span></td><td>non</td></tr>
+</table></div>
+
+</main>
+</body>
+</html>
