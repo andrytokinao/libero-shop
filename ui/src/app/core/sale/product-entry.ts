@@ -4,6 +4,7 @@ import { ToastService } from '../services/toast.service';
 import { Cart } from './cart';
 import type { ProductFinder } from './product-finder';
 import { ProductScanner, describeScan } from './product-scanner.service';
+import { baseUnitOf } from './sale-unit';
 import { parseScanEntry } from './scan-entry';
 
 /**
@@ -23,6 +24,8 @@ export class ProductEntry {
   private readonly toasts = inject(ToastService);
 
   readonly text = signal('');
+  /** The last code entered that no product carries, until the screen's dialog is closed. */
+  readonly unknownCode = signal<string | null>(null);
   readonly term: Signal<string> = computed(
     () => parseScanEntry(this.text())?.code.toLowerCase() ?? '',
   );
@@ -49,7 +52,12 @@ export class ProductEntry {
     }
     const matches = raw === this.text() ? this.matches() : [];
     this.scanner.scan(entry, this.cart, matches).subscribe((outcome) => {
-      this.toasts.show(describeScan(outcome));
+      // A code no product carries is not a dead end: the screen offers what to do with it.
+      if (outcome.kind === 'unknown') {
+        this.unknownCode.set(outcome.code);
+      } else {
+        this.toasts.show(describeScan(outcome));
+      }
       // Left alone if the cashier has already started on the next article meanwhile.
       if (outcome.kind !== 'ambiguous' && this.text() === raw) {
         this.text.set('');
@@ -59,5 +67,18 @@ export class ProductEntry {
 
   clear(): void {
     this.text.set('');
+  }
+
+  /** The article found by its name after an unknown code: one of it, in its base unit. */
+  addPicked(product: Product): void {
+    const unit = baseUnitOf(product);
+    const added = this.cart.add(product, 1, unit);
+    this.toasts.show(
+      describeScan(
+        added > 0
+          ? { kind: 'added', product, added, asked: 1, unit }
+          : { kind: 'out-of-stock', product, unit },
+      ),
+    );
   }
 }

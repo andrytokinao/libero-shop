@@ -1,4 +1,4 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
@@ -189,10 +189,12 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
     }
   `,
 })
-export class ProductCreateDialogComponent {
+export class ProductCreateDialogComponent implements OnInit {
   private readonly api = inject(CatalogApi);
   private readonly toasts = inject(ToastService);
 
+  /** A code already read — an unknown code scanned at the till — filled in from the start. */
+  readonly barcode = input('');
   /** The product as the server created it. */
   readonly created = output<Product>();
   readonly closed = output<void>();
@@ -235,6 +237,13 @@ export class ProductCreateDialogComponent {
       ? "Prix d'achat supérieur ou égal au prix de vente : ce produit serait vendu à perte."
       : null;
   });
+
+  /** Here rather than in a field: the inputs are not there yet before this. */
+  ngOnInit(): void {
+    if (this.barcode()) {
+      this.patch({ barcode: this.barcode() });
+    }
+  }
 
   protected patch(change: Partial<Draft>): void {
     this.draft.update((draft) => ({ ...draft, ...change }));

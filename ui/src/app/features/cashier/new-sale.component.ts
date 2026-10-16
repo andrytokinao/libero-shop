@@ -36,6 +36,7 @@ import {
 import { CatalogGridComponent, GridUnitPicked } from '../../shared/components/catalog-grid.component';
 import { CatalogListComponent } from '../../shared/components/catalog-list.component';
 import { CatalogViewToggleComponent } from '../../shared/components/catalog-view-toggle.component';
+import { UnknownCodeDialogComponent } from '../../shared/components/unknown-code-dialog.component';
 import { IconComponent } from '../../shared/components/icon.component';
 import { InvoiceDetailFlowComponent } from '../../shared/components/invoice-detail-flow.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -70,6 +71,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     CatalogGridComponent,
     CatalogListComponent,
     CatalogViewToggleComponent,
+    UnknownCodeDialogComponent,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   styles: `
@@ -467,6 +469,15 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
         (closed)="nextSale()"
       />
     }
+
+    @if (entry.unknownCode(); as code) {
+      <app-unknown-code-dialog
+        [code]="code"
+        (assigned)="entry.submit($event)"
+        (picked)="entry.addPicked($event)"
+        (closed)="entry.unknownCode.set(null); focusProductField()"
+      />
+    }
   `,
 })
 export class NewSaleComponent {
@@ -486,7 +497,9 @@ export class NewSaleComponent {
   /** Phone only: the basket brought up as a panel from the bottom bar's "Détails". */
   protected readonly cartSheetOpen = signal(false);
   /** A dialog is up: the till's keys wait, so F4 cannot hold a basket being paid for. */
-  private readonly dialogOpen = computed(() => this.checkoutOpen() || this.sold() !== null);
+  private readonly dialogOpen = computed(
+    () => this.checkoutOpen() || this.sold() !== null || this.entry.unknownCode() !== null,
+  );
 
   protected readonly cart = new Cart();
   private readonly reference = new SaleReference();

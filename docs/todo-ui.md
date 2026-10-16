@@ -17,7 +17,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-01** — « ⋮ » produit sur le tableau de bord du stock et la vue d'ensemble
   (`app-stock-table [manage]="true"` + `app-product-dialogs`), sur Prix et unités (à la place des
   boutons) et sur Bénéfices & stock.
-- [ ] **UI-21** — Code-barres inconnu : fenêtre « l'ajouter à un produit existant » / « créer le
+- [x] **UI-21** — Code-barres inconnu : fenêtre « l'ajouter à un produit existant » / « créer le
   produit » (code prérempli) pour qui peut modifier le catalogue ; recherche par nom sinon.
 - [ ] **UI-30** — Sélecteur de produit partagé (recherche dès 2 lettres, douchette, caméra, stock
   affiché) à la place des listes déroulantes d'Approvisionnement et de Corrections.

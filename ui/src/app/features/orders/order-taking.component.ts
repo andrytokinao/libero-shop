@@ -31,6 +31,7 @@ import {
 } from '../../shared/components/catalog-navigator.component';
 import { CatalogListComponent } from '../../shared/components/catalog-list.component';
 import { CatalogViewToggleComponent } from '../../shared/components/catalog-view-toggle.component';
+import { UnknownCodeDialogComponent } from '../../shared/components/unknown-code-dialog.component';
 import { CatalogViewService } from '../../core/services/catalog-view.service';
 import { FavoritesStore } from '../../core/store/favorites.store';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -57,6 +58,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     FolderTileComponent,
     CatalogListComponent,
     CatalogViewToggleComponent,
+    UnknownCodeDialogComponent,
   ],
   template: `
     <div class="order-top">
@@ -255,6 +257,15 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           </div>
         </div>
       </div>
+    }
+
+    @if (entry.unknownCode(); as code) {
+      <app-unknown-code-dialog
+        [code]="code"
+        (assigned)="entry.submit($event)"
+        (picked)="entry.addPicked($event)"
+        (closed)="entry.unknownCode.set(null)"
+      />
     }
   `,
   // The tiles, chips and bottom bar are in styles.scss: the customer's QR-code page uses them too.

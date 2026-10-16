@@ -67,4 +67,19 @@ describe('ProductEntry', () => {
     expect(cart.isEmpty()).toBeTrue();
     expect(entry.text()).toBe('riz');
   });
+
+  it('hands an unknown code to the screen instead of leaving the cashier at a dead end', () => {
+    shown = [];
+    entry.text.set('6111234567890');
+    entry.submit();
+
+    expect(entry.unknownCode()).toBe('6111234567890');
+    expect(entry.text()).toBe('');
+  });
+
+  it('puts one base unit of the article found by its name in the cart', () => {
+    entry.addPicked(riz);
+
+    expect(cart.quantityOf(riz)).toBe(1);
+  });
 });
