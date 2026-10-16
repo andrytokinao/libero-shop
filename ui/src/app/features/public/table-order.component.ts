@@ -8,8 +8,10 @@ import {
   PublicMenu,
   PublicMenuItem,
   PublicOrder,
+  PublicOrderRequest,
   PublicOrderStatus,
 } from '../../core/models';
+import { SaleReference } from '../../core/sale/sale-reference';
 import { formatAmount } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -390,6 +392,11 @@ export class TableOrderComponent implements OnInit {
   protected readonly customerName = signal('');
   protected readonly reviewing = signal(false);
   protected readonly sending = signal(false);
+  /**
+   * Names the order before it is sent, the same on every try of the same order: an order the
+   * server recorded but whose answer was lost on the Wi-Fi is answered again, not made twice.
+   */
+  private readonly reference = new SaleReference<Omit<PublicOrderRequest, 'clientReference'>>();
   /** The orders sent from this tab, newest first. */
   protected readonly sent = signal<PublicOrder[]>([]);
 
@@ -500,18 +507,24 @@ export class TableOrderComponent implements OnInit {
       return;
     }
     this.sending.set(true);
+    const draft = {
+      clientName: this.customerName().trim() || null,
+      lines: lines.map((l) => ({ productId: l.item.id, packagingId: l.unit.id, quantity: l.quantity })),
+    };
     this.api
-      .order(this.token, {
-        clientName: this.customerName().trim() || null,
-        lines: lines.map((l) => ({ productId: l.item.id, packagingId: l.unit.id, quantity: l.quantity })),
-      })
+      .order(this.token, { ...draft, clientReference: this.reference.for(draft) })
       .subscribe({
         next: (order) => {
           this.sending.set(false);
+          this.reference.renew();
           this.reviewing.set(false);
           this.quantities.set({});
           this.search.set('');
-          this.sent.update((orders) => [order, ...orders]);
+          // A retry answered with an order already listed is not listed twice.
+          this.sent.update((orders) => [
+            order,
+            ...orders.filter((o) => o.invoiceNumber !== order.invoiceNumber),
+          ]);
           this.storeSent();
           window.scrollTo({ top: 0, behavior: 'smooth' });
           this.toasts.show(`Commande ${order.invoiceNumber} envoyée : le serveur arrive.`);

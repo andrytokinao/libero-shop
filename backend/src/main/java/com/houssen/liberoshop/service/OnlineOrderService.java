@@ -30,6 +30,7 @@ import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -137,6 +138,13 @@ public class OnlineOrderService {
                         "Au plus " + MAX_UNITS_PER_LINE + " par article : demandez au serveur pour davantage.");
             }
         }
+        // Before the pause between two orders: a retry of an order already recorded is answered
+        // with it, not told to wait — and after the pause, not recorded a second time.
+        String reference = referenceOf(table, request);
+        Optional<InvoiceResponse> already = sales.recorded(reference, onlineAccount());
+        if (already.isPresent()) {
+            return toPublic(already.get(), table);
+        }
         LocalDateTime now = calendar.now();
         LocalDateTime previous = lastOrderAt.get(table.getId());
         if (previous != null && previous.plus(ORDER_INTERVAL).isAfter(now)) {
@@ -145,9 +153,29 @@ public class OnlineOrderService {
         }
 
         InvoiceResponse invoice = sales.checkout(new CreateSaleRequest(clientNameOf(table, request.clientName()),
-                PaymentStatus.UNPAID, PaymentMethod.CASH, request.lines()), onlineAccount());
+                PaymentStatus.UNPAID, PaymentMethod.CASH, request.lines(), reference), onlineAccount());
         lastOrderAt.put(table.getId(), now);
         return toPublic(invoice, table);
+    }
+
+    /**
+     * The order already recorded under the reference of this request, at this table. Asked after
+     * two identical posts raced past the lookup and the second was refused by the database.
+     */
+    @Transactional(readOnly = true)
+    public Optional<PublicOrderResponse> recorded(String token, PublicOrderRequest request) {
+        DiningTable table = openTable(token);
+        return sales.recorded(referenceOf(table, request), onlineAccount()).map(invoice -> toPublic(invoice, table));
+    }
+
+    /**
+     * The phone's reference, tied to its table: every online order is signed by the same account,
+     * so without the table a reference seen at another table would answer with that table's order.
+     * Null when the phone sent none.
+     */
+    private static String referenceOf(DiningTable table, PublicOrderRequest request) {
+        String reference = request.clientReference();
+        return reference == null || reference.isBlank() ? null : "table-" + table.getId() + ":" + reference.trim();
     }
 
     /** What the customer's phone polls to show "Servie": only the orders of that very table. */

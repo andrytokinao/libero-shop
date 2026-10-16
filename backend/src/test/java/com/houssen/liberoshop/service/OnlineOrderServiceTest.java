@@ -146,6 +146,33 @@ class OnlineOrderServiceTest {
     }
 
     @Test
+    @DisplayName("an order sent again with its reference is answered with the first one, not recorded twice")
+    void retriedOrder() {
+        DiningTableResponse table = table();
+        PublicOrderRequest request = new PublicOrderRequest("Rina",
+                List.of(new CreateSaleRequest.Line(dish.getId(), qty(2))), "a1b2c3");
+
+        PublicOrderResponse first = onlineOrders.order(table.token(), request);
+        // Within the pause between two orders: answered all the same, not told to wait.
+        PublicOrderResponse again = onlineOrders.order(table.token(), request);
+
+        assertEquals(first.invoiceNumber(), again.invoiceNumber());
+        assertEquals(0, qty(48).compareTo(products.findById(dish.getId()).orElseThrow().getStockQuantity()));
+    }
+
+    @Test
+    @DisplayName("the same reference at another table is that table's own order")
+    void referenceTiedToItsTable() {
+        List<CreateSaleRequest.Line> lines = List.of(new CreateSaleRequest.Line(dish.getId(), qty(1)));
+        PublicOrderResponse here = onlineOrders.order(table().token(), new PublicOrderRequest(null, lines, "meme"));
+        DiningTableResponse other = table();
+        PublicOrderResponse there = onlineOrders.order(other.token(), new PublicOrderRequest(null, lines, "meme"));
+
+        assertFalse(here.invoiceNumber().equals(there.invoiceNumber()));
+        assertEquals(other.name(), invoiceOf(there).clientName());
+    }
+
+    @Test
     @DisplayName("a withdrawn code, another table's order, or the switch off: nothing is served")
     void closedDoors() {
         DiningTableResponse table = table();

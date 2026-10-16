@@ -8,6 +8,7 @@ import com.houssen.liberoshop.web.dto.PublicOrderRequest;
 import com.houssen.liberoshop.web.dto.PublicOrderResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -53,7 +54,12 @@ public class PublicOrderController {
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
     public PublicOrderResponse order(@PathVariable String token, @Valid @RequestBody PublicOrderRequest request) {
-        return onlineOrders.order(token, request);
+        try {
+            return onlineOrders.order(token, request);
+        } catch (DataIntegrityViolationException refused) {
+            // The same order posted twice at once: the other post recorded it, answered with it.
+            return onlineOrders.recorded(token, request).orElseThrow(() -> refused);
+        }
     }
 
     @GetMapping("/orders/{invoiceNumber}")

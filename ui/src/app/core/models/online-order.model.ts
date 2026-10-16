@@ -42,6 +42,8 @@ export interface PublicOrderRequest {
   clientName: string | null;
   /** `packagingId` null for the base unit. */
   lines: { productId: number; packagingId: number | null; quantity: number }[];
+  /** The same on every try of one order, so a retry is not a second order (see SaleReference). */
+  clientReference?: string;
 }
 
 export type PublicOrderStatus = 'RECEIVED' | 'SERVED' | 'CANCELLED';

@@ -52,6 +52,7 @@ ou entretien.
   (`24-navigateur-apres-installation-et-sauvegardes-cachees.md`)
 - [x] Session gardée quand le serveur ne répond pas au démarrage
   (`25-session-gardee-quand-le-serveur-ne-repond-pas.md`)
+- [x] Commande par QR code enregistrée une seule fois (`26-commande-qr-envoyee-une-seule-fois.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -142,8 +143,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P1 — Vente en double si le réseau coupe à l'encaissement.** La caisse nomme chaque
   panier ; renvoyé, il reçoit la facture déjà faite.
   *Fait — voir `REALISATION-partie-3-argent.md`.*
-- [ ] **P2 — Commande par QR code envoyée deux fois.** Les commandes passées depuis une table
-  n'envoient pas de référence de panier : une coupure peut encore en créer deux.
+- [x] **P2 — Commande par QR code envoyée deux fois.** Le téléphone nomme chaque commande ;
+  renvoyée, elle est rendue au lieu d'être refaite. *Fait — voir
+  `26-commande-qr-envoyee-une-seule-fois.md`.*
 - [ ] **P2 — Le rapport journalier mélange deux dates.** Total par date de vente, répartition par
   date de paiement (`DashboardService`) : un crédit d'hier payé aujourd'hui fausse le
   rapprochement de caisse.

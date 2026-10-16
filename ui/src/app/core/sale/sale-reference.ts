@@ -16,12 +16,12 @@ export type SaleDraft = Omit<CreateSaleRequest, 'clientReference'>;
  * the server would answer with the first version of the sale, and the article just added would
  * leave the shop on no invoice at all.
  */
-export class SaleReference {
+export class SaleReference<Draft = SaleDraft> {
   private basket: string | null = null;
   private reference = '';
 
   /** The reference to post this draft under: the last one if nothing changed, else a new one. */
-  for(draft: SaleDraft): string {
+  for(draft: Draft): string {
     const basket = JSON.stringify(draft);
     if (basket !== this.basket) {
       this.basket = basket;
