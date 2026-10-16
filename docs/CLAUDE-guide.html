@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libero Shop — guide du CLAUDE.md</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Libero Shop — guide du <code>CLAUDE.md</code></h1>
+<p>État au 16 octobre 2026, branche <code>develop</code>.</p>
+<p>Ce document explique, avec des schémas, les règles écrites dans le fichier <code>CLAUDE.md</code> à la racine du projet. Le <code>CLAUDE.md</code> reste en Markdown : c'est lui que Claude lit automatiquement au début de chaque session. Cette page sert aux personnes : comprendre <em>pourquoi</em> chaque règle existe.</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé en 6 points</div>
+  <ol>
+    <li><strong>Commandes</strong> : JDK 21 dans <code>~/.jdks</code>, tests UI lancés avec Edge, pas de Python.</li>
+    <li><strong>Méthode</strong> : un point du <code>docs/TODO.md</code> = code + tests + compte rendu + un commit, puis le point suivant.</li>
+    <li><strong>Architecture</strong> : en couches <code>web → service → repository</code>, les entités ne sortent jamais du service, l'API ne parle qu'en DTO.</li>
+    <li><strong>SOLID</strong> : services à une seule responsabilité, injection par constructeur, Strategy plutôt qu'un <code>switch</code> qui grossit.</li>
+    <li><strong>Argent et quantités</strong> : <code>BigDecimal</code> avec arrondi explicite, jamais de <code>double</code>.</li>
+    <li><strong>Discipline</strong> : pas de pattern « au cas où », pas de refactoring hors du point en cours, chaque règle métier a son test.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+<li><a href="#1-role">1. À quoi sert le CLAUDE.md</a></li>
+<li><a href="#2-commandes">2. Commandes</a></li>
+<li><a href="#3-methode">3. Façon de travailler</a></li>
+<li><a href="#4-architecture">4. Architecture backend</a></li>
+<li><a href="#5-solid">5. SOLID appliqué</a></li>
+<li><a href="#6-patterns">6. Design patterns</a></li>
+<li><a href="#7-regles">7. Règles générales</a></li>
+<li><a href="#8-angular">8. Angular</a></li>
+<li><a href="#9-interdits">9. À ne pas faire</a></li>
+<li><a href="#10-recap">10. Récapitulatif</a></li>
+</ul></nav>
+
+<!-- ============================================================ -->
+<h2 id="1-role">1. À quoi sert le CLAUDE.md</h2>
+<p>Claude ne garde aucun souvenir d'une session à l'autre. Le <code>CLAUDE.md</code> est relu à chaque démarrage : c'est la « fiche d'accueil » du projet. On y met uniquement ce qu'on ne peut pas deviner en lisant le code.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 190" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="14">
+  <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect x="20" y="55" width="170" height="80" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/>
+  <text x="105" y="88" text-anchor="middle" font-weight="700">Nouvelle session</text>
+  <text x="105" y="110" text-anchor="middle" fill="#5d6873">Claude ne sait rien</text>
+  <rect x="250" y="55" width="170" height="80" rx="10" fill="#fff" stroke="#1f6f5c" stroke-width="2"/>
+  <text x="335" y="88" text-anchor="middle" font-weight="700">Lit CLAUDE.md</text>
+  <text x="335" y="110" text-anchor="middle" fill="#5d6873">automatiquement</text>
+  <rect x="480" y="20" width="170" height="44" rx="8" fill="#fff" stroke="#dde3e8"/>
+  <text x="565" y="47" text-anchor="middle">commandes exactes</text>
+  <rect x="480" y="73" width="170" height="44" rx="8" fill="#fff" stroke="#dde3e8"/>
+  <text x="565" y="100" text-anchor="middle">méthode de travail</text>
+  <rect x="480" y="126" width="170" height="44" rx="8" fill="#fff" stroke="#dde3e8"/>
+  <text x="565" y="153" text-anchor="middle">règles de code</text>
+  <rect x="700" y="55" width="140" height="80" rx="10" fill="#1f6f5c"/>
+  <text x="770" y="88" text-anchor="middle" fill="#fff" font-weight="700">Code conforme</text>
+  <text x="770" y="110" text-anchor="middle" fill="#e8f3ef">au projet</text>
+  <line x1="190" y1="95" x2="246" y2="95" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="420" y1="95" x2="476" y2="42" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="420" y1="95" x2="476" y2="95" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="420" y1="95" x2="476" y2="148" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="650" y1="95" x2="696" y2="95" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a1)"/>
+</svg>
+<div class="caption">Figure 1 — Le CLAUDE.md remplace l'explication qu'on donnerait à un nouveau développeur.</div>
+</div>
+
+<div class="compare">
+  <div class="good"><div class="good-title">Ce qu'on y met</div>
+    <ul><li>commandes qu'on peut copier telles quelles</li><li>pièges propres à la machine (JDK, Edge)</li><li>règles chiffrées et vérifiables</li></ul></div>
+  <div class="bad"><div class="bad-title">Ce qu'on n'y met pas</div>
+    <ul><li>la liste des fichiers (Claude sait les lire)</li><li>des généralités (« écrire du code propre »)</li><li>des textes longs : chaque ligne coûte du contexte</li></ul></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="2-commandes">2. Commandes</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Besoin</th><th>Commande</th><th>Pourquoi c'est écrit</th></tr></thead>
+<tbody>
+<tr><td>Tests backend</td><td><code>export JAVA_HOME=~/.jdks/ms-21.0.12.1</code><br><code>cd backend &amp;&amp; ./mvnw -o -DskipFrontend=true test</code></td><td>Le Java du système n'est pas le 21. <code>-o</code> : hors ligne ; <code>-DskipFrontend</code> : ne pas reconstruire Angular.</td></tr>
+<tr><td>Tests UI</td><td><code>export CHROME_BIN=".../msedge.exe"</code><br><code>cd ui &amp;&amp; npx ng test --watch=false</code></td><td>Chrome n'est pas installé ; Karma utilise Edge à la place.</td></tr>
+<tr><td>Scripts</td><td>—</td><td>Python n'est pas installé : utiliser bash, PowerShell ou Java.</td></tr>
+</tbody></table></div>
+
+<!-- ============================================================ -->
+<h2 id="3-methode">3. Façon de travailler</h2>
+<p>Le <code>docs/TODO.md</code> est traité point par point, en boucle, sans attendre de validation entre deux points. L'utilisateur relit l'ensemble à la fin.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="14">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker>
+        <marker id="a2r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b23b3b"/></marker></defs>
+  <g text-anchor="middle">
+    <rect x="20"  y="40" width="120" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/><text x="80"  y="64" font-weight="700">1. Lire</text><text x="80" y="84" font-size="12" fill="#5d6873">point du TODO</text>
+    <rect x="185" y="40" width="120" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/><text x="245" y="64" font-weight="700">2. Coder</text><text x="245" y="84" font-size="12" fill="#5d6873">+ tests</text>
+    <rect x="350" y="40" width="120" height="56" rx="10" fill="#fff" stroke="#1f6f5c" stroke-width="2"/><text x="410" y="64" font-weight="700">3. Tests</text><text x="410" y="84" font-size="12" fill="#5d6873">verts ?</text>
+    <rect x="515" y="40" width="140" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/><text x="585" y="64" font-weight="700">4. Cocher</text><text x="585" y="84" font-size="12" fill="#5d6873">docs/TODO.md</text>
+    <rect x="700" y="40" width="140" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/><text x="770" y="64" font-weight="700">5. Compte rendu</text><text x="770" y="84" font-size="12" fill="#5d6873">docs/NN-xxx.md</text>
+    <rect x="700" y="190" width="140" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/><text x="770" y="214" font-weight="700">6. Commit</text><text x="770" y="234" font-size="12" fill="#5d6873">un seul, sans accents</text>
+    <rect x="515" y="190" width="140" height="56" rx="10" fill="#1f6f5c"/><text x="585" y="214" font-weight="700" fill="#fff">7. Push</text><text x="585" y="234" font-size="12" fill="#e8f3ef">develop</text>
+  </g>
+  <line x1="140" y1="68" x2="181" y2="68" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="305" y1="68" x2="346" y2="68" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="470" y1="68" x2="511" y2="68" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/><text x="490" y="60" font-size="12" text-anchor="middle" fill="#1f6f5c">oui</text>
+  <line x1="655" y1="68" x2="696" y2="68" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="770" y1="96" x2="770" y2="186" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="700" y1="218" x2="659" y2="218" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a2)"/>
+  <path d="M515,218 L80,218 L80,100" fill="none" stroke="#1f6f5c" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a2)"/>
+  <text x="300" y="240" font-size="13" text-anchor="middle" fill="#1f6f5c">point suivant</text>
+  <path d="M410,96 L410,140 L245,140 L245,100" fill="none" stroke="#b23b3b" stroke-width="2" marker-end="url(#a2r)"/>
+  <text x="330" y="160" font-size="12" text-anchor="middle" fill="#b23b3b">non : corriger</text>
+  <text x="430" y="285" font-size="12" text-anchor="middle" fill="#5d6873">Les points marqués « décision attendue » sont sautés et signalés dans le rapport final.</text>
+</svg>
+<div class="caption">Figure 2 — Cycle d'un point du TODO.</div>
+</div>
+
+<p><strong>Pourquoi un commit par point ?</strong> Chaque commit raconte une seule fonctionnalité : facile à relire, facile à annuler (<code>git revert</code>) si un point pose problème, sans toucher aux autres.</p>
+
+<!-- ============================================================ -->
+<h2 id="4-architecture">4. Architecture backend</h2>
+<p>Le backend est organisé <strong>en couches</strong>. Chaque couche ne parle qu'à celle du dessous. C'est l'organisation actuelle du code (<code>web/</code>, <code>service/</code>, <code>repository/</code>, <code>entity/</code>) : la règle demande de la garder propre, pas de la changer.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 430" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="14">
+  <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker>
+        <marker id="a3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6b00"/></marker></defs>
+  <!-- UI -->
+  <rect x="160" y="10" width="340" height="46" rx="10" fill="#fff" stroke="#5d6873" stroke-dasharray="5 4"/>
+  <text x="330" y="38" text-anchor="middle" font-weight="700">Interface Angular (ui/)</text>
+  <!-- web -->
+  <rect x="160" y="90" width="340" height="66" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/>
+  <text x="330" y="116" text-anchor="middle" font-weight="700">web/ — contrôleurs REST</text>
+  <text x="330" y="138" text-anchor="middle" font-size="12" fill="#5d6873">valide le DTO (@Valid) · appelle UN service · renvoie un DTO</text>
+  <!-- service -->
+  <rect x="160" y="190" width="340" height="76" rx="10" fill="#1f6f5c"/>
+  <text x="330" y="218" text-anchor="middle" font-weight="700" fill="#fff">service/ — logique métier</text>
+  <text x="330" y="240" text-anchor="middle" font-size="12" fill="#e8f3ef">règles de prix, stock, unités · @Transactional</text>
+  <!-- repository -->
+  <rect x="160" y="300" width="340" height="56" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/>
+  <text x="330" y="333" text-anchor="middle" font-weight="700">repository/ — accès aux données</text>
+  <!-- DB -->
+  <ellipse cx="330" cy="398" rx="90" ry="18" fill="#fff" stroke="#5d6873"/>
+  <text x="330" y="403" text-anchor="middle" fill="#5d6873">base de données</text>
+  <!-- arrows -->
+  <line x1="330" y1="56" x2="330" y2="86" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a3)"/><text x="345" y="76" font-size="12" fill="#5d6873">JSON (DTO)</text>
+  <line x1="330" y1="156" x2="330" y2="186" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a3)"/>
+  <line x1="330" y1="266" x2="330" y2="296" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a3)"/>
+  <line x1="330" y1="356" x2="330" y2="378" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a3)"/>
+  <!-- side: dto / entity -->
+  <rect x="10" y="98" width="120" height="50" rx="8" fill="#fff" stroke="#dde3e8"/>
+  <text x="70" y="120" text-anchor="middle" font-weight="600">web/dto</text><text x="70" y="138" text-anchor="middle" font-size="12" fill="#5d6873">records Java</text>
+  <rect x="10" y="300" width="120" height="56" rx="8" fill="#fff" stroke="#dde3e8"/>
+  <text x="70" y="324" text-anchor="middle" font-weight="600">entity/</text><text x="70" y="342" text-anchor="middle" font-size="12" fill="#5d6873">restent ici</text>
+  <line x1="130" y1="123" x2="160" y2="123" stroke="#dde3e8" stroke-width="2"/>
+  <path d="M130,328 L145,328 L145,228 L160,228" fill="none" stroke="#dde3e8" stroke-width="2"/>
+  <!-- ports -->
+  <text x="690" y="200" text-anchor="middle" font-weight="700" fill="#9a6b00">Ports (interfaces)</text>
+  <rect x="580" y="212" width="220" height="34" rx="8" fill="#fdf4e1" stroke="#9a6b00"/><text x="690" y="234" text-anchor="middle">fichiers / sauvegardes</text>
+  <rect x="580" y="252" width="220" height="34" rx="8" fill="#fdf4e1" stroke="#9a6b00"/><text x="690" y="274" text-anchor="middle">réseau / licence / mises à jour</text>
+  <rect x="580" y="292" width="220" height="34" rx="8" fill="#fdf4e1" stroke="#9a6b00"/><text x="690" y="314" text-anchor="middle">horloge (Clock)</text>
+  <line x1="500" y1="240" x2="576" y2="268" stroke="#9a6b00" stroke-width="2" marker-end="url(#a3g)"/>
+  <text x="690" y="350" text-anchor="middle" font-size="12" fill="#5d6873">remplaçables par un faux dans les tests</text>
+  <!-- forbidden -->
+  <path d="M520,123 C600,123 600,333 504,333" fill="none" stroke="#b23b3b" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="608" y="132" font-size="12" fill="#b23b3b">✗ web → repository interdit</text>
+</svg>
+<div class="caption">Figure 3 — Les couches et leurs dépendances. Les flèches vont toujours vers le bas.</div>
+</div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Couche</th><th>Fait</th><th>Ne fait jamais</th></tr></thead>
+<tbody>
+<tr><td><code>web/</code></td><td>Valider l'entrée, appeler un service, convertir en DTO</td><td>Calculer un prix, ouvrir une transaction, appeler un repository</td></tr>
+<tr><td><code>service/</code></td><td>Règles métier, transactions, orchestration</td><td>Connaître <code>HttpServletRequest</code> ou les DTO web</td></tr>
+<tr><td><code>repository/</code></td><td>Lire et écrire en base</td><td>Contenir une règle métier</td></tr>
+<tr><td><code>entity/</code></td><td>Représenter les données persistées</td><td>Être renvoyée telle quelle par l'API</td></tr>
+</tbody></table></div>
+
+<div class="compare">
+<div class="bad"><div class="bad-title">À éviter : logique dans le contrôleur</div>
+<pre><code>@PostMapping("/sales")
+Sale create(@RequestBody Sale s) {
+  s.setTotal(s.getQty() * s.getPrice());
+  return saleRepository.save(s);
+}</code></pre></div>
+<div class="good"><div class="good-title">Attendu : contrôleur mince</div>
+<pre><code>@PostMapping("/sales")
+SaleResponse create(@Valid @RequestBody
+                    CreateSaleRequest req) {
+  return saleService.checkout(req);
+}</code></pre></div>
+</div>
+
+<div class="note"><strong>Et l'architecture hexagonale ?</strong> Elle n'est pas imposée. Migrer 50 services d'un coup laisserait le code à moitié en couches, à moitié hexagonal, ce qui est pire que l'un ou l'autre. On en garde l'idée utile : les <em>ports</em>. Tout ce qui touche l'extérieur (fichiers, réseau, horloge) passe par une interface, pour pouvoir le remplacer par un faux dans les tests. Si un jour on veut aller plus loin, on le fait sur un module isolé (<code>license/</code> ou <code>backup/</code>), comme point dédié du TODO.</div>
+
+<!-- ============================================================ -->
+<h2 id="5-solid">5. SOLID appliqué</h2>
+<p>Cinq principes, chacun traduit en règle concrète pour le projet.</p>
+<div class="cards">
+  <div class="card"><h4><span class="letter">S</span>Responsabilité unique</h4>
+    <p>Un service = une raison de changer. Au-delà de ~300 lignes, on découpe.</p>
+    <p style="font-size:13px;color:#5d6873">Ex. : <code>PurchaseCosting</code> (coût d'achat) séparé de <code>CostingService</code>.</p></div>
+  <div class="card"><h4><span class="letter">O</span>Ouvert / fermé</h4>
+    <p>Ajouter une variante = ajouter une classe, pas modifier un <code>switch</code>.</p>
+    <p style="font-size:13px;color:#5d6873">Ex. : un nouveau moyen de paiement ne touche pas le code des anciens.</p></div>
+  <div class="card"><h4><span class="letter">L</span>Substitution de Liskov</h4>
+    <p>Toute implémentation respecte le contrat de son interface.</p>
+    <p style="font-size:13px;color:#5d6873">Signe d'erreur : une méthode qui lance <code>UnsupportedOperationException</code>.</p></div>
+  <div class="card"><h4><span class="letter">I</span>Ségrégation des interfaces</h4>
+    <p>Des interfaces petites, ciblées sur un besoin.</p>
+    <p style="font-size:13px;color:#5d6873">Mieux deux interfaces de 2 méthodes qu'une de 12.</p></div>
+  <div class="card"><h4><span class="letter">D</span>Inversion des dépendances</h4>
+    <p>Injection par constructeur, champs <code>final</code>. Dépendre d'interfaces pour l'extérieur.</p>
+    <p style="font-size:13px;color:#5d6873">Pas de <code>@Autowired</code> sur les champs.</p></div>
+</div>
+
+<h3>Exemple : injection par constructeur (D)</h3>
+<div class="compare">
+<div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>@Service
+class StockService {
+  @Autowired
+  private ProductRepository repo;
+}</code></pre>
+<p style="font-size:13px">Dépendance cachée, impossible à fournir dans un test sans Spring.</p></div>
+<div class="good"><div class="good-title">Attendu</div>
+<pre><code>@Service
+class StockService {
+  private final ProductRepository repo;
+  StockService(ProductRepository repo) {
+    this.repo = repo;
+  }
+}</code></pre>
+<p style="font-size:13px">Dépendance visible, objet immuable, testable avec un simple <code>new</code>.</p></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="6-patterns">6. Design patterns</h2>
+<p>Un pattern n'est utile que s'il résout un problème présent. La figure 4 sert de guide de décision.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="14">
+  <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <g text-anchor="middle">
+    <rect x="300" y="10" width="260" height="44" rx="22" fill="#1f6f5c"/><text x="430" y="37" fill="#fff" font-weight="700">Quel est le besoin ?</text>
+    <rect x="10"  y="100" width="200" height="56" rx="8" fill="#fff" stroke="#1f6f5c"/><text x="110" y="124">Une règle qui varie</text><text x="110" y="144" font-size="12" fill="#5d6873">selon un type</text>
+    <rect x="225" y="100" width="200" height="56" rx="8" fill="#fff" stroke="#1f6f5c"/><text x="325" y="124">Créer un objet</text><text x="325" y="144" font-size="12" fill="#5d6873">complexe ou un DTO</text>
+    <rect x="440" y="100" width="200" height="56" rx="8" fill="#fff" stroke="#1f6f5c"/><text x="540" y="124">Un montant, une</text><text x="540" y="144" font-size="12" fill="#5d6873">quantité, une conversion</text>
+    <rect x="655" y="100" width="195" height="56" rx="8" fill="#fff" stroke="#1f6f5c"/><text x="752" y="124">Une seule</text><text x="752" y="144" font-size="12" fill="#5d6873">implémentation prévue</text>
+    <rect x="10"  y="200" width="200" height="56" rx="8" fill="#e8f3ef" stroke="#1f6f5c"/><text x="110" y="234" font-weight="700">Strategy</text>
+    <rect x="225" y="200" width="200" height="56" rx="8" fill="#e8f3ef" stroke="#1f6f5c"/><text x="325" y="224" font-weight="700">Factory</text><text x="325" y="244" font-size="12" fill="#5d6873">méthode statique of(...)</text>
+    <rect x="440" y="200" width="200" height="56" rx="8" fill="#e8f3ef" stroke="#1f6f5c"/><text x="540" y="224" font-weight="700">Value Object</text><text x="540" y="244" font-size="12" fill="#5d6873">record + BigDecimal</text>
+    <rect x="655" y="200" width="195" height="56" rx="8" fill="#fdf4e1" stroke="#9a6b00"/><text x="752" y="224" font-weight="700">Aucun pattern</text><text x="752" y="244" font-size="12" fill="#5d6873">une classe concrète</text>
+  </g>
+  <line x1="430" y1="54" x2="110" y2="96" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="430" y1="54" x2="325" y2="96" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="430" y1="54" x2="540" y2="96" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="430" y1="54" x2="752" y2="96" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="110" y1="156" x2="110" y2="196" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a4)"/>
+  <line x1="325" y1="156" x2="325" y2="196" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a4)"/>
+  <line x1="540" y1="156" x2="540" y2="196" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a4)"/>
+  <line x1="752" y1="156" x2="752" y2="196" stroke="#9a6b00" stroke-width="2" marker-end="url(#a4)"/>
+  <text x="430" y="300" text-anchor="middle" font-size="13" fill="#5d6873">Pas de pattern « au cas où » : l'abstraction se paie en lisibilité dès qu'elle est inutile.</text>
+</svg>
+<div class="caption">Figure 4 — Choisir un pattern selon le besoin.</div>
+</div>
+
+<h3>Strategy plutôt qu'un switch qui grossit</h3>
+<div class="figure">
+<svg viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="13">
+  <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker>
+        <marker id="a5o" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L11,6 L0,12 z" fill="#fff" stroke="#1f6f5c"/></marker></defs>
+  <rect x="20" y="80" width="170" height="56" rx="8" fill="#1f6f5c"/><text x="105" y="104" text-anchor="middle" fill="#fff" font-weight="700">PaymentService</text><text x="105" y="122" text-anchor="middle" fill="#e8f3ef">utilise l'interface</text>
+  <rect x="290" y="80" width="200" height="56" rx="8" fill="#fff" stroke="#1f6f5c" stroke-width="2"/><text x="390" y="102" text-anchor="middle" font-style="italic">«interface»</text><text x="390" y="122" text-anchor="middle" font-weight="700">PaymentMethod</text>
+  <line x1="190" y1="108" x2="286" y2="108" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a5)"/>
+  <rect x="610" y="15"  width="200" height="40" rx="8" fill="#e8f3ef" stroke="#1f6f5c"/><text x="710" y="40" text-anchor="middle">CashPayment</text>
+  <rect x="610" y="88"  width="200" height="40" rx="8" fill="#e8f3ef" stroke="#1f6f5c"/><text x="710" y="113" text-anchor="middle">MobileMoneyPayment</text>
+  <rect x="610" y="161" width="200" height="40" rx="8" fill="#fdf4e1" stroke="#9a6b00" stroke-dasharray="5 4"/><text x="710" y="186" text-anchor="middle">NouveauPayment (ajout)</text>
+  <line x1="606" y1="35"  x2="494" y2="100" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a5o)"/>
+  <line x1="606" y1="108" x2="494" y2="108" stroke="#1f6f5c" stroke-width="1.5" marker-end="url(#a5o)"/>
+  <line x1="606" y1="181" x2="494" y2="116" stroke="#9a6b00" stroke-width="1.5" marker-end="url(#a5o)"/>
+</svg>
+<div class="caption">Figure 5 — Ajouter un moyen de paiement = ajouter une classe. Rien d'existant n'est modifié (principe O). Noms donnés à titre d'illustration.</div>
+</div>
+
+<h3>Value Object pour l'argent</h3>
+<div class="compare">
+<div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>double total = 0.1 + 0.2;
+// 0.30000000000000004</code></pre>
+<p style="font-size:13px">Le <code>double</code> ne sait pas représenter exactement 0,1 : les écarts s'accumulent sur les caisses et les rapports.</p></div>
+<div class="good"><div class="good-title">Attendu</div>
+<pre><code>BigDecimal total = new BigDecimal("0.1")
+    .add(new BigDecimal("0.2"))
+    .setScale(2, RoundingMode.HALF_UP);
+// 0.30</code></pre>
+<p style="font-size:13px">Exact, avec un arrondi choisi et écrit noir sur blanc.</p></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="7-regles">7. Règles générales</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Règle</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td>Méthodes courtes, vocabulaire de la boutique (vente, sortie, approvisionnement, unité)</td><td>Le code se lit comme le métier ; un nom clair évite un commentaire.</td></tr>
+<tr><td>Pas de <code>null</code> en retour : <code>Optional</code> ou exception métier</td><td>Supprime les <code>NullPointerException</code> surprises et rend l'absence explicite.</td></tr>
+<tr><td>Exceptions métier dédiées, un seul <code>@RestControllerAdvice</code></td><td>Toutes les erreurs HTTP ont le même format, à un seul endroit.</td></tr>
+<tr><td>Chercher avant d'écrire (<code>util/</code>, <code>service/</code>)</td><td>Une règle de calcul dupliquée finit toujours par diverger.</td></tr>
+<tr><td>Chaque règle métier a son test, nommé par comportement</td><td>Le nom du test (<code>sortieValoriseeAuPrixDeVente</code>) documente la règle.</td></tr>
+<tr><td>Pas de refactoring hors du point en cours</td><td>Un point du TODO reste un petit commit relisible ; les améliorations repérées vont dans le compte rendu.</td></tr>
+</tbody></table></div>
+
+<!-- ============================================================ -->
+<h2 id="8-angular">8. Angular</h2>
+<div class="figure">
+<svg viewBox="0 0 860 230" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="14">
+  <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <g text-anchor="middle">
+    <rect x="20" y="20" width="250" height="90" rx="10" fill="#e8f3ef" stroke="#1f6f5c"/>
+    <text x="145" y="48" font-weight="700">features/</text>
+    <text x="145" y="70" font-size="12" fill="#5d6873">un dossier par fonctionnalité</text>
+    <text x="145" y="90" font-size="12" fill="#5d6873">composants standalone : affichage</text>
+    <rect x="20" y="130" width="250" height="80" rx="10" fill="#fff" stroke="#1f6f5c"/>
+    <text x="145" y="160" font-weight="700">shared/</text>
+    <text x="145" y="182" font-size="12" fill="#5d6873">seulement ce qui est réutilisé</text>
+    <rect x="330" y="20" width="250" height="190" rx="10" fill="#1f6f5c"/>
+    <text x="455" y="48" font-weight="700" fill="#fff">core/</text>
+    <text x="455" y="80"  font-size="13" fill="#e8f3ef">services : logique + HTTP</text>
+    <text x="455" y="104" font-size="13" fill="#e8f3ef">models : types stricts</text>
+    <text x="455" y="128" font-size="13" fill="#e8f3ef">guards, interceptors</text>
+    <text x="455" y="152" font-size="13" fill="#e8f3ef">realtime, store</text>
+    <rect x="640" y="85" width="200" height="60" rx="10" fill="#fff" stroke="#5d6873" stroke-dasharray="5 4"/>
+    <text x="740" y="112" font-weight="700">API backend</text>
+    <text x="740" y="132" font-size="12" fill="#5d6873">web/ (DTO JSON)</text>
+  </g>
+  <line x1="270" y1="65"  x2="326" y2="65"  stroke="#1f6f5c" stroke-width="2" marker-end="url(#a6)"/>
+  <line x1="270" y1="170" x2="326" y2="170" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a6)"/>
+  <line x1="580" y1="115" x2="636" y2="115" stroke="#1f6f5c" stroke-width="2" marker-end="url(#a6)"/>
+</svg>
+<div class="caption">Figure 6 — Les composants affichent, les services de <code>core/</code> pensent et parlent au serveur.</div>
+</div>
+<ul>
+  <li>Composants <strong>standalone</strong>, sans logique métier ni appel HTTP direct.</li>
+  <li>Types stricts dans <code>models/</code>, jamais de <code>any</code> : les erreurs apparaissent à la compilation, pas chez le client.</li>
+  <li>Désabonnement automatique (<code>takeUntilDestroyed</code>, pipe <code>async</code>) : pas de fuite mémoire quand on change d'écran.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="9-interdits">9. À ne pas faire</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">✗ Commiter sur master</div><p>On travaille sur <code>develop</code> ; <code>master</code> reçoit les versions livrées.</p></div>
+  <div class="bad"><div class="bad-title">✗ Modifier une migration livrée</div><p>Elle a déjà tourné chez les clients. On en ajoute une nouvelle dans <code>bootstrap/</code>, avec son test.</p></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="10-recap">10. Récapitulatif</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Thème</th><th>Règle en une ligne</th><th>Gain</th></tr></thead>
+<tbody>
+<tr><td>Commandes</td><td>JDK 21 de <code>~/.jdks</code>, Edge pour Karma</td><td>Les tests tournent du premier coup</td></tr>
+<tr><td>Méthode</td><td>Un point du TODO = un commit testé + compte rendu</td><td>Historique lisible, retour arrière facile</td></tr>
+<tr><td>Couches</td><td><code>web → service → repository</code>, DTO en sortie</td><td>Logique au même endroit, API stable</td></tr>
+<tr><td>Ports</td><td>Interface pour fichiers, réseau, horloge</td><td>Tests sans dépendance extérieure</td></tr>
+<tr><td>SOLID</td><td>Petits services, injection par constructeur, Strategy</td><td>Ajouter sans casser</td></tr>
+<tr><td>Argent</td><td><code>BigDecimal</code> + <code>RoundingMode</code></td><td>Caisse juste au centime</td></tr>
+<tr><td>Patterns</td><td>Seulement s'ils répondent à un besoin présent</td><td>Code simple</td></tr>
+<tr><td>Tests</td><td>Chaque règle métier testée, nommée par comportement</td><td>Les régressions se voient tout de suite</td></tr>
+<tr><td>Périmètre</td><td>Pas de refactoring hors du point</td><td>Commits petits et relisibles</td></tr>
+<tr><td>Angular</td><td>Standalone, logique dans <code>core/</code>, pas de <code>any</code></td><td>Composants simples, erreurs à la compilation</td></tr>
+</tbody></table></div>
+
+</main>
+</body>
+</html>
