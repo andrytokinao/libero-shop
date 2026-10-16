@@ -5,6 +5,7 @@ import { CatalogApi } from '../../core/api/catalog.api';
 import { CategoryNode, CreateProductRequest, Product } from '../../core/models';
 import { formatAmount } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
+import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { CategoryPickerComponent } from './category-picker.component';
 
 /** The form as typed. Strings because an empty field is not zero. */
@@ -32,7 +33,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
 @Component({
   selector: 'app-product-create-dialog',
   standalone: true,
-  imports: [FormsModule, CategoryPickerComponent],
+  imports: [FormsModule, CameraScanButtonComponent, CategoryPickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -42,7 +43,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             <h2 id="pn-title">Nouveau produit</h2>
             <div class="sub muted">
               Le nom et le prix suffisent. Les autres unités de vente (kg, carton, sac…) s'ajoutent
-              ensuite avec « Modifier le produit ».
+              ensuite avec « Configurer (prix, unités) ».
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -101,16 +102,22 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             </div>
             <div class="fld">
               <label for="pn-barcode">Code-barres</label>
-              <input
-                id="pn-barcode"
-                name="barcode"
-                type="text"
-                autocomplete="off"
-                maxlength="64"
-                placeholder="facultatif"
-                [ngModel]="draft().barcode"
-                (ngModelChange)="patch({ barcode: $event })"
-              />
+              <!-- Typed, read by a USB scanner, or by the phone camera. A scanner presses Entrée
+                   after the code: it must not create the product half filled in. -->
+              <div class="pn-scan">
+                <input
+                  id="pn-barcode"
+                  name="barcode"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="64"
+                  placeholder="scanner ou saisir"
+                  [ngModel]="draft().barcode"
+                  (ngModelChange)="patch({ barcode: $event })"
+                  (keydown.enter)="$event.preventDefault()"
+                />
+                <app-camera-scan-button (scanned)="patch({ barcode: $event })" />
+              </div>
             </div>
           </div>
           <div class="pn-row">
@@ -156,6 +163,16 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
     </div>
   `,
   styles: `
+    .pn-scan {
+      display: flex;
+      gap: 6px;
+
+      input {
+        min-width: 0;
+        flex: 1;
+      }
+    }
+
     .pn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;

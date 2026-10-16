@@ -134,6 +134,11 @@ export const ICONS = {
     'M3 5v14a9 3 0 0 0 18 0V5',
     'M3 12a9 3 0 0 0 18 0',
   ],
+  // A price label: what a product sells for and what it costs.
+  tag: [
+    'M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z',
+    'M7.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+  ],
   qrCode: [
     'M3 3h5v5H3z', 'M16 3h5v5h-5z', 'M3 16h5v5H3z',
     'M21 16h-3a2 2 0 0 0-2 2v3', 'M21 21v.01', 'M12 7v3a2 2 0 0 1-2 2H7',

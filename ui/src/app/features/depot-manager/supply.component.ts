@@ -493,15 +493,17 @@ export class SupplyComponent {
 
   /**
    * The cost the form will send, per unit received: what was typed, else the last price paid —
-   * kept per base unit, so scaled up to the unit picked (the last kapoka price × 175 for a sack).
+   * scaled by the server to the unit picked (the last kapoka price × 175 for a sack).
    */
   protected readonly unitCost = computed<number | null>(() => {
     const typed = this.typedCost();
     if (typed !== undefined) {
       return typed;
     }
-    const last = this.selectedCost()?.lastUnitCost ?? null;
-    return last === null ? null : Math.round(last * (this.selectedUnit()?.factor ?? 1));
+    // Scaled by the server from the exact price: a tonne comes back to the ariary.
+    const unitId = this.selectedUnit()?.packagingId ?? null;
+    const last = this.selectedCost()?.units.find((unit) => unit.packagingId === unitId)?.lastCost;
+    return last == null ? null : Math.round(last);
   });
 
   protected readonly deliveryCost = computed(() => {

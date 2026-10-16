@@ -1,17 +1,23 @@
 import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
+import { ProductRights } from '../../core/catalog/product-rights';
 import {
   CategoryNode,
   Packaging,
   PackagingRequest,
+  Product,
+  ProductCost,
   ProductUnits,
+  UnitCost,
   UpdateProductRequest,
 } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { CategoryPickerComponent } from './category-picker.component';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
@@ -32,16 +38,30 @@ interface Sheet {
   price: string;
   barcode: string;
   categoryId: number | null;
-  /** Purchase cost of one base unit; empty while none is known. */
+  /** Purchase cost of one purchase unit; empty while none is known. */
   cost: string;
+  /** The unit it is bought in; null for the base unit. */
+  purchaseUnitId: number | null;
 }
 
-const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null, cost: '' };
+const EMPTY_SHEET: Sheet = {
+  name: '',
+  price: '',
+  barcode: '',
+  categoryId: null,
+  cost: '',
+  purchaseUnitId: null,
+};
 
 /**
- * A product's sheet — name, price, barcode, rayon, purchase cost — and the units it is sold in:
- * its base unit, and "1 kg = 3.5 kapoka"-style packagings. Everything about it but its stock,
- * which moves only by a receipt, a sale or a correction.
+ * A product's configuration: its sheet — name, rayon, barcode, sale price, purchase price — and
+ * the units it is sold and bought in: its base unit, and "1 kg = 3.5 kapoka"-style packagings,
+ * each with its sale price, its cost and the profit left on it. Everything about it but its
+ * stock, which moves only by a receipt, a sale or a correction — the stock manager's "Ajouter du
+ * stock" hands over to the receipt dialog.
+ *
+ * <p>The purchase price is typed in the unit the shop buys in — a tonne — and never for the base
+ * unit: the server keeps it per base unit and prices every other unit from it.
  *
  * <p>Talks to the server itself rather than through its parent, unlike the import dialogs: it
  * edits one product's units and nothing else, every write answers the whole set of units, and the
@@ -55,18 +75,19 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
 @Component({
   selector: 'app-product-units-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, CategoryPickerComponent],
+  imports: [FormsModule, NgTemplateOutlet, AriaryPipe, CameraScanButtonComponent, CategoryPickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="units-title">
         <div class="modal-head">
           <div>
-            <h2 id="units-title">Modifier le produit — {{ units()?.productName ?? productName }}</h2>
+            <h2 id="units-title">Configuration — {{ units()?.productName ?? productName }}</h2>
             <div class="sub muted">
-              Le stock est compté dans l'unité de base, la plus petite. Chaque autre unité s'écrit
-              comme sur l'emballage, dans l'unité de votre choix : « sac 25 kg » contient 25 kg.
-              Le calcul en unité de base est fait pour vous.
+              Prix de vente, prix d'entrée et unités. Le stock est compté dans l'unité de base, la
+              plus petite ; chaque autre unité s'écrit comme sur l'emballage (« sac 25 kg » contient
+              25 kg). Le prix d'entrée se saisit dans l'unité d'achat — la tonne, le sac — sans
+              rien déclarer pour l'unité de base : le calcul est fait pour vous.
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -74,7 +95,7 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
 
         <div class="modal-body">
           @if (units(); as u) {
-            <!-- ---------------------------------------------------- base unit -->
+            <!-- ------------------------------------------------- the sheet -->
             <!-- A past ticket keeps the name and price it was sold at: correcting them here only
                  changes what the next sale reads. -->
             <form class="un-sheet" (ngSubmit)="saveSheet()">
@@ -91,31 +112,6 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
                 />
               </div>
               <div class="fld">
-                <label for="un-base-price">Prix (Ar) par {{ baseName() }}</label>
-                <input
-                  id="un-base-price"
-                  name="price"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  [ngModel]="sheet().price"
-                  (ngModelChange)="patchSheet({ price: $event })"
-                />
-              </div>
-              <div class="fld">
-                <label for="un-base-barcode">Code-barres</label>
-                <input
-                  id="un-base-barcode"
-                  name="barcode"
-                  type="text"
-                  autocomplete="off"
-                  maxlength="64"
-                  placeholder="facultatif"
-                  [ngModel]="sheet().barcode"
-                  (ngModelChange)="patchSheet({ barcode: $event })"
-                />
-              </div>
-              <div class="fld">
                 <label for="un-category">Catégorie</label>
                 <app-category-picker
                   fieldId="un-category"
@@ -126,24 +122,82 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
                 />
               </div>
               <div class="fld">
-                <!-- What the stock on hand cost, per base unit: the figure the margins are
-                     computed from. Receipts move it; this corrects it when none said it right. -->
-                <label for="un-cost">Prix d'achat (Ar) par {{ baseName() }}</label>
-                <input
-                  id="un-cost"
-                  name="cost"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  placeholder="inconnu"
-                  [ngModel]="sheet().cost"
-                  (ngModelChange)="patchSheet({ cost: $event })"
-                />
+                <label for="un-base-barcode">Code-barres</label>
+                <!-- Typed, read by a USB scanner (which types it and presses Entrée), or read by
+                     the phone camera. Entrée stays in the field: a scan must not save the sheet. -->
+                <div class="un-suffixed">
+                  <input
+                    id="un-base-barcode"
+                    name="barcode"
+                    type="text"
+                    autocomplete="off"
+                    maxlength="64"
+                    placeholder="scanner ou saisir"
+                    [ngModel]="sheet().barcode"
+                    (ngModelChange)="patchSheet({ barcode: $event })"
+                    (keydown.enter)="$event.preventDefault()"
+                  />
+                  <app-camera-scan-button (scanned)="patchSheet({ barcode: $event })" />
+                </div>
+              </div>
+
+              <div class="un-prices">
+                <div class="fld">
+                  <label for="un-base-price">Prix de vente (Ar) par {{ baseName() }}</label>
+                  <input
+                    id="un-base-price"
+                    name="price"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    [ngModel]="sheet().price"
+                    (ngModelChange)="patchSheet({ price: $event })"
+                  />
+                </div>
+                <!-- What the shop pays, said in the unit it buys in: a tonne, not a kapoka. The
+                     server keeps it per base unit and works out every other unit from it. -->
+                <div class="fld">
+                  <label for="un-cost">Prix d'entrée (Ar)</label>
+                  <div class="un-suffixed">
+                    <input
+                      id="un-cost"
+                      name="cost"
+                      type="text"
+                      inputmode="decimal"
+                      autocomplete="off"
+                      placeholder="inconnu"
+                      [ngModel]="sheet().cost"
+                      (ngModelChange)="patchSheet({ cost: $event })"
+                    />
+                    <select
+                      name="purchaseUnit"
+                      class="field"
+                      aria-label="Unité d'achat"
+                      [ngModel]="sheet().purchaseUnitId"
+                      (ngModelChange)="pickPurchaseUnit($event)"
+                    >
+                      <option [ngValue]="null">par {{ baseName() }}</option>
+                      @for (p of u.packagings; track p.id) {
+                        <option [ngValue]="p.id">par {{ p.label }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <div class="un-cost-hint muted">
+                  @if (costHint(); as hint) {
+                    {{ hint }}
+                  } @else if (u.packagings.length === 0) {
+                    Acheté dans une autre unité (tonne, sac…) ? Ajoutez-la ci-dessous, puis
+                    choisissez-la ici.
+                  }
+                </div>
               </div>
               @if (sheetChanged()) {
-                <button class="btn small" type="submit" [disabled]="busy() || !sheetRequest()">
-                  Enregistrer
-                </button>
+                <div class="un-sheet-foot">
+                  <button class="btn small" type="submit" [disabled]="busy() || !sheetRequest()">
+                    Enregistrer
+                  </button>
+                </div>
               }
             </form>
 
@@ -171,65 +225,102 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
               </div>
             </div>
 
-            <!-- ---------------------------------------------------- other units -->
-            <table class="un-table">
-              <thead>
-                <tr>
-                  <th>Unité</th>
-                  <th>Contient</th>
-                  <th class="num">Prix</th>
-                  <th>Code-barres</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="un-base-row">
-                  <td>{{ baseName() }} <span class="muted">(base)</span></td>
-                  <td class="muted">1 {{ baseName() }}</td>
-                  <td class="num">{{ u.basePrice | ariary }}</td>
-                  <td class="muted">{{ u.baseBarcode ?? '—' }}</td>
-                  <td></td>
-                </tr>
-                @for (p of u.packagings; track p.id) {
-                  <tr [class.on]="editingId() === p.id">
-                    <td>{{ p.label }}</td>
-                    <td>
-                      @if (p.reference) {
-                        {{ formatFactor(p.referenceQuantity) }} {{ p.reference }}
-                        <span class="muted">({{ formatFactor(p.factor) }} {{ baseName() }})</span>
-                      } @else {
-                        {{ formatFactor(p.factor) }} {{ baseName() }}
-                      }
-                    </td>
-                    <td class="num">{{ p.price | ariary }}</td>
-                    <td class="muted">{{ p.barcode ?? '—' }}</td>
-                    <td class="un-actions">
-                      @if (removingId() === p.id) {
-                        <span class="muted">Supprimer ?</span>
-                        <button class="btn small danger" type="button" [disabled]="busy()" (click)="remove(p)">
-                          Oui
-                        </button>
-                        <button class="btn small ghost" type="button" (click)="removingId.set(null)">
-                          Non
-                        </button>
-                      } @else {
-                        <button class="btn small ghost" type="button" (click)="edit(p)">Modifier</button>
-                        <button class="btn small ghost" type="button" (click)="removingId.set(p.id)">
-                          Supprimer
-                        </button>
-                      }
-                    </td>
-                  </tr>
-                } @empty {
+            <!-- ---------------------------------------------------- every unit -->
+            <!-- Each unit priced both ways: what it sells for, what it cost at the average, and
+                 what is left. Worked out by the server, so a tonne reads back to the ariary. -->
+            <div class="table-scroll">
+              <table class="un-table">
+                <thead>
                   <tr>
-                    <td colspan="5" class="muted un-empty">
-                      Vendu dans une seule unité. Ajoutez-en une autre ci-dessous si le produit se
-                      vend aussi au kilo, au carton, au sac…
-                    </td>
+                    <th>Unité</th>
+                    <th>Contient</th>
+                    <th class="num">Prix de vente</th>
+                    <th class="num">Prix d'entrée</th>
+                    <th class="num">Bénéfice</th>
+                    <th>Code-barres</th>
+                    <th></th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  <tr class="un-base-row">
+                    <td>
+                      {{ baseName() }} <span class="muted">(base)</span>
+                      @if (u.purchaseUnitId === null) {
+                        <span class="badge grey">achat</span>
+                      }
+                    </td>
+                    <td class="muted">1 {{ baseName() }}</td>
+                    <td class="num">{{ u.basePrice | ariary }}</td>
+                    <ng-container
+                      *ngTemplateOutlet="costCells; context: { $implicit: costOf(null) }"
+                    />
+                    <td class="muted">{{ u.baseBarcode ?? '—' }}</td>
+                    <td></td>
+                  </tr>
+                  @for (p of u.packagings; track p.id) {
+                    <tr [class.on]="editingId() === p.id">
+                      <td>
+                        {{ p.label }}
+                        @if (u.purchaseUnitId === p.id) {
+                          <span class="badge grey">achat</span>
+                        }
+                      </td>
+                      <td>
+                        @if (p.reference) {
+                          {{ formatFactor(p.referenceQuantity) }} {{ p.reference }}
+                          <span class="muted">({{ formatFactor(p.factor) }} {{ baseName() }})</span>
+                        } @else {
+                          {{ formatFactor(p.factor) }} {{ baseName() }}
+                        }
+                      </td>
+                      <td class="num">{{ p.price | ariary }}</td>
+                      <ng-container
+                        *ngTemplateOutlet="costCells; context: { $implicit: costOf(p.id) }"
+                      />
+                      <td class="muted">{{ p.barcode ?? '—' }}</td>
+                      <td class="un-actions">
+                        @if (removingId() === p.id) {
+                          <span class="muted">Supprimer ?</span>
+                          <button class="btn small danger" type="button" [disabled]="busy()" (click)="remove(p)">
+                            Oui
+                          </button>
+                          <button class="btn small ghost" type="button" (click)="removingId.set(null)">
+                            Non
+                          </button>
+                        } @else {
+                          <button class="btn small ghost" type="button" (click)="edit(p)">Modifier</button>
+                          <button class="btn small ghost" type="button" (click)="removingId.set(p.id)">
+                            Supprimer
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="muted un-empty">
+                        Vendu dans une seule unité. Ajoutez-en une autre ci-dessous si le produit se
+                        vend ou s'achète aussi au kilo, au carton, au sac, à la tonne…
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <ng-template #costCells let-cost>
+              @if (cost?.cost != null) {
+                <td class="num">{{ cost.cost | ariary }}</td>
+                <td class="num" [class.un-loss]="cost.margin < 0">
+                  {{ cost.margin | ariary }}
+                  @if (cost.marginRate !== null) {
+                    <span class="muted">· {{ formatRate(cost.marginRate) }}</span>
+                  }
+                </td>
+              } @else {
+                <td class="num muted">—</td>
+                <td class="num muted">—</td>
+              }
+            </ng-template>
 
             <!-- ------------------------------------------------------- the form -->
             <form class="un-form" (ngSubmit)="save()">
@@ -294,15 +385,19 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
                 </div>
                 <div class="fld">
                   <label for="un-barcode">Code-barres</label>
-                  <input
-                    id="un-barcode"
-                    name="barcode"
-                    type="text"
-                    autocomplete="off"
-                    placeholder="facultatif"
-                    [ngModel]="draft().barcode"
-                    (ngModelChange)="patch({ barcode: $event })"
-                  />
+                  <div class="un-suffixed">
+                    <input
+                      id="un-barcode"
+                      name="barcode"
+                      type="text"
+                      autocomplete="off"
+                      placeholder="facultatif"
+                      [ngModel]="draft().barcode"
+                      (ngModelChange)="patch({ barcode: $event })"
+                      (keydown.enter)="$event.preventDefault()"
+                    />
+                    <app-camera-scan-button (scanned)="patch({ barcode: $event })" />
+                  </div>
                 </div>
               </div>
 
@@ -326,6 +421,13 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
         </div>
 
         <div class="modal-foot">
+          <!-- The stock manager books goods in from here too: the receipt opens in the unit the
+               product is bought in, at the last price paid. -->
+          @if (rights.canAddStock() && units(); as u) {
+            <button class="btn ghost" type="button" (click)="addStock.emit(asProduct(u))">
+              ＋ Ajouter du stock
+            </button>
+          }
           <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
         </div>
       </div>
@@ -350,6 +452,36 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
         flex: 1;
         min-width: 200px;
       }
+    }
+
+    /* Selling and buying side by side, on their own line under the name. */
+    .un-prices {
+      flex-basis: 100%;
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+
+      .fld:last-of-type {
+        width: 280px;
+      }
+    }
+
+    .un-cost-hint {
+      flex: 1;
+      min-width: 180px;
+      font-size: 12px;
+      align-self: center;
+    }
+
+    .un-sheet-foot {
+      flex-basis: 100%;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .un-loss {
+      color: var(--red);
     }
 
     .un-base {
@@ -454,6 +586,7 @@ const EMPTY_SHEET: Sheet = { name: '', price: '', barcode: '', categoryId: null,
 export class ProductUnitsDialogComponent implements OnInit {
   private readonly api = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
+  protected readonly rights = inject(ProductRights);
 
   @Input({ required: true }) productId!: number;
   /** Shown while the units load, so the title never flashes empty. */
@@ -461,6 +594,8 @@ export class ProductUnitsDialogComponent implements OnInit {
   /** After any successful write: the stock list may show the base unit's new name. */
   @Output() readonly changed = new EventEmitter<void>();
   @Output() readonly closed = new EventEmitter<void>();
+  /** "Ajouter du stock" from the sheet: the product as it now stands, units included. */
+  @Output() readonly addStock = new EventEmitter<Product>();
 
   protected readonly units = signal<ProductUnits | null>(null);
   protected readonly busy = signal(false);
@@ -478,18 +613,34 @@ export class ProductUnitsDialogComponent implements OnInit {
 
   protected readonly sheet = signal<Sheet>(EMPTY_SHEET);
 
-  /** The purchase cost the server holds, to tell a correction from a field left as it was. */
-  private readonly knownCost = signal<number | null>(null);
+  /** Every unit priced both ways, as the server last worked it out; null until it answers. */
+  private readonly costs = signal<ProductCost | null>(null);
 
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   protected readonly categories = this.categoryResource.value;
+
+  /**
+   * The purchase cost typed, or null when the field still shows what the server holds for the
+   * unit picked — then nothing is corrected, and switching the unit only changes how it is shown.
+   */
+  private readonly typedCost = computed<number | null | undefined>(() => {
+    const text = this.sheet().cost.trim();
+    if (!text) {
+      return null;
+    }
+    const cost = parseDecimal(text);
+    if (cost === null) {
+      return undefined;
+    }
+    return cost === this.costOf(this.sheet().purchaseUnitId)?.cost ? null : cost;
+  });
 
   /** The sheet as a request, or null while it cannot be sent. The server still judges it. */
   protected readonly sheetRequest = computed<UpdateProductRequest | null>(() => {
     const sheet = this.sheet();
     const price = parseDecimal(sheet.price);
-    const cost = sheet.cost.trim() ? parseDecimal(sheet.cost) : null;
-    if (!sheet.name.trim() || price === null || price <= 0 || (sheet.cost.trim() && cost === null)) {
+    const cost = this.typedCost();
+    if (!sheet.name.trim() || price === null || price <= 0 || cost === undefined) {
       return null;
     }
     return {
@@ -499,6 +650,7 @@ export class ProductUnitsDialogComponent implements OnInit {
       categoryId: sheet.categoryId,
       // An emptied field is not "free": the average stays as the receipts made it.
       purchaseCost: cost,
+      purchaseUnitId: sheet.purchaseUnitId,
     };
   });
 
@@ -511,8 +663,25 @@ export class ProductUnitsDialogComponent implements OnInit {
         parseDecimal(sheet.price) !== units.basePrice ||
         sheet.barcode.trim() !== (units.baseBarcode ?? '') ||
         sheet.categoryId !== (units.category?.id ?? null) ||
-        (sheet.cost.trim() !== '' && parseDecimal(sheet.cost) !== this.knownCost()))
+        sheet.purchaseUnitId !== units.purchaseUnitId ||
+        this.typedCost() !== null)
     );
+  });
+
+  /**
+   * The purchase price read back per base unit — "soit 785,71 Ar le kapoka" — so the operator
+   * sees what was understood without ever typing it.
+   */
+  protected readonly costHint = computed(() => {
+    const units = this.units();
+    const sheet = this.sheet();
+    const cost = parseDecimal(sheet.cost.trim());
+    const unit = units?.packagings.find((p) => p.id === sheet.purchaseUnitId);
+    if (!units || !unit || cost === null) {
+      return null;
+    }
+    const perBase = (cost / unit.factor).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+    return `1 ${unit.label} = ${this.formatFactor(unit.factor)} ${this.baseName()} : soit ${perBase} Ar le ${this.baseName()}.`;
   });
 
   protected readonly editingLabel = computed(
@@ -609,10 +778,49 @@ export class ProductUnitsDialogComponent implements OnInit {
    * after each answer, since a save may just have changed it.
    */
   private loadCost(): void {
-    this.costing.productCost(this.productId).subscribe((cost) => {
-      this.knownCost.set(cost.averageCost);
-      this.patchSheet({ cost: cost.averageCost === null ? '' : String(cost.averageCost) });
+    this.costing.productCost(this.productId).subscribe((costs) => {
+      this.costs.set(costs);
+      this.patchSheet({ cost: this.costText(this.sheet().purchaseUnitId) });
     });
+  }
+
+  /** The unit's sale price, cost and profit as the server worked them out; null while unknown. */
+  protected costOf(packagingId: number | null): UnitCost | null {
+    return this.costs()?.units.find((unit) => unit.packagingId === packagingId) ?? null;
+  }
+
+  /** A price typed for a kapoka is not a tonne's: the field shows what the new unit costs. */
+  protected pickPurchaseUnit(packagingId: number | null): void {
+    this.patchSheet({ purchaseUnitId: packagingId, cost: this.costText(packagingId) });
+  }
+
+  private costText(packagingId: number | null): string {
+    const cost = this.costOf(packagingId)?.cost;
+    return cost == null ? '' : String(cost);
+  }
+
+  /** 8.3 → "8,3 %". */
+  protected formatRate(rate: number): string {
+    return `${rate.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
+  }
+
+  /**
+   * The product as the stock entry needs it, from what this sheet holds — fresher than the list
+   * it was opened from, since a unit may just have been added here.
+   */
+  protected asProduct(units: ProductUnits): Product {
+    return {
+      id: units.productId,
+      name: units.productName,
+      price: units.basePrice,
+      stockQuantity: units.stockQuantity,
+      unit: units.baseUnit,
+      barcode: units.baseBarcode,
+      category: units.category,
+      lowStock: false,
+      stockValue: 0,
+      packagings: units.packagings,
+    };
   }
 
   protected formatFactor(factor: number): string {
@@ -705,6 +913,7 @@ export class ProductUnitsDialogComponent implements OnInit {
           price: String(units.basePrice),
           barcode: units.baseBarcode ?? '',
           categoryId: units.category?.id ?? null,
+          purchaseUnitId: units.purchaseUnitId,
         }));
         this.loadCost();
         this.busy.set(false);

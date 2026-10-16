@@ -15,6 +15,8 @@ export interface ProductUnits {
   /** The rayon it is filed under, or null for none. */
   category: Category | null;
   packagings: Packaging[];
+  /** The packaging the shop buys it in — "tonne" — or null for the base unit. */
+  purchaseUnitId: number | null;
 }
 
 /** Another unit than the base one: "kg = 3.5 kapoka, 3 000 Ar", "sac 25 kg = 25 kg". */
@@ -39,8 +41,13 @@ export interface UpdateProductRequest {
   barcode: string | null;
   /** The rayon, or null for none: the dialog always sends the one it shows. */
   categoryId: number | null;
-  /** Purchase cost of one base unit, corrected by hand; null leaves it as the receipts made it. */
+  /**
+   * Purchase cost of one `purchaseUnitId` — a tonne for rice bought by the tonne — corrected by
+   * hand; null leaves it as the receipts made it.
+   */
   purchaseCost: number | null;
+  /** The unit the shop buys it in, or null for the base unit: the dialog sends the one it shows. */
+  purchaseUnitId: number | null;
 }
 
 /** A product typed in by hand — mirrors CreateProductRequest. */

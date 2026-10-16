@@ -83,6 +83,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
     items: [
       { icon: 'dashboard', label: 'Tableau de bord', path: '/gestion-depot/tableau-de-bord' },
       { icon: 'warehouse', label: 'Stock', path: '/gestion-depot/stock' },
+      { icon: 'tag', label: 'Prix et unités', path: '/gestion-depot/prix-et-unites' },
       { icon: 'layers', label: 'Catégories', path: '/gestion-depot/categories' },
       { icon: 'stockIn', label: 'Approvisionnement', path: '/gestion-depot/approvisionnement' },
       { icon: 'stockOut', label: 'Sorties', path: '/gestion-depot/sorties' },
@@ -98,6 +99,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: 'overview', label: "Vue d'ensemble", path: '/admin/vue-ensemble' },
       { icon: 'trendingUp', label: "Chiffre d'affaires", path: '/admin/chiffre-affaires' },
       { icon: 'percent', label: 'Bénéfices & stock', path: '/admin/marges' },
+      { icon: 'tag', label: 'Prix et unités', path: '/admin/prix-et-unites' },
       { icon: 'warehouse', label: 'Stock global', path: '/admin/stock-global' },
       { icon: 'invoice', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: 'users', label: 'Utilisateurs', path: '/admin/utilisateurs' },

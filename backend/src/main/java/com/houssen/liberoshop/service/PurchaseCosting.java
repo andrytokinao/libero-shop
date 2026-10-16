@@ -24,6 +24,14 @@ public final class PurchaseCosting {
     /** Ariary have no subdivision in use; two places match the price columns and absorb rounding. */
     public static final int COST_SCALE = 2;
 
+    /**
+     * The average per base unit keeps six places: the shop buys by the tonne and sells by the
+     * kapoka, and 2 750 000 Ar a tonne of 3 500 kapoka is 785.714286 Ar a kapoka. Rounded to the
+     * cent it would read back as 2 749 985 Ar a tonne -- not the price the operator typed.
+     * Amounts (a sale line's cost, a value) stay at {@link #COST_SCALE}.
+     */
+    public static final int AVERAGE_SCALE = 6;
+
     private PurchaseCosting() {
     }
 
@@ -60,7 +68,7 @@ public final class PurchaseCosting {
             return averageBefore;
         }
         if (averageBefore == null || stockBefore.signum() <= 0) {
-            return scaled(unitCost);
+            return average(unitCost);
         }
         if (received.signum() <= 0) {
             return averageBefore;
@@ -68,7 +76,22 @@ public final class PurchaseCosting {
         BigDecimal valueBefore = averageBefore.multiply(stockBefore);
         BigDecimal valueReceived = unitCost.multiply(received);
         return valueBefore.add(valueReceived)
-                .divide(stockBefore.add(received), COST_SCALE, RoundingMode.HALF_UP);
+                .divide(stockBefore.add(received), AVERAGE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * The average per base unit when one unit of another size costs {@code unitCost}: a tonne at
+     * 2 750 000 Ar is 785.714286 Ar a kapoka. Null stays null.
+     *
+     * @param factor base units in that unit; 1 for the base unit itself
+     */
+    public static BigDecimal averageFrom(BigDecimal unitCost, BigDecimal factor) {
+        return unitCost == null ? null : unitCost.divide(factor, AVERAGE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /** An average per base unit as stored: six places, half up. Null stays null. */
+    public static BigDecimal average(BigDecimal cost) {
+        return cost == null ? null : cost.setScale(AVERAGE_SCALE, RoundingMode.HALF_UP);
     }
 
     /**
@@ -96,7 +119,7 @@ public final class PurchaseCosting {
         return margin.multiply(BigDecimal.valueOf(100)).divide(revenue, 1, RoundingMode.HALF_UP);
     }
 
-    /** A cost as stored: two places, half up. Null stays null. */
+    /** An amount as stored: two places, half up. Null stays null. */
     public static BigDecimal scaled(BigDecimal cost) {
         return cost == null ? null : cost.setScale(COST_SCALE, RoundingMode.HALF_UP);
     }

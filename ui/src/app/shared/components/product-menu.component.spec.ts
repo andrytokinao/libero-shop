@@ -54,7 +54,7 @@ describe('ProductMenuComponent', () => {
 
     expect(labels()).toEqual([
       'Ajouter du stock',
-      'Modifier le produit',
+      'Configurer (prix, unités)',
       'Corriger le stock',
       'Historique du stock',
     ]);
@@ -63,7 +63,7 @@ describe('ProductMenuComponent', () => {
   it('keeps adding stock from the administrator, who may still edit and correct', () => {
     open(RoleApp.SUPER_ADMIN);
 
-    expect(labels()).toEqual(['Modifier le produit', 'Corriger le stock', 'Historique du stock']);
+    expect(labels()).toEqual(['Configurer (prix, unités)', 'Corriger le stock', 'Historique du stock']);
   });
 
   it('shows no menu at all to the counter', () => {

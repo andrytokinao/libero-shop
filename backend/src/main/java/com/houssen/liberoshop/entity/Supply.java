@@ -40,6 +40,9 @@ public class Supply extends StockMovement {
     /** The two places of the cost columns, here and on the product's average. */
     private static final int COST_SCALE = 2;
 
+    /** The places of the product's average, which a receipt's cost is blended into. */
+    private static final int EXACT_COST_SCALE = 6;
+
     /** Who delivered it, or null when no supplier was named. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
@@ -91,6 +94,15 @@ public class Supply extends StockMovement {
     public BigDecimal baseUnitCost() {
         return unitCost == null ? null
                 : unitCost.divide(factor(), COST_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * {@link #baseUnitCost()} to six places, for the product's average: a tonne at 2 750 000 Ar
+     * teaches 785.714286 Ar a kapoka, which times 3 500 gives the tonne back to the ariary.
+     */
+    public BigDecimal exactBaseUnitCost() {
+        return unitCost == null ? null
+                : unitCost.divide(factor(), EXACT_COST_SCALE, RoundingMode.HALF_UP);
     }
 
     /**

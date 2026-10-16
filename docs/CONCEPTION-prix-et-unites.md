@@ -63,7 +63,8 @@ Category 1───* Product 1───* ProductPackaging ──┐
 |---|---|---|
 | `unit` | `varchar(16)`, nullable | Nom de l'**unité de base**, tel que saisi. Null = « unités » sans nom. |
 | `price` | `numeric(12,2)`, non null | Prix de vente d'**une unité de base**. |
-| `averageCost` | `numeric(12,2)`, nullable | **Prix d'achat** : coût moyen pondéré d'une unité de base. Null tant qu'aucun coût n'est connu. |
+| `averageCost` | `numeric(18,6)`, nullable | **Prix d'achat** : coût moyen pondéré d'une unité de base, à 6 décimales (une tonne saisie se relit à l'ariary). Null tant qu'aucun coût n'est connu. |
+| `purchaseUnit` | `purchase_unit_id`, nullable | **Unité d'achat** : le conditionnement dans lequel le prix d'achat se saisit et s'affiche (la tonne). Null = unité de base. Remis à null quand l'unité est supprimée. |
 | `stockQuantity` | `numeric(14,3)`, non null | Stock, **en unités de base**. |
 | `barcode` | unique, nullable | Code-barres de l'unité de base. |
 | `category` | `category_id`, nullable | Rayon / famille (arbre de 4 niveaux max). |
@@ -223,7 +224,9 @@ SaleUnit.of(product, packagingId)
 ## 5. Prix d'achat (coût moyen pondéré)
 
 Classe : `B/service/PurchaseCosting.java`. Le prix d'achat est `Product.averageCost`, **par unité
-de base**, à 2 décimales.
+de base**, à 6 décimales (`AVERAGE_SCALE`, depuis le 16 octobre 2026 ; 2 avant). Il se saisit dans
+l'**unité d'achat** du produit (`purchaseUnit`) et se divise par son facteur
+(`averageFrom`) — voir `28-configuration-des-prix-et-des-unites.md`.
 
 ### 5.1 Calcul à chaque réception
 
@@ -249,7 +252,7 @@ Exemple : 100 kapoka en stock à 800 Ar ; réception de 2 sacs de 50 kg (175 kap
 | Approvisionnement (`StockService.registerSupply`) | Moyenne pondérée avec `baseUnitCost()` de la réception. |
 | Création d'un produit avec stock initial et prix d'achat (`ProductEditService.create`) | Le prix saisi devient la moyenne ; un `Supply` sans fournisseur est écrit si le stock > 0. |
 | Import Excel, produit nouveau ou fusionné | Moyenne pondérée, comme une réception. |
-| Modification à la main (`PUT /api/products/{id}`, champ `purchaseCost`) | **Remplace** la moyenne. Champ vide → moyenne inchangée (on ne peut pas l'effacer). |
+| Modification à la main (`PUT /api/products/{id}`, champs `purchaseCost` et `purchaseUnitId`) | **Remplace** la moyenne : prix d'une unité d'achat ÷ son facteur. Champ vide → moyenne inchangée (on ne peut pas l'effacer). |
 | Vente, annulation, correction de stock | **Aucun**. Une casse ou une perte ne change pas le coût des unités restantes. |
 
 ### 5.3 Coût figé à la vente
@@ -387,6 +390,8 @@ super-admin).
 - `B/bootstrap/DecimalQuantityMigration.java` : passage des quantités entières en
   `numeric(p,3)` (`product.stock_quantity`, `stock_movement.quantity`, `sale_line.quantity`).
 - `B/bootstrap/MovementTypeMigration.java` : contrainte `movement_type` élargie à `ADJUSTMENT`.
+- `B/bootstrap/AverageCostPrecisionMigration.java` : `product.average_cost` passé à
+  `numeric(18,6)`.
 - Les colonnes `average_cost`, `unit_cost`, `unit_label`, `unit_factor`, `reference_id`,
   `reference_quantity` et la table `product_packaging` sont créées par `ddl-auto=update`
   (colonnes nullables, rien à reprendre).

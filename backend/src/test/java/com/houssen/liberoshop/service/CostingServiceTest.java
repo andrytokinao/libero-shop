@@ -2,6 +2,7 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.Sale;
 import com.houssen.liberoshop.entity.SaleLine;
@@ -281,5 +282,33 @@ class CostingServiceTest {
         assertEquals(0, new BigDecimal("10900").compareTo(grossiste.lastUnitCost()));
         assertEquals(0, new BigDecimal("10500").compareTo(grossiste.lowestCost()));
         assertTrue(grossiste.lastPurchaseDate().isAfter(TODAY.minusDays(6).atStartOfDay()));
+    }
+
+    @Test
+    @DisplayName("each unit is priced both ways: sale price, cost from the exact average, profit")
+    void profitPerUnit() {
+        Product rice = db.persist(Product.builder().name("Riz vrac").unit("kapoka").price(new BigDecimal("900"))
+                .stockQuantity(qty(7000)).averageCost(new BigDecimal("785.714286")).build());
+        ProductPackaging tonne = db.persist(ProductPackaging.builder().product(rice).label("tonne")
+                .factor(new BigDecimal("3500.000")).price(new BigDecimal("3000000")).build());
+        rice.setPurchaseUnit(tonne);
+        db.flush();
+        db.clear();
+
+        ProductCostResponse cost = service.productCostOf(rice.getId());
+
+        assertEquals(tonne.getId(), cost.purchaseUnitId());
+        assertEquals(2, cost.units().size());
+        ProductCostResponse.UnitCost kapoka = cost.units().getFirst();
+        assertNull(kapoka.packagingId());
+        assertEquals(0, new BigDecimal("785.71").compareTo(kapoka.cost()));
+        assertEquals(0, new BigDecimal("114.29").compareTo(kapoka.margin()));
+        assertEquals(new BigDecimal("12.7"), kapoka.marginRate());
+        ProductCostResponse.UnitCost perTonne = cost.units().get(1);
+        assertEquals("tonne", perTonne.label());
+        assertEquals(0, new BigDecimal("2750000").compareTo(perTonne.cost()), "the tonne to the ariary");
+        assertEquals(0, new BigDecimal("250000").compareTo(perTonne.margin()));
+        assertEquals(new BigDecimal("8.3"), perTonne.marginRate());
+        assertNull(perTonne.lastCost(), "no receipt yet");
     }
 }

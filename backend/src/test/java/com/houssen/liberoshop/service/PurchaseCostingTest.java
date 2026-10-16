@@ -25,7 +25,7 @@ class PurchaseCostingTest {
     @DisplayName("blends a receipt into the stock in proportion to the units")
     void weightsByUnits() {
         // 40 sacks at 10 000, then 10 at 11 000: the new sacks are a fifth of the shelf.
-        assertEquals(ar("10200.00"),
+        assertEquals(ar("10200.000000"),
                 PurchaseCosting.averageAfterReceipt(qty(40), ar("10000.00"), qty(10), ar("11000")));
     }
 
@@ -35,20 +35,20 @@ class PurchaseCostingTest {
         BigDecimal afterFirst = PurchaseCosting.averageAfterReceipt(qty(0), null, qty(30), ar("600"));
         BigDecimal afterSecond = PurchaseCosting.averageAfterReceipt(qty(30), afterFirst, qty(10), ar("800"));
 
-        assertEquals(ar("600.00"), afterFirst);
-        assertEquals(ar("650.00"), afterSecond);
+        assertEquals(ar("600.000000"), afterFirst);
+        assertEquals(ar("650.000000"), afterSecond);
     }
 
     @Test
     @DisplayName("the first known cost becomes the average")
     void firstCost() {
-        assertEquals(ar("650.00"), PurchaseCosting.averageAfterReceipt(qty(25), null, qty(10), ar("650")));
+        assertEquals(ar("650.000000"), PurchaseCosting.averageAfterReceipt(qty(25), null, qty(10), ar("650")));
     }
 
     @Test
     @DisplayName("an empty shelf forgets the old cost: nothing is left to carry it")
     void emptyShelfResets() {
-        assertEquals(ar("700.00"), PurchaseCosting.averageAfterReceipt(qty(0), ar("500.00"), qty(10), ar("700")));
+        assertEquals(ar("700.000000"), PurchaseCosting.averageAfterReceipt(qty(0), ar("500.00"), qty(10), ar("700")));
     }
 
     @Test
@@ -62,7 +62,7 @@ class PurchaseCostingTest {
     @DisplayName("rounds to two places, half up")
     void rounds() {
         // (1 × 100 + 2 × 101) / 3 = 100.666...
-        assertEquals(ar("100.67"), PurchaseCosting.averageAfterReceipt(qty(1), ar("100"), qty(2), ar("101")));
+        assertEquals(ar("100.666667"), PurchaseCosting.averageAfterReceipt(qty(1), ar("100"), qty(2), ar("101")));
     }
 
     @Test
@@ -78,7 +78,7 @@ class PurchaseCostingTest {
         PurchaseCosting.receive(riz, qty(10), ar("11000"));
 
         assertQuantity(50, riz.getStockQuantity());
-        assertEquals(ar("10200.00"), riz.getAverageCost());
+        assertEquals(ar("10200.000000"), riz.getAverageCost());
         assertEquals(ar("10200.00"), PurchaseCosting.costOfSale(riz, BigDecimal.ONE));
         // A kilo of it counted in 3.5 base units costs three and a half of them.
         assertEquals(ar("35700.00"), PurchaseCosting.costOfSale(riz, new BigDecimal("3.5")));

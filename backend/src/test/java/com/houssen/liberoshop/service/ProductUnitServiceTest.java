@@ -285,4 +285,18 @@ class ProductUnitServiceTest {
         assertEquals("PACKAGING_IS_REFERENCE", refused.code());
         assertTrue(refused.getMessage().contains("sac 25 kg"));
     }
+
+    @Test
+    @DisplayName("removing the unit the product is bought in falls back to the base unit, the price kept")
+    void removingThePurchaseUnit() {
+        Long tonne = service.add(1L, request("tonne", "3500", "3000000", null)).packagings().getFirst().id();
+        rice.setPurchaseUnit(table.getFirst());
+        rice.setAverageCost(new BigDecimal("785.714286"));
+
+        ProductUnitsResponse units = service.remove(1L, tonne);
+
+        assertNull(rice.getPurchaseUnit());
+        assertNull(units.purchaseUnitId());
+        assertEquals(new BigDecimal("785.714286"), rice.getAverageCost());
+    }
 }

@@ -84,7 +84,7 @@ class ProductByHandTest {
         assertEquals("piece", created.unit());
         assertEquals(rayon.getId(), created.category().id());
         assertQuantity(24, created.stockQuantity());
-        assertEquals(new BigDecimal("1000.00"), products.findById(created.id()).orElseThrow().getAverageCost());
+        assertEquals(new BigDecimal("1000.000000"), products.findById(created.id()).orElseThrow().getAverageCost());
 
         List<ProductMovementResponse> history = historyOf(created.id());
         assertEquals(1, history.size());
@@ -136,7 +136,7 @@ class ProductByHandTest {
         assertNull(supply.supplier());
         Product reloaded = products.findById(created.id()).orElseThrow();
         assertQuantity(20, reloaded.getStockQuantity());
-        assertEquals(new BigDecimal("1100.00"), reloaded.getAverageCost());
+        assertEquals(new BigDecimal("1100.000000"), reloaded.getAverageCost());
         assertEquals(2, historyOf(created.id()).size());
     }
 

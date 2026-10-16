@@ -727,7 +727,7 @@ class ProductImportServiceTest {
 
         Product created = shelf.getLast();
         assertQuantity(30, created.getStockQuantity());
-        assertEquals(new BigDecimal("650.00"), created.getAverageCost());
+        assertEquals(new BigDecimal("650.000000"), created.getAverageCost());
         assertEquals(new BigDecimal("650.00"), ledger.getFirst().getUnitCost());
     }
 
@@ -742,7 +742,7 @@ class ProductImportServiceTest {
         run(request(List.of(asSent(line(preview, 0)))));
 
         // (40 × 10 000 + 10 × 11 000) / 50
-        assertEquals(new BigDecimal("10200.00"), riz.getAverageCost());
+        assertEquals(new BigDecimal("10200.000000"), riz.getAverageCost());
         assertQuantity(50, riz.getStockQuantity());
     }
 
@@ -829,7 +829,7 @@ class ProductImportServiceTest {
         Product rice = shelf.getLast();
         assertEquals("kapoka", rice.getUnit());
         assertQuantity(7200, rice.getStockQuantity());
-        assertEquals(new BigDecimal("700.00"), rice.getAverageCost());
+        assertEquals(new BigDecimal("700.000000"), rice.getAverageCost());
         assertEquals(List.of("kg", "sac 50 kg", "tonne"), units.stream()
                 .filter(unit -> unit.getProduct() == rice).map(ProductPackaging::getLabel).toList());
     }

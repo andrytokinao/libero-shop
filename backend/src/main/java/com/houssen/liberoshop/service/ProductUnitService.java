@@ -84,9 +84,17 @@ public class ProductUnitService {
     @RequiresActiveLicense
     @Transactional
     public ProductUnitsResponse remove(Long productId, Long packagingId) {
+        // Locked first, so the product read below is the current row: when it was bought in this
+        // unit it is written back without it, and must not carry a stale stock with it.
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
         ProductPackaging packaging = requirePackaging(productId, packagingId);
         rules.refuseRemoval(packaging);
-        Product product = packaging.getProduct();
+        if (packaging.underlies(product.getPurchaseUnit())) {
+            // Its price is kept per base unit: only the unit it is shown in falls back.
+            product.setPurchaseUnit(null);
+            products.flush();
+        }
         packagings.delete(packaging);
         packagings.flush();
         return responseFor(product);

@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
@@ -79,7 +80,7 @@ class ProductEditServiceTest {
     @DisplayName("Le nom, le prix et le code-barres sont corriges, le stock ne bouge pas")
     void editsTheSheet() {
         ProductUnitsResponse response = service.edit(1L,
-                new UpdateProductRequest("  Riz   rose ", new BigDecimal("950"), " 444 ", null, null));
+                new UpdateProductRequest("  Riz   rose ", new BigDecimal("950"), " 444 ", null, null, null));
 
         assertEquals("Riz rose", rice.getName());
         assertEquals(new BigDecimal("950"), rice.getPrice());
@@ -92,7 +93,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Les ecrans ouverts sont prevenus du nouveau prix")
     void tellsTheScreens() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null, null));
 
         ArgumentCaptor<StockChangedEvent> event = ArgumentCaptor.forClass(StockChangedEvent.class);
         verify(events).publishEvent(event.capture());
@@ -102,7 +103,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Garder son propre code-barres n'est pas le prendre a un autre")
     void keepsItsOwnBarcode() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("950"), "111", null, null, null));
 
         assertEquals("111", rice.getBarcode());
     }
@@ -110,7 +111,7 @@ class ProductEditServiceTest {
     @Test
     @DisplayName("Un code-barres vide retire le code")
     void blankBarcodeClearsIt() {
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "  ", null, null));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "  ", null, null, null));
 
         assertNull(rice.getBarcode());
     }
@@ -120,7 +121,7 @@ class ProductEditServiceTest {
     void refusesATakenBarcode() {
         for (String taken : List.of("222", "333")) {
             BusinessRuleException refused = assertThrows(BusinessRuleException.class, () ->
-                    service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), taken, null, null)));
+                    service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), taken, null, null, null)));
             assertEquals("BARCODE_TAKEN", refused.code());
         }
         assertEquals("111", rice.getBarcode());
@@ -132,7 +133,7 @@ class ProductEditServiceTest {
     void refusesANonPositivePrice() {
         for (String price : List.of("0", "-5")) {
             BusinessRuleException refused = assertThrows(BusinessRuleException.class, () ->
-                    service.edit(1L, new UpdateProductRequest("Riz blanc", new BigDecimal(price), "111", null, null)));
+                    service.edit(1L, new UpdateProductRequest("Riz blanc", new BigDecimal(price), "111", null, null, null)));
             assertEquals("PRODUCT_PRICE_INVALID", refused.code());
         }
         assertEquals("Riz", rice.getName());
@@ -146,16 +147,16 @@ class ProductEditServiceTest {
         when(categories.findById(7L)).thenReturn(Optional.of(drinks));
 
         ProductUnitsResponse response = service.edit(1L,
-                new UpdateProductRequest("Riz", new BigDecimal("900"), "111", 7L, new BigDecimal("650")));
+                new UpdateProductRequest("Riz", new BigDecimal("900"), "111", 7L, new BigDecimal("650"), null));
 
         assertEquals(drinks, rice.getCategory());
-        assertEquals(new BigDecimal("650.00"), rice.getAverageCost());
+        assertEquals(new BigDecimal("650.000000"), rice.getAverageCost());
         assertEquals("Boissons", response.category().name());
 
-        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "111", null, null));
+        service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"), "111", null, null, null));
 
         assertNull(rice.getCategory());
-        assertEquals(new BigDecimal("650.00"), rice.getAverageCost());
+        assertEquals(new BigDecimal("650.000000"), rice.getAverageCost());
         assertEquals(qty(1750), rice.getStockQuantity());
     }
 
@@ -163,7 +164,7 @@ class ProductEditServiceTest {
     @DisplayName("Un rayon inconnu est refuse, rien n'est ecrit")
     void refusesAnUnknownRayon() {
         assertThrows(ResourceNotFoundException.class, () ->
-                service.edit(1L, new UpdateProductRequest("Riz rose", new BigDecimal("900"), "111", 99L, null)));
+                service.edit(1L, new UpdateProductRequest("Riz rose", new BigDecimal("900"), "111", 99L, null, null)));
         assertEquals("Riz", rice.getName());
     }
 
@@ -171,6 +172,37 @@ class ProductEditServiceTest {
     @DisplayName("Un produit inconnu repond introuvable")
     void unknownProduct() {
         assertThrows(ResourceNotFoundException.class, () ->
-                service.edit(99L, new UpdateProductRequest("Riz", new BigDecimal("900"), null, null, null)));
+                service.edit(99L, new UpdateProductRequest("Riz", new BigDecimal("900"), null, null, null, null)));
+    }
+
+    @Test
+    @DisplayName("Le prix d'achat se saisit dans l'unite d'achat : une tonne a 2 750 000 Ar se relit a l'ariary")
+    void purchaseCostTypedPerTonne() {
+        ProductPackaging tonne = ProductPackaging.builder().id(40L).product(rice).label("tonne")
+                .factor(new BigDecimal("3500.000")).price(new BigDecimal("3000000")).build();
+        when(packagings.findById(40L)).thenReturn(Optional.of(tonne));
+
+        ProductUnitsResponse response = service.edit(1L, new UpdateProductRequest("Riz", new BigDecimal("900"),
+                "111", null, new BigDecimal("2750000"), 40L));
+
+        assertEquals(tonne, rice.getPurchaseUnit());
+        assertEquals(40L, response.purchaseUnitId());
+        assertEquals(new BigDecimal("785.714286"), rice.getAverageCost());
+        assertEquals(new BigDecimal("2750000.00"), PurchaseCosting.costOfSale(rice, tonne.getFactor()),
+                "the tonne reads back at the price typed");
+    }
+
+    @Test
+    @DisplayName("Une unite d'achat d'un autre produit est refusee, rien n'est ecrit")
+    void refusesAnotherProductsUnit() {
+        Product sugar = Product.builder().id(2L).name("Sucre").build();
+        when(packagings.findById(41L)).thenReturn(Optional.of(ProductPackaging.builder().id(41L)
+                .product(sugar).label("sac").factor(new BigDecimal("50.000")).build()));
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class, () -> service.edit(1L,
+                new UpdateProductRequest("Riz", new BigDecimal("900"), "111", null, new BigDecimal("10"), 41L)));
+
+        assertEquals("PURCHASE_UNIT_UNKNOWN", refused.code());
+        assertNull(rice.getAverageCost());
     }
 }

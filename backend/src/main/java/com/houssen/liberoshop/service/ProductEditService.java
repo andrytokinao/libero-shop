@@ -2,6 +2,7 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
@@ -130,16 +131,20 @@ public class ProductEditService {
             throw barcodeTaken(barcode);
         }
         Category category = categoryOf(request.categoryId());
+        ProductPackaging purchaseUnit = purchaseUnitOf(product, request.purchaseUnitId());
 
         product.setName(name);
         product.setPrice(price);
         product.setBarcode(barcode);
         product.setCategory(category);
+        product.setPurchaseUnit(purchaseUnit);
         if (request.purchaseCost() != null) {
             // The one place the average is set rather than computed: the operator knows what the
-            // shelf cost when no receipt said it, or said it wrong. The next costed receipt blends
-            // into this figure like into any other.
-            product.setAverageCost(PurchaseCosting.scaled(request.purchaseCost()));
+            // shelf cost when no receipt said it, or said it wrong. Typed per purchase unit -- a
+            // tonne -- and kept per base unit. The next costed receipt blends into this figure
+            // like into any other.
+            product.setAverageCost(PurchaseCosting.averageFrom(request.purchaseCost(),
+                    purchaseUnit == null ? BigDecimal.ONE : purchaseUnit.getFactor()));
         }
         // Not a stock movement, but the same message serves: it carries the products as they
         // now stand, which is how an open till learns the new price before the next sale.
@@ -168,6 +173,17 @@ public class ProductEditService {
     private static BusinessRuleException barcodeTaken(String barcode) {
         return new BusinessRuleException("BARCODE_TAKEN",
                 "Le code-barres " + barcode + " est deja utilise par un autre article.");
+    }
+
+    /** One of the product's own units, or null for the base unit. */
+    private ProductPackaging purchaseUnitOf(Product product, Long packagingId) {
+        if (packagingId == null) {
+            return null;
+        }
+        return packagings.findById(packagingId)
+                .filter(packaging -> packaging.getProduct().getId().equals(product.getId()))
+                .orElseThrow(() -> new BusinessRuleException("PURCHASE_UNIT_UNKNOWN",
+                        "Cette unite d'achat n'existe plus pour ce produit. Rechargez la fiche."));
     }
 
     /** The rayon of that id; null for none. */

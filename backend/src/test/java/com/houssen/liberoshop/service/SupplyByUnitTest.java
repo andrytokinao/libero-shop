@@ -97,14 +97,14 @@ class SupplyByUnitTest {
     }
 
     @Test
-    @DisplayName("the average cost is kept per base unit: a sack at 145 000 is 828.57 a kapoka")
+    @DisplayName("the average cost is kept per base unit: a sack at 145 000 is 828.571429 a kapoka")
     void averagesPerBaseUnit() {
         receive(sack.getId(), "10", "145000");
-        assertEquals(new BigDecimal("828.57"), reloaded().getAverageCost());
+        assertEquals(new BigDecimal("828.571429"), reloaded().getAverageCost());
 
         // 175 kapoka more at 700 each, received loose: (1 750 × 828.57 + 175 × 700) / 1 925.
         receive(null, "175", "700");
-        assertEquals(new BigDecimal("816.88"), reloaded().getAverageCost());
+        assertEquals(new BigDecimal("816.883117"), reloaded().getAverageCost());
     }
 
     @Test

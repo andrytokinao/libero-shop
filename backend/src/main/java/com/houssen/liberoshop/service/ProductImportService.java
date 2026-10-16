@@ -452,8 +452,8 @@ public class ProductImportService {
          * are blended the way two deliveries would be, since that is what the lines describe.
          */
         void absorb(Draft duplicate) {
-            cost = PurchaseCosting.averageAfterReceipt(quantity, cost, duplicate.quantity,
-                    duplicate.cost);
+            cost = PurchaseCosting.scaled(PurchaseCosting.averageAfterReceipt(quantity, cost, duplicate.quantity,
+                    duplicate.cost));
             quantity = quantity.add(duplicate.quantity);
             if (packagings.isEmpty()) {
                 // The units described once, on whichever line, are the product's.

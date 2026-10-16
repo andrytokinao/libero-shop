@@ -36,7 +36,7 @@ export class ProductRights {
   /** The entries of a product's menu this account is offered, in the order they are shown. */
   readonly actions = computed<readonly { id: ProductAction; label: string }[]>(() => [
     ...(this.canAddStock() ? [{ id: 'addStock' as const, label: 'Ajouter du stock' }] : []),
-    ...(this.canEdit() ? [{ id: 'edit' as const, label: 'Modifier le produit' }] : []),
+    ...(this.canEdit() ? [{ id: 'edit' as const, label: 'Configurer (prix, unités)' }] : []),
     ...(this.canAdjustStock() ? [{ id: 'adjust' as const, label: 'Corriger le stock' }] : []),
     ...(this.canSeeHistory() ? [{ id: 'history' as const, label: 'Historique du stock' }] : []),
   ]);

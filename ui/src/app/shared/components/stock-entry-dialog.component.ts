@@ -4,7 +4,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
 import { StockApi } from '../../core/api/stock.api';
-import { Product, Supplier } from '../../core/models';
+import { Product, ProductCost, Supplier } from '../../core/models';
 import {
   SaleUnit,
   formatAmount,
@@ -156,8 +156,8 @@ export class StockEntryDialogComponent implements OnInit {
   protected readonly busy = signal(false);
 
   private readonly supplierResource = apiResource<Supplier[]>([], () => this.catalog.suppliers());
-  /** The last price paid per base unit, to pre-fill the next one; null while none is known. */
-  private readonly lastUnitCost = signal<number | null>(null);
+  /** Every unit with the last price paid for it, to pre-fill the next one; null until read. */
+  private readonly costs = signal<ProductCost | null>(null);
 
   protected readonly suppliers = this.supplierResource.value;
   protected readonly units = computed(() => unitsOf(this.product()));
@@ -171,8 +171,9 @@ export class StockEntryDialogComponent implements OnInit {
     if (typed !== undefined) {
       return typed;
     }
-    const last = this.lastUnitCost();
-    return last === null ? '' : String(Math.round(last * this.selectedUnit().factor));
+    const unit = this.selectedUnit();
+    const last = this.costs()?.units.find((u) => u.packagingId === unit.packagingId)?.lastCost;
+    return last == null ? '' : String(Math.round(last));
   });
 
   protected readonly quantityNumber = computed(() => parseQuantity(this.quantity()));
@@ -198,11 +199,18 @@ export class StockEntryDialogComponent implements OnInit {
 
   protected readonly formatAmount = formatAmount;
 
-  /** Here rather than in a field: the product is an input, and is not there yet before this. */
+  /**
+   * Here rather than in a field: the product is an input, and is not there yet before this. Opens
+   * on the unit the product is bought in — rice bought by the tonne is received in tonnes.
+   */
   ngOnInit(): void {
-    this.costing
-      .productCost(this.product().id)
-      .subscribe((cost) => this.lastUnitCost.set(cost.lastUnitCost));
+    this.costing.productCost(this.product().id).subscribe((costs) => {
+      this.costs.set(costs);
+      const bought = costs.purchaseUnitId;
+      if (this.unitId() === null && this.units().some((unit) => unit.packagingId === bought)) {
+        this.unitId.set(bought);
+      }
+    });
   }
 
   protected pickUnit(packagingId: number | null): void {

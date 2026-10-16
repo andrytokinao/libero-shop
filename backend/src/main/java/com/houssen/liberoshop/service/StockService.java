@@ -136,8 +136,8 @@ public class StockService {
                 .unitLabel(inBaseUnit ? null : unit.label())
                 .unitFactor(inBaseUnit ? null : unit.factor())
                 .build();
-        // The average is kept per base unit: ten sacks at 145 000 teach it 828.57 a kapoka.
-        PurchaseCosting.receive(product, supply.getQuantity(), supply.baseUnitCost());
+        // The average is kept per base unit: ten sacks at 145 000 teach it 828.571429 a kapoka.
+        PurchaseCosting.receive(product, supply.getQuantity(), supply.exactBaseUnitCost());
         movements.save(supply);
 
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));

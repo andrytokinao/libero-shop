@@ -15,12 +15,15 @@ import java.math.BigDecimal;
  * <p>Not the stock: it moves only through a receipt, a sale or a correction, each of which
  * leaves a movement behind. Nor the units, which have their own requests.
  *
- * @param price        of one base unit; positive, bounded by the column so an absurd figure is a
- *                     400 rather than an overflow
- * @param barcode      optional; blank means none
- * @param categoryId   the rayon, or null for none -- the dialog always sends the one it shows
- * @param purchaseCost the purchase cost of one base unit, corrected by hand; null leaves the
- *                     average as the receipts made it
+ * @param price          of one base unit; positive, bounded by the column so an absurd figure is
+ *                       a 400 rather than an overflow
+ * @param barcode        optional; blank means none
+ * @param categoryId     the rayon, or null for none -- the dialog always sends the one it shows
+ * @param purchaseCost   the purchase cost of one {@code purchaseUnitId}, corrected by hand -- a
+ *                       tonne's price for rice bought by the tonne; null leaves the average as
+ *                       the receipts made it
+ * @param purchaseUnitId the unit the shop buys it in, one of its packagings, or null for the
+ *                       base unit -- the dialog always sends the one it shows
  */
 public record UpdateProductRequest(@NotBlank @Size(max = 255) String name,
                                    @NotNull @Digits(integer = 10, fraction = 2) BigDecimal price,
@@ -28,5 +31,6 @@ public record UpdateProductRequest(@NotBlank @Size(max = 255) String name,
                                    Long categoryId,
                                    @PositiveOrZero(message = "le prix d'achat ne peut pas etre negatif")
                                    @Digits(integer = 10, fraction = 2)
-                                   BigDecimal purchaseCost) {
+                                   BigDecimal purchaseCost,
+                                   Long purchaseUnitId) {
 }

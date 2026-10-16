@@ -39,10 +39,20 @@ public class Product {
     /**
      * Weighted average purchase cost of one unit of the stock on hand -- the "coût moyen
      * pondéré". Moved only by {@code PurchaseCosting}, on every receipt that states a cost.
-     * Null while no receipt of this product has ever carried one.
+     * Null while no receipt of this product has ever carried one. Six places, so that a cost
+     * typed per tonne reads back to the ariary -- see {@code PurchaseCosting.AVERAGE_SCALE}.
      */
-    @Column(precision = 12, scale = 2)
+    @Column(precision = 18, scale = 6)
     private BigDecimal averageCost;
+
+    /**
+     * The unit the shop buys it in -- "tonne", "sac 50 kg" -- or null for the base unit. Only
+     * how the purchase price is shown and typed: the average stays per base unit, and a receipt
+     * may still come in any unit. Cleared when that unit is removed.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_unit_id")
+    private ProductPackaging purchaseUnit;
 
     /**
      * How the shelf counts it: "kg", "L", "sachet", "carton de 12". Kept exactly as the

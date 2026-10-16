@@ -23,6 +23,32 @@ export interface ProductCost {
   lastUnitCost: number | null;
   lastSupplierName: string | null;
   lastPurchaseDate: string | null;
+  /** The packaging the shop buys it in, or null for the base unit. */
+  purchaseUnitId: number | null;
+  /** The base unit, then every packaging, priced both ways by the server. */
+  units: UnitCost[];
+}
+
+/**
+ * One unit of a product, priced both ways — mirrors ProductCostResponse.UnitCost: "tonne —
+ * vendue 3 000 000, coûte 2 750 000, bénéfice 250 000 (8,3 %)".
+ */
+export interface UnitCost {
+  /** Null for the base unit. */
+  packagingId: number | null;
+  /** Null for a base unit counted in bare units. */
+  label: string | null;
+  /** Base units in one of it; 1 for the base unit. */
+  factor: number;
+  salePrice: number;
+  /** What one of it cost, at the average; null while none is known. */
+  cost: number | null;
+  /** salePrice − cost, or null with it. */
+  margin: number | null;
+  /** margin as a percentage of the sale price, one decimal. */
+  marginRate: number | null;
+  /** What one of it cost at the latest costed receipt, to pre-fill the next one. */
+  lastCost: number | null;
 }
 
 /** GET /api/costing/products/{id}/suppliers — mirrors SupplierPriceResponse. */

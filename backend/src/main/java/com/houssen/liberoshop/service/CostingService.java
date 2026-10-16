@@ -2,6 +2,7 @@ package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.Product;
+import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
@@ -13,6 +14,7 @@ import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.MarginReportResponse;
 import com.houssen.liberoshop.web.dto.MarginReportResponse.ProductMargin;
 import com.houssen.liberoshop.web.dto.ProductCostResponse;
+import com.houssen.liberoshop.web.dto.ProductCostResponse.UnitCost;
 import com.houssen.liberoshop.web.dto.StockValuationResponse;
 import com.houssen.liberoshop.web.dto.StockValuationResponse.CategoryValuation;
 import com.houssen.liberoshop.web.dto.SupplierPriceResponse;
@@ -97,21 +99,42 @@ public class CostingService {
     }
 
     private static ProductCostResponse costOf(Product product, Supply latest) {
-        BigDecimal average = product.getAverageCost();
-        BigDecimal unitMargin = average == null ? null : product.getPrice().subtract(average);
+        BigDecimal lastBaseCost = latest == null ? null : latest.exactBaseUnitCost();
+        List<UnitCost> units = new ArrayList<>();
+        units.add(unitCostOf(product, null, product.getUnit(), BigDecimal.ONE, product.getPrice(), lastBaseCost));
+        for (ProductPackaging packaging : product.getPackagings()) {
+            units.add(unitCostOf(product, packaging.getId(), packaging.getLabel(), packaging.getFactor(),
+                    packaging.getPrice(), lastBaseCost));
+        }
+        UnitCost base = units.getFirst();
         return new ProductCostResponse(
                 product.getId(),
                 product.getName(),
                 product.getUnit(),
                 product.getPrice(),
                 product.getStockQuantity(),
-                average,
-                unitMargin,
-                PurchaseCosting.marginRate(unitMargin, product.getPrice()),
+                base.cost(),
+                base.margin(),
+                base.marginRate(),
                 // Per base unit, like the average beside it: a sack's price would dwarf it.
                 latest == null ? null : latest.baseUnitCost(),
                 latest == null || latest.getSupplier() == null ? null : latest.getSupplier().getName(),
-                latest == null ? null : latest.getMovementDate());
+                latest == null ? null : latest.getMovementDate(),
+                product.getPurchaseUnit() == null ? null : product.getPurchaseUnit().getId(),
+                units);
+    }
+
+    /**
+     * One unit priced both ways. The cost is the exact average times the factor, rounded once at
+     * the end: the same figure a sale in this unit freezes on its line.
+     */
+    private static UnitCost unitCostOf(Product product, Long packagingId, String label, BigDecimal factor,
+                                       BigDecimal salePrice, BigDecimal lastBaseCost) {
+        BigDecimal cost = PurchaseCosting.costOfSale(product, factor);
+        BigDecimal margin = cost == null ? null : salePrice.subtract(cost);
+        return new UnitCost(packagingId, label, factor, salePrice, cost, margin,
+                PurchaseCosting.marginRate(margin, salePrice),
+                lastBaseCost == null ? null : PurchaseCosting.scaled(lastBaseCost.multiply(factor)));
     }
 
     // ----------------------------------------------------------------- suppliers
@@ -248,9 +271,10 @@ public class CostingService {
     /** One row of {@link ProductRepository#aggregateStockValueByCategory}. */
     private static CategoryValuation valuationOf(Object[] row, Map<Long, String> paths) {
         Long categoryId = (Long) row[0];
-        BigDecimal saleValue = decimal(row[3]);
-        BigDecimal costValue = decimal(row[4]);
-        BigDecimal costedSaleValue = decimal(row[5]);
+        BigDecimal saleValue = PurchaseCosting.scaled(decimal(row[3]));
+        // The average has six places, its product with the stock nine: an amount has two.
+        BigDecimal costValue = PurchaseCosting.scaled(decimal(row[4]));
+        BigDecimal costedSaleValue = PurchaseCosting.scaled(decimal(row[5]));
         BigDecimal potentialMargin = costedSaleValue.subtract(costValue);
         return new CategoryValuation(
                 categoryId,

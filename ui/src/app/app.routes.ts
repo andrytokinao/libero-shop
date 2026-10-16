@@ -233,6 +233,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/depot-manager/stock.component').then((m) => m.StockComponent),
       },
+      // Every product priced both ways, unit by unit. The same screen for the stock manager and
+      // the administrator: the two roles that read purchase prices.
+      {
+        path: 'prix-et-unites',
+        title: 'Prix et unités',
+        loadComponent: () =>
+          import('./features/catalog/product-prices.component').then((m) => m.ProductPricesComponent),
+      },
       {
         path: 'categories',
         title: 'Catégories',
@@ -302,6 +310,14 @@ export const routes: Routes = [
         title: 'Bénéfices & stock',
         loadComponent: () =>
           import('./features/admin/margin.component').then((m) => m.MarginComponent),
+      },
+      // Every product priced both ways, unit by unit. The same screen for the stock manager and
+      // the administrator: the two roles that read purchase prices.
+      {
+        path: 'prix-et-unites',
+        title: 'Prix et unités',
+        loadComponent: () =>
+          import('./features/catalog/product-prices.component').then((m) => m.ProductPricesComponent),
       },
       {
         path: 'stock-global',
