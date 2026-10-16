@@ -47,6 +47,9 @@ ou entretien.
   par produit, catégorie et prix d'achat modifiables (`22-produits-et-stock-a-la-main.md`)
 - [x] Mise à jour de l'application sans réinstaller : envoi manuel sur page cachée, bouton en ligne,
   automatique avec confirmation des postes, paquet `.lsu` signé (`23-mise-a-jour-de-l-application.md`)
+- [x] Boutique ouverte dans le navigateur à la fin de l'installation (pas aux démarrages suivants),
+  page « Sauvegardes » retirée du menu et laissée à `/admin/sauvegardes`
+  (`24-navigateur-apres-installation-et-sauvegardes-cachees.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),

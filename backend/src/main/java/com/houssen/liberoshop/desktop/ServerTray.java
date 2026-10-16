@@ -59,6 +59,12 @@ import java.util.function.Supplier;
 public final class ServerTray {
 
     public static final String ENABLED_PROPERTY = "liberoshop.tray.enabled";
+    /**
+     * Passed by the Windows installer only, when it starts the application at the end of an
+     * installation (see {@code src/main/jpackage/windows/main.wxs}): the shop then opens in the
+     * browser once the server is up. The logon start has no such argument, so it stays silent.
+     */
+    public static final String OPEN_BROWSER_ARGUMENT = "--liberoshop.open-browser";
 
     private static final Logger log = LoggerFactory.getLogger(ServerTray.class);
 
@@ -94,18 +100,22 @@ public final class ServerTray {
     private final BufferedImage logo = loadLogo();
     private int iconPixels;
     private State shown;
+    /** Opens the browser the first time the server is up, then never again in this process. */
+    private boolean openWhenRunning;
 
-    private ServerTray(Supplier<ConfigurableApplicationContext> starter) {
+    private ServerTray(Supplier<ConfigurableApplicationContext> starter, boolean openWhenRunning) {
         this.starter = starter;
+        this.openWhenRunning = openWhenRunning;
     }
 
     /**
      * Shows the icon and starts the server behind it.
      *
      * @param starter how to start the application, each time it has to be
+     * @param openWhenRunning open the shop in the browser once the server is up (after an installation)
      * @return false when there is no tray here; the caller then starts the application itself
      */
-    public static boolean launch(Supplier<ConfigurableApplicationContext> starter) {
+    public static boolean launch(Supplier<ConfigurableApplicationContext> starter, boolean openWhenRunning) {
         if (!Boolean.getBoolean(ENABLED_PROPERTY)) {
             return false;
         }
@@ -116,7 +126,7 @@ public final class ServerTray {
         // Spring Boot switches AWT to headless unless told otherwise, and the dialogs with it.
         System.setProperty("java.awt.headless", "false");
 
-        ServerTray tray = new ServerTray(starter);
+        ServerTray tray = new ServerTray(starter, openWhenRunning);
         try {
             EventQueue.invokeAndWait(tray::show);
         } catch (InterruptedException e) {
@@ -222,6 +232,11 @@ public final class ServerTray {
                     TrayIcon.MessageType.ERROR);
         }
         shown = state;
+
+        if (state == State.RUNNING && openWhenRunning) {
+            openWhenRunning = false;
+            open();
+        }
     }
 
     private static Color color(State state) {

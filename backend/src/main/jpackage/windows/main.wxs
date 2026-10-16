@@ -101,9 +101,12 @@
       </Component>
     </DirectoryRef>
 
-    <!-- Libero Shop: started when the installation ends. Not waited for: it never exits. -->
+    <!-- Libero Shop: started when the installation ends. Not waited for: it never exits.
+         The argument opens the shop in the browser once the server is up (ServerTray); the
+         logon start above has none, so it does not. -->
     <CustomAction Id="LiberoShopLaunch" Directory="INSTALLDIR"
-                  ExeCommand="&quot;[INSTALLDIR]$(var.JpAppName).exe&quot;" Return="asyncNoWait"/>
+                  ExeCommand="&quot;[INSTALLDIR]$(var.JpAppName).exe&quot; --liberoshop.open-browser"
+                  Return="asyncNoWait"/>
 
     <CustomAction Id="JpSetARPINSTALLLOCATION" Property="ARPINSTALLLOCATION" Value="[INSTALLDIR]" />
     <CustomAction Id="JpSetARPCOMMENTS" Property="ARPCOMMENTS" Value="$(var.JpAppDescription)" />

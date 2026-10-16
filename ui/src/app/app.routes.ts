@@ -327,6 +327,8 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/shop-settings.component').then((m) => m.ShopSettingsComponent),
       },
+      // Hidden like 'mise-a-jour': no menu entry (see navigation.ts). Reached by typing
+      // /admin/sauvegardes.
       {
         path: 'sauvegardes',
         title: 'Sauvegardes',

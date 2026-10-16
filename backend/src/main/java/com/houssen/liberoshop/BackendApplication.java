@@ -9,15 +9,22 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 
+import java.util.Arrays;
+
 @SpringBootApplication
 public class BackendApplication {
 
-    public static void main(String[] args) {
+    public static void main(String[] arguments) {
+        // Only the installer passes it, and only the tray reads it: kept away from Spring.
+        boolean justInstalled = Arrays.asList(arguments).contains(ServerTray.OPEN_BROWSER_ARGUMENT);
+        String[] args = Arrays.stream(arguments)
+                .filter(argument -> !argument.equals(ServerTray.OPEN_BROWSER_ARGUMENT))
+                .toArray(String[]::new);
         // A restore restarts the application in this process: it needs to know how.
         ApplicationRestarter.remember(BackendApplication::start, args);
         // Installed, the application has no window: the tray icon is how it is seen and stopped,
         // so the tray starts the server and outlives it. Anywhere else, start as usual.
-        if (!ServerTray.launch(() -> start(args))) {
+        if (!ServerTray.launch(() -> start(args), justInstalled)) {
             start(args);
         }
     }

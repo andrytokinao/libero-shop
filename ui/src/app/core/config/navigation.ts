@@ -102,7 +102,6 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: 'invoice', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: 'users', label: 'Utilisateurs', path: '/admin/utilisateurs' },
       { icon: 'settings', label: 'Configuration', path: '/admin/configuration' },
-      { icon: 'database', label: 'Sauvegardes', path: '/admin/sauvegardes' },
       {
         icon: 'qrCode',
         label: 'Tables & QR codes',
@@ -113,6 +112,7 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       // bar links to it once expiry is within LICENSE_BANNER_DAYS.
       // No 'Mise à jour' entry either, on purpose: the update page stays hidden and is
       // reached only by typing /admin/mise-a-jour.
+      // Nor 'Sauvegardes': the backup page is hidden the same way, at /admin/sauvegardes.
     ],
   },
 };
