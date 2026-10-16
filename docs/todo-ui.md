@@ -14,7 +14,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 
 ## P1
 
-- [ ] **UI-01** — « ⋮ » produit sur le tableau de bord du stock et la vue d'ensemble
+- [x] **UI-01** — « ⋮ » produit sur le tableau de bord du stock et la vue d'ensemble
   (`app-stock-table [manage]="true"` + `app-product-dialogs`), sur Prix et unités (à la place des
   boutons) et sur Bénéfices & stock.
 - [ ] **UI-21** — Code-barres inconnu : fenêtre « l'ajouter à un produit existant » / « créer le

@@ -1,13 +1,17 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { EMPTY, catchError, switchMap } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
-import { MarginReport, StockValuation } from '../../core/models';
+import { ProductDialogRequest } from '../../core/catalog/product-rights';
+import { MarginReport, Product, StockValuation } from '../../core/models';
+import { ProductStore } from '../../core/store/product.store';
 import { isoDate } from '../../core/utils/date.util';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
+import { ProductMenuComponent } from '../../shared/components/product-menu.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** The periods a manager actually asks about; anything else goes through the two dates. */
@@ -55,7 +59,14 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
 @Component({
   selector: 'app-margin',
   standalone: true,
-  imports: [FormsModule, DatePipe, KpiCardComponent, AriaryPipe],
+  imports: [
+    FormsModule,
+    DatePipe,
+    KpiCardComponent,
+    ProductDialogsComponent,
+    ProductMenuComponent,
+    AriaryPipe,
+  ],
   template: `
     <!-- ================================================= what the period earned -->
     <div class="card period">
@@ -136,6 +147,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
                   <th class="num">Coût d'achat</th>
                   <th class="num">Bénéfice</th>
                   <th class="num">Taux</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -154,6 +166,11 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
                     <td class="num">{{ row.costOfGoodsSold | ariary }}</td>
                     <td class="num" [class.loss]="row.grossMargin < 0">{{ row.grossMargin | ariary }}</td>
                     <td class="num">{{ percent(row.marginRate) }}</td>
+                    <td class="num">
+                      @if (productOf(row.productId); as product) {
+                        <app-product-menu [product]="product" (action)="asked.set($event)" />
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -250,6 +267,8 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
         }
       </div>
     }
+
+    <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
   `,
   styles: `
     .period {
@@ -310,9 +329,31 @@ export class MarginComponent {
   );
 
   /** Loaded once: the stock does not depend on the period chosen. */
-  protected readonly valuation = apiResource<StockValuation | null>(null, () =>
+  private readonly valuationResource = apiResource<StockValuation | null>(null, () =>
     this.costing.stockValuation(),
-  ).value;
+  );
+  protected readonly valuation = this.valuationResource.value;
+
+  /** What a product's menu asked for, or null while no dialog is open. */
+  protected readonly asked = signal<ProductDialogRequest | null>(null);
+  /** The products themselves, which the menus and dialogs open on. */
+  private readonly products = inject(ProductStore).list().value;
+  private readonly productsById = computed(
+    () => new Map(this.products().map((product) => [product.id, product])),
+  );
+
+  protected productOf(productId: number): Product | null {
+    return this.productsById().get(productId) ?? null;
+  }
+
+  /**
+   * A purchase price typed or goods received: both halves are the server's to work out again.
+   * The period is handed back as a new object so the report is asked for once more.
+   */
+  protected onChanged(): void {
+    this.period.set({ ...this.period() });
+    this.valuationResource.reload();
+  }
 
   protected choose(preset: Preset): void {
     this.preset.set(preset);

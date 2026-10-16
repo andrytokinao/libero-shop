@@ -65,10 +65,6 @@ describe('ProductPricesComponent', () => {
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
   const rows = () => [...fixture.nativeElement.querySelectorAll('tbody tr')] as HTMLTableRowElement[];
-  const buttons = () =>
-    [...fixture.nativeElement.querySelectorAll('.pp-actions button')].map((b) =>
-      (b as HTMLButtonElement).textContent?.trim(),
-    );
 
   function render(...held: RoleApp[]): void {
     roles.set(held);
@@ -115,12 +111,26 @@ describe('ProductPricesComponent', () => {
     expect(text()).not.toContain('Sel');
   });
 
+  it('gives each product the same "⋮" as the stock screen, one per product', () => {
+    render(RoleApp.SUPER_ADMIN);
+    expect(fixture.nativeElement.querySelectorAll('.pp-actions app-product-menu').length).toBe(2);
+  });
+
   it('offers to receive goods to the stock manager only', () => {
     render(RoleApp.SUPER_ADMIN);
-    expect(buttons()).toEqual(['Configurer', 'Configurer']);
+    expect(menuOfFirstProduct()).not.toContain('Ajouter du stock');
 
     TestBed.resetTestingModule();
     render(RoleApp.DEPOT_MANAGER);
-    expect(buttons()).toEqual(['Configurer', '＋ Stock', 'Configurer', '＋ Stock']);
+    expect(menuOfFirstProduct()).toContain('Ajouter du stock');
   });
+
+  /** Opens the first product's "⋮" and reads its entries. */
+  function menuOfFirstProduct(): string[] {
+    (fixture.nativeElement.querySelector('.pp-actions .am-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    return [...fixture.nativeElement.querySelectorAll('[role=menuitem]')].map(
+      (entry) => (entry as HTMLElement).textContent?.trim() ?? '',
+    );
+  }
 });

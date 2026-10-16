@@ -2,11 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
-import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
+import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { Product, ProductCost } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
+import { ProductMenuComponent } from '../../shared/components/product-menu.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** Which products the table keeps. */
@@ -16,9 +17,9 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
  * Every product's configuration on one page: each unit it sells in, what it sells for, what it
  * cost the shop and the profit left on one of it — the page to read before changing a price.
  *
- * <p>One row per unit, the product named once beside them. "Configurer" opens the product's own
- * dialog, where prices, purchase price and units are corrected; the stock manager can also book
- * goods in from here. The figures are the server's, worked out from the exact average cost, so
+ * <p>One row per unit, the product named once beside them, with the same "⋮" as on the
+ * stock screen: its configuration, where prices, purchase price and units are corrected, and the
+ * stock actions the account may take. The figures are the server's, worked out from the exact average cost, so
  * a tonne reads back at the price it was typed at.
  *
  * <p>Shown to the two roles that read purchase prices — the stock manager and the administrator
@@ -27,7 +28,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
 @Component({
   selector: 'app-product-prices',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, KpiCardComponent, ProductDialogsComponent],
+  imports: [FormsModule, AriaryPipe, KpiCardComponent, ProductDialogsComponent, ProductMenuComponent],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Produits" [value]="costs().length" />
@@ -115,24 +116,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
                   @if (first) {
                     <td class="pp-actions" [attr.rowspan]="cost.units.length">
                       @if (productOf(cost); as product) {
-                        @if (rights.canEdit()) {
-                          <button
-                            class="btn small ghost"
-                            type="button"
-                            (click)="asked.set({ action: 'edit', product })"
-                          >
-                            Configurer
-                          </button>
-                        }
-                        @if (rights.canAddStock()) {
-                          <button
-                            class="btn small ghost"
-                            type="button"
-                            (click)="asked.set({ action: 'addStock', product })"
-                          >
-                            ＋ Stock
-                          </button>
-                        }
+                        <app-product-menu [product]="product" (action)="asked.set($event)" />
                       }
                     </td>
                   }
@@ -186,7 +170,6 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
 })
 export class ProductPricesComponent {
   private readonly costing = inject(CostingApi);
-  protected readonly rights = inject(ProductRights);
 
   protected readonly search = signal('');
   protected readonly filter = signal<PriceFilter>('all');

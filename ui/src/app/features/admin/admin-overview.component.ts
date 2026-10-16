@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { DashboardApi } from '../../core/api/dashboard.api';
+import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { AdminDashboard } from '../../core/models';
 import { reloadOnOrderChange, reloadOnStockChange } from '../../core/realtime/reload-on';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -27,7 +29,13 @@ const EMPTY: AdminDashboard = {
 @Component({
   selector: 'app-admin-overview',
   standalone: true,
-  imports: [KpiCardComponent, RevenueBarsComponent, StockTableComponent, AriaryPipe],
+  imports: [
+    KpiCardComponent,
+    ProductDialogsComponent,
+    RevenueBarsComponent,
+    StockTableComponent,
+    AriaryPipe,
+  ],
   template: `
     <div class="grid g4">
       <app-kpi-card
@@ -60,7 +68,9 @@ const EMPTY: AdminDashboard = {
         <h2>Produits en alerte stock</h2>
         <app-stock-table
           [products]="data().lowStockProducts"
+          [manage]="true"
           emptyMessage="Aucun produit en alerte."
+          (action)="asked.set($event)"
         />
       </div>
     </div>
@@ -90,12 +100,17 @@ const EMPTY: AdminDashboard = {
         />
       </div>
     </div>
+
+    <app-product-dialogs [request]="asked()" (changed)="resource.reload()" (closed)="asked.set(null)" />
   `,
 })
 export class AdminOverviewComponent {
   private readonly api = inject(DashboardApi);
-  private readonly resource = apiResource(EMPTY, () => this.api.admin());
+  protected readonly resource = apiResource(EMPTY, () => this.api.admin());
   protected readonly data = this.resource.value;
+
+  /** What a product's menu asked for, or null while no dialog is open. */
+  protected readonly asked = signal<ProductDialogRequest | null>(null);
 
   constructor() {
     // The whole shop at a glance: its takings move with the orders, its value with the stock.
