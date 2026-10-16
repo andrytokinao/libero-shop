@@ -19,6 +19,7 @@ import {
 } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
+import { ProductPickerComponent } from '../../shared/components/product-picker.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -36,7 +37,7 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
 @Component({
   selector: 'app-supply',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, HasRoleDirective, AriaryPipe],
+  imports: [FormsModule, DatePipe, DecimalPipe, HasRoleDirective, AriaryPipe, ProductPickerComponent],
   template: `
     <div class="grid g2">
       <div class="card">
@@ -47,18 +48,13 @@ const EMPTY_UNIT: NewUnitDraft = { label: '', factor: '', reference: null, price
         <div class="form-row">
           <div class="fld" style="flex:1; min-width:200px;">
             <label for="supply-product">Produit</label>
-            <select
-              id="supply-product"
-              class="field"
-              [ngModel]="selectedProductId()"
-              (ngModelChange)="pickProduct($event)"
-            >
-              @for (product of products(); track product.id) {
-                <option [ngValue]="product.id">
-                  {{ product.name }} — stock {{ stockLabel(product) }}
-                </option>
-              }
-            </select>
+            <app-product-picker
+              inputId="supply-product"
+              [products]="products()"
+              [selected]="selectedProduct()"
+              (picked)="pickProduct($event.product.id, $event.packagingId)"
+              (unknownCode)="sayUnknown($event)"
+            />
           </div>
           <div class="fld" style="flex:1; min-width:200px;">
             <label for="supply-supplier">Fournisseur</label>
@@ -572,12 +568,17 @@ export class SupplyComponent {
     { initialValue: [] as SupplierPrice[] },
   );
 
-  protected pickProduct(id: number): void {
+  /** A carton's code scanned picks the carton too: the delivery is counted the way it came. */
+  protected pickProduct(id: number, packagingId: number | null = null): void {
     this.productId.set(id);
     // The cost and the unit were the previous product's; the new one starts from its own.
     this.typedCost.set(undefined);
-    this.unitId.set(null);
+    this.unitId.set(packagingId);
     this.creatingUnit.set(false);
+  }
+
+  protected sayUnknown(code: string): void {
+    this.toasts.show(`Aucun produit ne porte le code ${code}.`);
   }
 
   protected pickUnit(packagingId: number | null): void {

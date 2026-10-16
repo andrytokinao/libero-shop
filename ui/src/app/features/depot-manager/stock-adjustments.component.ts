@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, StockAdjustment } from '../../core/models';
-import { formatAmount, formatQuantity, parseQuantity, roundQuantity, stockLabel } from '../../core/sale/sale-unit';
+import { formatAmount, formatQuantity, parseQuantity, roundQuantity } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ProductPickerComponent } from '../../shared/components/product-picker.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -21,7 +22,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-stock-adjustments',
   standalone: true,
-  imports: [FormsModule, DatePipe, KpiCardComponent, AriaryPipe],
+  imports: [FormsModule, DatePipe, KpiCardComponent, AriaryPipe, ProductPickerComponent],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Corrections enregistrées" [value]="adjustments().length" />
@@ -37,17 +38,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       <form class="form-row" (ngSubmit)="register()">
         <div class="fld" style="flex:1; min-width:200px;">
           <label for="adjust-product">Produit</label>
-          <select
-            id="adjust-product"
-            name="product"
-            class="field"
-            [ngModel]="selectedProductId()"
-            (ngModelChange)="productId.set($event)"
-          >
-            @for (product of products(); track product.id) {
-              <option [ngValue]="product.id">{{ product.name }} — stock {{ stockLabel(product) }}</option>
-            }
-          </select>
+          <app-product-picker
+            inputId="adjust-product"
+            [products]="products()"
+            [selected]="selectedProduct()"
+            (picked)="productId.set($event.product.id)"
+            (unknownCode)="sayUnknown($event)"
+          />
         </div>
         <div class="fld">
           <label for="adjust-reason">Motif</label>
@@ -237,7 +234,6 @@ export class StockAdjustmentsComponent {
     ),
   );
 
-  protected readonly stockLabel = stockLabel;
   protected readonly formatQuantity = formatQuantity;
 
   protected reasonLabel(reason: AdjustmentReason): string {
@@ -257,6 +253,10 @@ export class StockAdjustmentsComponent {
       !preview.refused &&
       (this.reason() !== 'OTHER' || this.comment().trim() !== '')
     );
+  }
+
+  protected sayUnknown(code: string): void {
+    this.toasts.show(`Aucun produit ne porte le code ${code}.`);
   }
 
   protected register(): void {

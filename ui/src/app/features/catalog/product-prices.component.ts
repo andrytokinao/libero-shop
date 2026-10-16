@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
+import { searchKey } from '../../core/catalog/product-pick';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { Product, ProductCost } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
@@ -218,16 +219,6 @@ export class ProductPricesComponent {
   protected onChanged(): void {
     this.resource.reload();
   }
-}
-
-/** Lower case, without accents or extra spaces: "cafe" finds "Café", as the server's search does. */
-function searchKey(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 /** Some unit of it sells for less than it cost. */
