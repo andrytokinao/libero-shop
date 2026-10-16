@@ -102,3 +102,72 @@ describe('AuthService.reloadAfterAccessChange', () => {
     expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/login');
   });
 });
+
+/**
+ * Only the server turning the token down signs out for good. A server that does not answer —
+ * still starting after a power cut, Wi-Fi gone — leaves the token for when it is back.
+ */
+describe('AuthService.refresh when the server does not answer', () => {
+  let auth: AuthService;
+  let http: HttpTestingController;
+  let token: ReturnType<typeof signal<string | null>>;
+
+  beforeEach(() => {
+    token = signal<string | null>('jeton');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: Router, useValue: { url: '/', navigateByUrl: () => Promise.resolve(true) } },
+        {
+          provide: TokenStorage,
+          useValue: { token, clear: () => token.set(null), save: () => undefined },
+        },
+      ],
+    });
+    auth = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  function session(): ReturnType<HttpTestingController['expectOne']> {
+    return http.expectOne(`${API_BASE_URL}/auth/session`);
+  }
+
+  it('keeps the token through a network failure, and says the server is unreachable', () => {
+    auth.refresh().subscribe();
+    session().error(new ProgressEvent('error'), { status: 0, statusText: '' });
+
+    expect(auth.isAuthenticated()).toBeFalse();
+    expect(token()).toBe('jeton');
+    expect(auth.unreachable()).toBeTrue();
+  });
+
+  it('keeps the token through a proxy with no server behind it', () => {
+    auth.refresh().subscribe();
+    session().flush('', { status: 502, statusText: 'Bad Gateway' });
+
+    expect(token()).toBe('jeton');
+    expect(auth.unreachable()).toBeTrue();
+  });
+
+  it('gets the session back with the kept token once the server answers', () => {
+    auth.refresh().subscribe();
+    session().error(new ProgressEvent('error'), { status: 0, statusText: '' });
+
+    auth.refresh().subscribe();
+    session().flush(sessionOf(RoleApp.CASHIER, '/caisse/vente'));
+
+    expect(auth.isAuthenticated()).toBeTrue();
+    expect(auth.unreachable()).toBeFalse();
+  });
+
+  it('drops the token the server turns down', () => {
+    auth.refresh().subscribe();
+    session().flush({ message: 'Jeton expire' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(token()).toBeNull();
+    expect(auth.unreachable()).toBeFalse();
+  });
+});

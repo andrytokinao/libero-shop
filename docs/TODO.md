@@ -50,6 +50,8 @@ ou entretien.
 - [x] Boutique ouverte dans le navigateur à la fin de l'installation (pas aux démarrages suivants),
   page « Sauvegardes » retirée du menu et laissée à `/admin/sauvegardes`
   (`24-navigateur-apres-installation-et-sauvegardes-cachees.md`)
+- [x] Session gardée quand le serveur ne répond pas au démarrage
+  (`25-session-gardee-quand-le-serveur-ne-repond-pas.md`)
 
 Le détail de chaque partie est dans [`REALISATION.md`](REALISATION.md) (parties 1 et 2), puis
 dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-partie-3-argent.md),
@@ -214,8 +216,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 - [ ] **P2 — Le panier en cours n'existe qu'en mémoire.** Un rechargement, un clic de menu ou une
   session expirée le perd (`new-sale.component.ts`).
-- [ ] **P2 — Une coupure réseau au démarrage déconnecte l'utilisateur** (`auth.service.ts` efface
-  le jeton sur toute erreur, pas seulement 401/403).
+- [x] **P2 — Une coupure réseau au démarrage déconnecte l'utilisateur.** Seul un refus du
+  serveur (401/403) efface la session ; sans réponse, elle est gardée et la page de connexion
+  réessaie toute seule. *Fait — voir `25-session-gardee-quand-le-serveur-ne-repond-pas.md`.*
 - [ ] **P2 — Session qui expire sans prévenir** en plein service : ni jeton de rafraîchissement,
   ni alerte.
 - [ ] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on

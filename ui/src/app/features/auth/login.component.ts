@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
 import { SetupApi, SetupStatus } from '../../core/api/setup.api';
 import { PUBLISHER, SUPPORT } from '../../core/config/publisher';
 import { ServerConfig } from '../../core/config/server-config.service';
@@ -10,6 +11,9 @@ import { ApiError } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { IconName } from '../../core/ui/icons';
 import { IconComponent } from '../../shared/components/icon.component';
+
+/** How often a session kept through an unreachable server is tried again. */
+const RETRY_MS = 5000;
 
 interface Highlight {
   readonly icon: IconName;
@@ -133,6 +137,20 @@ const HIGHLIGHTS: readonly Highlight[] = [
             />
           </div>
         </div>
+
+        <!-- The session could not be read because the server did not answer: it is kept, and
+             tried again every few seconds, so the screen comes back by itself. -->
+        @if (auth.unreachable()) {
+          <div class="login-first" role="status">
+            <div class="title">Serveur injoignable</div>
+            <div class="text">
+              Votre session est conservée : elle reprendra dès que le serveur répondra.
+            </div>
+            <button class="btn small ghost" type="button" [disabled]="retrying()" (click)="retry()">
+              {{ retrying() ? 'Nouvel essai...' : 'Réessayer maintenant' }}
+            </button>
+          </div>
+        }
 
         @if (error(); as message) {
           <div class="login-error">{{ message }}</div>
@@ -369,13 +387,14 @@ export class LoginComponent {
   protected readonly publisher = PUBLISHER;
   protected readonly supportPhone = SUPPORT.phone;
   protected readonly supportLink = SUPPORT.whatsappLink;
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly username = signal('');
   protected readonly password = signal('');
   protected readonly submitting = signal(false);
+  protected readonly retrying = signal(false);
   protected readonly error = signal<string | null>(null);
 
   /** The first password of a new installation, while it is the one in service; else null. */
@@ -395,6 +414,28 @@ export class LoginComponent {
           this.username.set(status.username);
         }
       });
+
+    interval(RETRY_MS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (this.auth.unreachable() && !this.submitting()) {
+          this.retry();
+        }
+      });
+  }
+
+  /** Reads the kept session again; back to where the user was if the server now answers. */
+  protected retry(): void {
+    if (this.retrying()) {
+      return;
+    }
+    this.retrying.set(true);
+    this.auth.refresh().subscribe((session) => {
+      this.retrying.set(false);
+      if (session.authenticated) {
+        this.goOn(session.homePath);
+      }
+    });
   }
 
   protected canSubmit(): boolean {
@@ -411,9 +452,7 @@ export class LoginComponent {
     this.auth.login({ username: this.username().trim(), password: this.password() }).subscribe({
       next: (session) => {
         this.submitting.set(false);
-        // Back to the page that sent us here, or the role's own landing page.
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        void this.router.navigateByUrl(returnUrl || session.homePath);
+        this.goOn(session.homePath);
       },
       error: (failure: HttpErrorResponse) => {
         this.submitting.set(false);
@@ -427,5 +466,11 @@ export class LoginComponent {
         );
       },
     });
+  }
+
+  /** Back to the page that sent us here, or the role's own landing page. */
+  private goOn(homePath: string): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    void this.router.navigateByUrl(returnUrl || homePath);
   }
 }

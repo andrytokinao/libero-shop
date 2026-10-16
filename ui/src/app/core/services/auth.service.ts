@@ -1,4 +1,4 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, tap } from 'rxjs';
@@ -52,8 +52,14 @@ export class AuthService {
   private readonly session = signal<Session>(ANONYMOUS);
   /** False until the first /session call answers, so guards can wait rather than guess. */
   private readonly resolved = signal(false);
+  /**
+   * True when the session could not be read because the server did not answer — down, still
+   * starting, Wi-Fi gone. The token is kept: the login page offers to try again with it.
+   */
+  private readonly serverUnreachable = signal(false);
 
   readonly state = this.session.asReadonly();
+  readonly unreachable = this.serverUnreachable.asReadonly();
   readonly isAuthenticated = computed(() => this.session().authenticated);
   readonly currentUser = computed<UserApp | null>(() => this.session().user);
   /** Every job the account may do — several when one person runs the whole shop. */
@@ -89,10 +95,18 @@ export class AuthService {
       return of(ANONYMOUS);
     }
     return this.http.get<Session>(`${API_BASE_URL}/auth/session`).pipe(
-      // The token is expired, or signed with a key this backend no longer holds. Either
-      // way it is dead weight, and keeping it would only break the next sign-in attempt.
-      catchError(() => {
-        this.tokens.clear();
+      tap(() => this.serverUnreachable.set(false)),
+      catchError((error: HttpErrorResponse) => {
+        if (isRefusal(error)) {
+          // The token is expired, or signed with a key this backend no longer holds. Either
+          // way it is dead weight, and keeping it would only break the next sign-in attempt.
+          this.tokens.clear();
+          this.serverUnreachable.set(false);
+        } else {
+          // No answer, or not the server's own: says nothing about the token. Signed out for
+          // now, but the token stays for when the server is back.
+          this.serverUnreachable.set(true);
+        }
         return of(ANONYMOUS);
       }),
       tap((session) => {
@@ -109,6 +123,7 @@ export class AuthService {
       tap((response) => this.tokens.save(response.accessToken, response.expiresIn)),
       map((response) => response.session),
       tap((session) => {
+        this.serverUnreachable.set(false);
         this.session.set(session);
         this.resolved.set(true);
       }),
@@ -180,6 +195,7 @@ export class AuthService {
   /** Drops the token and the session without calling the server — used on a 401. */
   clear(): void {
     this.tokens.clear();
+    this.serverUnreachable.set(false);
     this.session.set(ANONYMOUS);
     this.resolved.set(true);
   }
@@ -198,4 +214,12 @@ export class AuthService {
   goHome(): void {
     void this.router.navigateByUrl(this.homePath());
   }
+}
+
+/**
+ * The server read the token and turned it down. Anything else — no answer (0), a proxy with
+ * no server behind it (502, 503, 504), a server error — leaves the token as good as it was.
+ */
+function isRefusal(error: HttpErrorResponse): boolean {
+  return error.status === 401 || error.status === 403;
 }
