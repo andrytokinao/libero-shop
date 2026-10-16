@@ -30,6 +30,11 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [ ] **UI-80** — Listes vides : une phrase + le bouton de l'action (fournisseurs, produits, rayons…).
 - [ ] **UI-82** — Confirmations cohérentes : remise d'argent depuis « Argent en main » et « Tout
   remettre », désactivation d'utilisateur ; fenêtre de l'application au lieu de `window.confirm()`.
+- [ ] **UI-87** — Menu latéral d'un compte à plusieurs rôles (Caisse · Stock) : deux « Tableau de
+  bord » indistincts et liste plus haute que l'écran ; nommer les entrées par section, sections
+  repliables.
+- [ ] **UI-88** — Page de vente : une ressource demandée au chargement répond 404 (console) ;
+  la retrouver et la corriger.
 
 ## P2
 
@@ -75,10 +80,19 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [ ] **UI-71** — « ⋮ » des tables (renommer, copier, imprimer QR, nouveau code, supprimer). (serveur)
 - [ ] **UI-85** — « ? » d'aide dans l'en-tête de chaque fenêtre.
 - [ ] **UI-86** — Téléphone : appui long = « ⋮ », menu en panneau du bas sous 600 px.
+- [ ] **UI-89** — Vente : rayons en barre compacte au-dessus de la grille (les tuiles de rayon
+  occupent deux rangées avant le premier produit).
+- [ ] **UI-90** — Message « article ajouté » de la vente : ne plus masquer le bas de la grille.
+- [ ] **UI-91** — Nouveau produit : dire ce qui manque quand « Créer le produit » est grisé ;
+  aligner le champ Code-barres sur les autres.
+- [ ] **UI-92** — Unité de base sans nom (« unité ») : la demander à la création, l'afficher
+  partout comme « sac (unité de base) ».
 
 ## Décisions attendues
 
 - Code inconnu à la caisse : prévenir le responsable de dépôt ? (UI-21)
+- Plusieurs codes-barres par unité ? Aujourd'hui associer un code remplace l'ancien : les paquets
+  encore en rayon avec l'ancien code deviennent inconnus. (serveur ; UI-20, UI-21)
 - Stock visible par le caissier pendant la vente ? (UI-53)
 - Sauvegardes, Mise à jour, Licence : menu « ⚙ » de l'administrateur ou toujours cachées ?
 - Prix proposés par marge, changement de prix groupé ? (UI-10)
