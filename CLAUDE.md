@@ -22,7 +22,7 @@ Python n'est pas installé sur la machine : ne pas écrire de scripts Python.
 ## Façon de travailler
 
 - Traiter `docs/TODO.md` point par point. Ignorer les points marqués « décision attendue » et les signaler à la fin.
-- Pour chaque point : coder, faire passer les tests, cocher le point dans `docs/TODO.md`, écrire le compte rendu `docs/NN-fonctionnalite.md` (numéro suivant), commiter, pousser `develop`, puis passer au point suivant.
+- Pour chaque point : coder, faire passer les tests, cocher le point dans `docs/TODO.md`, écrire le compte rendu `docs/NN-fonctionnalite.html` (numéro suivant, voir « Documentation »), commiter, pousser `develop`, puis passer au point suivant.
 - Un commit par point. Message en français, sans accents, dans le style de `git log` (ex. « Sorties de stock valorisees au prix de la vente »).
 - Avancer sans demander d'autorisation : l'utilisateur relit tout à la fin.
 - Répondre en français.
@@ -33,6 +33,21 @@ Python n'est pas installé sur la machine : ne pas écrire de scripts Python.
 - Les migrations de données au démarrage vont dans `bootstrap/` et ont chacune leur test.
 - Toute règle métier (prix, coûts, unités, stock) est testée dans `backend/src/test/.../service/`.
 - Avant de toucher aux prix ou aux unités, lire `docs/CONCEPTION-prix-et-unites.md`.
+
+## Documentation
+
+Toute documentation (compte rendu, conception, guide) est rendue en HTML dans `docs/`, en un seul fichier autonome (CSS dans `<style>`, pas de dépendance externe). Modèle de style : `docs/CLAUDE-guide.html` (mêmes couleurs, mêmes classes).
+
+Chaque document contient, dans cet ordre :
+1. Titre, date, branche.
+2. **Résumé** encadré en haut : 3 à 6 points, lisible sans le reste.
+3. Sommaire.
+4. **Explication** pas à pas : le problème, ce qui a été fait, pourquoi.
+5. **Schémas** en SVG intégré (flux, couches, avant/après, arbre de décision) : au moins un par document, avec une légende numérotée (« Figure 1 — ... »).
+6. Exemples « à éviter / attendu » en code quand c'est utile.
+7. Tableau récapitulatif à la fin (fichiers modifiés, règles, tests).
+
+Écrire pour un lecteur non développeur : phrases courtes, vocabulaire de la boutique, chemins de fichiers en `code`.
 
 ## Qualité du code (niveau senior)
 
