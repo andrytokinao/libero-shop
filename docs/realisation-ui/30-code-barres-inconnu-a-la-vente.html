@@ -74,11 +74,14 @@ li { margin:3px 0; }
 <div class="summary">
   <div class="summary-title">Résumé</div>
   <ol>
-    <li>Un code-barres qu'aucun produit ne porte n'est plus une impasse : une fenêtre « Code inconnu » s'ouvre à la caisse et à la prise de commande.</li>
-    <li>Le <strong>caissier</strong> cherche l'article par son nom et le met dans le panier ; le code reste de côté.</li>
-    <li>Qui peut <strong>modifier le catalogue</strong> choisit le produit puis l'unité (pièce, carton…) qui porte ce code : le code lui est associé et l'article est ajouté.</li>
-    <li>Il peut aussi <strong>créer le produit</strong> : la fiche s'ouvre avec le code déjà rempli.</li>
-    <li>Le serveur refuse un code déjà porté par un autre produit ; le message dit lequel.</li>
+    <li>À la caisse et à la prise de commande, un code-barres que <strong>aucun produit</strong> ne porte ouvre une fenêtre
+      « Code inconnu », au lieu d'un simple message.</li>
+    <li><strong>Tout le monde</strong> peut y chercher l'article par son nom et l'ajouter au panier : la vente continue.</li>
+    <li>Qui peut <strong>modifier le catalogue</strong> (responsable de dépôt, administrateur) peut aussi <strong>associer le
+      code</strong> au produit, en choisissant l'unité sur laquelle il est imprimé (la pièce, le carton…).</li>
+    <li>Ou bien <strong>créer le produit</strong> avec le code déjà rempli.</li>
+    <li>Une fois associé, le code est relu tout seul : l'article arrive dans le panier, dans la bonne unité. Le scan suivant
+      le trouve directement.</li>
   </ol>
 </div>
 
@@ -86,98 +89,107 @@ li { margin:3px 0; }
   <li><a href="#probleme">1. Le problème</a></li>
   <li><a href="#fait">2. Ce qui a été fait</a></li>
   <li><a href="#ecrans">3. Le résultat en images</a></li>
-  <li><a href="#reste">4. Ce qui reste à décider</a></li>
+  <li><a href="#exemples">4. À éviter / attendu</a></li>
   <li><a href="#recap">5. Tableau récapitulatif</a></li>
 </ul></nav>
 
 <h2 id="probleme">1. Le problème</h2>
-<p>Quand la douchette lisait un code inconnu, la caisse affichait seulement « Code inconnu ». Le caissier devait effacer,
-  retrouver l'article à la main dans la grille, et le code restait inconnu pour la vente suivante. Pour l'enregistrer, il fallait
-  quitter la vente, aller dans <em>Prix et unités</em> et ouvrir la configuration du produit.</p>
+<p>Un client apporte un article dont le code-barres n'est pas encore dans le logiciel : nouvel arrivage, carton d'un autre
+  fournisseur. Avant, la caisse affichait « code inconnu » et s'arrêtait là. Le caissier devait chercher l'article à la main
+  dans les tuiles. Le code restait inconnu, donc le problème revenait au scan suivant.</p>
 
 <h2 id="fait">2. Ce qui a été fait</h2>
-<p>Le code inconnu est maintenant gardé par la saisie de la vente, qui ouvre une fenêtre. Ce que propose la fenêtre dépend du
-  droit de modifier le catalogue (le même droit que pour le menu « ⋮ » du produit).</p>
+<p>Le champ « Rechercher ou scanner » passe maintenant le code inconnu à l'écran, qui ouvre la fenêtre « Code inconnu ». Ce
+  que la fenêtre propose dépend du rôle :</p>
 
 <div class="figure">
-<svg viewBox="0 0 860 300" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ce qui se passe après un code inconnu">
+<svg viewBox="0 0 860 280" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ce que propose la fenêtre Code inconnu selon le rôle">
   <style>
     .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
     .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
-    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
-    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
-    .q { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
-    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+    .q { fill:#fff; stroke:#1f6f5c; stroke-width:1.5; }
+    .r { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .w { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#b); }
   </style>
-  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
-  <rect class="box" x="20" y="125" width="150" height="50" rx="8"/><text class="t" x="34" y="148">Douchette :</text><text class="s" x="34" y="165">code inconnu</text>
-  <rect class="q" x="215" y="115" width="190" height="70" rx="8"/><text class="t" x="229" y="143">Peut modifier</text><text class="t" x="229" y="161">le catalogue ?</text>
-  <rect class="new" x="460" y="20" width="180" height="50" rx="8"/><text class="t" x="474" y="43">Chercher par le nom</text><text class="s" x="474" y="60">non : caissier</text>
-  <rect class="box" x="680" y="20" width="160" height="50" rx="8"/><text class="t" x="694" y="43">Article au panier</text><text class="s" x="694" y="60">code laissé de côté</text>
-  <rect class="new" x="460" y="125" width="180" height="50" rx="8"/><text class="t" x="474" y="148">Produit puis unité</text><text class="s" x="474" y="165">oui : associer le code</text>
-  <rect class="new" x="460" y="230" width="180" height="50" rx="8"/><text class="t" x="474" y="253">Créer le produit</text><text class="s" x="474" y="270">oui : code prérempli</text>
-  <rect class="box" x="680" y="175" width="160" height="60" rx="8"/><text class="t" x="694" y="198">Code relu :</text><text class="s" x="694" y="215">article au panier,</text><text class="s" x="694" y="228">reconnu la fois suivante</text>
-  <path class="ln" d="M170,150 L213,150"/>
-  <path class="ln" d="M405,135 L458,48"/><path class="ln" d="M405,150 L458,150"/><path class="ln" d="M405,165 L458,252"/>
-  <path class="ln" d="M640,45 L678,45"/><path class="ln" d="M640,150 L678,195"/><path class="ln" d="M640,255 L678,218"/>
+  <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="w" x="20" y="110" width="170" height="56" rx="8"/>
+  <text class="t" x="34" y="134">Code scanné</text><text class="s" x="34" y="153">aucun produit ne le porte</text>
+  <rect class="q" x="250" y="110" width="190" height="56" rx="8"/>
+  <text class="t" x="264" y="134">Fenêtre « Code inconnu »</text><text class="s" x="264" y="153">selon le rôle</text>
+  <path class="ln" d="M190,138 L245,138"/>
+
+  <rect class="r" x="520" y="20" width="320" height="56" rx="8"/>
+  <text class="t" x="534" y="44">Chercher par le nom → ajouter au panier</text><text class="s" x="534" y="63">tout le monde (caissier compris)</text>
+  <rect class="r" x="520" y="110" width="320" height="56" rx="8"/>
+  <text class="t" x="534" y="134">Associer le code à une unité du produit</text><text class="s" x="534" y="153">puis relu : l'article arrive dans le panier</text>
+  <rect class="r" x="520" y="200" width="320" height="56" rx="8"/>
+  <text class="t" x="534" y="224">Créer le produit avec ce code</text><text class="s" x="534" y="243">code déjà rempli</text>
+  <path class="ln" d="M440,130 L515,48"/><path class="ln" d="M440,138 L515,138"/><path class="ln" d="M440,146 L515,228"/>
+  <text class="s" x="452" y="190">responsable de dépôt,</text><text class="s" x="452" y="204">administrateur</text>
 </svg>
-<div class="caption">Figure 1 — Après un code inconnu : le chemin du caissier en haut, celui de qui gère le catalogue en dessous.</div>
+<div class="caption">Figure 1 — Le code inconnu n'est plus une impasse : chercher, associer ou créer.</div>
 </div>
 
-<p>Une fois le code associé ou le produit créé, la caisse <strong>relit le code</strong> comme si on venait de le scanner :
-  l'article entre dans le panier dans la bonne unité (un carton si le code est celui du carton). Associer un code ne touche à
-  rien d'autre du produit : ni le prix, ni le prix d'achat, ni le contenu du carton.</p>
-
-<div class="compare">
-  <div class="bad"><div class="bad-title">Avant</div>« Code inconnu » s'affiche ; le caissier efface et cherche dans la grille ; le code reste inconnu.</div>
-  <div class="good"><div class="good-title">Maintenant</div>Une fenêtre propose de chercher l'article par son nom, de lui donner ce code ou de créer le produit.</div>
-</div>
+<p>Associer un code ne passe pas par une nouvelle route du serveur. On réutilise les mêmes écritures que la fenêtre de
+  configuration : la fiche du produit pour l'unité de base, l'unité elle-même pour un carton. Tout le reste du produit
+  (nom, prix, contenance, prix d'achat) reste tel quel. Si le code appartient déjà à un autre article, le serveur refuse
+  et le message le dit.</p>
 
 <h2 id="ecrans">3. Le résultat en images</h2>
+<h3>À la caisse, sans droit sur le catalogue</h3>
+<p><span class="who">Fatima — responsable de caisse</span> Elle scanne un code inconnu.</p>
+<div class="shot"><img src="captures/ui-21-caissier-code-inconnu.png" alt="Code inconnu tapé dans le champ de la caisse">
+<div class="caption">Figure 2 — Le code 9990001112223 arrive dans le champ « Rechercher ou scanner ».</div></div>
+<div class="shot"><img src="captures/ui-21-caissier-recherche-par-nom.png" alt="Recherche par le nom dans la fenêtre Code inconnu">
+<div class="caption">Figure 3 — Elle ne peut pas modifier le catalogue : la fenêtre propose seulement de chercher par le nom.</div></div>
+<div class="shot"><img src="captures/ui-21-caissier-article-ajoute.png" alt="Article ajouté au panier">
+<div class="caption">Figure 4 — Le riz est dans le panier, la vente continue.</div></div>
 
-<h3>Le caissier : chercher l'article par son nom</h3>
-<p><span class="who">Fatima — caisse</span> Le code <code>9990001112223</code> n'est porté par aucun produit.
-  Elle tape « riz » et choisit l'article.</p>
-<div class="shot"><img src="captures/ui-21-caissier-code-inconnu.png" alt="Fenêtre Code inconnu pour le caissier">
-<div class="caption">Figure 2 — La fenêtre s'ouvre à la place du simple message.</div></div>
-<div class="shot"><img src="captures/ui-21-caissier-recherche-par-nom.png" alt="Recherche du riz par son nom">
-<div class="caption">Figure 3 — Recherche dès deux lettres, avec le stock de chaque article.</div></div>
-<div class="shot"><img src="captures/ui-21-caissier-article-ajoute.png" alt="Riz ajouté au panier">
-<div class="caption">Figure 4 — Le riz est dans le panier ; on peut scanner l'article suivant.</div></div>
-
-<h3>Qui gère le catalogue : associer le code</h3>
-<p><span class="who">Rado — caisse et stock</span> La même fenêtre propose en plus « Créer le produit avec ce code ».
-  Après le choix du produit, elle demande sur quelle unité le code est imprimé et montre le code qu'il remplacera.</p>
-<div class="shot"><img src="captures/ui-21-responsable-code-inconnu.png" alt="Fenêtre Code inconnu avec le bouton Créer le produit">
-<div class="caption">Figure 5 — Chercher un produit existant ou en créer un.</div></div>
+<h3>Avec le droit de modifier le catalogue</h3>
+<p><span class="who">Rado — caisse et stock</span> Il peut modifier le catalogue : la fenêtre propose aussi de créer le produit.</p>
+<div class="shot"><img src="captures/ui-21-responsable-code-inconnu.png" alt="Fenêtre Code inconnu pour un responsable">
+<div class="caption">Figure 5 — « Produit existant » ou « Créer le produit avec ce code ».</div></div>
 <div class="shot"><img src="captures/ui-21-responsable-choix-unite.png" alt="Choix de l'unité qui porte le code">
-<div class="caption">Figure 6 — Le code va sur l'unité choisie ; « Vendre sans associer » reste possible.</div></div>
-<div class="shot"><img src="captures/ui-21-responsable-code-associe.png" alt="Code associé, riz au panier">
-<div class="caption">Figure 7 — Code associé : le riz est ajouté, et le code sera reconnu à la vente suivante.</div></div>
+<div class="caption">Figure 6 — Sur quelle unité le code est-il imprimé ? L'ancien code est indiqué (« remplace … »). On peut aussi vendre sans associer.</div></div>
+<div class="shot"><img src="captures/ui-21-responsable-code-associe.png" alt="Code associé et article ajouté">
+<div class="caption">Figure 7 — Code associé : l'article est ajouté au panier ; le prochain scan le trouvera directement.</div></div>
+<div class="shot"><img src="captures/ui-21-responsable-creer-produit.png" alt="Nouveau produit avec le code prérempli">
+<div class="caption">Figure 8 — « Créer le produit » : le code-barres est déjà rempli (capture faite avant l'ajout des modèles d'unités, voir le compte rendu 31).</div></div>
 
-<h3>Qui gère le catalogue : créer le produit</h3>
-<div class="shot"><img src="captures/ui-21-responsable-creer-produit.png" alt="Fiche Nouveau produit avec le code-barres rempli">
-<div class="caption">Figure 8 — La fiche « Nouveau produit » s'ouvre avec le code scanné déjà rempli.</div></div>
-
-<h2 id="reste">4. Ce qui reste à décider</h2>
-<div class="note">« Code inconnu à la caisse : prévenir le responsable de dépôt ? » est une décision attendue de
-  <code>docs/todo-ui.md</code>. Rien n'est envoyé pour l'instant : le caissier vend l'article, le code reste inconnu.</div>
-<div class="note">Une unité ne porte qu'un code : associer un nouveau code <strong>remplace</strong> l'ancien (Figure 6,
-  « remplace 6001001000015 »). Les paquets encore en rayon avec l'ancien code deviennent inconnus. Signalé dans
-  <code>docs/todo-ui.md</code> comme décision attendue (plusieurs codes par unité : changement côté serveur).</div>
+<h2 id="exemples">4. À éviter / attendu</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>// Associer le code en réécrivant la fiche
+// avec ce que l'écran croit savoir :
+updateProduct(id, { ...ligneDuPanier, barcode })</code></pre></div>
+  <div class="good"><div class="good-title">Attendu</div>
+<pre><code>// Relire le produit, ne changer que le code,
+// garder le prix d'achat tel que les réceptions l'ont fait :
+productUnits(id) → updateProduct(id, { ...fiche, barcode, purchaseCost: null })</code></pre></div>
+</div>
 
 <h2 id="recap">5. Tableau récapitulatif</h2>
 <div class="table-wrap"><table>
 <tr><th>Fichier</th><th>Changement</th></tr>
-<tr><td><code>shared/components/unknown-code-dialog.component.ts</code></td><td>nouvelle fenêtre « Code inconnu » : recherche par nom, choix de l'unité, création</td></tr>
-<tr><td><code>core/catalog/barcode-assignment.ts</code></td><td>donne un code à l'unité de base ou à un carton, sans toucher au reste du produit</td></tr>
-<tr><td><code>core/sale/product-entry.ts</code></td><td>garde le code inconnu au lieu d'afficher un message ; ajoute l'article trouvé par son nom</td></tr>
-<tr><td><code>features/cashier/new-sale.component.ts</code></td><td>fenêtre branchée sur la nouvelle vente (touches F4/F10 en pause tant qu'elle est ouverte)</td></tr>
-<tr><td><code>features/orders/order-taking.component.ts</code></td><td>fenêtre branchée sur la prise de commande</td></tr>
-<tr><td><code>shared/components/product-create-dialog.component.ts</code></td><td>code-barres prérempli à l'ouverture</td></tr>
-<tr><td><code>core/catalog/barcode-assignment.spec.ts</code>, <code>core/sale/product-entry.spec.ts</code></td><td>tests : code sur l'unité de base ou sur un carton sans rien changer d'autre ; code inconnu confié à l'écran ; article trouvé ajouté</td></tr>
+<tr><td><code>ui/…/core/sale/product-entry.ts</code></td><td>un code inconnu est passé à l'écran (<code>unknownCode</code>) ; <code>addPicked</code> ajoute l'article trouvé par son nom</td></tr>
+<tr><td><code>ui/…/shared/components/unknown-code-dialog.component.ts</code></td><td>nouvelle fenêtre « Code inconnu » : chercher, associer à une unité, créer</td></tr>
+<tr><td><code>ui/…/core/catalog/barcode-assignment.ts</code></td><td>donne le code à l'unité de base ou à un conditionnement, sans toucher au reste</td></tr>
+<tr><td><code>ui/…/features/cashier/new-sale.component.ts</code>, <code>features/orders/order-taking.component.ts</code></td><td>ouvrent la fenêtre ; le code associé est relu</td></tr>
+<tr><td><code>ui/…/shared/components/product-create-dialog.component.ts</code></td><td>accepte un code-barres déjà rempli</td></tr>
 </table></div>
-<p><strong>Tests :</strong> tests de l'interface (<code>ng test</code>) au vert, 195 tests. Aucun changement côté serveur.</p>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Un code inconnu est passé à l'écran au lieu d'un simple message</td><td><code>product-entry.spec.ts</code> — « hands an unknown code to the screen… »</td></tr>
+<tr><td>L'article trouvé par son nom entre dans le panier, une unité de base</td><td><code>product-entry.spec.ts</code> — « puts one base unit… »</td></tr>
+<tr><td>Le code va à l'unité de base sans changer le reste de la fiche ; ou à un carton sans changer sa contenance ni son prix</td><td><code>barcode-assignment.spec.ts</code> (3 tests)</td></tr>
+</table></div>
+<p><strong>Tests :</strong> tests de l'interface au vert (195 à ce moment-là). Aucun changement côté serveur.</p>
+<div class="note"><strong>Décision attendue</strong> (notée dans <code>docs/todo-ui.md</code>) : prévenir le responsable de dépôt
+  quand un caissier rencontre un code inconnu, ou seulement continuer la vente ?</div>
+<div class="note"><strong>Décision attendue</strong> (notée dans <code>docs/todo-ui.md</code>) : une unité ne porte qu'un
+  code, donc associer un code <strong>remplace</strong> l'ancien (Figure 6, « remplace … »). Les paquets encore en rayon
+  avec l'ancien code deviennent inconnus. Garder plusieurs codes par unité demande une modification du serveur.</div>
 </main>
 </body>
 </html>
