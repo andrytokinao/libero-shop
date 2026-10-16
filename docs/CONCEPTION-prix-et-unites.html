@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libero Shop — conception des prix et des unités</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:40px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+hr { border:0; border-top:1px solid var(--line); margin:28px 0; }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc li.l3 { padding-left:16px; font-size:14px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Libero Shop — conception des prix et des unités</h1>
+<p>État au 16 octobre 2026, branche <code>develop</code>.</p>
+<p>Document technique : comment l'application représente les <strong>unités</strong> d'un produit (unité de base, conditionnements), ses <strong>prix</strong> (prix de vente, prix d'achat) et comment les deux se combinent dans les ventes, les approvisionnements, les corrections de stock, l'import Excel et les rapports. Il décrit le code tel qu'il est ; les écarts relevés à la lecture sont regroupés à la fin (section 10).</p>
+<p>Abréviations des chemins : <code>B/</code> = <code>backend/src/main/java/com/houssen/liberoshop/</code>, <code>U/</code> = <code>ui/src/app/</code>.</p>
+<nav class="toc"><div class="toc-title">Sommaire</div><ul><li class="l2"><a href="#1-principes">1. Principes</a></li><li class="l2"><a href="#2-modele-de-donnees">2. Modèle de données</a></li><li class="l3"><a href="#2-1-vue-d-ensemble">2.1 Vue d'ensemble</a></li><li class="l3"><a href="#2-2-product-b-entity-product-java">2.2 <code>Product</code> — <code>B/entity/Product.java</code></a></li><li class="l3"><a href="#2-3-productpackaging-b-entity-productpackaging-java">2.3 <code>ProductPackaging</code> — <code>B/entity/ProductPackaging.java</code></a></li><li class="l3"><a href="#2-4-saleline-b-entity-saleline-java">2.4 <code>SaleLine</code> — <code>B/entity/SaleLine.java</code></a></li><li class="l3"><a href="#2-5-mouvements-de-stock-b-entity-stockmovement-java-et-sous-classes">2.5 Mouvements de stock — <code>B/entity/StockMovement.java</code> et sous-classes</a></li><li class="l3"><a href="#2-6-regles-de-quantite-b-util-quantities-java">2.6 Règles de quantité — <code>B/util/Quantities.java</code></a></li><li class="l2"><a href="#3-unites-regles-de-gestion">3. Unités : règles de gestion</a></li><li class="l3"><a href="#3-1-unite-de-base">3.1 Unité de base</a></li><li class="l3"><a href="#3-2-conditionnements">3.2 Conditionnements</a></li><li class="l3"><a href="#3-3-resolution-d-une-unite-b-service-saleunit-java">3.3 Résolution d'une unité — <code>B/service/SaleUnit.java</code></a></li><li class="l2"><a href="#4-prix-de-vente">4. Prix de vente</a></li><li class="l2"><a href="#5-prix-d-achat-cout-moyen-pondere">5. Prix d'achat (coût moyen pondéré)</a></li><li class="l3"><a href="#5-1-calcul-a-chaque-reception">5.1 Calcul à chaque réception</a></li><li class="l3"><a href="#5-2-qui-modifie-le-prix-d-achat">5.2 Qui modifie le prix d'achat</a></li><li class="l3"><a href="#5-3-cout-fige-a-la-vente">5.3 Coût figé à la vente</a></li><li class="l2"><a href="#6-flux">6. Flux</a></li><li class="l3"><a href="#6-1-vente-b-service-saleservice-checkout">6.1 Vente — <code>B/service/SaleService.checkout</code></a></li><li class="l3"><a href="#6-2-approvisionnement-b-service-stockservice-registersupply">6.2 Approvisionnement — <code>B/service/StockService.registerSupply</code></a></li><li class="l3"><a href="#6-3-correction-de-stock-stockservice-corrections">6.3 Correction de stock — <code>StockService</code> (corrections)</a></li><li class="l3"><a href="#6-4-import-excel-productimportservice-productimportcolumns-productunitsheet">6.4 Import Excel — <code>ProductImportService</code>, <code>ProductImportColumns</code>, <code>ProductUnitSheet</code></a></li><li class="l2"><a href="#7-rapports">7. Rapports</a></li><li class="l2"><a href="#8-interface-angular">8. Interface (Angular)</a></li><li class="l2"><a href="#9-points-d-entree-et-schema">9. Points d'entrée et schéma</a></li><li class="l3"><a href="#9-1-api">9.1 API</a></li><li class="l3"><a href="#9-2-migrations">9.2 Migrations</a></li><li class="l3"><a href="#9-3-tests-de-reference">9.3 Tests de référence</a></li><li class="l2"><a href="#10-limites-et-ecarts-releves">10. Limites et écarts relevés</a></li><li class="l2"><a href="#voir-aussi">Voir aussi</a></li></ul></nav>
+<hr>
+<h2 id="1-principes">1. Principes</h2>
+<ol>
+<li><strong>Tout le stock est compté dans l'unité de base du produit.</strong> Un produit a une seule quantité en stock (<code>Product.stockQuantity</code>), exprimée dans son unité de base (le kapoka, le kg, la pièce…). Les autres unités ne sont que des façons de compter cette même quantité.</li>
+<li><strong>Une unité = un facteur.</strong> Chaque conditionnement dit combien d'unités de base il contient (<code>ProductPackaging.factor</code>). Vendre ou recevoir « 2 sacs » revient toujours à « 2 × facteur » unités de base.</li>
+<li><strong>Chaque unité a son propre prix de vente</strong>, saisi par le commerçant. Le prix d'un sac n'est <em>pas</em> calculé à partir du prix du kapoka : le gros peut être moins cher au détail près.</li>
+<li><strong>Le prix d'achat est un coût moyen pondéré</strong>, tenu par unité de base, mis à jour à chaque réception de marchandise.</li>
+<li><strong>Ce qui est vendu est figé au moment de la vente.</strong> Une ligne de vente recopie le nom de l'unité, son facteur, son prix et le coût d'achat du moment. Renommer une unité, la supprimer ou changer un prix ne réécrit jamais l'historique.</li>
+<li><strong>Le client n'envoie jamais de prix.</strong> La caisse envoie produit, unité et quantité ; le serveur relit les prix dans le catalogue, dans la transaction de la vente.</li>
+<li><strong>Quantités décimales à 3 chiffres</strong> partout (vente en vrac : 1,5 kg, 0,25 l), montants à 2 chiffres.</li>
+</ol>
+<hr>
+<h2 id="2-modele-de-donnees">2. Modèle de données</h2>
+<p>Le schéma est créé et mis à jour par Hibernate (<code>spring.jpa.hibernate.ddl-auto=update</code>, base H2 fichier). Il n'y a pas de Flyway : seules quelques migrations écrites à la main existent (section 9).</p>
+<h3 id="2-1-vue-d-ensemble">2.1 Vue d'ensemble</h3>
+<pre><code>Category 1───* Product 1───* ProductPackaging ──┐
+                  │  (unit, price, averageCost,   │ reference (0..1)
+                  │   stockQuantity)              └──► ProductPackaging
+                  │
+                  ├───* SaleLine *───1 Sale 1───1 Invoice
+                  │     (copie : unitLabel, unitFactor, unitPrice, unitCost)
+                  │
+                  └───* StockMovement  (table unique, colonne movement_type)
+                         ├─ Supply        "SUPPLY"      (+ unitLabel, unitFactor, unitCost, supplier)
+                         ├─ StockOutput   "OUTPUT"      (+ invoice)
+                         └─ StockAdjustment "ADJUSTMENT" (+ reason, comment ; quantité signée)</code></pre>
+<h3 id="2-2-product-b-entity-product-java">2.2 <code>Product</code> — <code>B/entity/Product.java</code></h3>
+<div class="table-wrap"><table><thead><tr><th>Champ</th><th>Colonne</th><th>Rôle</th></tr></thead><tbody><tr><td><code>unit</code></td><td><code>varchar(16)</code>, nullable</td><td>Nom de l'<strong>unité de base</strong>, tel que saisi. Null = « unités » sans nom.</td></tr><tr><td><code>price</code></td><td><code>numeric(12,2)</code>, non null</td><td>Prix de vente d'<strong>une unité de base</strong>.</td></tr><tr><td><code>averageCost</code></td><td><code>numeric(12,2)</code>, nullable</td><td><strong>Prix d'achat</strong> : coût moyen pondéré d'une unité de base. Null tant qu'aucun coût n'est connu.</td></tr><tr><td><code>stockQuantity</code></td><td><code>numeric(14,3)</code>, non null</td><td>Stock, <strong>en unités de base</strong>.</td></tr><tr><td><code>barcode</code></td><td>unique, nullable</td><td>Code-barres de l'unité de base.</td></tr><tr><td><code>category</code></td><td><code>category_id</code>, nullable</td><td>Rayon / famille (arbre de 4 niveaux max).</td></tr><tr><td><code>packagings</code></td><td><code>@OneToMany(mappedBy = "product")</code>, triés par facteur croissant</td><td>Les autres unités. Lecture seule depuis le produit.</td></tr></tbody></table></div>
+<p>Le stock ne change que par <code>adjustStock(quantité)</code>, qui ramène le résultat à 3 décimales.</p>
+<p>L'unité de base <strong>n'est pas une ligne</strong> de <code>product_packaging</code> : son nom, son prix, son code-barres et le stock sont sur le produit lui-même. Cela garde un seul endroit pour le stock et évite un conditionnement « facteur 1 » à maintenir en double.</p>
+<p>Pas de <code>@Version</code> : les écritures concurrentes sont sérialisées par un verrou pessimiste, <code>ProductRepository.findByIdForUpdate</code> (<code>PESSIMISTIC_WRITE</code>). Toute opération qui modifie un produit le prend, même quand elle ne touche pas au stock : Hibernate réécrit toutes les colonnes de la ligne, et une vente validée entre la lecture et l'écriture verrait son décompte écrasé (correctif <code>9c0a5c3</code>, renommage de l'unité de base).</p>
+<h3 id="2-3-productpackaging-b-entity-productpackaging-java">2.3 <code>ProductPackaging</code> — <code>B/entity/ProductPackaging.java</code></h3>
+<p>Un conditionnement d'un produit : « sac 50 kg », « carton de 12 », « kg » pour un produit compté en kapoka.</p>
+<div class="table-wrap"><table><thead><tr><th>Champ</th><th>Colonne</th><th>Rôle</th></tr></thead><tbody><tr><td><code>label</code></td><td><code>varchar(16)</code>, non null</td><td>Nom de l'unité. Unique par produit (contrainte <code>(product_id, label)</code>).</td></tr><tr><td><code>reference</code></td><td><code>reference_id</code>, nullable</td><td>L'unité <strong>dans laquelle</strong> celle-ci est décrite. Null = l'unité de base.</td></tr><tr><td><code>referenceQuantity</code></td><td><code>numeric(12,3)</code>, nullable</td><td>Combien d'unités de référence elle contient (« 50 » kg pour un sac de 50 kg).</td></tr><tr><td><code>factor</code></td><td><code>numeric(12,3)</code>, non null</td><td>Combien d'<strong>unités de base</strong> elle contient. <strong>Calculé</strong>, jamais saisi : <code>referenceQuantity × reference.factor</code>.</td></tr><tr><td><code>price</code></td><td><code>numeric(12,2)</code>, non null</td><td><strong>Son propre</strong> prix de vente.</td></tr><tr><td><code>barcode</code></td><td>unique, nullable</td><td>Son code-barres (un sac et un paquet ont des codes différents).</td></tr></tbody></table></div>
+<p><strong>Pourquoi une référence ?</strong> Le commerçant pense « un sac = 50 kg », pas « un sac = 175 kapoka ». On lui laisse écrire chaque unité dans celle qui lui parle, et le serveur en déduit le facteur.</p>
+<p>Exemple — riz vendu au kapoka :</p>
+<div class="table-wrap"><table><thead><tr><th>Unité</th><th>Écrite comme</th><th><code>referenceQuantity</code></th><th><code>reference</code></th><th><code>factor</code> (en kapoka)</th></tr></thead><tbody><tr><td>kapoka (base)</td><td>—</td><td>—</td><td>—</td><td>1</td></tr><tr><td>kg</td><td>3,5 kapoka</td><td>3,5</td><td>null (base)</td><td>3,5</td></tr><tr><td>sac 50 kg</td><td>50 kg</td><td>50</td><td>kg</td><td>175</td></tr></tbody></table></div>
+<p>Quand le facteur d'une unité change (ici le kg passe à 3,6 kapoka), toutes les unités écrites dedans, directement ou en chaîne, sont recalculées (le sac passe à 180), et <strong>toutes</strong> sont revalidées avant la moindre écriture (<code>PackagingRules.followersOf</code>).</p>
+<h3 id="2-4-saleline-b-entity-saleline-java">2.4 <code>SaleLine</code> — <code>B/entity/SaleLine.java</code></h3>
+<p>Ce qui a été vendu, figé :</p>
+<div class="table-wrap"><table><thead><tr><th>Champ</th><th>Colonne</th><th>Rôle</th></tr></thead><tbody><tr><td><code>quantity</code></td><td><code>numeric(12,3)</code></td><td>Quantité <strong>dans l'unité vendue</strong> (2 sacs, pas 350 kapoka).</td></tr><tr><td><code>unitLabel</code></td><td><code>varchar(16)</code></td><td>Copie du nom de l'unité au moment de la vente.</td></tr><tr><td><code>unitFactor</code></td><td><code>numeric(12,3)</code></td><td>Copie du facteur. Null sur les lignes anciennes, lu comme 1.</td></tr><tr><td><code>unitPrice</code></td><td><code>numeric(12,2)</code></td><td>Copie du prix de l'unité vendue.</td></tr><tr><td><code>unitCost</code></td><td><code>numeric(12,2)</code>, nullable</td><td>Coût d'achat de l'unité vendue au moment de la vente : <code>averageCost × facteur</code>. Null si aucun coût n'était connu.</td></tr></tbody></table></div>
+<p>Pas de clé étrangère vers <code>product_packaging</code> : un conditionnement supprimé ou renommé ne touche pas aux ventes passées.</p>
+<ul>
+<li><code>baseQuantity()</code> = <code>quantity × facteur</code>, à 3 décimales — ce qui sort du stock.</li>
+<li><code>lineTotal()</code> = <code>unitPrice × quantity</code>, arrondi au centime (HALF_UP).</li>
+<li><code>Sale.totalAmount</code> = somme des <code>lineTotal()</code>.</li>
+</ul>
+<h3 id="2-5-mouvements-de-stock-b-entity-stockmovement-java-et-sous-classes">2.5 Mouvements de stock — <code>B/entity/StockMovement.java</code> et sous-classes</h3>
+<p>Une table unique <code>stock_movement</code> ; <code>quantity</code> (<code>numeric(14,3)</code>) est <strong>toujours en unités de base</strong>.</p>
+<ul>
+<li><strong><code>Supply</code></strong> (approvisionnement) : <code>unitCost</code> = prix d'achat d'<strong>une unité telle que reçue</strong> (un sac), <code>unitLabel</code>/<code>unitFactor</code> = l'unité de réception (null si reçue en unité de base), <code>supplier</code> facultatif. Valeurs dérivées :<ul>
+<li><code>receivedQuantity()</code> = <code>quantity / facteur</code> (les 2 sacs d'origine) ;</li>
+<li><code>baseUnitCost()</code> = <code>unitCost / facteur</code> (le prix d'achat d'un kapoka) ;</li>
+<li><code>totalCost()</code> = <code>unitCost × receivedQuantity</code>.</li>
+</ul></li>
+<li><strong><code>StockOutput</code></strong> : une sortie par ligne de facture, en unités de base.</li>
+<li><strong><code>StockAdjustment</code></strong> (correction) : quantité <strong>signée</strong> (l'écart, pas le chiffre compté), motif (<code>BREAKAGE</code>, <code>THEFT</code>, <code>EXPIRED</code>, <code>INVENTORY_COUNT</code>, <code>OTHER</code>), commentaire.</li>
+</ul>
+<h3 id="2-6-regles-de-quantite-b-util-quantities-java">2.6 Règles de quantité — <code>B/util/Quantities.java</code></h3>
+<ul>
+<li>Échelle 3, précision 14 (<code>SCALE</code>, <code>PRECISION</code>).</li>
+<li><code>scaled()</code> arrondit à 3 décimales (HALF_UP) ; <code>tooPrecise()</code> signale plus de 3 décimales.</li>
+<li>Les écrans et les services <strong>refusent</strong> une quantité trop précise (<code>QUANTITY_TOO_PRECISE</code>) ; seul l'import arrondit, et le note sur la ligne.</li>
+</ul>
+<hr>
+<h2 id="3-unites-regles-de-gestion">3. Unités : règles de gestion</h2>
+<p>Services : <code>B/service/ProductUnitService.java</code> (opérations) et <code>B/service/PackagingRules.java</code> (validation, sans transaction propre pour être appelé aussi par l'import).</p>
+<h3 id="3-1-unite-de-base">3.1 Unité de base</h3>
+<ul>
+<li>Renommer (<code>PUT /api/products/{id}/units/base</code>) <strong>ne fait que changer le nom</strong> : le stock, les facteurs et les prix restent tels quels. Un nom vide remet « unités ».</li>
+<li>Le nom ne doit pas être déjà celui d'un conditionnement du produit.</li>
+<li>Opération faite sous verrou du produit (voir 2.2).</li>
+</ul>
+<h3 id="3-2-conditionnements">3.2 Conditionnements</h3>
+<p>Ajout, modification (<code>POST</code>/<code>PUT /api/products/{id}/units[/{packagingId}]</code>) — tout est validé avant d'écrire :</p>
+<div class="table-wrap"><table><thead><tr><th>Règle</th><th>Code d'erreur</th></tr></thead><tbody><tr><td>Nom obligatoire, espaces ramenés à un seul</td><td><code>PACKAGING_LABEL_REQUIRED</code></td></tr><tr><td>Nom unique dans le produit, <strong>unité de base comprise</strong>, comparé sans casse ni espaces (« Sac 50kg » = « sac 50 kg »)</td><td><code>PACKAGING_LABEL_TAKEN</code></td></tr><tr><td>Référence : vide ou nom de l'unité de base = unité de base ; sinon un conditionnement existant</td><td><code>PACKAGING_REFERENCE_UNKNOWN</code></td></tr><tr><td>Pas de boucle (A écrit en B écrit en A)</td><td><code>PACKAGING_REFERENCE_CYCLE</code></td></tr><tr><td>Contenance &gt; 0, au plus 3 décimales</td><td><code>PACKAGING_FACTOR_INVALID</code>, <code>PACKAGING_FACTOR_TOO_PRECISE</code></td></tr><tr><td>Facteur calculé &gt; 0, au plus 3 décimales — <strong>refusé, pas arrondi</strong></td><td>idem</td></tr><tr><td>Facteur ≠ 1 : une unité qui vaut exactement une unité de base <em>est</em> l'unité de base</td><td><code>PACKAGING_FACTOR_IS_BASE</code></td></tr><tr><td>Prix &gt; 0</td><td><code>PACKAGING_PRICE_INVALID</code></td></tr><tr><td>Code-barres unique sur les produits <strong>et</strong> les conditionnements</td><td><code>BARCODE_TAKEN</code></td></tr></tbody></table></div>
+<p>Un facteur inférieur à 1 est permis (une « demi-baguette » d'un produit compté à la baguette). Si une unité demande plus de 3 décimales, le message conseille de prendre la plus petite des deux comme unité de base.</p>
+<p>Suppression (<code>DELETE …/units/{packagingId}</code>) : refusée tant qu'une autre unité est écrite dedans (<code>PACKAGING_IS_REFERENCE</code>). L'historique n'est pas concerné (copies dans <code>SaleLine</code> et <code>Supply</code>).</p>
+<p>Toute réponse renvoie l'état complet des unités du produit (<code>ProductUnitsResponse</code>) : l'écran se redessine à partir de cette réponse, sans recalcul de son côté.</p>
+<h3 id="3-3-resolution-d-une-unite-b-service-saleunit-java">3.3 Résolution d'une unité — <code>B/service/SaleUnit.java</code></h3>
+<p>Point unique utilisé par la vente <strong>et</strong> l'approvisionnement :</p>
+<pre><code>SaleUnit.of(product, packagingId)
+  packagingId == null → (product.unit, facteur 1, product.price)
+  sinon               → (packaging.label, packaging.factor, packaging.price)
+                        ou UNKNOWN_SALE_UNIT si le conditionnement n'existe plus</code></pre>
+<hr>
+<h2 id="4-prix-de-vente">4. Prix de vente</h2>
+<ul>
+<li><strong>Unité de base</strong> : <code>Product.price</code>, obligatoire et &gt; 0 à la création et à la modification (<code>PRODUCT_PRICE_INVALID</code>).</li>
+<li><strong>Conditionnement</strong> : <code>ProductPackaging.price</code>, obligatoire et &gt; 0, saisi librement. L'écran propose <code>arrondi(facteur × prix de base)</code> en simple indication (placeholder du champ dans <code>product-units-dialog</code>), jamais imposé.</li>
+<li><strong>Modification</strong> : <code>PUT /api/products/{id}</code> (nom, prix, code-barres, catégorie, prix d'achat). Elle publie un <code>StockChangedEvent</code> : les caisses ouvertes reçoivent le nouveau prix en direct.</li>
+<li>Les ventes déjà faites gardent leur prix (<code>SaleLine.unitPrice</code>).</li>
+</ul>
+<hr>
+<h2 id="5-prix-d-achat-cout-moyen-pondere">5. Prix d'achat (coût moyen pondéré)</h2>
+<p>Classe : <code>B/service/PurchaseCosting.java</code>. Le prix d'achat est <code>Product.averageCost</code>, <strong>par unité de base</strong>, à 2 décimales.</p>
+<h3 id="5-1-calcul-a-chaque-reception">5.1 Calcul à chaque réception</h3>
+<pre><code>averageAfterReceipt(stockAvant, moyenneAvant, reçu, coût) :
+  coût inconnu                            → moyenne inchangée
+  pas encore de moyenne, ou stockAvant ≤ 0 → coût
+  reçu ≤ 0                                → moyenne inchangée
+  sinon → (stockAvant × moyenneAvant + reçu × coût) / (stockAvant + reçu), arrondi au centime</code></pre>
+<p>Un stock nul ou négatif repart du dernier coût : il n'y a plus rien à « moyenner ».</p>
+<p>Exemple : 100 kapoka en stock à 800 Ar ; réception de 2 sacs de 50 kg (175 kapoka chacun) à 145 000 Ar le sac.</p>
+<ul>
+<li>coût par kapoka reçu = 145 000 / 175 = 828,57 ;</li>
+<li>nouvelle moyenne = (100 × 800 + 350 × 828,57) / 450 = 822,22 Ar le kapoka.</li>
+</ul>
+<h3 id="5-2-qui-modifie-le-prix-d-achat">5.2 Qui modifie le prix d'achat</h3>
+<div class="table-wrap"><table><thead><tr><th>Opération</th><th>Effet sur <code>averageCost</code></th></tr></thead><tbody><tr><td>Approvisionnement (<code>StockService.registerSupply</code>)</td><td>Moyenne pondérée avec <code>baseUnitCost()</code> de la réception.</td></tr><tr><td>Création d'un produit avec stock initial et prix d'achat (<code>ProductEditService.create</code>)</td><td>Le prix saisi devient la moyenne ; un <code>Supply</code> sans fournisseur est écrit si le stock &gt; 0.</td></tr><tr><td>Import Excel, produit nouveau ou fusionné</td><td>Moyenne pondérée, comme une réception.</td></tr><tr><td>Modification à la main (<code>PUT /api/products/{id}</code>, champ <code>purchaseCost</code>)</td><td><strong>Remplace</strong> la moyenne. Champ vide → moyenne inchangée (on ne peut pas l'effacer).</td></tr><tr><td>Vente, annulation, correction de stock</td><td><strong>Aucun</strong>. Une casse ou une perte ne change pas le coût des unités restantes.</td></tr></tbody></table></div>
+<h3 id="5-3-cout-fige-a-la-vente">5.3 Coût figé à la vente</h3>
+<p><code>PurchaseCosting.costOfSale(product, facteur)</code> = <code>averageCost × facteur</code>, copié dans <code>SaleLine.unitCost</code>. Le rapport de marge utilise <strong>ce coût figé</strong>, pas la moyenne du jour : une hausse du prix d'achat après la vente ne change pas la marge déjà réalisée.</p>
+<hr>
+<h2 id="6-flux">6. Flux</h2>
+<h3 id="6-1-vente-b-service-saleservice-checkout">6.1 Vente — <code>B/service/SaleService.checkout</code></h3>
+<p>Entrée : <code>CreateSaleRequest.lines[{productId, packagingId?, quantity}]</code> (+ <code>clientReference</code>).</p>
+<ol>
+<li><strong>Regroupement</strong> (<code>mergeLines</code>) : refus des quantités à plus de 3 décimales, fusion des lignes même produit + même unité. Le même produit dans deux unités reste sur deux lignes.</li>
+<li><strong>Verrous</strong> : <code>findByIdForUpdate</code> sur chaque produit, <strong>dans l'ordre des identifiants</strong> pour éviter les interblocages entre deux caisses.</li>
+<li>Panier déjà enregistré sous la même référence → la facture existante est rendue.</li>
+<li><strong>Gel de chaque ligne</strong> : <code>SaleUnit.of</code> → <code>unitLabel</code>, <code>unitFactor</code>, <code>unitPrice</code> ; <code>unitCost = costOfSale</code>.</li>
+<li><strong>Contrôle du stock</strong> (<code>refuseShortages</code>) : somme des <code>baseQuantity()</code> <strong>par produit, toutes unités confondues</strong>, comparée au stock. Une seule erreur <code>InsufficientStockException</code> liste tous les produits manquants, avec le stock disponible ; la caisse met son affichage à jour.</li>
+<li><strong>Décompte</strong> : <code>adjustStock(-baseQuantity)</code> ; une <code>StockOutput</code> par ligne en unités de base.</li>
+<li>Total, facture, événements (<code>SaleRecordedEvent</code>, <code>StockChangedEvent</code>).</li>
+</ol>
+<p>Arrondis : quantité de base à 3 décimales, total de ligne au centime, total = somme des lignes, coût figé au centime.</p>
+<p>Les commandes par QR code (<code>OnlineOrderService</code>) passent par le même <code>checkout</code>, avec le même choix d'unité (<code>PublicMenuResponse.Unit(id, label, price)</code>).</p>
+<p>Annulation (<code>InvoiceService.giveBackStock</code>) : stock rendu en unités de base sous verrou, puis sorties <strong>supprimées</strong> (et non contre-passées — point ouvert du <code>TODO.md</code>).</p>
+<h3 id="6-2-approvisionnement-b-service-stockservice-registersupply">6.2 Approvisionnement — <code>B/service/StockService.registerSupply</code></h3>
+<p>Entrée : <code>CreateSupplyRequest{productId, packagingId?, quantity, unitCost?, supplierId?}</code> — rôle <code>DEPOT_MANAGER</code>.</p>
+<ol>
+<li>Verrou du produit, contrôle des décimales.</li>
+<li><code>SaleUnit.of(product, packagingId)</code> : on reçoit dans n'importe quelle unité du produit.</li>
+<li><code>Supply.quantity = quantité × facteur</code> (unités de base) ; <code>unitCost</code> = prix <strong>par unité reçue</strong> ; <code>unitLabel</code>/<code>unitFactor</code> = unité de réception (null pour l'unité de base).</li>
+<li><code>PurchaseCosting.receive(product, quantitéBase, supply.baseUnitCost())</code> : nouvelle moyenne, puis ajout au stock.</li>
+</ol>
+<p>L'écran pré-remplit le prix d'achat avec <code>dernier coût par unité de base × facteur</code> de l'unité choisie, et avertit quand le prix d'achat dépasse le prix de vente de cette unité.</p>
+<h3 id="6-3-correction-de-stock-stockservice-corrections">6.3 Correction de stock — <code>StockService</code> (corrections)</h3>
+<ul>
+<li><strong>En unité de base uniquement</strong> (pas de <code>packagingId</code> dans la requête).</li>
+<li>Inventaire (<code>INVENTORY_COUNT</code>) : on saisit ce qui a été compté ; l'écart est calculé sur la ligne verrouillée. Écart nul refusé.</li>
+<li>Autres motifs : quantité &gt; 0 et ≤ stock ; <code>OTHER</code> exige un commentaire.</li>
+<li>Le coût moyen ne bouge pas.</li>
+</ul>
+<h3 id="6-4-import-excel-productimportservice-productimportcolumns-productunitsheet">6.4 Import Excel — <code>ProductImportService</code>, <code>ProductImportColumns</code>, <code>ProductUnitSheet</code></h3>
+<ul>
+<li><strong>Feuille « Produits »</strong> : colonnes reconnues par leur en-tête, dans n'importe quel ordre — nom, quantité, <strong>unité</strong>, <strong>prix</strong> (« prix de vente », « pv », « pu »…), <strong>prix d'achat</strong> (« prix d'achat », « pa », « coût », « prix de revient »…), code-barres, catégorie. Les nombres acceptent espaces ou points de milliers, virgule décimale et suffixe monétaire.</li>
+<li><strong>Feuille « Unités »</strong> : produit, unité, contenance, unité de référence, prix, code-barres. Une ligne de contenance 1 sans référence décrit l'unité de base. Au plus 10 unités par produit ; les références sont créées avant les unités écrites dedans.</li>
+<li><strong>Conversion</strong> (<code>toBaseUnit</code>) : une ligne saisie dans une autre unité est ramenée à l'unité de base (<code>quantité × facteur</code>, <code>coût / facteur</code>). Une unité inconnue du produit est <strong>refusée</strong>, jamais devinée. Les unités déjà au catalogue l'emportent sur celles du fichier.</li>
+<li><strong>Fusion</strong> avec un produit existant : stock ajouté et coût moyenné ; <strong>prix, nom et catégorie existants conservés</strong> ; seuls les conditionnements manquants sont ajoutés.</li>
+<li>Chaque ligne importée écrit un <code>Supply</code> en unités de base.</li>
+<li>Une unité refusée est notée sur sa ligne sans annuler le reste de l'import.</li>
+</ul>
+<hr>
+<h2 id="7-rapports">7. Rapports</h2>
+<p>Service : <code>B/service/CostingService.java</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Rapport</th><th>Calcul</th><th>Source des prix</th></tr></thead><tbody><tr><td><strong>Marge sur période</strong> (<code>GET /api/costing/margin</code>, super-admin) — page « Bénéfices &amp; stock »</td><td>Par produit : quantité en unités de base, chiffre d'affaires <code>Σ unitPrice × quantity</code>, coût <code>Σ unitCost × quantity</code>. Ventes payées et non payées, sans les annulées. Les lignes sans coût connu sont comptées à part (<code>uncostedRevenue</code>, taux de couverture). Taux de marque = marge / CA.</td><td><strong>Valeurs figées</strong> des lignes de vente.</td></tr><tr><td><strong>Coût par produit</strong> (<code>/api/costing/products</code>)</td><td>Marge unitaire = <code>price − averageCost</code>, dernier coût de réception, comparaison des fournisseurs par unité de base.</td><td>Prix et moyenne <strong>actuels</strong>, unité de base.</td></tr><tr><td><strong>Valeur du stock</strong> (<code>/api/costing/stock-valuation</code>)</td><td>Par catégorie : <code>stock × price</code> et <code>stock × averageCost</code>.</td><td>Prix et moyenne <strong>actuels</strong>, unité de base.</td></tr><tr><td><strong>Stock bas</strong> (<code>StockPolicy</code>)</td><td>Stock &lt; 10 unités de base, seuil unique pour tout le catalogue.</td><td>—</td></tr></tbody></table></div>
+<hr>
+<h2 id="8-interface-angular">8. Interface (Angular)</h2>
+<div class="table-wrap"><table><thead><tr><th>Élément</th><th>Fichier</th><th>Rôle</th></tr></thead><tbody><tr><td>Unités d'un produit</td><td><code>U/core/sale/sale-unit.ts</code></td><td><code>unitsOf</code> : unité de base puis conditionnements par facteur croissant ; <code>stockLabel</code> affiche le stock dans la plus grande unité qu'il couvre (« 9,96 sac 50 kg ») ; <code>parseQuantity</code>/<code>formatQuantity</code> à 3 décimales, format français.</td></tr><tr><td>Panier</td><td><code>U/core/sale/cart.ts</code></td><td>Ligne = produit + unité ; contrôle du stock en unités de base sur toutes les lignes du produit ; changer l'unité d'une ligne garde le nombre et fusionne si besoin ; envoie <code>{productId, packagingId, quantity}</code>, jamais de prix.</td></tr><tr><td>Choix de l'unité</td><td><code>U/shared/components/unit-picker.component.ts</code>, <code>cart-line-quantity.component.ts</code></td><td>Un bouton par unité avec son prix ; grisé si le stock ne couvre pas une unité entière.</td></tr><tr><td>Fiche produit</td><td><code>U/shared/components/product-units-dialog.component.ts</code> (« Modifier le produit — … »)</td><td>Nom, prix par unité de base, code-barres, catégorie, prix d'achat par unité de base ; renommage de l'unité de base ; tableau des unités (« contient 50 kg (175 kapoka) ») ; ajout/modification avec choix de la référence (boucles exclues), prix suggéré en indication, phrase d'aperçu.</td></tr><tr><td>Création</td><td><code>U/shared/components/product-create-dialog.component.ts</code></td><td>Prix, unité de base, catégorie, code-barres, prix d'achat, stock initial ; alerte si coût ≥ prix.</td></tr><tr><td>Réception</td><td><code>stock-entry-dialog.component.ts</code>, <code>U/features/depot-manager/supply.component.ts</code></td><td>« Reçu en » (toutes les unités), prix d'achat par unité reçue pré-rempli, aperçu en unités de base, marge unitaire, création d'un conditionnement à la volée.</td></tr><tr><td>Correction</td><td><code>stock-adjust-dialog.component.ts</code></td><td>En unité de base.</td></tr><tr><td>Import</td><td><code>U/features/depot-manager/product-import-dialog.component.ts</code></td><td>Aperçu ligne à ligne ; prix affiché en lecture seule pour une fusion.</td></tr></tbody></table></div>
+<p>Menu « ⋮ » d'un produit (<code>product-menu.component.ts</code>, droits dans <code>U/core/catalog/product-rights.ts</code>) : ajouter du stock (gestionnaire de dépôt), modifier, corriger, historique (gestionnaire de dépôt et super-admin).</p>
+<hr>
+<h2 id="9-points-d-entree-et-schema">9. Points d'entrée et schéma</h2>
+<h3 id="9-1-api">9.1 API</h3>
+<div class="table-wrap"><table><thead><tr><th>Méthode</th><th>Chemin</th><th>Rôles</th></tr></thead><tbody><tr><td>POST</td><td><code>/api/products</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>PUT</td><td><code>/api/products/{id}</code> (prix, prix d'achat, nom, code-barres, catégorie)</td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>GET</td><td><code>/api/products/{id}/units</code></td><td>tout compte connecté</td></tr><tr><td>PUT</td><td><code>/api/products/{id}/units/base</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>POST / PUT / DELETE</td><td><code>/api/products/{id}/units[/{packagingId}]</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>POST</td><td><code>/api/sales</code></td><td>CASHIER, ORDER_TAKER</td></tr><tr><td>POST</td><td><code>/api/public/tables/{token}/orders</code></td><td>public (réseau local)</td></tr><tr><td>POST</td><td><code>/api/stock/supplies</code></td><td>DEPOT_MANAGER</td></tr><tr><td>GET / POST</td><td><code>/api/stock/adjustments</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>GET</td><td><code>/api/costing/products</code>, <code>/products/{id}</code>, <code>/products/{id}/suppliers</code>, <code>/stock-valuation</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr><tr><td>GET</td><td><code>/api/costing/margin</code></td><td>SUPER_ADMIN</td></tr><tr><td>POST / GET</td><td><code>/api/products/import/preview</code>, <code>/apply</code>, <code>/template</code>, <code>/columns</code></td><td>DEPOT_MANAGER, SUPER_ADMIN</td></tr></tbody></table></div>
+<h3 id="9-2-migrations">9.2 Migrations</h3>
+<ul>
+<li><code>B/bootstrap/DecimalQuantityMigration.java</code> : passage des quantités entières en <code>numeric(p,3)</code> (<code>product.stock_quantity</code>, <code>stock_movement.quantity</code>, <code>sale_line.quantity</code>).</li>
+<li><code>B/bootstrap/MovementTypeMigration.java</code> : contrainte <code>movement_type</code> élargie à <code>ADJUSTMENT</code>.</li>
+<li>Les colonnes <code>average_cost</code>, <code>unit_cost</code>, <code>unit_label</code>, <code>unit_factor</code>, <code>reference_id</code>, <code>reference_quantity</code> et la table <code>product_packaging</code> sont créées par <code>ddl-auto=update</code> (colonnes nullables, rien à reprendre).</li>
+</ul>
+<h3 id="9-3-tests-de-reference">9.3 Tests de référence</h3>
+<p><code>backend/src/test/java/com/houssen/liberoshop/service/</code> : <code>SaleByUnitTest</code>, <code>SupplyByUnitTest</code>, <code>ProductUnitServiceTest</code> (références en chaîne, boucles, suppression), <code>PurchaseCostingTest</code>, <code>CostingServiceTest</code>, <code>ProductEditServiceTest</code>, <code>ProductByHandTest</code>, <code>StockAdjustmentTest</code>, <code>ProductImportServiceTest</code>.</p>
+<hr>
+<h2 id="10-limites-et-ecarts-releves">10. Limites et écarts relevés</h2>
+<p>Constatés à la lecture du code, non corrigés :</p>
+<ol>
+<li><strong>Coût par produit et valeur du stock ignorent le prix des conditionnements.</strong> Ils utilisent le prix de l'unité de base × stock. Un produit surtout vendu en sac à prix de gros est valorisé au prix du détail. (Le rapport de marge, lui, utilise les prix réellement vendus.)</li>
+<li><strong>Valeur des sorties de stock au prix du jour.</strong> <code>StockOutputResponse.value</code> et <code>StockMovementRepository.sumOutputs</code> multiplient par le prix <strong>actuel</strong> de l'unité de base, pas par le prix figé de la vente : ces totaux ne correspondent pas aux factures pour les ventes en conditionnement ou après un changement de prix.</li>
+<li><strong>Valeur d'une correction au coût du jour.</strong> <code>StockAdjustmentResponse.costValue</code> utilise la moyenne actuelle, pas celle du moment de la correction.</li>
+<li><strong>Réceptions en unité de base renommées après coup.</strong> Un <code>Supply</code> reçu en unité de base garde <code>unitLabel = null</code> ; l'historique affiche le nom <strong>actuel</strong> de l'unité de base.</li>
+<li><strong>L'import perd l'unité de réception.</strong> Ses <code>Supply</code> sont écrits en unités de base sans <code>unitLabel</code>/<code>unitFactor</code> : « 2 tonnes à X » devient « 7 000 kapoka à X / 3 500 ».</li>
+<li><strong>Prix à 0 accepté par l'import</strong> (<code>ProductImportLineRequest.price</code> en <code>@PositiveOrZero</code>), refusé partout ailleurs (déjà au <code>TODO.md</code>, section 3).</li>
+<li><strong>Conditionnements sans verrou ni version.</strong> Ajout, modification et suppression d'une unité ne verrouillent pas le produit : deux modifications simultanées de la même unité — la dernière gagne. Sans incidence sur le stock (non écrit par ces opérations).</li>
+<li><strong>Infobulle de l'import (à vérifier).</strong> <code>unitsTitle</code> dans <code>product-import-dialog.component.ts</code> affiche <code>unit.factor</code> suivi du nom de l'unité de base ; pour une unité écrite dans une autre (« sac 25 kg = 25 kg »), cela pourrait afficher « 25 kapoka ».</li>
+<li><strong>Seuil de stock bas aveugle aux unités</strong> : 10 unités de base pour tout produit (10 kapoka comme 10 sacs) — déjà au <code>TODO.md</code> (seuil par produit).</li>
+<li><strong>Corrections de stock en unité de base seulement</strong> — déjà au <code>TODO.md</code>.</li>
+<li><strong>Aucune trace de qui a changé un prix ou une unité</strong> — piste d'audit au <code>TODO.md</code>.</li>
+</ol>
+<h2 id="voir-aussi">Voir aussi</h2>
+<ul>
+<li><code>22-produits-et-stock-a-la-main.md</code> : fonctionnement côté utilisateur (ajout de stock, prix d'achat modifiable, corrections, historique, droits).</li>
+<li><code>21-produits-en-liste-a-la-vente.md</code> : choix de l'unité dans la liste de vente.</li>
+<li><code>REALISATION-partie-3-argent.md</code> : référence de panier, ventes en double.</li>
+</ul>
+</main>
+</body>
+</html>
