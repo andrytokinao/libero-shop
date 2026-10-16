@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.service.ProductUnitService;
+import com.houssen.liberoshop.web.dto.ApplyUnitModelRequest;
 import com.houssen.liberoshop.web.dto.BaseUnitRequest;
 import com.houssen.liberoshop.web.dto.PackagingRequest;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
@@ -51,6 +52,13 @@ public class ProductUnitController {
     public ProductUnitsResponse add(@PathVariable Long productId,
                                     @Valid @RequestBody PackagingRequest request) {
         return productUnitService.add(productId, request);
+    }
+
+    @PostMapping("/from-model")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public ProductUnitsResponse addFromModel(@PathVariable Long productId,
+                                             @Valid @RequestBody ApplyUnitModelRequest request) {
+        return productUnitService.addFromModel(productId, request);
     }
 
     @PutMapping("/{packagingId}")

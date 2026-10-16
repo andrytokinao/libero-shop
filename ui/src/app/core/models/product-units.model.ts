@@ -1,3 +1,4 @@
+import { ApplyUnitModelRequest } from './unit-model.model';
 import { Category } from './category.model';
 
 /**
@@ -63,6 +64,8 @@ export interface CreateProductRequest {
   purchaseCost: number | null;
   /** Already on the shelf, in base units; booked as an entry without a supplier. */
   initialStock: number | null;
+  /** Units ticked in a model of units, created with the product; absent or null for none. */
+  units?: ApplyUnitModelRequest | null;
 }
 
 /** A unit as the dialog sends it, for a creation and an edit alike. */

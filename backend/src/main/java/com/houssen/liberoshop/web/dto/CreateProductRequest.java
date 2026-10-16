@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,8 @@ import java.math.BigDecimal;
  * @param initialStock what is already on the shelf, in base units; null or zero for none. Booked
  *                     as an entry without a supplier, like an import's, so the stock of a product
  *                     is explained by its movements from the first unit
+ * @param units        units ticked in a model of units ("Poids"), created with the product; null
+ *                     for none
  */
 public record CreateProductRequest(@NotBlank @Size(max = 255) String name,
                                    @NotNull @Digits(integer = 10, fraction = 2) BigDecimal price,
@@ -31,5 +34,12 @@ public record CreateProductRequest(@NotBlank @Size(max = 255) String name,
                                    BigDecimal purchaseCost,
                                    @PositiveOrZero(message = "le stock de depart ne peut pas etre negatif")
                                    @Digits(integer = 11, fraction = 3)
-                                   BigDecimal initialStock) {
+                                   BigDecimal initialStock,
+                                   @Valid ApplyUnitModelRequest units) {
+
+    /** A product sold in its base unit only, as every product was created before models. */
+    public CreateProductRequest(String name, BigDecimal price, String unit, String barcode, Long categoryId,
+                                BigDecimal purchaseCost, BigDecimal initialStock) {
+        this(name, price, unit, barcode, categoryId, purchaseCost, initialStock, null);
+    }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
@@ -7,6 +7,8 @@ import { formatAmount } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { CategoryPickerComponent } from './category-picker.component';
+import { UnitModelPickerComponent } from './unit-model-picker.component';
+import { UnitModelsDialogComponent } from './unit-models-dialog.component';
 
 /** The form as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -27,23 +29,29 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
  *
  * <p>Only the name and the price are required. What is already on the shelf is asked here too,
  * and the server books it as an entry in the product's history, so its stock is explained from
- * the first unit. The other units it sells in — kg, carton, sac — are added afterwards from its
- * menu, once it exists.
+ * the first unit. Units kept in a model — g, kg, tonne — can be ticked here, each at its price,
+ * and are created with the product; any other unit is added afterwards from its menu.
  */
 @Component({
   selector: 'app-product-create-dialog',
   standalone: true,
-  imports: [FormsModule, CameraScanButtonComponent, CategoryPickerComponent],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  imports: [
+    FormsModule,
+    CameraScanButtonComponent,
+    CategoryPickerComponent,
+    UnitModelPickerComponent,
+    UnitModelsDialogComponent,
+  ],
+  host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
-      <form class="modal" role="dialog" aria-modal="true" aria-labelledby="pn-title" (ngSubmit)="create()">
+      <form class="modal wide pn" role="dialog" aria-modal="true" aria-labelledby="pn-title" (ngSubmit)="create()">
         <div class="modal-head">
           <div>
             <h2 id="pn-title">Nouveau produit</h2>
             <div class="sub muted">
-              Le nom et le prix suffisent. Les autres unités de vente (kg, carton, sac…) s'ajoutent
-              ensuite avec « Configurer (prix, unités) ».
+              Le nom et le prix suffisent. Les unités courantes (g, kg, tonne…) se cochent ci-dessous ;
+              les autres s'ajoutent ensuite avec « Configurer (prix, unités) ».
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -151,6 +159,17 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
           @if (warning(); as line) {
             <div class="muted pn-warning">{{ line }}</div>
           }
+
+          <!-- Units kept in a model, ticked rather than typed again: created with the product. -->
+          <details class="pn-units">
+            <summary>Autres unités depuis un modèle (g, kg, tonne…)</summary>
+            <app-unit-model-picker
+              fieldId="pn-model"
+              [baseUnit]="draft().unit"
+              [basePrice]="basePrice()"
+              (manage)="modelsOpen.set(true)"
+            />
+          </details>
         </div>
 
         <div class="modal-foot">
@@ -161,6 +180,10 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
         </div>
       </form>
     </div>
+
+    @if (modelsOpen()) {
+      <app-unit-models-dialog (changed)="picker()?.reload()" (closed)="modelsOpen.set(false)" />
+    }
   `,
   styles: `
     .pn-scan {
@@ -183,6 +206,31 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
       }
     }
 
+    .pn-units {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-top: 12px;
+
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 12.5px;
+      }
+
+      &[open] summary {
+        margin-bottom: 10px;
+      }
+    }
+
+    /* A phone: the whole screen, nothing sideways. */
+    @media (max-width: 560px) {
+      .modal.pn {
+        width: 100%;
+        max-height: 100%;
+      }
+    }
+
     .pn-warning {
       font-size: 12.5px;
       color: var(--red);
@@ -201,6 +249,11 @@ export class ProductCreateDialogComponent implements OnInit {
 
   protected readonly draft = signal<Draft>(EMPTY);
   protected readonly busy = signal(false);
+  protected readonly modelsOpen = signal(false);
+  protected readonly picker = viewChild(UnitModelPickerComponent);
+
+  /** The base price as typed, for the prices the model proposes; null while not a number. */
+  protected readonly basePrice = computed(() => amount(this.draft().price, 2) ?? null);
 
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   protected readonly categories = this.categoryResource.value;
@@ -216,7 +269,7 @@ export class ProductCreateDialogComponent implements OnInit {
     if (!draft.name.trim() || price === null || price === undefined || price <= 0) {
       return null;
     }
-    if (cost === undefined || stock === undefined) {
+    if (cost === undefined || stock === undefined || this.picker()?.blocking()) {
       return null;
     }
     return {
@@ -227,6 +280,7 @@ export class ProductCreateDialogComponent implements OnInit {
       categoryId: draft.categoryId,
       purchaseCost: cost,
       initialStock: stock,
+      units: this.picker()?.request() ?? null,
     };
   });
 
@@ -268,6 +322,15 @@ export class ProductCreateDialogComponent implements OnInit {
       // A refusal keeps the form as typed — the error toast says what to fix.
       error: () => this.busy.set(false),
     });
+  }
+
+  /** Échap closes the models dialog first when it is open over this one. */
+  protected onEscape(): void {
+    if (this.modelsOpen()) {
+      this.modelsOpen.set(false);
+    } else {
+      this.closed.emit();
+    }
   }
 
   protected onBackdrop(event: MouseEvent): void {

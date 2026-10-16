@@ -1,10 +1,13 @@
-import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
+import { UnitModelApi } from '../../core/api/unit-model.api';
+import { parseDecimal } from '../../core/catalog/decimal-text';
+import { fold } from '../../core/catalog/unit-model-plan';
 import { ProductRights } from '../../core/catalog/product-rights';
 import {
   CategoryNode,
@@ -14,11 +17,15 @@ import {
   ProductCost,
   ProductUnits,
   UnitCost,
+  UnitModel,
   UpdateProductRequest,
 } from '../../core/models';
+import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { CategoryPickerComponent } from './category-picker.component';
+import { UnitModelPickerComponent } from './unit-model-picker.component';
+import { UnitModelsDialogComponent } from './unit-models-dialog.component';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -43,6 +50,17 @@ interface Sheet {
   /** The unit it is bought in; null for the base unit. */
   purchaseUnitId: number | null;
 }
+
+/** « Ajouter aussi au modèle » under the unit form. */
+interface Keep {
+  on: boolean;
+  /** The model to add the unit to; null for a new one. */
+  modelId: number | null;
+  /** The new model's name; empty for the one proposed. */
+  name: string;
+}
+
+const KEEP_OFF: Keep = { on: false, modelId: null, name: '' };
 
 const EMPTY_SHEET: Sheet = {
   name: '',
@@ -75,20 +93,29 @@ const EMPTY_SHEET: Sheet = {
 @Component({
   selector: 'app-product-units-dialog',
   standalone: true,
-  imports: [FormsModule, NgTemplateOutlet, AriaryPipe, CameraScanButtonComponent, CategoryPickerComponent],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  imports: [
+    FormsModule,
+    NgTemplateOutlet,
+    AriaryPipe,
+    CameraScanButtonComponent,
+    CategoryPickerComponent,
+    UnitModelPickerComponent,
+    UnitModelsDialogComponent,
+  ],
+  host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
-    <div class="modal-backdrop" (click)="onBackdrop($event)">
-      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="units-title">
+    <div class="modal-backdrop cfg-backdrop" (click)="onBackdrop($event)">
+      <div class="modal cfg" role="dialog" aria-modal="true" aria-labelledby="units-title">
         <div class="modal-head">
-          <div>
+          <div class="cfg-title">
             <h2 id="units-title">Configuration — {{ units()?.productName ?? productName }}</h2>
-            <div class="sub muted">
-              Prix de vente, prix d'entrée et unités. Le stock est compté dans l'unité de base, la
-              plus petite ; chaque autre unité s'écrit comme sur l'emballage (« sac 25 kg » contient
-              25 kg). Le prix d'entrée se saisit dans l'unité d'achat — la tonne, le sac — sans
-              rien déclarer pour l'unité de base : le calcul est fait pour vous.
-            </div>
+            <details class="cfg-help muted">
+              <summary>Comment ça marche ?</summary>
+              Le stock est compté dans l'unité de base, la plus petite. Chaque autre unité s'écrit
+              comme sur l'emballage (« sac 25 kg » contient 25 kg). Le prix d'entrée se saisit dans
+              l'unité d'achat — la tonne, le sac — et le calcul par unité de base est fait pour vous.
+              Les unités courantes (g, kg, tonne…) se cochent depuis un modèle.
+            </details>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
@@ -140,57 +167,54 @@ const EMPTY_SHEET: Sheet = {
                   <app-camera-scan-button (scanned)="patchSheet({ barcode: $event })" />
                 </div>
               </div>
-
-              <div class="un-prices">
-                <div class="fld">
-                  <label for="un-base-price">Prix de vente (Ar) par {{ baseName() }}</label>
+              <div class="fld">
+                <label for="un-base-price">Prix de vente (Ar) par {{ baseName() }}</label>
+                <input
+                  id="un-base-price"
+                  name="price"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [ngModel]="sheet().price"
+                  (ngModelChange)="patchSheet({ price: $event })"
+                />
+              </div>
+              <!-- What the shop pays, said in the unit it buys in: a tonne, not a kapoka. The
+                   server keeps it per base unit and works out every other unit from it. -->
+              <div class="fld un-cost">
+                <label for="un-cost">Prix d'entrée (Ar)</label>
+                <div class="un-suffixed">
                   <input
-                    id="un-base-price"
-                    name="price"
+                    id="un-cost"
+                    name="cost"
                     type="text"
                     inputmode="decimal"
                     autocomplete="off"
-                    [ngModel]="sheet().price"
-                    (ngModelChange)="patchSheet({ price: $event })"
+                    placeholder="inconnu"
+                    [ngModel]="sheet().cost"
+                    (ngModelChange)="patchSheet({ cost: $event })"
                   />
+                  <select
+                    name="purchaseUnit"
+                    class="field"
+                    aria-label="Unité d'achat"
+                    [ngModel]="sheet().purchaseUnitId"
+                    (ngModelChange)="pickPurchaseUnit($event)"
+                  >
+                    <option [ngValue]="null">par {{ baseName() }}</option>
+                    @for (p of u.packagings; track p.id) {
+                      <option [ngValue]="p.id">par {{ p.label }}</option>
+                    }
+                  </select>
                 </div>
-                <!-- What the shop pays, said in the unit it buys in: a tonne, not a kapoka. The
-                     server keeps it per base unit and works out every other unit from it. -->
-                <div class="fld">
-                  <label for="un-cost">Prix d'entrée (Ar)</label>
-                  <div class="un-suffixed">
-                    <input
-                      id="un-cost"
-                      name="cost"
-                      type="text"
-                      inputmode="decimal"
-                      autocomplete="off"
-                      placeholder="inconnu"
-                      [ngModel]="sheet().cost"
-                      (ngModelChange)="patchSheet({ cost: $event })"
-                    />
-                    <select
-                      name="purchaseUnit"
-                      class="field"
-                      aria-label="Unité d'achat"
-                      [ngModel]="sheet().purchaseUnitId"
-                      (ngModelChange)="pickPurchaseUnit($event)"
-                    >
-                      <option [ngValue]="null">par {{ baseName() }}</option>
-                      @for (p of u.packagings; track p.id) {
-                        <option [ngValue]="p.id">par {{ p.label }}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-                <div class="un-cost-hint muted">
-                  @if (costHint(); as hint) {
-                    {{ hint }}
-                  } @else if (u.packagings.length === 0) {
-                    Acheté dans une autre unité (tonne, sac…) ? Ajoutez-la ci-dessous, puis
-                    choisissez-la ici.
-                  }
-                </div>
+              </div>
+              <div class="un-cost-hint muted">
+                @if (costHint(); as hint) {
+                  {{ hint }}
+                } @else if (u.packagings.length === 0) {
+                  Acheté dans une autre unité (tonne, sac…) ? Ajoutez-la ci-dessous, puis
+                  choisissez-la ici.
+                }
               </div>
               @if (sheetChanged()) {
                 <div class="un-sheet-foot">
@@ -227,100 +251,127 @@ const EMPTY_SHEET: Sheet = {
 
             <!-- ---------------------------------------------------- every unit -->
             <!-- Each unit priced both ways: what it sells for, what it cost at the average, and
-                 what is left. Worked out by the server, so a tonne reads back to the ariary. -->
-            <div class="table-scroll">
-              <table class="un-table">
-                <thead>
-                  <tr>
-                    <th>Unité</th>
-                    <th>Contient</th>
-                    <th class="num">Prix de vente</th>
-                    <th class="num">Prix d'entrée</th>
-                    <th class="num">Bénéfice</th>
-                    <th>Code-barres</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="un-base-row">
-                    <td>
-                      {{ baseName() }} <span class="muted">(base)</span>
-                      @if (u.purchaseUnitId === null) {
+                 what is left. Worked out by the server, so a tonne reads back to the ariary.
+                 A table on a wide screen; on a narrow one each row becomes a card (data-label),
+                 so the dialog never scrolls sideways. -->
+            <table class="un-table">
+              <thead>
+                <tr>
+                  <th>Unité</th>
+                  <th>Contient</th>
+                  <th class="num">Prix de vente</th>
+                  <th class="num">Prix d'entrée</th>
+                  <th class="num">Bénéfice</th>
+                  <th>Code-barres</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="un-base-row">
+                  <td class="un-unit">
+                    {{ baseName() }} <span class="muted">(base)</span>
+                    @if (u.purchaseUnitId === null) {
+                      <span class="badge grey">achat</span>
+                    }
+                  </td>
+                  <td class="muted" data-label="Contient">1 {{ baseName() }}</td>
+                  <td class="num" data-label="Prix de vente">{{ u.basePrice | ariary }}</td>
+                  <ng-container
+                    *ngTemplateOutlet="costCells; context: { $implicit: costOf(null) }"
+                  />
+                  <td class="muted un-code" data-label="Code-barres">{{ u.baseBarcode ?? '—' }}</td>
+                  <td class="un-actions"></td>
+                </tr>
+                @for (p of u.packagings; track p.id) {
+                  <tr [class.on]="editingId() === p.id">
+                    <td class="un-unit">
+                      {{ p.label }}
+                      @if (u.purchaseUnitId === p.id) {
                         <span class="badge grey">achat</span>
                       }
                     </td>
-                    <td class="muted">1 {{ baseName() }}</td>
-                    <td class="num">{{ u.basePrice | ariary }}</td>
+                    <td data-label="Contient">
+                      @if (p.reference) {
+                        {{ formatFactor(p.referenceQuantity) }} {{ p.reference }}
+                        <span class="muted">({{ formatFactor(p.factor) }} {{ baseName() }})</span>
+                      } @else {
+                        {{ formatFactor(p.factor) }} {{ baseName() }}
+                      }
+                    </td>
+                    <td class="num" data-label="Prix de vente">{{ p.price | ariary }}</td>
                     <ng-container
-                      *ngTemplateOutlet="costCells; context: { $implicit: costOf(null) }"
+                      *ngTemplateOutlet="costCells; context: { $implicit: costOf(p.id) }"
                     />
-                    <td class="muted">{{ u.baseBarcode ?? '—' }}</td>
-                    <td></td>
+                    <td class="muted un-code" data-label="Code-barres">{{ p.barcode ?? '—' }}</td>
+                    <td class="un-actions">
+                      @if (removingId() === p.id) {
+                        <span class="muted">Supprimer ?</span>
+                        <button class="btn small danger" type="button" [disabled]="busy()" (click)="remove(p)">
+                          Oui
+                        </button>
+                        <button class="btn small ghost" type="button" (click)="removingId.set(null)">
+                          Non
+                        </button>
+                      } @else {
+                        <button class="btn small ghost" type="button" (click)="edit(p)">Modifier</button>
+                        <button class="btn small ghost" type="button" (click)="removingId.set(p.id)">
+                          Supprimer
+                        </button>
+                      }
+                    </td>
                   </tr>
-                  @for (p of u.packagings; track p.id) {
-                    <tr [class.on]="editingId() === p.id">
-                      <td>
-                        {{ p.label }}
-                        @if (u.purchaseUnitId === p.id) {
-                          <span class="badge grey">achat</span>
-                        }
-                      </td>
-                      <td>
-                        @if (p.reference) {
-                          {{ formatFactor(p.referenceQuantity) }} {{ p.reference }}
-                          <span class="muted">({{ formatFactor(p.factor) }} {{ baseName() }})</span>
-                        } @else {
-                          {{ formatFactor(p.factor) }} {{ baseName() }}
-                        }
-                      </td>
-                      <td class="num">{{ p.price | ariary }}</td>
-                      <ng-container
-                        *ngTemplateOutlet="costCells; context: { $implicit: costOf(p.id) }"
-                      />
-                      <td class="muted">{{ p.barcode ?? '—' }}</td>
-                      <td class="un-actions">
-                        @if (removingId() === p.id) {
-                          <span class="muted">Supprimer ?</span>
-                          <button class="btn small danger" type="button" [disabled]="busy()" (click)="remove(p)">
-                            Oui
-                          </button>
-                          <button class="btn small ghost" type="button" (click)="removingId.set(null)">
-                            Non
-                          </button>
-                        } @else {
-                          <button class="btn small ghost" type="button" (click)="edit(p)">Modifier</button>
-                          <button class="btn small ghost" type="button" (click)="removingId.set(p.id)">
-                            Supprimer
-                          </button>
-                        }
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="7" class="muted un-empty">
-                        Vendu dans une seule unité. Ajoutez-en une autre ci-dessous si le produit se
-                        vend ou s'achète aussi au kilo, au carton, au sac, à la tonne…
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+                } @empty {
+                  <tr class="un-empty-row">
+                    <td colspan="7" class="muted un-empty">
+                      Vendu dans une seule unité. Ajoutez-en une autre ci-dessous si le produit se
+                      vend ou s'achète aussi au kilo, au carton, au sac, à la tonne…
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
 
             <ng-template #costCells let-cost>
               @if (cost?.cost != null) {
-                <td class="num">{{ cost.cost | ariary }}</td>
-                <td class="num" [class.un-loss]="cost.margin < 0">
+                <td class="num" data-label="Prix d'entrée">{{ cost.cost | ariary }}</td>
+                <td class="num" data-label="Bénéfice" [class.un-loss]="cost.margin < 0">
                   {{ cost.margin | ariary }}
                   @if (cost.marginRate !== null) {
                     <span class="muted">· {{ formatRate(cost.marginRate) }}</span>
                   }
                 </td>
               } @else {
-                <td class="num muted">—</td>
-                <td class="num muted">—</td>
+                <td class="num muted" data-label="Prix d'entrée">—</td>
+                <td class="num muted" data-label="Bénéfice">—</td>
               }
             </ng-template>
+
+            <!-- --------------------------------------------- units from a model -->
+            <!-- g, kg, tonne… ticked rather than typed again for every product. -->
+            <details class="un-model" [open]="modelOpen()" (toggle)="onModelToggle($event)">
+              <summary>Ajouter des unités depuis un modèle (g, kg, tonne…)</summary>
+              @if (modelOpen()) {
+                <app-unit-model-picker
+                  #picker
+                  fieldId="un-model"
+                  [baseUnit]="u.baseUnit"
+                  [basePrice]="u.basePrice"
+                  [packagings]="u.packagings"
+                  (manage)="modelsOpen.set(true)"
+                />
+                <div class="un-form-foot">
+                  <div class="un-hint muted"></div>
+                  <button
+                    class="btn small"
+                    type="button"
+                    [disabled]="busy() || !picker.request()"
+                    (click)="applyModel(picker)"
+                  >
+                    Ajouter les unités cochées
+                  </button>
+                </div>
+              }
+            </details>
 
             <!-- ------------------------------------------------------- the form -->
             <form class="un-form" (ngSubmit)="save()">
@@ -401,6 +452,46 @@ const EMPTY_SHEET: Sheet = {
                 </div>
               </div>
 
+              <!-- A unit typed here once can be kept in a model, to be ticked on the next product. -->
+              @if (editingId() === null) {
+                <div class="un-keep">
+                  <label class="un-keep-check">
+                    <input
+                      type="checkbox"
+                      name="keep"
+                      [ngModel]="keep().on"
+                      (ngModelChange)="patchKeep({ on: $event })"
+                    />
+                    Ajouter aussi au modèle
+                  </label>
+                  @if (keep().on) {
+                    <select
+                      name="keepModel"
+                      class="field"
+                      aria-label="Modèle"
+                      [ngModel]="keep().modelId"
+                      (ngModelChange)="patchKeep({ modelId: $event })"
+                    >
+                      @for (m of keepChoices(); track m.id) {
+                        <option [ngValue]="m.id">{{ m.name }}</option>
+                      }
+                      <option [ngValue]="null">＋ Nouveau modèle…</option>
+                    </select>
+                    @if (keep().modelId === null) {
+                      <input
+                        name="keepName"
+                        type="text"
+                        maxlength="40"
+                        aria-label="Nom du nouveau modèle"
+                        [placeholder]="defaultModelName()"
+                        [ngModel]="keep().name"
+                        (ngModelChange)="patchKeep({ name: $event })"
+                      />
+                    }
+                  }
+                </div>
+              }
+
               <div class="un-form-foot">
                 <div class="un-hint muted">
                   @if (preview(); as line) {
@@ -432,50 +523,63 @@ const EMPTY_SHEET: Sheet = {
         </div>
       </div>
     </div>
+
+    @if (modelsOpen()) {
+      <app-unit-models-dialog (changed)="onModelsChanged()" (closed)="modelsOpen.set(false)" />
+    }
   `,
   styles: `
+    /* Wide enough for the seven columns of the units on a computer; on a phone the dialog takes
+       the whole screen and the table turns into cards. Never a sideways scroll. */
+    .modal.cfg {
+      width: min(1040px, 100%);
+    }
+
+    .cfg-title {
+      min-width: 0;
+    }
+
+    .cfg-help {
+      font-size: 12.5px;
+      margin-bottom: 4px;
+
+      summary {
+        cursor: pointer;
+        width: fit-content;
+      }
+    }
+
+    /* The sheet: as many fields a line as fit, never narrower than a price. */
     .un-sheet {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
       align-items: end;
       gap: 10px;
-      flex-wrap: wrap;
       margin-bottom: 14px;
       padding-bottom: 14px;
       border-bottom: 1px solid var(--line);
 
       .fld {
         margin-bottom: 0;
-        width: 160px;
+        min-width: 0;
       }
 
       .un-sheet-name {
-        flex: 1;
-        min-width: 200px;
+        grid-column: span 2;
       }
-    }
 
-    /* Selling and buying side by side, on their own line under the name. */
-    .un-prices {
-      flex-basis: 100%;
-      display: flex;
-      align-items: end;
-      gap: 10px;
-      flex-wrap: wrap;
-
-      .fld:last-of-type {
-        width: 280px;
+      .un-cost {
+        grid-column: span 2;
       }
     }
 
     .un-cost-hint {
-      flex: 1;
-      min-width: 180px;
+      grid-column: 1 / -1;
       font-size: 12px;
-      align-self: center;
     }
 
     .un-sheet-foot {
-      flex-basis: 100%;
+      grid-column: 1 / -1;
       display: flex;
       justify-content: flex-end;
     }
@@ -493,7 +597,8 @@ const EMPTY_SHEET: Sheet = {
 
       .fld {
         margin-bottom: 0;
-        width: 200px;
+        flex: 0 1 220px;
+        min-width: 0;
       }
     }
 
@@ -504,11 +609,21 @@ const EMPTY_SHEET: Sheet = {
     }
 
     .un-table {
+      width: 100%;
       margin-bottom: 16px;
+      table-layout: auto;
 
       tr.on {
         background: var(--brand-soft);
       }
+
+      td {
+        overflow-wrap: anywhere;
+      }
+    }
+
+    .un-code {
+      word-break: break-all;
     }
 
     .un-base-row td {
@@ -516,16 +631,34 @@ const EMPTY_SHEET: Sheet = {
     }
 
     .un-actions {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-      align-items: center;
+      text-align: right;
       white-space: nowrap;
+
+      .btn + .btn {
+        margin-left: 6px;
+      }
     }
 
     .un-empty {
       font-size: 12.5px;
       padding: 12px 8px;
+    }
+
+    .un-model {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 12.5px;
+      }
+
+      &[open] summary {
+        margin-bottom: 10px;
+      }
     }
 
     .un-form {
@@ -542,15 +675,12 @@ const EMPTY_SHEET: Sheet = {
 
     .un-fields {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
       gap: 10px;
 
       .fld {
         margin-bottom: 0;
-      }
-
-      @media (max-width: 640px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
       }
     }
 
@@ -566,26 +696,142 @@ const EMPTY_SHEET: Sheet = {
 
       select {
         width: auto;
-        max-width: 120px;
+        min-width: 0;
+        max-width: 50%;
       }
+    }
+
+    .un-keep {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 13px;
+
+      select,
+      input[type='text'] {
+        width: auto;
+        min-width: 0;
+        flex: 0 1 220px;
+      }
+    }
+
+    .un-keep-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
     }
 
     .un-form-foot {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
       margin-top: 10px;
     }
 
     .un-hint {
-      flex: 1;
+      flex: 1 1 200px;
       font-size: 12px;
+    }
+
+    /* A phone, or a narrow window: the dialog fills the screen, its head and foot stay in sight,
+       and each unit is a card — its name as a title, then one line per figure. */
+    @media (max-width: 760px) {
+      .cfg-backdrop {
+        padding: 0;
+      }
+
+      .modal.cfg {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+
+        .modal-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 14px;
+        }
+      }
+
+      .un-sheet .un-sheet-name,
+      .un-sheet .un-cost {
+        grid-column: 1 / -1;
+      }
+
+      .un-base-facts {
+        margin-left: 0;
+      }
+
+      .un-table {
+        thead {
+          display: none;
+        }
+
+        tbody,
+        tr,
+        td {
+          display: block;
+        }
+
+        tr {
+          border: 1px solid var(--line);
+          border-radius: 9px;
+          padding: 8px 10px;
+          margin-bottom: 8px;
+        }
+
+        td {
+          border: none;
+          padding: 3px 0;
+          text-align: left;
+        }
+
+        /* The figure on the right, kept in one piece ("200 Ar · 22,2 %"); its label on the left. */
+        td[data-label] {
+          text-align: right;
+
+          &::before {
+            content: attr(data-label);
+            float: left;
+            margin-right: 12px;
+            color: var(--ink-soft);
+            font-size: 12px;
+          }
+        }
+
+        .un-unit {
+          font-weight: 700;
+          padding-bottom: 6px;
+        }
+
+        .un-actions {
+          text-align: left;
+          white-space: normal;
+          padding-top: 8px;
+        }
+
+        .un-actions:empty {
+          display: none;
+        }
+
+        .un-empty-row {
+          border-style: dashed;
+        }
+      }
     }
   `,
 })
 export class ProductUnitsDialogComponent implements OnInit {
   private readonly api = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
+  private readonly modelApi = inject(UnitModelApi);
+  private readonly toasts = inject(ToastService);
   protected readonly rights = inject(ProductRights);
 
   @Input({ required: true }) productId!: number;
@@ -603,6 +849,31 @@ export class ProductUnitsDialogComponent implements OnInit {
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
   protected readonly editingId = signal<number | null>(null);
   protected readonly removingId = signal<number | null>(null);
+
+  /** « Ajouter des unités depuis un modèle » unfolded. */
+  protected readonly modelOpen = signal(false);
+  /** The models dialog, over this one. */
+  protected readonly modelsOpen = signal(false);
+  protected readonly keep = signal<Keep>(KEEP_OFF);
+  private readonly picker = viewChild(UnitModelPickerComponent);
+  private readonly modelResource = apiResource<UnitModel[]>([], () => this.modelApi.models());
+
+  /** The unit the one being typed is written in, by name: what a model must have to take it. */
+  private readonly keepReference = computed(() => this.draft().reference ?? this.units()?.baseUnit ?? null);
+
+  /** The models that know that unit: the new one can be written in it there too. */
+  protected readonly keepChoices = computed(() => {
+    const reference = this.keepReference();
+    if (!reference) {
+      return [];
+    }
+    const folded = fold(reference);
+    return this.modelResource
+      .value()
+      .filter((m) => fold(m.baseLabel) === folded || m.units.some((u) => fold(u.label) === folded));
+  });
+
+  protected readonly defaultModelName = computed(() => `Unités en ${this.keepReference() ?? 'unité'}`);
 
   /** What the base unit is called in sentences; "unité" for a product counted in bare units. */
   protected readonly baseName = computed(() => this.units()?.baseUnit ?? 'unité');
@@ -873,13 +1144,81 @@ export class ProductUnitsDialogComponent implements OnInit {
       return;
     }
     const id = this.editingId();
+    const keep = id === null && this.keep().on ? this.keep() : null;
+    const reference = this.keepReference();
     this.run(
       id === null
         ? this.api.addPackaging(this.productId, request)
         : this.api.updatePackaging(this.productId, id, request),
       true,
-      () => this.reset(),
+      () => {
+        this.reset();
+        if (keep && reference) {
+          this.keepInModel(keep, request, reference);
+        }
+      },
     );
+  }
+
+  /**
+   * The unit just added, kept in a model as it was written — « sac 25 kg » contient 25 « kg » — so
+   * the next product only ticks it. A model that does not know its reference refuses it: the toast
+   * says so, and the product keeps its unit all the same.
+   */
+  private keepInModel(keep: Keep, request: PackagingRequest, reference: string): void {
+    const unit = { label: request.label, quantity: request.factor, reference };
+    const call =
+      keep.modelId === null
+        ? this.modelApi.create({
+            name: keep.name.trim() || this.defaultModelName(),
+            baseLabel: reference,
+            units: [{ ...unit, reference: null }],
+          })
+        : this.modelApi.addUnit(keep.modelId, unit);
+    call.subscribe((model) => {
+      this.toasts.show(`« ${request.label} » ajoutée au modèle « ${model.name} ».`);
+      this.keep.set(KEEP_OFF);
+      this.onModelsChanged();
+    });
+  }
+
+  protected patchKeep(change: Partial<Keep>): void {
+    this.keep.update((keep) => {
+      const next = { ...keep, ...change };
+      // Ticked: the first model that knows the unit, else a new one.
+      if (change.on && !keep.on) {
+        next.modelId = this.keepChoices()[0]?.id ?? null;
+      }
+      return next;
+    });
+  }
+
+  /** The ticked units of the model, onto this product; the picker is cleared once they are in. */
+  protected applyModel(picker: UnitModelPickerComponent): void {
+    const request = picker.request();
+    if (!request || this.busy()) {
+      return;
+    }
+    this.run(this.modelApi.applyToProduct(this.productId, request), true, () => picker.clear());
+  }
+
+  protected onModelToggle(event: Event): void {
+    this.modelOpen.set((event.target as HTMLDetailsElement).open);
+  }
+
+  /** A model added, renamed or removed: the lists that show models read them again. */
+  protected onModelsChanged(): void {
+    this.modelResource.reload();
+    this.picker()?.reload();
+  }
+
+  /** Échap closes the models dialog first when it is open over this one. */
+  protected onEscape(): void {
+    if (this.modelsOpen()) {
+      this.modelsOpen.set(false);
+    } else {
+      this.closed.emit();
+    }
   }
 
   protected remove(packaging: Packaging): void {
@@ -925,13 +1264,4 @@ export class ProductUnitsDialogComponent implements OnInit {
       error: () => this.busy.set(false),
     });
   }
-}
-
-/** "3,5", "3.5", "1 750" → a number; anything else → null. */
-function parseDecimal(value: string): number | null {
-  const cleaned = value.replace(/\s/g, '').replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(cleaned)) {
-    return null;
-  }
-  return Number(cleaned);
 }

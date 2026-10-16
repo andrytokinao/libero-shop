@@ -4,6 +4,7 @@ import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.ProductPackaging;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.UnitModelRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.BaseUnitRequest;
@@ -53,6 +54,8 @@ class ProductUnitServiceTest {
     private ProductRepository products;
     @Mock
     private ProductPackagingRepository packagings;
+    @Mock
+    private UnitModelRepository unitModels;
 
     private ProductUnitService service;
 
@@ -62,7 +65,9 @@ class ProductUnitServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProductUnitService(products, packagings, new PackagingRules(products, packagings));
+        PackagingRules rules = new PackagingRules(products, packagings);
+        service = new ProductUnitService(products, packagings, rules,
+                new UnitModelApplication(unitModels, packagings, rules));
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 

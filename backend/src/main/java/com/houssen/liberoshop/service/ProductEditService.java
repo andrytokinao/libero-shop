@@ -47,11 +47,12 @@ public class ProductEditService {
     private final PackagingRules rules;
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
+    private final UnitModelApplication modelApplication;
 
     public ProductEditService(ProductRepository products, ProductPackagingRepository packagings,
                               CategoryRepository categories, StockMovementRepository movements,
                               PackagingRules rules, BusinessCalendar calendar,
-                              ApplicationEventPublisher events) {
+                              ApplicationEventPublisher events, UnitModelApplication modelApplication) {
         this.products = products;
         this.packagings = packagings;
         this.categories = categories;
@@ -59,6 +60,7 @@ public class ProductEditService {
         this.rules = rules;
         this.calendar = calendar;
         this.events = events;
+        this.modelApplication = modelApplication;
     }
 
     /**
@@ -102,6 +104,10 @@ public class ProductEditService {
         BigDecimal unitCost = PurchaseCosting.scaled(request.purchaseCost());
         PurchaseCosting.receive(fresh, Quantities.scaled(stock), unitCost);
         Product product = products.save(fresh);
+        if (request.units() != null) {
+            // In the same transaction: a refused unit leaves no half-configured product behind.
+            modelApplication.applyTo(product, request.units());
+        }
         if (stock.signum() > 0) {
             movements.save(Supply.builder()
                     .quantity(Quantities.scaled(stock))

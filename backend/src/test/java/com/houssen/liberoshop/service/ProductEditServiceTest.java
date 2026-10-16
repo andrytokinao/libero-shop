@@ -6,6 +6,7 @@ import com.houssen.liberoshop.entity.Category;
 import com.houssen.liberoshop.repository.CategoryRepository;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
+import com.houssen.liberoshop.repository.UnitModelRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
@@ -56,6 +57,8 @@ class ProductEditServiceTest {
     private StockMovementRepository movements;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private UnitModelRepository unitModels;
 
     private ProductEditService service;
     private Product rice;
@@ -63,7 +66,8 @@ class ProductEditServiceTest {
     @BeforeEach
     void setUp() {
         service = new ProductEditService(products, packagings, categories, movements,
-                new PackagingRules(products, packagings), new BusinessCalendar(Clock.systemDefaultZone()), events);
+                new PackagingRules(products, packagings), new BusinessCalendar(Clock.systemDefaultZone()), events,
+                new UnitModelApplication(unitModels, packagings, new PackagingRules(products, packagings)));
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 

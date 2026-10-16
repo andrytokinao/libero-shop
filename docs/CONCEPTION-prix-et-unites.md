@@ -206,6 +206,30 @@ SaleUnit.of(product, packagingId)
                         ou UNKNOWN_SALE_UNIT si le conditionnement n'existe plus
 ```
 
+### 3.4 Modèles d'unités — `B/service/UnitModelService.java`, `UnitModelApplication.java`
+
+Ajouté le 16 octobre 2026 (`realisation-ui/31-modeles-d-unites-et-configuration.html`).
+
+- **Modèle** (`unit_model`, `unit_model_unit`) : un nom unique, une unité de référence
+  (`baseLabel`, « g ») et des unités écrites chacune dans la référence ou dans une unité ajoutée
+  avant elle (« tonne » = 1000 « kg »). **Ni prix ni stock.** Mêmes règles qu'un conditionnement :
+  nom unique sans casse (référence comprise), contenance > 0 à 3 décimales, pas exactement 1.
+  Une unité qui sert de référence ne se retire pas en premier.
+- **Application à un produit** (`POST /api/products/{id}/units/from-model`, ou champ `units` de
+  `CreateProductRequest`) : les unités cochées sont **copiées** en conditionnements, chacune au
+  prix saisi pour ce produit. Le point de rencontre modèle/produit est cherché dans l'ordre :
+  1. l'unité de base du produit est une unité du modèle (sucre en kg) ;
+  2. le produit a déjà un conditionnement du modèle (riz qui a son « kg = 3,5 kapoka ») ;
+  3. sinon l'« ancre » saisie : « 1 kg = 3,5 kapoka » (`UNIT_MODEL_ANCHOR_REQUIRED` si absente).
+- Chaque unité passe par `PackagingRules` comme une unité saisie à la main ; elle est écrite dans
+  sa référence du modèle quand le produit l'a (la tonne reste « 1000 kg » et suit le kg du
+  produit), sinon directement en unités de base. **Tout ou rien** : une unité refusée (un gramme
+  de riz en kapoka, 0,0035) annule l'ensemble, message préfixé par son nom.
+- Un modèle modifié ou supprimé **ne change aucun produit**. `UnitModelSeed` crée « Poids »
+  (g, kg, tonne) quand il n'existe aucun modèle.
+- L'écran prévisualise le même calcul (`ui/.../core/catalog/unit-model-plan.ts`) pour griser ce
+  qui serait refusé et proposer les prix (`facteur × prix de base`, arrondi, modifiable).
+
 ---
 
 ## 4. Prix de vente

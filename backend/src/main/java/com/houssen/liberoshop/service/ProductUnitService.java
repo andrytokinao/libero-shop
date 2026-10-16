@@ -6,6 +6,7 @@ import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
+import com.houssen.liberoshop.web.dto.ApplyUnitModelRequest;
 import com.houssen.liberoshop.web.dto.BaseUnitRequest;
 import com.houssen.liberoshop.web.dto.PackagingRequest;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
@@ -31,12 +32,14 @@ public class ProductUnitService {
     private final ProductRepository products;
     private final ProductPackagingRepository packagings;
     private final PackagingRules rules;
+    private final UnitModelApplication modelApplication;
 
     public ProductUnitService(ProductRepository products, ProductPackagingRepository packagings,
-                              PackagingRules rules) {
+                              PackagingRules rules, UnitModelApplication modelApplication) {
         this.products = products;
         this.packagings = packagings;
         this.rules = rules;
+        this.modelApplication = modelApplication;
     }
 
     public ProductUnitsResponse unitsOf(Long productId) {
@@ -65,6 +68,18 @@ public class ProductUnitService {
         ProductPackaging packaging = ProductPackaging.builder().product(product).build();
         rules.applyTo(request, packaging);
         packagings.save(packaging);
+        return responseFor(product);
+    }
+
+    /**
+     * Units ticked in a model of units ("Poids": g, kg, tonne), each at the price typed for this
+     * product. All or nothing: one refused unit and none is added.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public ProductUnitsResponse addFromModel(Long productId, ApplyUnitModelRequest request) {
+        Product product = requireProduct(productId);
+        modelApplication.applyTo(product, request);
         return responseFor(product);
     }
 

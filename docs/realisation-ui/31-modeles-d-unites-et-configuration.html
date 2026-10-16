@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modèles d'unités et fenêtre de configuration</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; min-width:0; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1>Modèles d'unités et fenêtre de configuration sans défilement de côté</h1>
+<p class="meta">16 octobre 2026 · branche <code>develop</code> · demande directe (hors <code>docs/todo-ui.md</code>)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>La fenêtre <strong>Configuration</strong> d'un produit est plus large sur ordinateur. Sur téléphone, elle prend tout l'écran et chaque unité devient une carte. Elle <strong>ne défile plus jamais de côté</strong>.</li>
+    <li>Nouveau : les <strong>modèles d'unités</strong>. Un modèle est une liste d'unités à réutiliser, sans prix. Le modèle <strong>« Poids »</strong> (g, kg, tonne) est créé tout seul.</li>
+    <li>À la <strong>création d'un produit</strong>, comme dans sa configuration, on <strong>coche</strong> les unités d'un modèle. Le prix de chacune est proposé et reste modifiable.</li>
+    <li>Pour un riz compté en kapoka, on dit une seule fois « 1 kg = 3,5 kapoka ». Le kg et la tonne sont ensuite calculés.</li>
+    <li>En ajoutant une unité à la main, on peut cocher <strong>« Ajouter aussi au modèle »</strong> : dans un modèle existant, ou dans un nouveau modèle à nommer, puis à renommer si besoin.</li>
+    <li>Un modèle ne change aucun produit : ses unités sont <strong>copiées</strong>. Renommer ou supprimer un modèle ne touche pas aux produits déjà faits.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fenetre">2. La fenêtre de configuration</a></li>
+  <li><a href="#modeles">3. Les modèles d'unités</a></li>
+  <li><a href="#calcul">4. Comment le modèle rejoint le produit</a></li>
+  <li><a href="#ecrans">5. Le résultat en images</a></li>
+  <li><a href="#exemples">6. À éviter / attendu</a></li>
+  <li><a href="#recap">7. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<ul>
+  <li><strong>Défilement de côté.</strong> Le tableau des unités a sept colonnes. Dans une fenêtre de 680 pixels, il
+    débordait : il fallait faire défiler de gauche à droite pour voir le bénéfice ou les boutons. Sur téléphone, c'était
+    pire.</li>
+  <li><strong>Unités retapées à chaque produit.</strong> Le gramme, le kilo et la tonne se retapaient pour chaque produit
+    vendu au poids, avec leur contenance. C'est long, et une faute de frappe fausse le stock à chaque vente.</li>
+</ul>
+
+<h2 id="fenetre">2. La fenêtre de configuration</h2>
+<div class="cards">
+  <div class="card"><h4><span class="letter">1</span>Sur ordinateur</h4>
+    La fenêtre passe à 1 040 pixels de large. Les champs du produit se rangent sur autant de colonnes que la largeur
+    permet. Le tableau des unités tient en entier : plus de barre de défilement.</div>
+  <div class="card"><h4><span class="letter">2</span>Sur téléphone</h4>
+    La fenêtre prend tout l'écran. Le titre et les boutons du bas restent visibles. Chaque unité devient une
+    <strong>carte</strong> : son nom en titre, puis une ligne par chiffre (contient, prix de vente, prix d'entrée,
+    bénéfice, code-barres).</div>
+  <div class="card"><h4><span class="letter">3</span>Moins de texte en haut</h4>
+    Le long paragraphe d'explication est replié dans « Comment ça marche ? ». Il s'ouvre d'un clic.</div>
+</div>
+
+<div class="figure">
+<svg viewBox="0 0 860 250" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Avant et après : le tableau des unités">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .b { font: bold 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .frame { fill:#fff; stroke:#1d2329; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+    .ok { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .cell { fill:#f4f6f8; stroke:#dde3e8; }
+  </style>
+  <text class="b" x="20" y="22">Avant — fenêtre de 680 px</text>
+  <rect class="frame" x="20" y="34" width="250" height="150" rx="8"/>
+  <rect class="ko" x="30" y="70" width="330" height="70" rx="4"/>
+  <text class="s" x="40" y="92">Unité · Contient · Prix · Entrée · Bénéfice · Code · …</text>
+  <text class="s" x="40" y="118">les dernières colonnes sortent du cadre</text>
+  <text class="t" x="20" y="208" style="fill:#b23b3b">→ défilement de côté</text>
+
+  <text class="b" x="400" y="22">Après — ordinateur</text>
+  <rect class="frame" x="400" y="34" width="250" height="150" rx="8"/>
+  <rect class="ok" x="410" y="70" width="230" height="70" rx="4"/>
+  <text class="s" x="420" y="92">7 colonnes, tout tient</text>
+  <text class="s" x="420" y="118">dans 1 040 px</text>
+
+  <text class="b" x="690" y="22">Après — téléphone</text>
+  <rect class="frame" x="695" y="34" width="150" height="200" rx="12"/>
+  <rect class="ok" x="705" y="50" width="130" height="56" rx="6"/>
+  <text class="s" x="713" y="68">kg</text><text class="s" x="713" y="84">Contient 3,5</text><text class="s" x="713" y="99">Prix 3 150 Ar</text>
+  <rect class="ok" x="705" y="114" width="130" height="56" rx="6"/>
+  <text class="s" x="713" y="132">tonne</text><text class="s" x="713" y="148">Contient 1 000 kg</text><text class="s" x="713" y="163">Prix …</text>
+  <rect class="ok" x="705" y="178" width="130" height="44" rx="6"/>
+  <text class="s" x="713" y="198">sac 25 kg</text>
+</svg>
+<div class="caption">Figure 1 — Le tableau des unités : avant (il débordait), après sur ordinateur (il tient), après sur téléphone (des cartes).</div>
+</div>
+
+<h2 id="modeles">3. Les modèles d'unités</h2>
+<p>Un <strong>modèle</strong> est une liste d'unités avec leurs contenances, <strong>sans prix ni stock</strong>. Exemple,
+  le modèle « Poids » créé tout seul au démarrage :</p>
+<div class="table-wrap"><table>
+<tr><th>Unité</th><th>S'écrit</th><th>En grammes</th></tr>
+<tr><td>g</td><td>unité de référence du modèle</td><td>1</td></tr>
+<tr><td>kg</td><td>1 000 g</td><td>1 000</td></tr>
+<tr><td>tonne</td><td>1 000 kg</td><td>1 000 000</td></tr>
+</table></div>
+<p>On s'en sert à trois endroits :</p>
+<div class="cards">
+  <div class="card"><h4><span class="letter">A</span>Nouveau produit</h4>
+    « Autres unités depuis un modèle » : on coche le kg, la tonne… et on règle leurs prix. Elles sont créées
+    <strong>avec</strong> le produit, dans la même opération.</div>
+  <div class="card"><h4><span class="letter">B</span>Configuration d'un produit</h4>
+    « Ajouter des unités depuis un modèle » : même chose pour un produit qui existe déjà. Une unité que le produit a
+    déjà est grisée (« déjà présente »).</div>
+  <div class="card"><h4><span class="letter">C</span>« Ajouter aussi au modèle »</h4>
+    Sous « Ajouter une unité » : l'unité tapée à la main (un « sac 25 kg » = 25 kg) part aussi dans un modèle. On choisit
+    le modèle, ou « ＋ Nouveau modèle… » avec son nom.</div>
+</div>
+<p><strong>« Gérer les modèles »</strong> ouvre une fenêtre pour <strong>renommer</strong> un modèle, lui ajouter ou retirer
+  des unités, le supprimer, ou en créer un nouveau (Volume, Cartons…).</p>
+<div class="note">Un modèle est <strong>copié</strong> sur le produit, il n'y reste pas attaché. Si l'on modifie ou supprime
+  le modèle, les produits déjà faits gardent leurs unités. Les ventes passées ne sont jamais touchées.</div>
+
+<h2 id="calcul">4. Comment le modèle rejoint le produit</h2>
+<p>Le modèle dit seulement comment ses unités se comparent entre elles. Pour les mettre sur un produit, il faut savoir où
+  le modèle rejoint ce produit. Le serveur le cherche dans cet ordre :</p>
+<div class="figure">
+<svg viewBox="0 0 860 300" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre de décision : où le modèle rejoint le produit">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .q { fill:#fff; stroke:#1f6f5c; stroke-width:1.5; }
+    .r { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .w { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="q" x="20" y="20" width="270" height="52" rx="8"/>
+  <text class="t" x="34" y="42">① Le produit est-il compté dans</text><text class="t" x="34" y="60">une unité du modèle ? (sucre en kg)</text>
+  <rect class="r" x="560" y="20" width="280" height="52" rx="8"/>
+  <text class="t" x="574" y="42">Oui : rien à demander.</text><text class="s" x="574" y="60">tonne = 1 000 kg, g = 0,001 kg</text>
+  <path class="ln" d="M290,46 L555,46"/><text class="s" x="400" y="40">oui</text>
+
+  <rect class="q" x="20" y="120" width="270" height="52" rx="8"/>
+  <text class="t" x="34" y="142">② Le produit a-t-il déjà une unité</text><text class="t" x="34" y="160">du modèle ? (riz qui a son kg)</text>
+  <rect class="r" x="560" y="120" width="280" height="52" rx="8"/>
+  <text class="t" x="574" y="142">Oui : on part de son kg.</text><text class="s" x="574" y="160">kg = 3,5 kapoka → tonne = 3 500 kapoka</text>
+  <path class="ln" d="M155,72 L155,115"/><text class="s" x="162" y="98">non</text>
+  <path class="ln" d="M290,146 L555,146"/><text class="s" x="400" y="140">oui</text>
+
+  <rect class="w" x="20" y="220" width="270" height="60" rx="8"/>
+  <text class="t" x="34" y="243">③ Sinon : on le demande, une fois.</text><text class="s" x="34" y="263">« 1 kg = 3,5 kapoka »</text>
+  <rect class="r" x="560" y="220" width="280" height="60" rx="8"/>
+  <text class="t" x="574" y="243">kg = 3,5 kapoka, tonne = 3 500 kapoka</text><text class="s" x="574" y="263">g = 0,0035 : refusé (grisé à l'écran)</text>
+  <path class="ln" d="M155,172 L155,215"/><text class="s" x="162" y="198">non</text>
+  <path class="ln" d="M290,250 L555,250"/>
+</svg>
+<div class="caption">Figure 2 — Où le modèle rejoint le produit : d'abord ce que le produit dit déjà, et seulement sinon une question.</div>
+</div>
+<p>Chaque unité ajoutée passe ensuite par les <strong>mêmes règles</strong> qu'une unité tapée à la main : au plus trois
+  décimales, pas exactement une unité de base, prix supérieur à zéro, nom libre. Si une seule est refusée, <strong>aucune</strong>
+  n'est ajoutée, et le message dit laquelle (« "g" : la contenance accepte au plus 3 décimales… »).</p>
+<p>Quand le produit a déjà l'unité de référence, la nouvelle unité est écrite comme dans le modèle : la tonne reste « 1 000 kg ».
+  Si l'on corrige plus tard le kg du riz (3,6 kapoka au lieu de 3,5), la tonne suit d'elle-même.</p>
+
+<h2 id="ecrans">5. Le résultat en images</h2>
+<h3>Sur ordinateur</h3>
+<p><span class="who">Nadia — responsable de dépôt</span> La fenêtre d'un riz compté en kapoka : tout le tableau tient.</p>
+<div class="shot"><img src="captures/ui-31-1-config-desktop.png" alt="Fenêtre de configuration sur ordinateur">
+<div class="caption">Figure 3 — La configuration élargie, l'aide repliée dans « Comment ça marche ? ».</div></div>
+<p>« Ajouter des unités depuis un modèle » : le riz ne partage aucune unité avec « Poids », la fenêtre demande donc
+  « 1 kg = 3,5 kapoka ». Le gramme est grisé : il ferait 0,0035 kapoka, moins d'un millième.</p>
+<div class="shot"><img src="captures/ui-31-2-picker-desktop.png" alt="Choix des unités du modèle Poids">
+<div class="caption">Figure 4 — kg et tonne cochés, avec leurs prix proposés (3,5 × 900 Ar, 3 500 × 900 Ar), modifiables.</div></div>
+<p>Un « sac 25 kg » tapé à la main, avec « Ajouter aussi au modèle » : le modèle « Poids » est proposé, car il connaît le kg.</p>
+<div class="shot"><img src="captures/ui-31-3-keep-desktop.png" alt="Ajouter aussi au modèle">
+<div class="caption">Figure 5 — L'unité est ajoutée au produit, puis au modèle « Poids ».</div></div>
+
+<h3>Sur téléphone</h3>
+<div class="cards">
+  <div class="shot"><img src="captures/ui-31-5-units-phone.png" alt="Unités en cartes sur téléphone">
+  <div class="caption">Figure 6 — Une carte par unité, sans défilement de côté.</div></div>
+  <div class="shot"><img src="captures/ui-31-7-manage-phone.png" alt="Fenêtre Modèles d'unités sur téléphone">
+  <div class="caption">Figure 7 — « Gérer les modèles » : renommer, ajouter, retirer.</div></div>
+  <div class="shot"><img src="captures/ui-31-6-create-phone.png" alt="Nouveau produit avec unités du modèle">
+  <div class="caption">Figure 8 — Une farine en kg, créée avec sa tonne cochée.</div></div>
+</div>
+<p>Contrôle automatique (<code>scratch/drive-unit-models.mjs</code>) : sur ordinateur (1 366 px) et sur téléphone (390 px),
+  ni la page, ni la fenêtre, ni son contenu ne sont plus larges que l'écran ; aucune erreur dans la console, hors le refus
+  attendu quand on ajoute deux fois la même unité à un modèle.</p>
+
+<h2 id="exemples">6. À éviter / attendu</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>// Un « kg = 3,5 kapoka » mis dans un modèle partagé :
+// faux pour le sucre (≈ 4 kapoka le kg).
+modèle Riz : kg = 3,5 kapoka</code></pre></div>
+  <div class="good"><div class="good-title">Attendu</div>
+<pre><code>// Le modèle ne dit que ce qui est vrai partout,
+// le produit dit le reste, une fois :
+modèle Poids : kg = 1 000 g, tonne = 1 000 kg
+riz : 1 kg = 3,5 kapoka  →  tonne = 3 500 kapoka</code></pre></div>
+</div>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>/* une colonne de plus = un défilement de côté */
+.table-scroll { overflow-x: auto; }</code></pre></div>
+  <div class="good"><div class="good-title">Attendu</div>
+<pre><code>/* étroit : chaque ligne devient une carte */
+@media (max-width: 760px) {
+  .un-table td[data-label]::before { content: attr(data-label); }
+}</code></pre></div>
+</div>
+
+<h2 id="recap">7. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>entity/UnitModel.java</code>, <code>entity/UnitModelUnit.java</code></td><td>nouvelles tables <code>unit_model</code> et <code>unit_model_unit</code> (créées par <code>ddl-auto=update</code>)</td></tr>
+<tr><td><code>service/UnitModelService.java</code></td><td>créer, renommer, supprimer un modèle ; ajouter, retirer une unité</td></tr>
+<tr><td><code>service/UnitModelApplication.java</code></td><td>mettre les unités cochées sur un produit (point de rencontre, règles de <code>PackagingRules</code>, tout ou rien)</td></tr>
+<tr><td><code>service/UnitModelFactors.java</code></td><td>calcul exact des contenances dans un modèle</td></tr>
+<tr><td><code>service/ProductUnitService.java</code>, <code>service/ProductEditService.java</code></td><td>ajout depuis un modèle ; création d'un produit avec ses unités cochées</td></tr>
+<tr><td><code>web/UnitModelController.java</code>, <code>web/ProductUnitController.java</code></td><td><code>/api/unit-models</code> ; <code>POST /api/products/{id}/units/from-model</code> (responsable de dépôt, administrateur)</td></tr>
+<tr><td><code>bootstrap/UnitModelSeed.java</code></td><td>modèle « Poids » créé quand il n'y a aucun modèle</td></tr>
+<tr><td><code>ui/…/product-units-dialog.component.ts</code></td><td>fenêtre élargie, cartes sur téléphone, section « depuis un modèle », « Ajouter aussi au modèle »</td></tr>
+<tr><td><code>ui/…/product-create-dialog.component.ts</code></td><td>unités d'un modèle cochées à la création</td></tr>
+<tr><td><code>ui/…/unit-model-picker.component.ts</code>, <code>unit-models-dialog.component.ts</code></td><td>sélecteur d'unités d'un modèle ; fenêtre « Modèles d'unités »</td></tr>
+<tr><td><code>ui/…/core/catalog/unit-model-plan.ts</code></td><td>aperçu à l'écran du même calcul que le serveur (grise ce qui serait refusé, propose les prix)</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Une unité écrite dans une autre est comptée jusqu'à la référence (tonne = 1 000 000 g)</td><td><code>UnitModelServiceTest.uniteEcriteDansUneAutre</code></td></tr>
+<tr><td>Nom déjà pris (référence comprise, sans casse) ; référence inconnue ; contenance égale à la référence ; retrait d'une référence ; nom de modèle unique ; création tout ou rien</td><td><code>UnitModelServiceTest</code> (6 autres tests)</td></tr>
+<tr><td>Produit en kg : g et tonne sans rien demander</td><td><code>UnitModelApplicationTest.produitCompteEnKg</code></td></tr>
+<tr><td>Riz en kapoka : « 1 kg = 3,5 » ; ou son kg déjà là ; sinon la question est obligatoire</td><td><code>produitAvecAncre</code>, <code>produitQuiADejaLeKg</code>, <code>ancreManquante</code></td></tr>
+<tr><td>Un gramme de riz (0,0035) refusé, et rien d'autre ajouté ; unité déjà présente refusée</td><td><code>toutOuRien</code>, <code>uniteDejaPresente</code></td></tr>
+<tr><td>Produit créé avec ses unités cochées</td><td><code>creationAvecUnites</code></td></tr>
+<tr><td>« Poids » créé seulement s'il n'y a aucun modèle</td><td><code>UnitModelSeedTest</code></td></tr>
+<tr><td>Aperçu à l'écran identique au serveur</td><td><code>unit-model-plan.spec.ts</code> (6 tests)</td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur 608 au vert, interface 201 au vert, <code>ng build</code> de production réussi.</p>
+<div class="note"><strong>Signalé, non fait :</strong> le modèle « Poids » revient au démarrage si l'on supprime <em>tous</em> les
+  modèles (il n'est créé que lorsqu'il n'en existe aucun). Seul « Poids » est livré : un modèle « Volume » (ml, l) se crée
+  en deux clics dans « Gérer les modèles ».</div>
+</main>
+</body>
+</html>
