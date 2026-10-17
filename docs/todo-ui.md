@@ -38,7 +38,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 
 ## P2
 
-- [ ] **UI-02** — Menu produit complet par familles (Stock / Configuration / Autres) : compter ce
+- [x] **UI-02** — Menu produit complet par familles (Stock / Configuration / Autres) : compter ce
   produit, nom et rayon, prix, unités et packaging, codes-barres, seuil d'alerte, dupliquer,
   retirer de la vente. Étendre `MenuAction` (`group`, `hint`, `disabledReason`).
   (serveur : seuil par produit, produit retiré de la vente)

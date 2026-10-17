@@ -24,7 +24,10 @@ describe('ProductMenuComponent', () => {
   const trigger = () => fixture.nativeElement.querySelector('.am-trigger') as HTMLButtonElement | null;
   const entries = () =>
     [...fixture.nativeElement.querySelectorAll('[role=menuitem]')] as HTMLButtonElement[];
-  const labels = () => entries().map((entry) => entry.textContent?.trim());
+  /** The entry's name, without the grey hint on its right. */
+  const labels = () => entries().map((entry) => entry.querySelector('span')?.textContent?.trim());
+  const groups = () =>
+    Array.from(fixture.nativeElement.querySelectorAll('.am-group') as NodeListOf<HTMLElement>, (g) => g.textContent?.trim());
 
   function open(...held: RoleApp[]): void {
     roles.set(held);
@@ -49,21 +52,31 @@ describe('ProductMenuComponent', () => {
     fixture.componentInstance.action.subscribe((request) => asked.push(request));
   });
 
-  it('offers the stock manager everything, adding stock first', () => {
+  it('offers the stock manager everything, by family, adding stock first', () => {
     open(RoleApp.DEPOT_MANAGER);
 
     expect(labels()).toEqual([
       'Ajouter du stock',
-      'Configurer (prix, unités)',
       'Corriger le stock',
+      'Compter ce produit',
       'Historique du stock',
+      'Nom et rayon',
+      "Prix de vente et d'entrée",
+      'Unités et packaging',
+      'Codes-barres',
+      "Seuil d'alerte",
+      'Dupliquer le produit',
+      'Retirer de la vente',
     ]);
+    expect(groups()).toEqual(['Stock', 'Configuration', 'Autres']);
   });
 
   it('keeps adding stock from the administrator, who may still edit and correct', () => {
     open(RoleApp.SUPER_ADMIN);
 
-    expect(labels()).toEqual(['Configurer (prix, unités)', 'Corriger le stock', 'Historique du stock']);
+    expect(labels()).not.toContain('Ajouter du stock');
+    expect(labels()).toContain('Corriger le stock');
+    expect(labels()).toContain('Nom et rayon');
   });
 
   it('shows no menu at all to the counter', () => {
@@ -80,6 +93,23 @@ describe('ProductMenuComponent', () => {
 
     expect(asked).toEqual([{ action: 'addStock', product: rice }]);
     expect(entries()).toEqual([]);
+  });
+
+  it('shows the threshold of the product beside its entry, and offers to put a retired one back', () => {
+    fixture.componentRef.setInput('product', { ...rice, lowStockThreshold: 50, retired: true });
+    open(RoleApp.DEPOT_MANAGER);
+
+    const threshold = entries().find((entry) => entry.textContent?.includes("Seuil d'alerte"))!;
+    expect(threshold.querySelector('.am-hint')?.textContent?.trim()).toBe('50 kapoka');
+    expect(labels()).toContain('Remettre en vente');
+  });
+
+  it('opens the configuration on the tab of the entry picked', () => {
+    open(RoleApp.DEPOT_MANAGER);
+
+    entries().find((entry) => entry.textContent?.includes('Codes-barres'))!.click();
+
+    expect(asked).toEqual([{ action: 'edit', product: rice, tab: 'codes' }]);
   });
 
   it('closes on Escape without picking anything', () => {

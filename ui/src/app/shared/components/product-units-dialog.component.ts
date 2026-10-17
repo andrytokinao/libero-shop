@@ -993,6 +993,8 @@ export class ProductUnitsDialogComponent implements OnInit {
   @Input() productName = '';
   /** Opened to give a purchase price ("partiel" on the profit page): the cursor waits in it. */
   @Input() focusCost = false;
+  /** Opened from "Seuil d'alerte" in the menu: the cursor waits in the threshold. */
+  @Input() focusThreshold = false;
   /** The tab it opens on — the menu entry picked says which. */
   @Input() set initialTab(tab: ConfigTab | undefined) {
     if (tab) {
@@ -1472,6 +1474,10 @@ export class ProductUnitsDialogComponent implements OnInit {
         this.units.set(units);
         this.baseDraft.set(units.baseUnit ?? '');
         this.alertDraft.set(units.lowStockThreshold === null ? '' : String(units.lowStockThreshold));
+        if (this.focusThreshold) {
+          this.focusThreshold = false;
+          setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-alert')?.focus());
+        }
         this.sheet.update((sheet) => ({
           ...sheet,
           name: units.productName,

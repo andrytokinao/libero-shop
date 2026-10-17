@@ -1,5 +1,9 @@
-import { Component, effect, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
+import { CatalogApi } from '../../core/api/catalog.api';
+import { Product } from '../../core/models';
+import { ToastService } from '../../core/services/toast.service';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { ProductCreateDialogComponent } from './product-create-dialog.component';
 import { ProductUnitsDialogComponent } from './product-units-dialog.component';
 import { StockAdjustDialogComponent } from './stock-adjust-dialog.component';
@@ -26,18 +30,24 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
     StockAdjustDialogComponent,
     StockEntryDialogComponent,
     StockHistoryDialogComponent,
+    ConfirmDialogComponent,
   ],
   template: `
     @if (shown(); as asked) {
       @switch (asked.action) {
         @case ('create') {
-          <app-product-create-dialog (created)="changed.emit()" (closed)="closed.emit()" />
+          <app-product-create-dialog
+            [copyOf]="asked.copyOf ?? null"
+            (created)="changed.emit()"
+            (closed)="closed.emit()"
+          />
         }
         @case ('edit') {
           <app-product-units-dialog
             [productId]="asked.product.id"
             [productName]="asked.product.name"
             [focusCost]="asked.focus === 'cost'"
+            [focusThreshold]="asked.focus === 'threshold'"
             [initialTab]="asked.tab"
             (changed)="changed.emit()"
             (addStock)="shown.set({ action: 'addStock', product: $event })"
@@ -54,12 +64,35 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
         @case ('adjust') {
           <app-stock-adjust-dialog
             [product]="asked.product"
+            [initialReason]="asked.count ? 'INVENTORY_COUNT' : 'BREAKAGE'"
             (changed)="changed.emit()"
             (closed)="closed.emit()"
           />
         }
         @case ('history') {
           <app-stock-history-dialog [product]="asked.product" (closed)="closed.emit()" />
+        }
+        @case ('retire') {
+          @if (asked.product.retired) {
+            <app-confirm-dialog
+              title="Remettre en vente ?"
+              [message]="'« ' + asked.product.name + ' » sera de nouveau proposé aux caisses et aux commandes.'"
+              confirmLabel="Remettre en vente"
+              [busy]="busy()"
+              (confirmed)="setRetired(asked.product, false)"
+              (closed)="closed.emit()"
+            />
+          } @else {
+            <app-confirm-dialog
+              title="Retirer de la vente ?"
+              [message]="'« ' + asked.product.name + ' » ne sera plus proposé aux caisses ni aux commandes. Son stock, son historique et ses factures restent ; il peut être remis en vente.'"
+              confirmLabel="Retirer de la vente"
+              [danger]="true"
+              [busy]="busy()"
+              (confirmed)="setRetired(asked.product, true)"
+              (closed)="closed.emit()"
+            />
+          }
         }
       }
     }
@@ -77,5 +110,23 @@ export class ProductDialogsComponent {
 
   constructor() {
     effect(() => this.shown.set(this.request()), { allowSignalWrites: true });
+  }
+
+  private readonly api = inject(CatalogApi);
+  private readonly toasts = inject(ToastService);
+  protected readonly busy = signal(false);
+
+  /** "Retirer de la vente" or "Remettre en vente", once confirmed. */
+  protected setRetired(product: Product, retired: boolean): void {
+    this.busy.set(true);
+    this.api.changeRetired(product.id, retired).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.toasts.show(retired ? `« ${product.name} » retiré de la vente.` : `« ${product.name} » remis en vente.`);
+        this.changed.emit();
+        this.closed.emit();
+      },
+      error: () => this.busy.set(false),
+    });
   }
 }

@@ -16,11 +16,16 @@ export interface MenuAction<T extends string = string> {
   readonly label: string;
   /** Shown in red: an entry that removes something. */
   readonly danger?: boolean;
+  /** A small heading over the entries that share it, drawn where the group changes. */
+  readonly group?: string;
+  /** In grey on the right: what the entry does, or the value it changes. */
+  readonly hint?: string;
 }
 
 /** Room one entry takes, to decide whether the panel opens under its button or above it. */
 const ITEM_HEIGHT = 40;
 const PANEL_PADDING = 12;
+const GROUP_HEIGHT = 24;
 
 /**
  * A "⋮" button opening a short list of actions — what a `mat-menu` is, in this application's own
@@ -65,7 +70,10 @@ const PANEL_PADDING = 12;
         [style.bottom.px]="place().bottom"
         (keydown)="onKey($event)"
       >
-        @for (action of actions(); track action.id) {
+        @for (action of actions(); track action.id; let i = $index) {
+          @if (action.group && action.group !== actions()[i - 1]?.group) {
+            <div class="am-group" role="presentation">{{ action.group }}</div>
+          }
           <button
             type="button"
             role="menuitem"
@@ -73,7 +81,10 @@ const PANEL_PADDING = 12;
             [class.danger]="action.danger"
             (click)="pick(action)"
           >
-            {{ action.label }}
+            <span>{{ action.label }}</span>
+            @if (action.hint) {
+              <small class="am-hint">{{ action.hint }}</small>
+            }
           </button>
         }
       </div>
@@ -116,6 +127,9 @@ const PANEL_PADDING = 12;
       z-index: 71;
       min-width: 190px;
       max-width: calc(100vw - 16px);
+      /* A long menu on a short screen scrolls inside itself rather than leaving the screen. */
+      max-height: calc(100vh - 16px);
+      overflow-y: auto;
       padding: 6px;
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -125,7 +139,25 @@ const PANEL_PADDING = 12;
       flex-direction: column;
     }
 
+    .am-group {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      padding: 8px 12px 2px;
+    }
+
+    .am-hint {
+      margin-left: auto;
+      padding-left: 16px;
+      color: var(--ink-soft);
+      font-size: 11.5px;
+    }
+
     .am-item {
+      display: flex;
+      align-items: baseline;
       border: none;
       border-radius: 7px;
       background: none;
@@ -178,7 +210,8 @@ export class ActionMenuComponent<T extends string = string> {
       return { right: 0, top: 0, bottom: null };
     }
     const right = Math.max(8, window.innerWidth - rect.right);
-    const height = this.actions().length * ITEM_HEIGHT + PANEL_PADDING;
+    const groups = new Set(this.actions().map((action) => action.group).filter(Boolean)).size;
+    const height = this.actions().length * ITEM_HEIGHT + groups * GROUP_HEIGHT + PANEL_PADDING;
     const fitsBelow = rect.bottom + 4 + height <= window.innerHeight || rect.top < height;
     return fitsBelow
       ? { right, top: rect.bottom + 4, bottom: null }

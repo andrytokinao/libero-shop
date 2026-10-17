@@ -3,21 +3,27 @@ import { Product, RoleApp } from '../models';
 import { AuthService } from '../services/auth.service';
 
 /** What can be done to one product from its menu. */
-export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history';
+export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history' | 'retire';
 
 /** The parts of a product's configuration, one tab each. */
 export type ConfigTab = 'fiche' | 'prix' | 'unites' | 'codes';
 
 /** A product's menu entry picked, or the "Nouveau produit" button. */
 export type ProductDialogRequest =
-  | { readonly action: 'create' }
+  | {
+      readonly action: 'create';
+      /** "Dupliquer le produit": the new one starts from this one's sheet. */
+      readonly copyOf?: Product;
+    }
   | {
       readonly action: ProductAction;
       readonly product: Product;
       /** Where the dialog puts the cursor: the purchase price, to fill in a missing one. */
-      readonly focus?: 'cost';
+      readonly focus?: 'cost' | 'threshold';
       /** The configuration tab it opens on; the sheet ("Fiche") otherwise. */
       readonly tab?: ConfigTab;
+      /** A correction that is a count of the shelf: "Compter ce produit". */
+      readonly count?: boolean;
     };
 
 /**
@@ -43,11 +49,11 @@ export class ProductRights {
   /** A product's movements carry purchase prices: the readers of the receipts. */
   readonly canSeeHistory = this.canEdit;
 
-  /** The entries of a product's menu this account is offered, in the order they are shown. */
-  readonly actions = computed<readonly { id: ProductAction; label: string }[]>(() => [
-    ...(this.canAddStock() ? [{ id: 'addStock' as const, label: 'Ajouter du stock' }] : []),
-    ...(this.canEdit() ? [{ id: 'edit' as const, label: 'Configurer (prix, unités)' }] : []),
-    ...(this.canAdjustStock() ? [{ id: 'adjust' as const, label: 'Corriger le stock' }] : []),
-    ...(this.canSeeHistory() ? [{ id: 'history' as const, label: 'Historique du stock' }] : []),
-  ]);
+  /** What this account may do, as the product menu reads it. */
+  readonly menuRights = computed(() => ({
+    canAddStock: this.canAddStock(),
+    canAdjustStock: this.canAdjustStock(),
+    canSeeHistory: this.canSeeHistory(),
+    canEdit: this.canEdit(),
+  }));
 }

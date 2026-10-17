@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product } from '../../core/models';
@@ -95,11 +95,13 @@ import { ToastService } from '../../core/services/toast.service';
     }
   `,
 })
-export class StockAdjustDialogComponent {
+export class StockAdjustDialogComponent implements OnInit {
   private readonly api = inject(StockApi);
   private readonly toasts = inject(ToastService);
 
   readonly product = input.required<Product>();
+  /** "Compter ce produit" opens on the count, "Corriger le stock" on a loss. */
+  readonly initialReason = input<AdjustmentReason>('INVENTORY_COUNT');
   readonly changed = output<void>();
   readonly closed = output<void>();
 
@@ -112,6 +114,11 @@ export class StockAdjustDialogComponent {
   protected readonly busy = signal(false);
 
   protected readonly isCount = computed(() => this.reason() === 'INVENTORY_COUNT');
+
+  /** Here rather than in a field: the inputs are not there yet before this. */
+  ngOnInit(): void {
+    this.reason.set(this.initialReason());
+  }
 
   /** Zero included, unlike a quantity sold: a shelf may be counted empty. */
   private readonly quantityNumber = computed<number | null>(() => {

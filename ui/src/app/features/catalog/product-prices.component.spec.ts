@@ -130,7 +130,7 @@ describe('ProductPricesComponent', () => {
     (fixture.nativeElement.querySelector('.pp-actions .am-trigger') as HTMLButtonElement).click();
     fixture.detectChanges();
     return [...fixture.nativeElement.querySelectorAll('[role=menuitem]')].map(
-      (entry) => (entry as HTMLElement).textContent?.trim() ?? '',
+      (entry) => (entry as HTMLElement).querySelector('span')?.textContent?.trim() ?? '',
     );
   }
 });

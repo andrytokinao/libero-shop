@@ -51,7 +51,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             <h2 id="pn-title">Nouveau produit</h2>
             <div class="sub muted">
               Le nom et le prix suffisent. Les unités courantes (g, kg, tonne…) se cochent ci-dessous ;
-              les autres s'ajoutent ensuite avec « Configurer (prix, unités) ».
+              les autres s'ajoutent ensuite avec « Unités et packaging » dans le menu du produit.
             </div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -243,6 +243,8 @@ export class ProductCreateDialogComponent implements OnInit {
 
   /** A code already read — an unknown code scanned at the till — filled in from the start. */
   readonly barcode = input('');
+  /** "Dupliquer le produit": name, price, unit and rayon start from this one. */
+  readonly copyOf = input<Product | null>(null);
   /** The product as the server created it. */
   readonly created = output<Product>();
   readonly closed = output<void>();
@@ -296,6 +298,16 @@ export class ProductCreateDialogComponent implements OnInit {
   ngOnInit(): void {
     if (this.barcode()) {
       this.patch({ barcode: this.barcode() });
+    }
+    const model = this.copyOf();
+    if (model) {
+      // The code and the stock are this product's own: a copy starts without them.
+      this.patch({
+        name: `${model.name} (copie)`,
+        price: String(model.price),
+        unit: model.unit ?? '',
+        categoryId: model.category?.id ?? null,
+      });
     }
   }
 
