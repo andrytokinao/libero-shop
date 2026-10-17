@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { DeliveryStatus, PaymentStatus } from '../../core/models';
+import { debouncedAction } from '../../core/utils/debounced-action';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { Period, PeriodFilterComponent } from '../../shared/components/period-filter.component';
@@ -132,9 +133,12 @@ export class AllInvoicesComponent {
     () => this.invoices().filter((invoice) => invoice.printed).length,
   );
 
+  /** Asked once typing pauses, not at every keystroke. */
+  private readonly reloadSoon = debouncedAction(() => this.resource.reload());
+
   protected onSearch(value: string): void {
     this.search.set(value);
-    this.resource.reload();
+    this.reloadSoon();
   }
 
   protected onPeriod(value: Period): void {

@@ -4,6 +4,7 @@ import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice, PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { debouncedAction } from '../../core/utils/debounced-action';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { PayDialogComponent } from '../../shared/components/pay-dialog.component';
 
@@ -73,9 +74,12 @@ export class ToCollectComponent {
 
   protected readonly payLabel = (): string => 'Encaisser';
 
+  /** Asked once typing pauses, not at every keystroke. */
+  private readonly reloadSoon = debouncedAction(() => this.resource.reload());
+
   protected onSearch(value: string): void {
     this.search.set(value);
-    this.resource.reload();
+    this.reloadSoon();
   }
 
   protected pay(invoice: Invoice, method: PaymentMethod): void {

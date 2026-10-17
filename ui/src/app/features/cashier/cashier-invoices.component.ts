@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { Invoice } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { debouncedAction } from '../../core/utils/debounced-action';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { Period, PeriodFilterComponent } from '../../shared/components/period-filter.component';
 
@@ -68,9 +69,12 @@ export class CashierInvoicesComponent {
     this.resource.reload();
   }
 
+  /** Asked once typing pauses, not at every keystroke. */
+  private readonly reloadSoon = debouncedAction(() => this.resource.reload());
+
   protected onSearch(value: string): void {
     this.search.set(value);
-    this.resource.reload();
+    this.reloadSoon();
   }
 
   protected readonly printLabel = (invoice: Invoice): string =>

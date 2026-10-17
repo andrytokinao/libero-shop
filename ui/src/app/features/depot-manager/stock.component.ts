@@ -8,6 +8,7 @@ import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-
 import { ToastService } from '../../core/services/toast.service';
 import { CategoryNode } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
+import { debouncedAction } from '../../core/utils/debounced-action';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog.component';
@@ -250,10 +251,13 @@ export class StockComponent {
     this.products().reduce((total, p) => total + p.stockQuantity, 0),
   );
 
+  /** Asked once typing pauses, not at every keystroke. */
+  private readonly reloadSoon = debouncedAction(() => this.resource.reload());
+
   protected onSearch(value: string): void {
     this.search.set(value);
     this.openMenuOf.set(null);
-    this.resource.reload();
+    this.reloadSoon();
   }
 
   /** The delivery note open. */

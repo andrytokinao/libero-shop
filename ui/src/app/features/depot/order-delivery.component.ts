@@ -8,6 +8,7 @@ import { InvoiceTableComponent } from '../../shared/components/invoice-table.com
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { CashInHandComponent } from './cash-in-hand.component';
 import { asksHowToPay, deliveryActionLabel, deliveryRowAction } from '../../core/orders/delivery.util';
+import { debouncedAction } from '../../core/utils/debounced-action';
 
 /** The tabs of the queue: one delivery status, or every order. */
 type DeliveryView = DeliveryStatus.PENDING | DeliveryStatus.IN_PROGRESS | 'ALL';
@@ -133,9 +134,12 @@ export class OrderDeliveryComponent {
     { value: 'ALL', label: 'Tous', icon: 'list' },
   ]);
 
+  /** Asked once typing pauses, not at every keystroke. */
+  private readonly reloadSoon = debouncedAction(() => this.resource.reload());
+
   protected onSearch(value: string): void {
     this.search.set(value);
-    this.resource.reload();
+    this.reloadSoon();
   }
 
   protected onFilter(view: DeliveryView): void {
