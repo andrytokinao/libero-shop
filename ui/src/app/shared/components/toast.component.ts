@@ -6,7 +6,14 @@ import { ToastService } from '../../core/services/toast.service';
   standalone: true,
   template: `
     @if (toasts.message(); as message) {
-      <div class="toast" role="status" (click)="toasts.dismiss()">{{ message }}</div>
+      <div class="toast" role="status" (click)="toasts.dismiss()">
+        <span>{{ message }}</span>
+        @for (action of toasts.actions(); track action.label) {
+          <button class="toast-action" type="button" (click)="$event.stopPropagation(); toasts.act(action)">
+            {{ action.label }}
+          </button>
+        }
+      </div>
     }
   `,
 })

@@ -1,8 +1,9 @@
 import { Component, effect, inject, input, output, signal } from '@angular/core';
-import { ProductDialogRequest } from '../../core/catalog/product-rights';
+import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { Product } from '../../core/models';
-import { ToastService } from '../../core/services/toast.service';
+import { ToastAction, ToastService } from '../../core/services/toast.service';
+import { formatAmount } from '../../core/sale/sale-unit';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { ProductCreateDialogComponent } from './product-create-dialog.component';
 import { ProductUnitsDialogComponent } from './product-units-dialog.component';
@@ -38,7 +39,8 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
         @case ('create') {
           <app-product-create-dialog
             [copyOf]="asked.copyOf ?? null"
-            (created)="changed.emit()"
+            [announce]="false"
+            (created)="onCreated($event)"
             (closed)="closed.emit()"
           />
         }
@@ -114,7 +116,23 @@ export class ProductDialogsComponent {
 
   private readonly api = inject(CatalogApi);
   private readonly toasts = inject(ToastService);
+  private readonly rights = inject(ProductRights);
   protected readonly busy = signal(false);
+
+  /**
+   * A new product: said, with what usually comes next — its stock, its codes — one tap away in
+   * the message, for whoever may do it.
+   */
+  protected onCreated(product: Product): void {
+    this.changed.emit();
+    const next: ToastAction[] = [];
+    if (this.rights.canAddStock()) {
+      next.push({ label: 'Ajouter du stock', run: () => this.shown.set({ action: 'addStock', product }) });
+    }
+    next.push({ label: 'Codes-barres', run: () => this.shown.set({ action: 'edit', product, tab: 'codes' }) });
+    const stock = product.stockQuantity > 0 ? `, avec ${formatAmount(product.stockQuantity, product.unit)} en stock` : '';
+    this.toasts.show(`Produit « ${product.name} » créé${stock}.`, next);
+  }
 
   /** "Retirer de la vente" or "Remettre en vente", once confirmed. */
   protected setRetired(product: Product, retired: boolean): void {

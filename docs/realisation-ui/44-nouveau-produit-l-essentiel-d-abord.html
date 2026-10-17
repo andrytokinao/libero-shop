@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nouveau produit : l'essentiel d'abord</title>
+<meta name="ui-id" content="UI-12">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-12</span><span class="id">UI-91</span>Nouveau produit : l'essentiel d'abord</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · points <code>UI-12</code> et <code>UI-91</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>« Nouveau produit » ne montre d'abord que le <strong>nom</strong>, le <strong>prix</strong> et l'<strong>unité</strong> ; catégorie, code-barres, prix d'achat et stock de départ sont repliés sous « Plus de détails ».</li>
+    <li>Tant que « Créer le produit » est grisé, une phrase dit <strong>ce qui manque</strong> (« Il manque : un prix de vente »).</li>
+    <li>Après la création, le message propose la suite : <strong>« Ajouter du stock »</strong> et <strong>« Codes-barres »</strong>, d'un clic.</li>
+    <li>Le champ Code-barres a la même largeur que les autres.</li>
+    <li>Les messages de l'application peuvent maintenant porter des boutons : UI-83 (« Annuler ») s'en servira.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#recap">4. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>La fenêtre montrait huit champs, alors que trois suffisent. Le bouton restait grisé sans dire pourquoi. Une fois le
+  produit créé, il fallait le retrouver dans la liste pour lui ajouter du stock ou un code.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 170" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Créer un produit en trois temps">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="new" x="20" y="40" width="230" height="80" rx="8"/><text class="t" x="34" y="64">1. Nom, prix, unité</text><text class="s" x="34" y="84">« Plus de détails » replié</text><text class="s" x="34" y="102">« Il manque : … » sous le bouton</text>
+  <rect class="box" x="310" y="40" width="230" height="80" rx="8"/><text class="t" x="324" y="64">2. Créer le produit</text><text class="s" x="324" y="84">le produit est enregistré</text>
+  <rect class="new" x="600" y="40" width="240" height="80" rx="8"/><text class="t" x="614" y="64">3. Le message propose la suite</text><text class="s" x="614" y="84">[Ajouter du stock]</text><text class="s" x="614" y="102">[Codes-barres]</text>
+  <path class="ln" d="M250,80 L308,80"/><path class="ln" d="M540,80 L598,80"/>
+</svg>
+<div class="caption">Figure 1 — L'essentiel d'abord, puis la suite proposée dans le message.</div>
+</div>
+
+<p>« Plus de détails » s'ouvre tout seul quand quelque chose y est déjà rempli : un code scanné inconnu (UI-21) ou une
+  copie de produit (UI-02). « Ajouter du stock » n'est proposé qu'au responsable de dépôt, comme dans le menu.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span></p>
+<div class="shot"><img src="captures/ui-12-nouveau-produit.png" alt="Nouveau produit : trois champs">
+<div class="caption">Figure 2 — Trois champs ; le reste replié.</div></div>
+<div class="shot"><img src="captures/ui-12-il-manque.png" alt="Il manque un prix de vente">
+<div class="caption">Figure 3 — Le bouton grisé dit ce qu'il attend : un prix de vente.</div></div>
+<div class="shot"><img src="captures/ui-12-cree-avec-suite.png" alt="Message avec Ajouter du stock et Codes-barres">
+<div class="caption">Figure 4 — Le produit est créé ; le message propose la suite.</div></div>
+<div class="shot"><img src="captures/ui-12-ajouter-du-stock.png" alt="Ajouter du stock ouvert depuis le message">
+<div class="caption">Figure 5 — « Ajouter du stock » ouvre la réception, dans l'unité du produit (bidon).</div></div>
+
+<h2 id="recap">4. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>ui/…/shared/components/product-create-dialog.component.ts</code></td><td>« Plus de détails » replié, « Il manque : … », champ code-barres aligné, message optionnel</td></tr>
+<tr><td><code>ui/…/shared/components/product-dialogs.component.ts</code></td><td>message de création avec « Ajouter du stock » et « Codes-barres »</td></tr>
+<tr><td><code>ui/…/core/services/toast.service.ts</code>, <code>shared/components/toast.component.ts</code>, <code>ui/src/styles.scss</code></td><td>des boutons dans les messages</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Nom, prix, unité d'abord ; le reste replié, ouvert si un code est déjà là</td><td><code>product-create-dialog.component.spec.ts</code></td></tr>
+<tr><td>Ce qui manque est écrit, jusqu'à ce que rien ne manque</td><td>idem</td></tr>
+<tr><td>Un bouton du message lance l'action et ferme le message</td><td><code>toast.service.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> interface au vert (250 tests). Aucun changement côté serveur.</p>
+</main>
+</body>
+</html>

@@ -44,7 +44,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   (serveur : seuil par produit, produit retiré de la vente)
 - [x] **UI-10** — Fenêtre de configuration en onglets (Fiche, Prix, Unités et packaging,
   Codes-barres), ouverte sur l'onglet demandé (`initialTab`) ; pastilles d'unités toutes prêtes.
-- [ ] **UI-12** — Nouveau produit : nom, prix, unité d'abord, le reste replié ; message avec
+- [x] **UI-12** — Nouveau produit : nom, prix, unité d'abord, le reste replié ; message avec
   « Ajouter du stock » / « Codes-barres ».
 - [ ] **UI-20** — Onglet Codes-barres : une ligne par unité, bouton « Scanner », code déjà pris signalé.
 - [ ] **UI-22** — Douchette et caméra dans la recherche de Stock, Prix et unités, Corrections.
@@ -83,7 +83,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [ ] **UI-89** — Vente : rayons en barre compacte au-dessus de la grille (les tuiles de rayon
   occupent deux rangées avant le premier produit).
 - [ ] **UI-90** — Message « article ajouté » de la vente : ne plus masquer le bas de la grille.
-- [ ] **UI-91** — Nouveau produit : dire ce qui manque quand « Créer le produit » est grisé ;
+- [x] **UI-91** — Nouveau produit : dire ce qui manque quand « Créer le produit » est grisé ;
   aligner le champ Code-barres sur les autres.
 - [ ] **UI-92** — Unité de base sans nom (« unité ») : la demander à la création, l'afficher
   partout comme « sac (unité de base) ».

@@ -97,6 +97,9 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
               />
             </div>
           </div>
+          <!-- Name, price and unit are all a product needs; the rest waits, folded, for whoever has it. -->
+          <details class="pn-more" [open]="moreOpen">
+            <summary>Plus de détails <span class="muted">— catégorie, code-barres, prix d'achat, stock de départ</span></summary>
           <div class="pn-row">
             <div class="fld">
               <label for="pn-category">Catégorie</label>
@@ -156,6 +159,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
               />
             </div>
           </div>
+          </details>
           @if (warning(); as line) {
             <div class="muted pn-warning">{{ line }}</div>
           }
@@ -173,6 +177,10 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
         </div>
 
         <div class="modal-foot">
+          @if (missing(); as what) {
+            <!-- A grey button says nothing on its own: what it waits for is written beside it. -->
+            <span class="pn-missing muted">Il manque : {{ what }}</span>
+          }
           <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
           <button class="btn" type="submit" [disabled]="busy() || !request()">
             {{ busy() ? 'Enregistrement...' : 'Créer le produit' }}
@@ -194,6 +202,27 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
         min-width: 0;
         flex: 1;
       }
+
+      /* No camera outside the installed app: no gap kept for it, the field as wide as the others. */
+      app-camera-scan-button:empty {
+        display: none;
+      }
+    }
+
+    .pn-more {
+      margin: 4px 0 10px;
+
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+    }
+
+    .pn-missing {
+      margin-right: auto;
+      font-size: 12.5px;
     }
 
     .pn-row {
@@ -245,6 +274,8 @@ export class ProductCreateDialogComponent implements OnInit {
   readonly barcode = input('');
   /** "Dupliquer le produit": name, price, unit and rayon start from this one. */
   readonly copyOf = input<Product | null>(null);
+  /** The screen says what follows the creation itself (with its own buttons): no message from here. */
+  readonly announce = input(true);
   /** The product as the server created it. */
   readonly created = output<Product>();
   readonly closed = output<void>();
@@ -294,8 +325,26 @@ export class ProductCreateDialogComponent implements OnInit {
       : null;
   });
 
+  /** "Plus de détails" unfolded from the start when something is already filled in there. */
+  protected moreOpen = false;
+
+  /** What the creation still waits for, in words — null once it can be sent. */
+  protected readonly missing = computed<string | null>(() => {
+    const draft = this.draft();
+    const price = amount(draft.price, 2);
+    const absent = [
+      !draft.name.trim() && 'le nom',
+      !(price && price > 0) && 'un prix de vente',
+      amount(draft.cost, 2) === undefined && "un prix d'achat en chiffres",
+      amount(draft.stock, 3) === undefined && 'un stock de départ en chiffres',
+      this.picker()?.blocking() && 'le choix des unités du modèle',
+    ].filter(Boolean);
+    return absent.length ? absent.join(' et ') : null;
+  });
+
   /** Here rather than in a field: the inputs are not there yet before this. */
   ngOnInit(): void {
+    this.moreOpen = !!this.barcode() || !!this.copyOf()?.category;
     if (this.barcode()) {
       this.patch({ barcode: this.barcode() });
     }
@@ -323,11 +372,13 @@ export class ProductCreateDialogComponent implements OnInit {
     this.busy.set(true);
     this.api.createProduct(request).subscribe({
       next: (product) => {
-        this.toasts.show(
-          product.stockQuantity > 0
-            ? `${product.name} créé, avec ${formatAmount(product.stockQuantity, product.unit)} en stock.`
-            : `${product.name} créé.`,
-        );
+        if (this.announce()) {
+          this.toasts.show(
+            product.stockQuantity > 0
+              ? `${product.name} créé, avec ${formatAmount(product.stockQuantity, product.unit)} en stock.`
+              : `${product.name} créé.`,
+          );
+        }
         this.created.emit(product);
         this.closed.emit();
       },
