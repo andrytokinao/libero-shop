@@ -12,8 +12,6 @@ import java.util.List;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
-    List<Sale> findBySellerIdOrderBySaleDateDesc(Long sellerId);
-
     List<Sale> findBySaleDateBetweenOrderBySaleDateDesc(LocalDateTime from, LocalDateTime to);
 
     /** Total of the sales of one payment status over a window. */
