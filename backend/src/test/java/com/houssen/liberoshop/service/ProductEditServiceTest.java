@@ -257,4 +257,43 @@ class ProductEditServiceTest {
         service.changeRetired(1L, false);
         assertFalse(rice.isRetired());
     }
+
+    @Test
+    @DisplayName("Prix et unites : le prix de l'unite de base change seul, le reste de la fiche ne bouge pas")
+    void prixDeBaseChangeSeul() {
+        service.changeSalePrice(1L, null, new BigDecimal("1000"));
+
+        assertEquals(new BigDecimal("1000"), rice.getPrice());
+        assertEquals("Riz", rice.getName());
+        assertEquals("111", rice.getBarcode());
+        verify(events).publishEvent(any(StockChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("Prix et unites : le prix d'un carton change, celui de l'unite de base reste")
+    void prixDUnCartonChange() {
+        ProductPackaging sac = ProductPackaging.builder().id(42L).product(rice).label("sac")
+                .factor(new BigDecimal("50.000")).price(new BigDecimal("42000")).build();
+        when(packagings.findById(42L)).thenReturn(Optional.of(sac));
+
+        service.changeSalePrice(1L, 42L, new BigDecimal("44000"));
+
+        assertEquals(new BigDecimal("44000"), sac.getPrice());
+        assertEquals(new BigDecimal("900"), rice.getPrice());
+    }
+
+    @Test
+    @DisplayName("Prix et unites : un prix nul, ou l'unite d'un autre produit, est refuse")
+    void prixInvalideOuUniteEtrangereRefuses() {
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> service.changeSalePrice(1L, null, BigDecimal.ZERO));
+        assertEquals("PRODUCT_PRICE_INVALID", refused.code());
+
+        Product sugar = Product.builder().id(2L).name("Sucre").build();
+        when(packagings.findById(43L)).thenReturn(Optional.of(ProductPackaging.builder().id(43L)
+                .product(sugar).label("sac").factor(new BigDecimal("50.000")).price(new BigDecimal("10")).build()));
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.changeSalePrice(1L, 43L, new BigDecimal("12")));
+        assertEquals(new BigDecimal("900"), rice.getPrice());
+    }
 }

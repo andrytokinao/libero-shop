@@ -184,6 +184,11 @@ export class CatalogApi {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/retired`, { retired });
   }
 
+  /** One sale price typed in the "Prix et unités" table; null `packagingId` for the base unit. */
+  changeSalePrice(productId: number, packagingId: number | null, price: number): Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/sale-price`, { packagingId, price });
+  }
+
   /** The product's own alert threshold; null gives it back the shop's common one. */
   changeAlertThreshold(productId: number, threshold: number | null): Observable<ProductUnits> {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/alert-threshold`, { threshold });

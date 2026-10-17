@@ -1,10 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
+import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
+import { PriceEdit, marginAt, typedPrice } from '../../core/catalog/price-edit';
 import { findByCode, looksLikeCode, searchKey } from '../../core/catalog/product-pick';
-import { ProductDialogRequest } from '../../core/catalog/product-rights';
-import { Product, ProductCost } from '../../core/models';
+import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
+import { Product, ProductCost, UnitCost } from '../../core/models';
+import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
@@ -125,13 +128,48 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
                       {{ formatFactor(unit.factor) }} {{ cost.unit ?? 'unité' }}
                     }
                   </td>
-                  <td class="num">{{ unit.salePrice | ariary }}</td>
+                  <td class="num">
+                    <!-- A click turns the price into a field: Entrée saves, Échap leaves it as it was. -->
+                    @if (isEditing(cost, unit)) {
+                      <input
+                        class="pp-price"
+                        type="text"
+                        inputmode="decimal"
+                        [attr.aria-label]="'Prix de vente : ' + cost.name + ', ' + (unit.label ?? 'unité')"
+                        [class.pp-invalid]="typed() === null"
+                        [value]="editing()!.text"
+                        (input)="retype($any($event.target).value)"
+                        (keydown.enter)="save()"
+                        (keydown.escape)="cancel($event)"
+                        (blur)="save()"
+                        [disabled]="saving()"
+                        #priceField
+                      />
+                    } @else if (canEdit()) {
+                      <button
+                        class="pp-edit"
+                        type="button"
+                        title="Modifier le prix"
+                        (click)="edit(cost, unit)"
+                      >
+                        {{ unit.salePrice | ariary }}
+                      </button>
+                    } @else {
+                      {{ unit.salePrice | ariary }}
+                    }
+                  </td>
                   @if (unit.cost !== null) {
+                    @let shownMargin = isEditing(cost, unit) ? preview(unit.cost) : { margin: unit.margin!, rate: unit.marginRate };
                     <td class="num">{{ unit.cost | ariary }}</td>
-                    <td class="num" [class.pp-loss]="unit.margin! < 0">{{ unit.margin | ariary }}</td>
-                    <td class="num" [class.pp-loss]="unit.margin! < 0">
-                      {{ unit.marginRate === null ? '—' : formatRate(unit.marginRate) }}
-                    </td>
+                    @if (shownMargin) {
+                      <td class="num" [class.pp-loss]="shownMargin.margin < 0">{{ shownMargin.margin | ariary }}</td>
+                      <td class="num" [class.pp-loss]="shownMargin.margin < 0">
+                        {{ shownMargin.rate === null ? '—' : formatRate(shownMargin.rate) }}
+                      </td>
+                    } @else {
+                      <td class="num muted">—</td>
+                      <td class="num muted">—</td>
+                    }
                   } @else {
                     <td class="num"><span class="badge amber">à saisir</span></td>
                     <td class="num muted">—</td>
@@ -208,10 +246,54 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
     .pp-loss {
       color: var(--red);
     }
+
+    /* The price, a button that looks like the figure: a dotted line says it can be changed. */
+    .pp-edit {
+      border: 0;
+      border-bottom: 1px dashed var(--line);
+      background: none;
+      padding: 0;
+      font: inherit;
+      color: inherit;
+      cursor: text;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--brand);
+        border-bottom-color: var(--brand);
+      }
+    }
+
+    .pp-price {
+      width: 110px;
+      text-align: right;
+    }
+
+    .pp-invalid {
+      border-color: var(--red);
+    }
   `,
 })
 export class ProductPricesComponent {
   private readonly costing = inject(CostingApi);
+  private readonly catalog = inject(CatalogApi);
+  private readonly toasts = inject(ToastService);
+  protected readonly canEdit = inject(ProductRights).canEdit;
+
+  /** The price being typed, or null while the table only reads. */
+  protected readonly editing = signal<PriceEdit | null>(null);
+  protected readonly saving = signal(false);
+  protected readonly typed = computed(() => typedPrice(this.editing()?.text ?? ''));
+  private readonly priceField = viewChild<ElementRef<HTMLInputElement>>('priceField');
+
+  constructor() {
+    // The field opened by a click takes the cursor, its price selected to be typed over.
+    effect(() => {
+      const field = this.priceField()?.nativeElement;
+      field?.focus();
+      field?.select();
+    });
+  }
 
   protected readonly search = signal('');
   protected readonly filter = signal<PriceFilter>('all');
@@ -262,6 +344,56 @@ export class ProductPricesComponent {
   /** 8.3 → "8,3 %". */
   protected formatRate(rate: number): string {
     return `${rate.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
+  }
+
+  protected isEditing(cost: ProductCost, unit: UnitCost): boolean {
+    const editing = this.editing();
+    return editing !== null && editing.productId === cost.productId && editing.packagingId === unit.packagingId;
+  }
+
+  protected edit(cost: ProductCost, unit: UnitCost): void {
+    this.editing.set({ productId: cost.productId, packagingId: unit.packagingId, text: String(unit.salePrice) });
+  }
+
+  protected retype(text: string): void {
+    this.editing.update((editing) => (editing ? { ...editing, text } : editing));
+  }
+
+  /** The profit at the price being typed, beside the field. */
+  protected preview(cost: number | null): { margin: number; rate: number | null } | null {
+    return marginAt(this.typed(), cost);
+  }
+
+  /** Échap: the price stays as it was; the blur that follows finds nothing to save. */
+  protected cancel(event: Event): void {
+    event.stopPropagation();
+    this.editing.set(null);
+  }
+
+  /** Entrée or leaving the field: an unchanged or invalid price is left alone. */
+  protected save(): void {
+    const editing = this.editing();
+    const price = this.typed();
+    if (!editing || this.saving()) {
+      return;
+    }
+    const unit = this.costs()
+      .find((cost) => cost.productId === editing.productId)
+      ?.units.find((candidate) => candidate.packagingId === editing.packagingId);
+    if (price === null || price === unit?.salePrice) {
+      this.editing.set(null);
+      return;
+    }
+    this.saving.set(true);
+    this.catalog.changeSalePrice(editing.productId, editing.packagingId, price).subscribe({
+      next: (units) => {
+        this.saving.set(false);
+        this.editing.set(null);
+        this.toasts.show(`Prix de ${units.productName} enregistré.`);
+        this.resource.reload();
+      },
+      error: () => this.saving.set(false),
+    });
   }
 
   /** A price, a unit or a cost may have moved: the figures are the server's to work out again. */

@@ -159,6 +159,30 @@ public class ProductEditService {
     }
 
     /**
+     * One sale price changed, the rest of the sheet untouched: the base unit's, or one packaging's.
+     * Like any price change it applies from the next sale; past tickets keep theirs.
+     *
+     * @param packagingId null for the base unit
+     * @throws BusinessRuleException for a price that is not above zero
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public ProductUnitsResponse changeSalePrice(Long productId, Long packagingId, BigDecimal price) {
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
+        if (packagingId == null) {
+            product.setPrice(requirePrice(price));
+        } else {
+            ProductPackaging packaging = packagings.findById(packagingId)
+                    .filter(candidate -> candidate.getProduct().getId().equals(productId))
+                    .orElseThrow(() -> ResourceNotFoundException.of("Unite", packagingId));
+            packaging.setPrice(PackagingRules.validPrice(price));
+        }
+        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
+        return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
+    }
+
+    /**
      * The product's own alert threshold, in base units; null gives it back the shop's common one.
      * The lists and the dashboards follow at once: whether it is in alert may just have changed.
      *
