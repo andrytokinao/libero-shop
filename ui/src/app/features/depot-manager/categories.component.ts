@@ -9,10 +9,15 @@ import {
   MAX_CATEGORY_DEPTH,
 } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CategoryImagePickerComponent } from './category-image-picker.component';
+import { RayonProductsDialogComponent } from './rayon-products-dialog.component';
+
+/** What can be done to one rayon from its "⋮". */
+type RayonAction = 'rename' | 'child' | 'products' | 'move' | 'delete';
 
 /**
  * The rayons of the shop, and the tree they make.
@@ -40,6 +45,8 @@ import { CategoryImagePickerComponent } from './category-image-picker.component'
     SimpleImportComponent,
     AriaryPipe,
     CategoryImagePickerComponent,
+    ActionMenuComponent,
+    RayonProductsDialogComponent,
   ],
   template: `
     <div class="card">
@@ -70,7 +77,7 @@ import { CategoryImagePickerComponent } from './category-image-picker.component'
                 <th class="num">Références</th>
                 <th class="num">Unités</th>
                 <th class="num">Valeur du stock</th>
-                <th class="col-actions">Actions</th>
+                <th class="col-actions"></th>
               </tr>
             </thead>
             <tbody>
@@ -94,29 +101,11 @@ import { CategoryImagePickerComponent } from './category-image-picker.component'
                     {{ statOf(node.id).value ? (statOf(node.id).value | ariary) : '—' }}
                   </td>
                   <td class="col-actions">
-                    <div class="actions">
-                      <button
-                        class="btn small ghost"
-                        type="button"
-                        [disabled]="busyId() === node.id"
-                        (click)="openEdit(node)"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        class="btn small ghost danger"
-                        type="button"
-                        [disabled]="busyId() === node.id || node.children > 0"
-                        [title]="
-                          node.children
-                            ? 'Videz ou déplacez ses ' + node.children + ' sous-rayon(s) d’abord'
-                            : 'Supprime le rayon ; ses produits sont déplacés ailleurs'
-                        "
-                        (click)="openDelete(node)"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
+                    <app-action-menu
+                      [actions]="actionsFor(node)"
+                      [label]="'Actions sur le rayon ' + node.name"
+                      (picked)="pick(node, $event)"
+                    />
                   </td>
                 </tr>
               }
@@ -192,6 +181,48 @@ import { CategoryImagePickerComponent } from './category-image-picker.component'
               (click)="save()"
             >
               {{ saving() ? 'Enregistrement...' : target.id ? 'Enregistrer' : 'Créer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showingProducts(); as rayon) {
+      <app-rayon-products-dialog
+        [rayon]="rayon"
+        [categories]="tree()"
+        (changed)="reload()"
+        (closed)="showingProducts.set(null)"
+      />
+    }
+
+    @if (movingFrom(); as rayon) {
+      <div class="modal-backdrop" (click)="onBackdrop($event, closeMove)">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cat-move-title">
+          <div class="modal-head">
+            <div>
+              <h2 id="cat-move-title">Déplacer les produits de « {{ rayon.name }} »</h2>
+              <div class="sub muted">{{ statOf(rayon.id).references }} produit(s) rangé(s) directement dans ce rayon. Le rayon reste, vide.</div>
+            </div>
+            <button class="x" type="button" aria-label="Fermer" (click)="closeMove()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="fld">
+              <label for="cat-move-to">Vers le rayon</label>
+              <app-category-picker
+                fieldId="cat-move-to"
+                [categories]="tree()"
+                noneLabel="Choisir un rayon…"
+                [blocked]="[rayon.id]"
+                [value]="moveTo()"
+                (valueChange)="moveTo.set($event)"
+              />
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn ghost" type="button" (click)="closeMove()">Annuler</button>
+            <button class="btn" type="button" [disabled]="saving() || moveTo() === null" (click)="moveAll(rayon)">
+              Déplacer
             </button>
           </div>
         </div>
@@ -373,6 +404,64 @@ export class CategoriesComponent {
     }
     return null;
   });
+
+  protected readonly showingProducts = signal<CategoryNode | null>(null);
+  protected readonly movingFrom = signal<CategoryNode | null>(null);
+
+  /** Renaming, a sub-rayon, its products; deleting only once it holds no sub-rayon. */
+  protected actionsFor(node: CategoryNode): MenuAction<RayonAction>[] {
+    return [
+      { id: 'rename', label: 'Renommer ou déplacer' },
+      ...(node.depth + 1 < this.maxDepth ? [{ id: 'child' as const, label: 'Ajouter un sous-rayon' }] : []),
+      { id: 'products', label: 'Voir ses produits' },
+      ...(this.statOf(node.id).references ? [{ id: 'move' as const, label: 'Déplacer ses produits vers…' }] : []),
+      ...(node.children ? [] : [{ id: 'delete' as const, label: 'Supprimer', danger: true }]),
+    ];
+  }
+
+  protected pick(node: CategoryNode, action: RayonAction): void {
+    switch (action) {
+      case 'rename':
+        this.openEdit(node);
+        break;
+      case 'child':
+        this.openCreate();
+        this.formParent.set(node.id);
+        break;
+      case 'products':
+        this.showingProducts.set(node);
+        break;
+      case 'move':
+        this.moveTo.set(null);
+        this.movingFrom.set(node);
+        break;
+      case 'delete':
+        this.openDelete(node);
+        break;
+    }
+  }
+
+  protected readonly closeMove = (): void => {
+    this.movingFrom.set(null);
+  };
+
+  protected moveAll(rayon: CategoryNode): void {
+    const to = this.moveTo();
+    if (to === null) {
+      return;
+    }
+    this.saving.set(true);
+    this.api.moveCategoryProducts(rayon.id, to).subscribe({
+      next: ({ moved }) => {
+        this.saving.set(false);
+        this.movingFrom.set(null);
+        this.reload();
+        const target = this.tree().find((node) => node.id === to)?.name ?? '';
+        this.toasts.show(`${moved} produit(s) déplacé(s) de « ${rayon.name} » vers « ${target} ».`);
+      },
+      error: () => this.saving.set(false),
+    });
+  }
 
   protected openCreate(): void {
     this.editing.set({ id: null, name: '', path: '' });

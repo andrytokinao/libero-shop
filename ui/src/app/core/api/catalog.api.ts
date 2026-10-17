@@ -189,6 +189,18 @@ export class CatalogApi {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/alert-threshold`, { threshold });
   }
 
+  /** Files these products in a rayon; answers how many changed rayon. */
+  fileProducts(categoryId: number, productIds: number[]): Observable<{ moved: number }> {
+    return this.http.put<{ moved: number }>(`${API_BASE_URL}/categories/${categoryId}/products`, { productIds });
+  }
+
+  /** Every product of a rayon moved to another; the rayon stays, empty. */
+  moveCategoryProducts(fromId: number, toId: number): Observable<{ moved: number }> {
+    return this.http.post<{ moved: number }>(`${API_BASE_URL}/categories/${fromId}/move-products`, null, {
+      params: { to: toId },
+    });
+  }
+
   // ------------------------------------------------------------------- sale units
 
   /** The base unit and the other units of one product. Every write below answers the same shape. */

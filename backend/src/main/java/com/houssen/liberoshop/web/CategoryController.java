@@ -4,8 +4,10 @@ import com.houssen.liberoshop.entity.CategoryImage;
 import com.houssen.liberoshop.service.CategoryImageService;
 import com.houssen.liberoshop.service.CategoryImportService;
 import com.houssen.liberoshop.service.CategoryService;
+import com.houssen.liberoshop.service.ProductFilingService;
 import com.houssen.liberoshop.web.dto.CategoryNodeResponse;
 import com.houssen.liberoshop.web.dto.CreateCategoryRequest;
+import com.houssen.liberoshop.web.dto.FileProductsRequest;
 import com.houssen.liberoshop.web.dto.ImportPreviewRequest;
 import com.houssen.liberoshop.web.dto.SimpleImportPreviewResponse;
 import com.houssen.liberoshop.web.dto.SimpleImportRequest;
@@ -51,13 +53,16 @@ public class CategoryController {
     private final CategoryService categoryService;
     private final CategoryImportService categoryImportService;
     private final CategoryImageService categoryImageService;
+    private final ProductFilingService filing;
 
     public CategoryController(CategoryService categoryService,
                               CategoryImportService categoryImportService,
-                              CategoryImageService categoryImageService) {
+                              CategoryImageService categoryImageService,
+                              ProductFilingService filing) {
         this.categoryService = categoryService;
         this.categoryImportService = categoryImportService;
         this.categoryImageService = categoryImageService;
+        this.filing = filing;
     }
 
     /** The whole tree, depth-first, each row carrying its depth -- see CategoryNodeResponse. */
@@ -101,6 +106,24 @@ public class CategoryController {
     public DeletedCategory delete(@PathVariable Long id,
                                   @RequestParam(required = false) Long moveProductsTo) {
         return new DeletedCategory(id, categoryService.delete(id, moveProductsTo));
+    }
+
+    /** Products filed in this rayon: one changing rayon, or picked to join it. */
+    @PutMapping("/{id}/products")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public FiledProducts file(@PathVariable Long id, @Valid @RequestBody FileProductsRequest request) {
+        return new FiledProducts(filing.file(request.productIds(), id));
+    }
+
+    /** Every product of this rayon moved to {@code to}; the rayon stays, empty. */
+    @PostMapping("/{id}/move-products")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public FiledProducts moveProducts(@PathVariable Long id, @RequestParam Long to) {
+        return new FiledProducts(filing.moveAll(id, to));
+    }
+
+    /** @param moved how many products changed rayon */
+    public record FiledProducts(int moved) {
     }
 
     /** @param productsMoved how many references changed rayon on the way out */

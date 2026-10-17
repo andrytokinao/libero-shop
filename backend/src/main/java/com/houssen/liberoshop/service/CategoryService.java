@@ -179,9 +179,9 @@ public class CategoryService {
      * <p>Goods are different -- they must land somewhere, and leaving them in no rayon at all
      * would make them vanish from every filtered list without anything visible having
      * happened to them. So the caller either names where they go, or is told how many are in
-     * the way. Both paths go through here rather than through a separate "move" endpoint: the
-     * move only ever exists in order to delete, and splitting it would let a screen move the
-     * goods and then fail to delete, leaving a rayon that is empty for no reason.
+     * the way. Both are done here, in one
+     * step, so a screen cannot move the goods and then fail to delete. Moving products without
+     * deleting the rayon is {@link ProductFilingService}'s.
      *
      * @param moveProductsTo where the goods go, or null to refuse rather than guess
      * @return how many products were moved

@@ -54,9 +54,9 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   annuler par mouvement inverse. (serveur)
 - [x] **UI-34** — Page Fournisseurs : « ＋ Nouveau » et « ⋮ » (modifier, ses prix, nouvelle
   réception, ne plus proposer). (serveur)
-- [ ] **UI-40** — « ⋮ » par rayon : renommer, image, sous-rayon, voir/déplacer ses produits,
+- [x] **UI-40** — « ⋮ » par rayon : renommer, image, sous-rayon, voir/déplacer ses produits,
   compter, supprimer.
-- [ ] **UI-41** — Fenêtre « produits du rayon » : ajouter un produit au rayon, changer de rayon.
+- [x] **UI-41** — Fenêtre « produits du rayon » : ajouter un produit au rayon, changer de rayon.
 - [ ] **UI-60** — Compteurs des tableaux de bord cliquables (liste filtrée).
 - [ ] **UI-70** — « ⋮ » des utilisateurs (modifier, rôles, mot de passe, désactiver confirmé).
 - [ ] **UI-72** — Configuration de la boutique : phrase « ce que ça change », résumé avant
