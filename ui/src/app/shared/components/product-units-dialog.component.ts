@@ -1,4 +1,15 @@
-import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -833,10 +844,13 @@ export class ProductUnitsDialogComponent implements OnInit {
   private readonly modelApi = inject(UnitModelApi);
   private readonly toasts = inject(ToastService);
   protected readonly rights = inject(ProductRights);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   @Input({ required: true }) productId!: number;
   /** Shown while the units load, so the title never flashes empty. */
   @Input() productName = '';
+  /** Opened to give a purchase price ("partiel" on the profit page): the cursor waits in it. */
+  @Input() focusCost = false;
   /** After any successful write: the stock list may show the base unit's new name. */
   @Output() readonly changed = new EventEmitter<void>();
   @Output() readonly closed = new EventEmitter<void>();
@@ -1052,6 +1066,11 @@ export class ProductUnitsDialogComponent implements OnInit {
     this.costing.productCost(this.productId).subscribe((costs) => {
       this.costs.set(costs);
       this.patchSheet({ cost: this.costText(this.sheet().purchaseUnitId) });
+      if (this.focusCost) {
+        // Once: a later save reloads the cost, and the cursor may be elsewhere by then.
+        this.focusCost = false;
+        setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-cost')?.focus());
+      }
     });
   }
 

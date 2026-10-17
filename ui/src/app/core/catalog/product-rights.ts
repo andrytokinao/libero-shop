@@ -8,7 +8,12 @@ export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history';
 /** A product's menu entry picked, or the "Nouveau produit" button. */
 export type ProductDialogRequest =
   | { readonly action: 'create' }
-  | { readonly action: ProductAction; readonly product: Product };
+  | {
+      readonly action: ProductAction;
+      readonly product: Product;
+      /** Where the dialog puts the cursor: the purchase price, to fill in a missing one. */
+      readonly focus?: 'cost';
+    };
 
 /**
  * Who may write the catalogue and the stock, said once for every screen that shows a product.

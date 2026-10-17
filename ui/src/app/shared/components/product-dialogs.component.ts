@@ -37,6 +37,7 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
           <app-product-units-dialog
             [productId]="asked.product.id"
             [productName]="asked.product.name"
+            [focusCost]="asked.focus === 'cost'"
             (changed)="changed.emit()"
             (addStock)="shown.set({ action: 'addStock', product: $event })"
             (closed)="closed.emit()"

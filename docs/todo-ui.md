@@ -25,7 +25,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   téléphone ; choisi d'office). (serveur : création de fournisseur)
 - [x] **UI-50** — Numéro de facture cliquable (sorties, versements, historique du stock) →
   `invoice-detail-dialog`.
-- [ ] **UI-61** — Badge « prix d'achat inconnu » (Bénéfices & stock) → configuration du produit,
+- [x] **UI-61** — Badge « prix d'achat inconnu » (Bénéfices & stock) → configuration du produit,
   onglet Prix.
 - [ ] **UI-80** — Listes vides : une phrase + le bouton de l'action (fournisseurs, produits, rayons…).
 - [ ] **UI-82** — Confirmations cohérentes : remise d'argent depuis « Argent en main » et « Tout
@@ -93,6 +93,9 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - Code inconnu à la caisse : prévenir le responsable de dépôt ? (UI-21)
 - Plusieurs codes-barres par unité ? Aujourd'hui associer un code remplace l'ancien : les paquets
   encore en rayon avec l'ancien code deviennent inconnus. (serveur ; UI-20, UI-21)
+- Prix d'achat saisi après coup : l'appliquer aussi aux ventes déjà faites sans coût ? Aujourd'hui le
+  coût d'une vente est figé le jour de la vente (`unitCost`) ; le badge de Bénéfices reste donc
+  affiché pour la période. (serveur ; UI-61)
 - Stock visible par le caissier pendant la vente ? (UI-53)
 - Sauvegardes, Mise à jour, Licence : menu « ⚙ » de l'administrateur ou toujours cachées ?
 - Prix proposés par marge, changement de prix groupé ? (UI-10)

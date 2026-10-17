@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { EMPTY, catchError, switchMap } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
-import { ProductDialogRequest } from '../../core/catalog/product-rights';
+import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
 import { MarginReport, Product, StockValuation } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
 import { isoDate } from '../../core/utils/date.util';
@@ -156,9 +156,22 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
                     <td>
                       {{ row.name }}
                       @if (!row.fullyCosted) {
-                        <span class="badge amber" title="Une partie des ventes n'a pas de prix d'achat connu">
-                          partiel
-                        </span>
+                        @if (rights.canEdit() && productOf(row.productId); as product) {
+                          <!-- The fix is one field away: the configuration, cursor in the purchase price. A sale keeps
+                               the cost known the day it was made, so this costs the next ones. -->
+                          <button
+                            type="button"
+                            class="badge amber badge-btn"
+                            title="Une partie de ces ventes n'a pas de prix d'achat. Le saisir maintenant compte pour les prochaines ventes ; celles déjà faites gardent le coût connu ce jour-là."
+                            (click)="asked.set({ action: 'edit', product, focus: 'cost' })"
+                          >
+                            prix d'achat inconnu ›
+                          </button>
+                        } @else {
+                          <span class="badge amber" title="Une partie des ventes n'a pas de prix d'achat connu">
+                            partiel
+                          </span>
+                        }
                       }
                     </td>
                     <td class="num">{{ row.unitsSold }}</td>
@@ -271,6 +284,16 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
     <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
   `,
   styles: `
+    .badge-btn {
+      border: 0;
+      font-family: inherit;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
     .period {
       display: flex;
       align-items: center;
@@ -312,6 +335,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
 })
 export class MarginComponent {
   private readonly costing = inject(CostingApi);
+  protected readonly rights = inject(ProductRights);
 
   protected readonly preset = signal<Preset>('month');
   protected readonly period = signal<Period>(presetPeriod('month'));
