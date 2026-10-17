@@ -151,9 +151,10 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Commande par QR code envoyée deux fois.** Le téléphone nomme chaque commande ;
   renvoyée, elle est rendue au lieu d'être refaite. *Fait — voir
   `26-commande-qr-envoyee-une-seule-fois.md`.*
-- [ ] **P2 — Le rapport journalier mélange deux dates.** Total par date de vente, répartition par
+- [x] **P2 — Le rapport journalier mélange deux dates.** Total par date de vente, répartition par
   date de paiement (`DashboardService`) : un crédit d'hier payé aujourd'hui fausse le
   rapprochement de caisse.
+  *Fait — voir `44-rapport-du-jour-date-du-paiement.html`.*
 - [ ] **P2 — Piste d'audit.** Ni `createdAt`/`updatedBy`, ni journal ; aucune trace de qui a
   changé un prix ou une unité.
 - [x] **P2 — Annulation de commande.** Les sorties de stock sont supprimées au lieu d'être

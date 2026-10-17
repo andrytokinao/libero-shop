@@ -86,6 +86,21 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             """)
     List<Payment> findCashOutsideTill(@Param("invoiceIds") Collection<Long> invoiceIds);
 
+    /**
+     * Money cashed in over a window, per seller of the order -- by the day it was paid, like
+     * {@link #aggregateByMethod}, so the two always add up to the same total: a credit sold
+     * yesterday and paid today is today's money. Money in the till only, as there.
+     */
+    @Query("""
+            select s.seller.id, s.seller.fullName, coalesce(sum(p.amount), 0), count(distinct p.invoice)
+            from Payment p join p.invoice i join i.sale s
+            where p.paymentDate >= :from and p.paymentDate < :to
+              and i.paymentStatus = com.houssen.liberoshop.entity.PaymentStatus.PAID
+            group by s.seller.id, s.seller.fullName
+            order by sum(p.amount) desc
+            """)
+    List<Object[]> aggregateCashedBySeller(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
     /** Money in the till only: cash still at the depot, or awaiting confirmation, is left out. */
     @Query("""
             select p.paymentMethod, count(p), coalesce(sum(p.amount), 0)

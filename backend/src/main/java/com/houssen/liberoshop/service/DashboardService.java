@@ -156,10 +156,13 @@ public class DashboardService {
                 byMethod);
     }
 
-    /** Cashed-in revenue per seller for the current business day, best seller first. */
+    /**
+     * Money cashed in today, per seller of the order, best seller first. Counted by the day of
+     * payment, like the split by payment method: yesterday's credit paid today is today's money,
+     * and the day's total and its split always agree.
+     */
     public List<RevenueBySellerResponse> revenueBySellerToday() {
-        return sales.aggregateRevenueBySeller(PaymentStatus.PAID,
-                        calendar.startOfToday(), calendar.startOfTomorrow()).stream()
+        return payments.aggregateCashedBySeller(calendar.startOfToday(), calendar.startOfTomorrow()).stream()
                 .map(row -> new RevenueBySellerResponse(
                         (Long) row[0],
                         (String) row[1],

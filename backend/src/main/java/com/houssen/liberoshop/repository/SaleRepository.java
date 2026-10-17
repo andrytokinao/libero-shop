@@ -24,16 +24,4 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     BigDecimal sumTotalByStatus(@Param("status") PaymentStatus status,
                                 @Param("from") LocalDateTime from,
                                 @Param("to") LocalDateTime to);
-
-    /** Revenue per seller over a window, cashed-in sales only. Feeds the admin bar chart. */
-    @Query("""
-            select s.seller.id, s.seller.fullName, sum(s.totalAmount), count(s)
-            from Sale s
-            where s.paymentStatus = :status and s.saleDate >= :from and s.saleDate < :to
-            group by s.seller.id, s.seller.fullName
-            order by sum(s.totalAmount) desc
-            """)
-    List<Object[]> aggregateRevenueBySeller(@Param("status") PaymentStatus status,
-                                            @Param("from") LocalDateTime from,
-                                            @Param("to") LocalDateTime to);
 }
