@@ -197,7 +197,7 @@ public class LicenseService {
 
         LicenseStatus current = findStatus().orElse(null);
         // The anti-replay rule compares against a real license only. A trial is not one:
-        // a customer whose 30 days have barely started must still be able to install a
+        // a customer whose trial has barely started must still be able to install a
         // short licence that expires before the trial would have.
         if (current != null && !current.isTrial()
                 && !candidate.license().expiresOn().isAfter(current.license().expiresOn())) {

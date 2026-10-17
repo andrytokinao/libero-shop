@@ -42,7 +42,7 @@ import java.util.Locale;
  * <p><strong>The checksum is not a signature and the code carries no authority.</strong>
  * It catches a transcription error -- a dropped group, two characters swapped -- and
  * nothing more. It deliberately uses no secret: verifying one would mean shipping a shared
- * key into {@code tools/license-generator}, and it would buy very little. A customer who
+ * key into {@code license-generator}, and it would buy very little. A customer who
  * edits their code to claim a later expiry gains nothing, because the publisher issues what
  * was paid for, and {@code install} already refuses a license that does not expire later
  * than the installed one. The authority in this scheme is the Ed25519 signature on the

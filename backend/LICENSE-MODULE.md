@@ -12,7 +12,7 @@ n'est stocké en base, donc il n'y a aucun booléen `is_active` à basculer avec
 |---|---|---|
 | Signature | Ed25519 (`java.security`, natif JDK 15+) | Aucune dépendance, signature de 64 octets, pas de piège de padding |
 | Clé publique | Compilée en dur dans `EmbeddedLicenseKey` | Si elle était configurable, le client signerait ses propres licences |
-| Clé privée | Module séparé `tools/license-generator`, jamais livré | Ne peut pas se retrouver dans le jar client par accident |
+| Clé privée | Outil séparé `license-generator`, gardé par l'éditeur hors de ce dépôt, jamais livré | Ne peut pas se retrouver dans le jar client par accident |
 | Empreinte machine | Nom de machine + numéro de série du volume système | Survit aux changements réseau (dock USB, Wi-Fi, VPN) qui bloqueraient une empreinte MAC |
 | Expiration | Dégradation en lecture seule après 15 jours de grâce | Un supermarché ne doit pas s'arrêter un samedi midi |
 | Recul d'horloge | Fichier d'état authentifié par HMAC | Remettre l'horloge en arrière ne rallonge pas la licence |
@@ -56,12 +56,15 @@ La charge utile décodée :
 
 ---
 
-## 2. Côté éditeur : `tools/license-generator`
+## 2. Côté éditeur : l'outil `license-generator` (hors du dépôt)
+
+> Depuis le commit `3ea555d` (« Obscurisation »), l'outil n'est plus dans ce dépôt : l'éditeur le
+> garde à part, avec sa clé privée. Les commandes ci-dessous se lancent depuis cette copie.
 
 Module Maven autonome, **zéro dépendance**, à ne jamais livrer.
 
 ```bash
-cd tools/license-generator
+cd license-generator   # la copie de l'éditeur
 mvn package
 
 # 1. Une seule fois. Sauvegardez license-private.key hors ligne (jamais dans git).
@@ -128,7 +131,7 @@ Options utiles : `--plan MONTHLY|ANNUAL|TRIAL`, `--months <n>`, `--expires-on`,
 
 ⚠️ **La clé privée est le seul secret du dispositif.** Qui la détient peut générer des
 licences illimitées. Sauvegarde chiffrée hors ligne, jamais dans le dépôt
-(`tools/license-generator/.gitignore` couvre déjà `keys/`).
+(le `.gitignore` de l'outil couvre déjà `keys/`).
 
 ---
 
@@ -443,7 +446,7 @@ s'est inventée. Le générateur affiche alors `none -- this is a first license`
 Elle attrape une faute de recopie — un groupe sauté, deux caractères permutés, un caractère
 faux. **Elle n'est pas une signature et le code ne porte aucune autorité.** Elle n'utilise
 délibérément aucun secret : en vérifier un supposerait d'embarquer une clé partagée dans
-`tools/license-generator`, pour presque rien. Un client qui modifie son code pour annoncer
+`license-generator`, pour presque rien. Un client qui modifie son code pour annoncer
 une expiration plus tardive n'y gagne rien — vous émettez ce qui a été payé, et `install`
 refuse déjà une licence qui n'expire pas plus tard que l'installée. L'autorité, c'est la
 signature Ed25519 du `.lic` qui repart, et c'est le seul endroit où elle a besoin d'être.

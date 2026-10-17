@@ -16,8 +16,8 @@ import java.util.Base64;
  * rebuilding and redistributing the application, which is exactly the intent.
  *
  * <p>A public key is not a secret -- publishing it in the jar reveals nothing. Only the
- * matching private key, held by the publisher in {@code tools/license-generator}, can
- * produce a signature this key accepts.
+ * matching private key, held by the publisher in the {@code license-generator} tool (kept
+ * outside this repository), can produce a signature this key accepts.
  *
  * <p>To rotate: run {@code license-generator keygen}, paste the printed value below,
  * rebuild, then reissue every customer license with the new private key.
