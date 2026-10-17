@@ -82,7 +82,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-86** — Téléphone : appui long = « ⋮ », menu en panneau du bas sous 600 px.
 - [x] **UI-89** — Vente : rayons en barre compacte au-dessus de la grille (les tuiles de rayon
   occupent deux rangées avant le premier produit).
-- [ ] **UI-90** — Message « article ajouté » de la vente : ne plus masquer le bas de la grille.
+- [x] **UI-90** — Message « article ajouté » de la vente : ne plus masquer le bas de la grille.
 - [x] **UI-91** — Nouveau produit : dire ce qui manque quand « Créer le produit » est grisé ;
   aligner le champ Code-barres sur les autres.
 - [ ] **UI-92** — Unité de base sans nom (« unité ») : la demander à la création, l'afficher

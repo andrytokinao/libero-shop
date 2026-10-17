@@ -89,6 +89,12 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
       <app-camera-scan-button class="scan" (scanned)="entry.submit($event)" />
       <app-catalog-view-toggle class="scan" />
     </div>
+    <!-- The article just added, under the field: no message over the bottom of the grid. -->
+    @if (entry.lastAdded(); as said) {
+      @if (!cart.isEmpty()) {
+        <div class="last-added" role="status">✓ {{ said }}</div>
+      }
+    }
 
     <app-catalog-navigator [categories]="tree.value()" [scope]="scope()" (scopeChange)="scope.set($event)" />
 

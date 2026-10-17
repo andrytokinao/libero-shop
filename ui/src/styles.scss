@@ -1191,6 +1191,16 @@ tr.short td {
   gap: 8px 12px;
 }
 
+/* The article a sale screen just took in: one quiet line under the product field. */
+.last-added {
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  color: var(--green);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* What to do next, inside the message: light on the dark toast. */
 .toast-action {
   border: 1px solid rgba(255, 255, 255, 0.5);

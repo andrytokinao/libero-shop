@@ -3,7 +3,7 @@ import { Product } from '../models';
 import { ToastService } from '../services/toast.service';
 import { Cart } from './cart';
 import type { ProductFinder } from './product-finder';
-import { ProductScanner, describeScan } from './product-scanner.service';
+import { ProductScanner, ScanOutcome, describeScan } from './product-scanner.service';
 import { baseUnitOf } from './sale-unit';
 import { parseScanEntry } from './scan-entry';
 
@@ -24,6 +24,12 @@ export class ProductEntry {
   private readonly toasts = inject(ToastService);
 
   readonly text = signal('');
+  /**
+   * "Riz 5kg × 1 ajouté": the article that just went in as asked, said on a line under the field
+   * rather than in a message over the bottom of the grid — it happens dozens of times a sale.
+   * What needs reading (stock short, several matches) still comes as a message.
+   */
+  readonly lastAdded = signal<string | null>(null);
   /** The last code entered that no product carries, until the screen's dialog is closed. */
   readonly unknownCode = signal<string | null>(null);
   readonly term: Signal<string> = computed(
@@ -56,7 +62,7 @@ export class ProductEntry {
       if (outcome.kind === 'unknown') {
         this.unknownCode.set(outcome.code);
       } else {
-        this.toasts.show(describeScan(outcome));
+        this.say(outcome);
       }
       // Left alone if the cashier has already started on the next article meanwhile.
       if (outcome.kind !== 'ambiguous' && this.text() === raw) {
@@ -73,12 +79,20 @@ export class ProductEntry {
   addPicked(product: Product): void {
     const unit = baseUnitOf(product);
     const added = this.cart.add(product, 1, unit);
-    this.toasts.show(
-      describeScan(
-        added > 0
-          ? { kind: 'added', product, added, asked: 1, unit }
-          : { kind: 'out-of-stock', product, unit },
-      ),
+    this.say(
+      added > 0
+        ? { kind: 'added', product, added, asked: 1, unit }
+        : { kind: 'out-of-stock', product, unit },
     );
+  }
+
+  /** An article in as asked: the quiet line. Anything short of it: a message to read. */
+  private say(outcome: ScanOutcome): void {
+    if (outcome.kind === 'added' && outcome.added >= outcome.asked) {
+      this.lastAdded.set(describeScan(outcome));
+    } else {
+      this.lastAdded.set(null);
+      this.toasts.show(describeScan(outcome));
+    }
   }
 }

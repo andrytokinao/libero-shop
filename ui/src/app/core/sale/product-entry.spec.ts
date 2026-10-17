@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 import { CatalogApi } from '../api/catalog.api';
 import { Product } from '../models';
 import { Cart } from './cart';
+import { ToastService } from '../services/toast.service';
 import { ProductEntry } from './product-entry';
 
 function product(id: number, name: string): Product {
@@ -81,5 +82,21 @@ describe('ProductEntry', () => {
     entry.addPicked(riz);
 
     expect(cart.quantityOf(riz)).toBe(1);
+  });
+
+  it('un article ajouté comme demandé se dit sur la ligne sous le champ, pas en message', () => {
+    entry.text.set('ri');
+    entry.submit();
+
+    expect(entry.lastAdded()).toContain('Riz');
+    expect(TestBed.inject(ToastService).message()).toBeNull();
+  });
+
+  it('un stock épuisé reste un message à lire', () => {
+    cart.add(riz, 10);
+    entry.addPicked(riz);
+
+    expect(entry.lastAdded()).toBeNull();
+    expect(TestBed.inject(ToastService).message()).toContain('plus de stock');
   });
 });

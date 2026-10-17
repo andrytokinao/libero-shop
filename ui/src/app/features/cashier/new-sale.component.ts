@@ -284,6 +284,12 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
           <!-- The function keys, on demand: F2, F4, F8, F9, F10 are otherwise learnt by heart. -->
           <app-shortcut-legend [shortcuts]="keys.shortcuts" />
         </div>
+        <!-- The article just added, under the field: no message over the bottom of the grid. -->
+        @if (entry.lastAdded(); as said) {
+          @if (!cart.isEmpty()) {
+            <div class="last-added" role="status">✓ {{ said }}</div>
+          }
+        }
         <app-catalog-navigator [categories]="rayons()" [scope]="scope()" (scopeChange)="scope.set($event)" />
         <!-- Tiles or lines, as the seller chose: the same products, folders and basket either way. -->
         @if (catalogView.view() === 'list') {
