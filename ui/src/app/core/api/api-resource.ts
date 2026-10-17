@@ -1,5 +1,6 @@
 import { Signal, WritableSignal, signal } from '@angular/core';
 import { Observable } from 'rxjs';
+import { LoadState } from './load-state';
 
 /**
  * A remote collection or object held in a signal, with a way to ask for it again.
@@ -10,12 +11,16 @@ import { Observable } from 'rxjs';
  * mutation. Rather than repeat that subscribe/assign dance in nineteen components, it
  * lives here once.
  */
-export class ApiResource<T> {
+export class ApiResource<T> implements LoadState {
   private readonly state: WritableSignal<T>;
   private readonly inFlight = signal(false);
+  private readonly answered = signal(false);
+  private readonly lastFailed = signal(false);
 
   readonly value: Signal<T>;
   readonly loading: Signal<boolean> = this.inFlight.asReadonly();
+  readonly loaded: Signal<boolean> = this.answered.asReadonly();
+  readonly failed: Signal<boolean> = this.lastFailed.asReadonly();
 
   constructor(
     initial: T,
@@ -36,9 +41,14 @@ export class ApiResource<T> {
     this.loader().subscribe({
       next: (value) => {
         this.state.set(value);
+        this.answered.set(true);
+        this.lastFailed.set(false);
         this.inFlight.set(false);
       },
-      error: () => this.inFlight.set(false),
+      error: () => {
+        this.lastFailed.set(true);
+        this.inFlight.set(false);
+      },
     });
   }
 }

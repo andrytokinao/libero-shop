@@ -1,6 +1,7 @@
 import { DestroyRef, Signal, computed, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subscription } from 'rxjs';
+import { LoadState } from '../api/load-state';
 import { Entity, EntityStore } from './entity-store';
 
 export interface LiveListOptions<T extends Entity> {
@@ -34,12 +35,16 @@ export interface LiveListOptions<T extends Entity> {
  * <p>Same face as {@link ApiResource} — `value`, `loading`, `reload()` — so a screen moves from
  * one to the other without its template noticing.
  */
-export class LiveList<T extends Entity> {
+export class LiveList<T extends Entity> implements LoadState {
   private readonly members = signal<ReadonlySet<number>>(new Set());
   private readonly inFlight = signal(false);
+  private readonly answered = signal(false);
+  private readonly lastFailed = signal(false);
   private request?: Subscription;
 
   readonly loading: Signal<boolean> = this.inFlight.asReadonly();
+  readonly loaded: Signal<boolean> = this.answered.asReadonly();
+  readonly failed: Signal<boolean> = this.lastFailed.asReadonly();
 
   readonly value: Signal<T[]> = computed(() => {
     const entities = this.store.entities();
@@ -83,9 +88,14 @@ export class LiveList<T extends Entity> {
           .map((id) => this.store.get(id))
           .filter((item): item is T => item !== undefined);
         this.members.set(new Set([...items.map((item) => item.id), ...this.matching(pushed)]));
+        this.answered.set(true);
+        this.lastFailed.set(false);
         this.inFlight.set(false);
       },
-      error: () => this.inFlight.set(false),
+      error: () => {
+        this.lastFailed.set(true);
+        this.inFlight.set(false);
+      },
     });
   }
 

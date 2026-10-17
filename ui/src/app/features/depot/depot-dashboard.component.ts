@@ -59,6 +59,7 @@ const EMPTY: DepotDashboard = {
     <div class="card" style="margin-top:16px;">
       <h2>Commandes en attente de remise</h2>
       <app-invoice-table
+        [state]="resource"
         [invoices]="data().pendingInvoices"
         [showDate]="true"
         [busy]="busy()"
@@ -91,7 +92,7 @@ export class DepotDashboardComponent {
   /** The unpaid order whose "pays now or at the till?" question is open. */
   protected readonly askingFor = signal<Invoice | null>(null);
 
-  private readonly resource = apiResource(EMPTY, () => this.dashboardApi.depot());
+  protected readonly resource = apiResource(EMPTY, () => this.dashboardApi.depot());
   protected readonly data = this.resource.value;
 
   constructor() {

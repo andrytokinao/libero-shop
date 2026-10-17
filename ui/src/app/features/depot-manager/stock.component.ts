@@ -126,7 +126,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
           </button>
         </div>
       </div>
-      @if (!products().length && !resource.loading()) {
+      @if (!products().length && resource.loaded()) {
         <!-- An empty list says what to do next, with the button to do it. -->
         <div class="empty">
           @if (filtered()) {
@@ -148,6 +148,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
         </div>
       } @else if (view() === 'list') {
         <app-stock-table
+          [state]="resource"
           [products]="products()"
           [manage]="true"
           [openMenuOf]="openMenuOf()"

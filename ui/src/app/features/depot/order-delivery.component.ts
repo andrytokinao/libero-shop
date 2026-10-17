@@ -53,6 +53,7 @@ import { FilterTab, FilterTabsComponent } from '../../shared/components/filter-t
         </div>
       </div>
       <app-invoice-table
+        [state]="resource"
         [invoices]="invoices()"
         [showDate]="true"
         [busy]="busy()"
@@ -102,7 +103,7 @@ export class OrderDeliveryComponent {
 
   // Kept current by the store: a sale made at the counter appears in the queue, and an order
   // handed over by another storekeeper leaves it, without anyone pressing F5.
-  private readonly resource = this.invoiceStore.list(() => {
+  protected readonly resource = this.invoiceStore.list(() => {
     const view = this.view();
     return { search: this.search(), deliveryStatus: view === 'ALL' ? undefined : view };
   });

@@ -24,6 +24,7 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
         <small>ouvrez le détail d'une commande pour l'annuler si besoin</small>
       </h2>
       <app-invoice-table
+        [state]="orders"
         [invoices]="invoices()"
         [showSeller]="false"
         [showDate]="true"
@@ -55,7 +56,8 @@ export class MyOrdersComponent {
   protected readonly selected = signal<Invoice | null>(null);
   protected readonly cashOnly = [PaymentMethod.CASH];
 
-  protected readonly invoices = this.invoiceStore.list(() => ({ mine: true, todayOnly: true })).value;
+  protected readonly orders = this.invoiceStore.list(() => ({ mine: true, todayOnly: true }));
+  protected readonly invoices = this.orders.value;
 
   /** "Encaisser" on the unpaid ones, only where the shop lets order takers take money. */
   protected readonly collectLabel = computed(() =>

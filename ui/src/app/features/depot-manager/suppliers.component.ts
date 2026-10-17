@@ -9,6 +9,7 @@ import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
 import { SupplierPurchasesDialogComponent } from '../../shared/components/supplier-purchases-dialog.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 
 /** What can be done to one supplier from its "⋮". */
 type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
@@ -17,6 +18,7 @@ type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
   selector: 'app-suppliers',
   standalone: true,
   imports: [
+    LoadStateComponent,
     SimpleImportComponent,
     SupplierCreateDialogComponent,
     SupplierPurchasesDialogComponent,
@@ -35,6 +37,7 @@ type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
           <app-simple-import [kind]="importKind" (imported)="resource.reload()" />
         </div>
       </div>
+      <app-load-state [of]="resource" what="les fournisseurs" />
       @if (suppliers().length) {
         <div class="table-scroll">
           <table>
@@ -73,7 +76,7 @@ type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
             </tbody>
           </table>
         </div>
-      } @else if (!resource.loading()) {
+      } @else if (resource.loaded()) {
         <!-- Without a supplier a receipt is booked "Sans fournisseur": the price comparison is lost. -->
         <div class="empty">
           Aucun fournisseur pour l'instant.

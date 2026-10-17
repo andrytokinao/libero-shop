@@ -96,6 +96,7 @@ function filterFrom(asked: string | null): InvoiceFilter {
         <app-period-filter name="all-invoice" (changed)="onPeriod($event)" />
       </div>
       <app-invoice-table
+        [state]="resource"
         [invoices]="invoices()"
         [showDate]="true"
         [allowCancel]="true"

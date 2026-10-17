@@ -75,6 +75,7 @@ const EMPTY: RevenueReport = {
     <div class="card" style="margin-top:16px;">
       <h2>Détail des ventes encaissées aujourd'hui</h2>
       <app-invoice-table
+        [state]="paidTodayList"
         [invoices]="paidToday()"
         [showDate]="true"
         emptyMessage="Aucune vente encaissée aujourd'hui."
@@ -89,7 +90,7 @@ export class RevenueComponent {
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 
   private readonly reportResource = apiResource(EMPTY, () => this.dashboardApi.revenue());
-  private readonly paidTodayList = this.invoices.list(() => ({
+  protected readonly paidTodayList = this.invoices.list(() => ({
     todayOnly: true,
     paymentStatus: PaymentStatus.PAID,
   }));

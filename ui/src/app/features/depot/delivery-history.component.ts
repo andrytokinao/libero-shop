@@ -27,6 +27,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <app-period-filter name="delivery-history" (changed)="onPeriod($event)" />
       </div>
       <app-invoice-table
+        [state]="history"
         [invoices]="delivered()"
         [showDate]="true"
         emptyMessage="Aucune commande remise pour le moment."
@@ -39,7 +40,7 @@ export class DeliveryHistoryComponent {
 
   protected readonly period = signal<Period>({});
 
-  private readonly history = this.invoiceStore.list(() => ({
+  protected readonly history = this.invoiceStore.list(() => ({
     ...this.period(),
     deliveryStatus: DeliveryStatus.DELIVERED,
   }));

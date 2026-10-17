@@ -61,7 +61,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-70** — « ⋮ » des utilisateurs (modifier, rôles, mot de passe, désactiver confirmé).
 - [x] **UI-72** — Configuration de la boutique : phrase « ce que ça change », résumé avant
   d'enregistrer.
-- [ ] **UI-81** — États chargement / vide / erreur distincts (factures, stock, fournisseurs,
+- [x] **UI-81** — États chargement / vide / erreur distincts (factures, stock, fournisseurs,
   utilisateurs, tableaux de bord).
 - [ ] **UI-83** — Bouton « Annuler » dans le message (`toast.service.ts`) après une action
   réversible ; écrit le mouvement inverse. (serveur)

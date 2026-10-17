@@ -53,6 +53,7 @@ const EMPTY: StockDashboard = {
         <small>triés du stock le plus faible au plus élevé</small>
       </h2>
       <app-stock-table
+        [state]="resource"
         [products]="data().toRestock"
         [manage]="true"
         emptyMessage="Aucun produit en alerte — le stock est sain."

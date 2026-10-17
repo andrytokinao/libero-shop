@@ -34,6 +34,7 @@ import { PayDialogComponent } from '../../shared/components/pay-dialog.component
         </div>
       </div>
       <app-invoice-table
+        [state]="resource"
         [invoices]="invoices()"
         [showDate]="true"
         [busy]="busy()"

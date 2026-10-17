@@ -74,6 +74,7 @@ const EMPTY: AdminDashboard = {
       <div class="card">
         <h2>Produits en alerte stock</h2>
         <app-stock-table
+          [state]="resource"
           [products]="data().lowStockProducts"
           [manage]="true"
           emptyMessage="Aucun produit en alerte."

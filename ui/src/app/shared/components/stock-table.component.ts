@@ -2,15 +2,18 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { Product } from '../../core/models';
 import { formatQuantity, stockLabel } from '../../core/sale/sale-unit';
+import { LoadState } from '../../core/api/load-state';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { LoadStateComponent, showsEmpty } from './load-state.component';
 import { ProductMenuComponent } from './product-menu.component';
 import { StockStatusBadgeComponent } from './status-badges.component';
 
 @Component({
   selector: 'app-stock-table',
   standalone: true,
-  imports: [AriaryPipe, ProductMenuComponent, StockStatusBadgeComponent],
+  imports: [AriaryPipe, LoadStateComponent, ProductMenuComponent, StockStatusBadgeComponent],
   template: `
+    <app-load-state [of]="state" what="le stock" />
     @if (products.length) {
       <div class="table-scroll">
         <table>
@@ -66,13 +69,16 @@ import { StockStatusBadgeComponent } from './status-badges.component';
           </tbody>
         </table>
       </div>
-    } @else {
+    } @else if (showsEmpty(state)) {
       <div class="empty">{{ emptyMessage }}</div>
     }
   `,
 })
 export class StockTableComponent {
   @Input({ required: true }) products: readonly Product[] = [];
+  /** The list's loading state: "Chargement…" or the failure in place of the empty message. */
+  @Input() state?: LoadState;
+  protected readonly showsEmpty = showsEmpty;
   @Input() emptyMessage = 'Aucun produit à afficher.';
   /**
    * Offers a "⋮" menu per row — add stock, edit, correct, history, whichever the account may do.

@@ -17,6 +17,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { UserDialogComponent } from './user-dialog.component';
 import { UserPasswordDialogComponent } from './user-password-dialog.component';
@@ -44,6 +45,7 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
   selector: 'app-users',
   standalone: true,
   imports: [
+    LoadStateComponent,
     AriaryPipe,
     UserDialogComponent,
     UserPasswordDialogComponent,
@@ -61,6 +63,7 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
         <button class="btn small" type="button" (click)="openCreate()">＋ Nouveau compte</button>
       </div>
 
+      <app-load-state [of]="resource" what="les comptes" />
       @if (activity().length) {
         <div class="table-scroll">
           <table>
@@ -106,7 +109,7 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
             </tbody>
           </table>
         </div>
-      } @else {
+      } @else if (resource.loaded()) {
         <div class="empty">
           Aucun utilisateur pour l'instant.
           <div class="empty-actions">
@@ -226,7 +229,7 @@ export class UsersComponent {
   protected readonly roles = ROLE_PRECEDENCE;
   protected readonly describe = describeRoles;
 
-  private readonly resource = apiResource<UserActivity[]>([], () => this.api.activity());
+  protected readonly resource = apiResource<UserActivity[]>([], () => this.api.activity());
   protected readonly activity = this.resource.value;
 
   /** Which row has a call in flight, so only its own buttons go quiet. */

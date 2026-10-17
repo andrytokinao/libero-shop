@@ -28,6 +28,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     <div class="card" style="margin-top:16px;">
       <h2>Détail des ventes du jour</h2>
       <app-invoice-table
+        [state]="sales"
         [invoices]="invoices()"
         [showSeller]="false"
         [showDate]="true"
@@ -43,7 +44,8 @@ export class DailySalesComponent {
   // mine + todayOnly are resolved server-side: the client cannot ask for another seller.
   // Handed over at the depot, the status changes, and an unpaid order is now paid: the store
   // carries both here.
-  protected readonly invoices = this.invoiceStore.list(() => ({ mine: true, todayOnly: true })).value;
+  protected readonly sales = this.invoiceStore.list(() => ({ mine: true, todayOnly: true }));
+  protected readonly invoices = this.sales.value;
 
   private readonly paid = computed(() =>
     this.invoices().filter((i) => i.paymentStatus === PaymentStatus.PAID),

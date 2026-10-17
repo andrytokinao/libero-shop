@@ -75,6 +75,7 @@ const EMPTY: CashierDashboard = {
     <div class="card" style="margin-top:16px;">
       <h2>Mes dernières factures</h2>
       <app-invoice-table
+        [state]="dashboard"
         [invoices]="data().latestInvoices"
         [showSeller]="false"
         [showDate]="true"
@@ -85,7 +86,7 @@ const EMPTY: CashierDashboard = {
 })
 export class CashierDashboardComponent {
   private readonly api = inject(DashboardApi);
-  private readonly dashboard = apiResource(EMPTY, () => this.api.cashier());
+  protected readonly dashboard = apiResource(EMPTY, () => this.api.cashier());
   protected readonly data = this.dashboard.value;
 
   constructor() {

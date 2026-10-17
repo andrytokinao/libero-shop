@@ -80,7 +80,7 @@ const EMPTY: StockDashboard = {
       <h2>Stock global <small>toutes catégories</small></h2>
       <!-- The menu offers the administrator what the server lets him do: edit a product, correct
            its stock, read its history — booking goods in stays the stock manager's. -->
-      <app-stock-table [products]="products()" [manage]="true" (action)="asked.set($event)" />
+      <app-stock-table [state]="productList" [products]="products()" [manage]="true" (action)="asked.set($event)" />
     </div>
 
     <app-product-dialogs [request]="asked()" (changed)="productList.reload()" (closed)="asked.set(null)" />

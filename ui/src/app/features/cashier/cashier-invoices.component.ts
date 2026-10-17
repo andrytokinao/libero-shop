@@ -32,6 +32,7 @@ import { Period, PeriodFilterComponent } from '../../shared/components/period-fi
         <app-period-filter name="invoice" (changed)="onPeriod($event)" />
       </div>
       <app-invoice-table
+        [state]="resource"
         [invoices]="invoices()"
         [showSeller]="false"
         [showDate]="true"

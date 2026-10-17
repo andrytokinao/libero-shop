@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { Invoice } from '../../core/models';
+import { LoadState } from '../../core/api/load-state';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { LoadStateComponent, showsEmpty } from './load-state.component';
 import { InvoiceDetailFlowComponent } from './invoice-detail-flow.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 import { HandlerChipComponent } from './handler-chip.component';
@@ -19,6 +21,7 @@ import { UserAvatarComponent } from './user-avatar.component';
   selector: 'app-invoice-table',
   standalone: true,
   imports: [
+    LoadStateComponent,
     DatePipe,
     AriaryPipe,
     PaymentStatusBadgeComponent,
@@ -28,6 +31,7 @@ import { UserAvatarComponent } from './user-avatar.component';
     HandlerChipComponent,
   ],
   template: `
+    <app-load-state [of]="state" what="les factures" />
     @if (invoices.length) {
       <div class="table-scroll">
         <table class="inv-table">
@@ -159,7 +163,7 @@ import { UserAvatarComponent } from './user-avatar.component';
           (closed)="closeDetail()"
         />
       }
-    } @else {
+    } @else if (showsEmpty(state)) {
       <div class="empty">{{ emptyMessage }}</div>
     }
   `,
@@ -168,6 +172,9 @@ export class InvoiceTableComponent {
   @Input({ required: true }) invoices: readonly Invoice[] = [];
   @Input() showSeller = true;
   @Input() showDate = false;
+  /** The list's loading state: "Chargement…" or the failure in place of the empty message. */
+  @Input() state?: LoadState;
+  protected readonly showsEmpty = showsEmpty;
   @Input() emptyMessage = 'Aucune facture pour le moment.';
   /** Blocks the row actions while a call is in flight, so nothing is posted twice. */
   @Input() busy = false;
