@@ -1,8 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { Invoice } from '../../core/models';
 import { LoadState } from '../../core/api/load-state';
+import { InvoiceActionKind, availableActions } from '../../core/orders/invoice-actions';
+import { InvoiceMenuEntry, InvoiceMenuId, SHOW_DETAIL, invoiceActionContext, invoiceMenu } from '../../core/orders/invoice-menu';
+import { AuthService } from '../../core/services/auth.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { ActionMenuComponent } from './action-menu.component';
 import { LoadStateComponent, showsEmpty } from './load-state.component';
 import { InvoiceDetailFlowComponent } from './invoice-detail-flow.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
@@ -21,6 +25,7 @@ import { UserAvatarComponent } from './user-avatar.component';
   selector: 'app-invoice-table',
   standalone: true,
   imports: [
+    ActionMenuComponent,
     LoadStateComponent,
     DatePipe,
     AriaryPipe,
@@ -85,6 +90,12 @@ import { UserAvatarComponent } from './user-avatar.component';
                     >
                       Détail
                     </button>
+                    <!-- What the detail offers, without opening it: print, cash in, serve… -->
+                    <app-action-menu
+                      [actions]="menuOf(invoice)"
+                      [label]="'Actions sur la facture ' + invoice.invoiceNumber"
+                      (picked)="pick(invoice, $event)"
+                    />
                   </td>
                 }
                 @if (actionLabel) {
@@ -146,9 +157,16 @@ import { UserAvatarComponent } from './user-avatar.component';
               }
             </div>
             @if (showDetail) {
-              <button class="lnk-detail" type="button" (click)="openDetail(invoice)">
-                Voir les articles ›
-              </button>
+              <div class="card-links">
+                <button class="lnk-detail" type="button" (click)="openDetail(invoice)">
+                  Voir les articles ›
+                </button>
+                <app-action-menu
+                  [actions]="menuOf(invoice)"
+                  [label]="'Actions sur la facture ' + invoice.invoiceNumber"
+                  (picked)="pick(invoice, $event)"
+                />
+              </div>
             }
           </li>
         }
@@ -159,6 +177,7 @@ import { UserAvatarComponent } from './user-avatar.component';
           [invoice]="invoice"
           [showSeller]="showSeller"
           [allowCancel]="allowCancel"
+          [start]="startWith()"
           (changed)="changed.emit()"
           (closed)="closeDetail()"
         />
@@ -206,11 +225,35 @@ export class InvoiceTableComponent {
     return id === null ? null : (this.invoices.find((invoice) => invoice.id === id) ?? null);
   }
 
+  /** The action picked in a line's "⋮", run without the detail; null opens the detail. */
+  protected readonly startWith = signal<InvoiceActionKind | null>(null);
+  private readonly auth = inject(AuthService);
+
   protected openDetail(invoice: Invoice): void {
+    this.startWith.set(null);
     this.detailId.set(invoice.id);
   }
 
   protected closeDetail(): void {
     this.detailId.set(null);
+    this.startWith.set(null);
+  }
+
+  /** The detail's own actions for this person, cancelling only where this list allows it. */
+  protected menuOf(invoice: Invoice): InvoiceMenuEntry[] {
+    return invoiceMenu(
+      availableActions(invoice, invoiceActionContext(this.auth)).filter(
+        (action) => action.kind !== InvoiceActionKind.CANCEL || this.allowCancel,
+      ),
+    );
+  }
+
+  protected pick(invoice: Invoice, id: InvoiceMenuId): void {
+    if (id === SHOW_DETAIL) {
+      this.openDetail(invoice);
+      return;
+    }
+    this.startWith.set(id);
+    this.detailId.set(invoice.id);
   }
 }

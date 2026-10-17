@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Invoice, PaymentMethod } from '../../core/models';
 import { asksHowToPay } from '../../core/orders/delivery.util';
@@ -8,10 +8,12 @@ import {
   InvoiceActionKind,
   availableActions,
 } from '../../core/orders/invoice-actions';
+import { invoiceActionContext } from '../../core/orders/invoice-menu';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { CancelOrderDialogComponent } from './cancel-order-dialog.component';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { HandOverDialogComponent } from './hand-over-dialog.component';
 import { InvoiceDetailDialogComponent } from './invoice-detail-dialog.component';
 import { PayDialogComponent } from './pay-dialog.component';
@@ -36,6 +38,7 @@ import { PayDialogComponent } from './pay-dialog.component';
     CancelOrderDialogComponent,
     PayDialogComponent,
     HandOverDialogComponent,
+    ConfirmDialogComponent,
   ],
   template: `
     @let order = current();
@@ -45,7 +48,7 @@ import { PayDialogComponent } from './pay-dialog.component';
           [invoice]="order"
           [busy]="running()"
           (confirmed)="run(runner.cancel(order, $event))"
-          (closed)="step.set(null)"
+          (closed)="back()"
         />
       }
       @case ('pay') {
@@ -53,7 +56,7 @@ import { PayDialogComponent } from './pay-dialog.component';
           [invoice]="order"
           [busy]="running()"
           (paid)="run(runner.pay(order, $event))"
-          (closed)="step.set(null)"
+          (closed)="back()"
         />
       }
       @case ('collect') {
@@ -62,7 +65,7 @@ import { PayDialogComponent } from './pay-dialog.component';
           [busy]="running()"
           [methods]="cashOnly"
           (paid)="run(runner.collect(order))"
-          (closed)="step.set(null)"
+          (closed)="back()"
         />
       }
       @case ('handOver') {
@@ -70,10 +73,24 @@ import { PayDialogComponent } from './pay-dialog.component';
           [invoice]="order"
           [busy]="running()"
           (chosen)="run(runner.handOver(order, $event))"
-          (closed)="step.set(null)"
+          (closed)="back()"
         />
       }
+      @case ('confirm') {
+        <!-- From a line's "⋮": the question the detail asks on a second press, asked here. -->
+        @if (confirming(); as action) {
+          <app-confirm-dialog
+            [title]="action.label + ' — ' + order.invoiceNumber"
+            [message]="action.confirm!"
+            [confirmLabel]="action.label"
+            [busy]="running()"
+            (confirmed)="act(order, action)"
+            (closed)="back()"
+          />
+        }
+      }
       @default {
+        @if (!start()) {
         <app-invoice-detail-dialog
           [invoice]="order"
           [showSeller]="showSeller()"
@@ -83,11 +100,12 @@ import { PayDialogComponent } from './pay-dialog.component';
           (act)="act(order, $event)"
           (closed)="closed.emit()"
         />
+        }
       }
     }
   `,
 })
-export class InvoiceDetailFlowComponent {
+export class InvoiceDetailFlowComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toasts = inject(ToastService);
   private readonly store = inject(InvoiceStore);
@@ -100,14 +118,30 @@ export class InvoiceDetailFlowComponent {
   readonly allowCancel = input(false);
   /** A line above the detail — "Vente enregistrée" right after the till recorded it. */
   readonly notice = input<string | null>(null);
+  /**
+   * Picked in a line's "⋮": the action runs at once, without the detail, and the flow closes once
+   * it is done or given up. Null opens the detail.
+   */
+  readonly start = input<InvoiceActionKind | null>(null);
 
   readonly closed = output<void>();
   /** An action went through: the order moved. */
   readonly changed = output<void>();
 
   /** The dialog an action opens over the detail to ask what it needs, or null for the detail. */
-  protected readonly step = signal<'pay' | 'collect' | 'handOver' | 'cancel' | null>(null);
+  protected readonly step = signal<'pay' | 'collect' | 'handOver' | 'cancel' | 'confirm' | null>(null);
+  /** The action whose question is on screen, from a line's "⋮". */
+  protected readonly confirming = signal<InvoiceAction | null>(null);
   protected readonly running = signal(false);
+  /**
+   * Gone before its call came back: the order left the list it was opened from — taken on, it is
+   * no longer waiting — and the list closed it. The message is still said; nobody listens for more.
+   */
+  private gone = false;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => (this.gone = true));
+  }
   protected readonly cashOnly = [PaymentMethod.CASH];
 
   /** The order as the store has it now, or as it was handed in until the store knows it. */
@@ -117,13 +151,34 @@ export class InvoiceDetailFlowComponent {
 
   /** The detail's buttons for this person — see `availableActions` for the rules. */
   protected readonly actions = computed<InvoiceAction[]>(() =>
-    availableActions(this.current(), {
-      userId: this.auth.currentUser()?.id ?? null,
-      roles: this.auth.roles(),
-      features: this.auth.settings(),
-      handOverLabel: this.auth.words().handOverAction,
-    }).filter((action) => action.kind !== InvoiceActionKind.CANCEL || this.allowCancel()),
+    availableActions(this.current(), invoiceActionContext(this.auth)).filter((action) => action.kind !== InvoiceActionKind.CANCEL || this.allowCancel()),
   );
+
+  ngOnInit(): void {
+    const kind = this.start();
+    if (kind === null) {
+      return;
+    }
+    const action = this.actions().find((candidate) => candidate.kind === kind);
+    if (!action) {
+      // The order moved on since the menu was drawn: the detail says where it stands.
+      this.closed.emit();
+    } else if (action.confirm) {
+      this.confirming.set(action);
+      this.step.set('confirm');
+    } else {
+      this.act(this.current(), action);
+    }
+  }
+
+  /** A dialog given up: back to the detail, or out altogether when the "⋮" opened it. */
+  protected back(): void {
+    if (this.start()) {
+      this.closed.emit();
+    } else {
+      this.step.set(null);
+    }
+  }
 
   /** A button of the detail: straight to the server, or through the dialog that asks first. */
   protected act(invoice: Invoice, action: InvoiceAction): void {
@@ -162,9 +217,20 @@ export class InvoiceDetailFlowComponent {
         this.running.set(false);
         this.step.set(null);
         this.toasts.show(message);
+        if (this.gone) {
+          return;
+        }
         this.changed.emit();
+        if (this.start()) {
+          this.closed.emit();
+        }
       },
-      error: () => this.running.set(false),
+      error: () => {
+        this.running.set(false);
+        if (!this.gone && this.start() && this.step() === null) {
+          this.closed.emit();
+        }
+      },
     });
   }
 }

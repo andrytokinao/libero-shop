@@ -784,6 +784,17 @@ tr:last-child td {
     margin-top: 8px;
     padding: 4px 0;
   }
+
+  /* "Voir les articles" and the line's "⋮", side by side. */
+  .card-links {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .lnk-detail {
+      margin-top: 0;
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ badges */
