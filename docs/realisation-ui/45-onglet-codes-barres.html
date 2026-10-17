@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onglet Codes-barres : scanner pour associer</title>
+<meta name="ui-id" content="UI-20">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-20</span>Onglet Codes-barres : scanner pour associer</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-20</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>L'onglet « Codes-barres » de la configuration montre <strong>une ligne par unité</strong> (pièce, paquet, carton…) avec son code.</li>
+    <li>Avec une douchette : on clique dans la ligne, on scanne, le code est <strong>enregistré tout seul</strong>. Sur téléphone, un bouton 📷 lit le code.</li>
+    <li>Un code déjà porté par <strong>un autre produit</strong> est signalé tout de suite, avec son nom ; il n'est pas envoyé.</li>
+    <li>Le code existant d'une ligne est sélectionné quand on y entre : le code scanné le <strong>remplace</strong> au lieu de s'y ajouter.</li>
+    <li>Chaque ligne s'enregistre seule : changer le code du carton ne touche à rien d'autre.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#exemples">4. À éviter / attendu</a></li>
+  <li><a href="#recap">5. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Le code de l'unité de base se tapait dans la fiche ; celui d'un carton, dans le formulaire « Modifier » de l'unité.
+  Un code déjà utilisé n'était découvert qu'à l'enregistrement, par un message d'erreur.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 190" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Associer un code à une unité">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .q { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="65" width="170" height="56" rx="8"/><text class="t" x="34" y="89">Ligne « carton »</text><text class="s" x="34" y="107">code sélectionné à l'entrée</text>
+  <rect class="box" x="230" y="65" width="150" height="56" rx="8"/><text class="t" x="244" y="89">Scan ou saisie</text><text class="s" x="244" y="107">remplace le code</text>
+  <rect class="q" x="420" y="60" width="190" height="66" rx="8"/><text class="t" x="434" y="86">Porté par un autre</text><text class="t" x="434" y="104">produit ?</text>
+  <rect class="ko" x="650" y="15" width="190" height="56" rx="8"/><text class="t" x="664" y="39">Oui : nom affiché,</text><text class="s" x="664" y="57">rien n'est envoyé</text>
+  <rect class="new" x="650" y="115" width="190" height="56" rx="8"/><text class="t" x="664" y="139">Non : enregistré</text><text class="s" x="664" y="157">pour cette unité seule</text>
+  <path class="ln" d="M190,93 L228,93"/><path class="ln" d="M380,93 L418,93"/><path class="ln" d="M610,80 L648,45"/><path class="ln" d="M610,108 L648,140"/>
+</svg>
+<div class="caption">Figure 1 — Une ligne par unité ; le code déjà pris est arrêté avant l'envoi.</div>
+</div>
+
+<p>L'enregistrement réutilise ce qui avait été fait pour le code inconnu à la caisse (UI-21) : seul le code change, ni le
+  prix, ni le prix d'achat, ni le contenu du carton. Le serveur refuse de toute façon un code déjà pris ; la vérification
+  à l'écran évite seulement d'aller jusque-là.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span> « Lait en poudre 400g », vendu à l'unité et au carton.</p>
+<div class="shot"><img src="captures/ui-20-codes-par-unite.png" alt="Une ligne par unité">
+<div class="caption">Figure 2 — Une ligne pour l'unité de base, une pour le carton.</div></div>
+<div class="shot"><img src="captures/ui-20-code-deja-pris.png" alt="Code déjà pris par le riz">
+<div class="caption">Figure 3 — Ce code est celui du « Riz 5kg » : c'est dit, et « Enregistrer » reste grisé.</div></div>
+<div class="shot"><img src="captures/ui-20-code-enregistre.png" alt="Code du carton enregistré">
+<div class="caption">Figure 4 — Le bon code, scanné par-dessus l'autre, est enregistré pour le carton.</div></div>
+
+<h2 id="exemples">4. À éviter / attendu</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>Le curseur arrive à la fin du code existant ; la douchette ajoute le sien : « 9990001112223<strong>6009009000099</strong> ».</div>
+  <div class="good"><div class="good-title">Attendu</div>Le code existant est sélectionné quand on entre dans la ligne ; la douchette le remplace : « 6009009000099 ».</div>
+</div>
+
+<h2 id="recap">5. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>ui/…/shared/components/barcodes-editor.component.ts</code></td><td>nouveau : une ligne par unité, scan, code déjà pris signalé</td></tr>
+<tr><td><code>ui/…/shared/components/product-units-dialog.component.ts</code></td><td>l'onglet Codes-barres utilise cet éditeur</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Une ligne par unité, la base d'abord, avec son code</td><td><code>barcodes-editor.component.spec.ts</code></td></tr>
+<tr><td>Entrée (douchette) enregistre le code du carton seul</td><td>idem</td></tr>
+<tr><td>Un code d'un autre produit est signalé et pas envoyé</td><td>idem</td></tr>
+<tr><td>Le code est sélectionné à l'entrée dans la ligne</td><td>idem</td></tr>
+</table></div>
+<p><strong>Tests :</strong> interface au vert (254 tests). Aucun changement côté serveur. Une unité garde un seul code :
+  en garder plusieurs reste une décision attendue (liste de travail).</p>
+</main>
+</body>
+</html>

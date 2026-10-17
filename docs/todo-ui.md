@@ -46,7 +46,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   Codes-barres), ouverte sur l'onglet demandé (`initialTab`) ; pastilles d'unités toutes prêtes.
 - [x] **UI-12** — Nouveau produit : nom, prix, unité d'abord, le reste replié ; message avec
   « Ajouter du stock » / « Codes-barres ».
-- [ ] **UI-20** — Onglet Codes-barres : une ligne par unité, bouton « Scanner », code déjà pris signalé.
+- [x] **UI-20** — Onglet Codes-barres : une ligne par unité, bouton « Scanner », code déjà pris signalé.
 - [ ] **UI-22** — Douchette et caméra dans la recherche de Stock, Prix et unités, Corrections.
 - [ ] **UI-31** — « ＋ Réception » : fenêtre bon de livraison multi-produits, un fournisseur, un
   seul enregistrement. (serveur)

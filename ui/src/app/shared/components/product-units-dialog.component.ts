@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
@@ -33,6 +33,7 @@ import {
 } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { BarcodesEditorComponent } from './barcodes-editor.component';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { FilterTab, FilterTabsComponent } from './filter-tabs.component';
@@ -119,6 +120,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
     UnitModelsDialogComponent,
     FilterTabsComponent,
     ConfirmDialogComponent,
+    BarcodesEditorComponent,
   ],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
@@ -147,8 +149,8 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
             <!-- ------------------------------------------------- the sheet -->
             <!-- A past ticket keeps the name and price it was sold at: correcting them here only
                  changes what the next sale reads. -->
-            <!-- Nothing of the sheet is in the units tab; its "Enregistrer" still is, if a change waits. -->
-            <form class="un-sheet" [class.un-off]="tab() === 'unites' && !sheetChanged()" (ngSubmit)="saveSheet()">
+            <!-- Nothing of the sheet is in the units and codes tabs; its "Enregistrer" still is, if a change waits. -->
+            <form class="un-sheet" [class.un-off]="(tab() === 'unites' || tab() === 'codes') && !sheetChanged()" (ngSubmit)="saveSheet()">
               <div class="fld un-sheet-name" [class.un-off]="tab() !== 'fiche'">
                 <label for="un-name">Nom du produit</label>
                 <input
@@ -171,7 +173,8 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
                   (valueChange)="patchSheet({ categoryId: $event })"
                 />
               </div>
-              <div class="fld" [class.un-off]="tab() !== 'codes'">
+              <!-- Kept in the sheet so a save sends it unchanged; edited in the codes tab, line by line. -->
+              <div class="fld un-off">
                 <label for="un-base-barcode">Code-barres</label>
                 <!-- Typed, read by a USB scanner (which types it and presses Entrée), or read by
                      the phone camera. Entrée stays in the field: a scan must not save the sheet. -->
@@ -322,7 +325,9 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
                  what is left. Worked out by the server, so a tonne reads back to the ariary.
                  A table on a wide screen; on a narrow one each row becomes a card (data-label),
                  so the dialog never scrolls sideways. -->
-            <table class="un-table" [class.un-off]="tab() === 'fiche'">
+            <app-barcodes-editor [class.un-off]="tab() !== 'codes'" [units]="u" (changed)="onCodes($event)" />
+
+            <table class="un-table" [class.un-off]="tab() === 'fiche' || tab() === 'codes'">
               <thead>
                 <tr>
                   <th>Unité</th>
@@ -1311,6 +1316,11 @@ export class ProductUnitsDialogComponent implements OnInit {
       this.retiring.set(false);
       this.toasts.show(retired ? 'Produit retiré de la vente.' : 'Produit remis en vente.');
     });
+  }
+
+  /** A code saved in the codes tab: the sheet and the table read the units again. */
+  protected onCodes(units: ProductUnits): void {
+    this.run(of(units));
   }
 
   protected saveAlert(): void {

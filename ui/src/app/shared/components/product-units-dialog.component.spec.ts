@@ -81,7 +81,7 @@ describe('ProductUnitsDialogComponent', () => {
 
   it('keeps the barcode in the "Codes-barres" tab', () => {
     render('codes');
-    expect(shown('un-base-barcode')).toBeTrue();
+    expect(shown('bc-base')).toBeTrue();
     expect(shown('un-base-price')).toBeFalse();
   });
 
