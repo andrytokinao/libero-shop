@@ -4,6 +4,8 @@ import com.houssen.liberoshop.entity.AdjustmentReason;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
+import com.houssen.liberoshop.entity.ProductPackaging;
+import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
@@ -41,6 +43,8 @@ class StockAdjustmentTest {
     private ProductRepository products;
     @Autowired
     private UserAppRepository users;
+    @Autowired
+    private ProductPackagingRepository packagings;
 
     private Product juice;
     private UserApp manager;
@@ -163,5 +167,49 @@ class StockAdjustmentTest {
         assertEquals(last.id(), first.id());
         assertTrue(stockService.findAdjustments().stream()
                 .filter(a -> a.product().id().equals(juice.getId())).count() >= 2);
+    }
+
+    private ProductPackaging cartonOfTwelve() {
+        return packagings.save(ProductPackaging.builder().product(juice).label("carton")
+                .factor(new BigDecimal("12.000")).price(new BigDecimal("34000")).build());
+    }
+
+    @Test
+    @DisplayName("2 cartons casses : 24 bouteilles sortent, l'historique dit 2 carton = 24 bouteille")
+    void casseSaisieEnCartons() {
+        ProductPackaging carton = cartonOfTwelve();
+
+        StockAdjustmentResponse adjustment = stockService.registerAdjustment(new CreateStockAdjustmentRequest(
+                juice.getId(), AdjustmentReason.BREAKAGE, new BigDecimal("2"), "tombe du camion", carton.getId()), manager);
+
+        assertQuantity(16, reloaded().getStockQuantity());
+        assertQuantity(-24, adjustment.quantity());
+        assertEquals("2 carton = 24 bouteille -- tombe du camion", adjustment.comment());
+    }
+
+    @Test
+    @DisplayName("Inventaire compte en cartons : 3 cartons comptes = 36 bouteilles, l'ecart est de -4")
+    void inventaireCompteEnCartons() {
+        ProductPackaging carton = cartonOfTwelve();
+
+        StockAdjustmentResponse adjustment = stockService.registerAdjustment(new CreateStockAdjustmentRequest(
+                juice.getId(), AdjustmentReason.INVENTORY_COUNT, new BigDecimal("3"), null, carton.getId()), manager);
+
+        assertQuantity(36, reloaded().getStockQuantity());
+        assertQuantity(-4, adjustment.quantity());
+        assertEquals("3 carton = 36 bouteille", adjustment.comment());
+    }
+
+    @Test
+    @DisplayName("4 cartons casses quand il n'en reste que 40 bouteilles : refuse, en bouteilles")
+    void casseEnCartonsAuDelaDuStockRefusee() {
+        ProductPackaging carton = cartonOfTwelve();
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class, () -> stockService.registerAdjustment(
+                new CreateStockAdjustmentRequest(juice.getId(), AdjustmentReason.BREAKAGE, new BigDecimal("4"), null,
+                        carton.getId()), manager));
+
+        assertEquals("ADJUSTMENT_EXCEEDS_STOCK", refused.code());
+        assertQuantity(40, reloaded().getStockQuantity());
     }
 }

@@ -6,7 +6,8 @@ import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product, StockAdjustment, adjustmentReasonLabel } from '../../core/models';
 import { MovementAction, adjustmentActions, countsAsLoss } from '../../core/stock/movement-actions';
-import { formatAmount, formatQuantity, parseQuantity, roundQuantity } from '../../core/sale/sale-unit';
+import { formatAmount, formatQuantity, parseQuantity, roundQuantity, unitsOf } from '../../core/sale/sale-unit';
+import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
@@ -77,7 +78,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         </div>
         <div class="fld">
           <label for="adjust-qty">
-            {{ isCount() ? 'Quantité comptée' : 'Quantité perdue' }} ({{ baseName() }})
+            {{ isCount() ? 'Quantité comptée' : 'Quantité perdue' }} ({{ unit()?.label ?? 'unité' }})
           </label>
           <input
             id="adjust-qty"
@@ -89,7 +90,27 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             [ngModel]="quantity()"
             (ngModelChange)="quantity.set($event)"
           />
+          @if (conversion(); as line) {
+            <div class="muted" style="font-size:12px;">{{ line }}</div>
+          }
         </div>
+        <!-- "2 cartons cassés" rather than "48 pièces": counted in the unit at hand. -->
+        @if (units().length > 1) {
+          <div class="fld">
+            <label for="adjust-unit">En</label>
+            <select
+              id="adjust-unit"
+              name="unit"
+              class="field"
+              [ngModel]="unit()?.packagingId ?? null"
+              (ngModelChange)="unitId.set($event)"
+            >
+              @for (choice of units(); track choice.packagingId) {
+                <option [ngValue]="choice.packagingId">{{ choice.label ?? 'unité' }}</option>
+              }
+            </select>
+          </div>
+        }
         <div class="fld" style="flex:1; min-width:200px;">
           <label for="adjust-comment">
             Commentaire {{ reason() === 'OTHER' ? '(obligatoire)' : '(facultatif)' }}
@@ -99,7 +120,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             name="comment"
             type="text"
             autocomplete="off"
-            maxlength="255"
+            maxlength="200"
             [ngModel]="comment()"
             (ngModelChange)="comment.set($event)"
           />
@@ -234,19 +255,34 @@ export class StockAdjustmentsComponent {
   protected readonly selectedProduct = computed(() =>
     this.products().find((product) => product.id === this.selectedProductId()),
   );
-  protected readonly baseName = computed(() => this.selectedProduct()?.unit ?? 'unité');
+  protected readonly units = computed(() => {
+    const product = this.selectedProduct();
+    return product ? unitsOf(product) : [];
+  });
+  /** The packaging the quantity is said in; null for the base unit. Another product: its base unit. */
+  protected readonly unitId = signal<number | null>(null);
+  protected readonly unit = computed(
+    () => this.units().find((unit) => unit.packagingId === this.unitId()) ?? this.units()[0],
+  );
   protected readonly isCount = computed(() => this.reason() === 'INVENTORY_COUNT');
 
   protected readonly quantityNumber = computed(() => parseQuantity(this.quantity()));
+  protected readonly conversion = computed(() => {
+    const product = this.selectedProduct();
+    const unit = this.unit();
+    return product && unit ? conversionLine(this.quantityNumber(), unit, product) : null;
+  });
 
   /** What the stock would move by, from the figure this screen holds; the server decides. */
   private readonly difference = computed<number | null>(() => {
     const product = this.selectedProduct();
     const quantity = this.quantityNumber();
-    if (!product || quantity === null) {
+    const unit = this.unit();
+    if (!product || quantity === null || !unit) {
       return null;
     }
-    return roundQuantity(this.isCount() ? quantity - product.stockQuantity : -quantity);
+    const base = inBaseUnits(quantity, unit);
+    return roundQuantity(this.isCount() ? base - product.stockQuantity : -base);
   });
 
   protected readonly preview = computed<{ text: string; refused: boolean } | null>(() => {
@@ -359,6 +395,7 @@ export class StockAdjustmentsComponent {
         reason: this.reason(),
         quantity,
         comment: this.comment().trim() || null,
+        packagingId: this.unit()?.packagingId ?? null,
       })
       .subscribe({
         next: (adjustment) => {

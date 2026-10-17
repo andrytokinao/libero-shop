@@ -94,9 +94,11 @@ export interface StockAdjustment extends StockMovementBase {
 export interface CreateStockAdjustmentRequest {
   productId: number;
   reason: AdjustmentReason;
-  /** What was counted for an inventory, what was lost for every other reason — in base units. */
+  /** What was counted for an inventory, what was lost for every other reason — in `packagingId`'s unit. */
   quantity: number;
   comment: string | null;
+  /** The unit the quantity is said in ("2 cartons"); null or absent for the base unit. */
+  packagingId?: number | null;
 }
 
 /** What kind of movement a line of a product's history is. */

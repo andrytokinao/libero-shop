@@ -188,14 +188,19 @@ public class StockService {
             throw new BusinessRuleException("ADJUSTMENT_REASON_RESERVED",
                     "Une annulation se fait depuis la saisie a annuler, pas comme une correction.");
         }
-        String comment = PackagingRules.squeeze(request.comment());
-        if (request.reason() == AdjustmentReason.OTHER && comment == null) {
+        String typed = PackagingRules.squeeze(request.comment());
+        if (request.reason() == AdjustmentReason.OTHER && typed == null) {
             throw new BusinessRuleException("ADJUSTMENT_COMMENT_REQUIRED",
                     "Precisez en commentaire la raison de cette correction.");
         }
+        // Said in a carton or a sack: counted in base units, the unit it was said in kept in the
+        // comment, so the history reads "2 carton = 48" rather than a bare 48.
+        SaleUnit unit = SaleUnit.of(product, request.packagingId());
+        BigDecimal quantity = Quantities.scaled(request.quantity().multiply(unit.factor()));
+        String comment = request.packagingId() == null ? typed : saidIn(request.quantity(), unit, quantity, product, typed);
 
         StockAdjustment adjustment = StockAdjustment.builder()
-                .quantity(Quantities.scaled(differenceOf(request, product)))
+                .quantity(Quantities.scaled(differenceOf(request.reason(), quantity, product)))
                 .movementDate(calendar.now())
                 .product(product)
                 .performedBy(author)
@@ -209,11 +214,23 @@ public class StockService {
         return StockAdjustmentResponse.of(adjustment);
     }
 
-    /** What the stock moves by: minus what was lost, or the count minus what the stock says. */
-    private static BigDecimal differenceOf(CreateStockAdjustmentRequest request, Product product) {
+    /** "2 carton = 48 piece", then what the operator typed, if anything. */
+    private static String saidIn(BigDecimal typedQuantity, SaleUnit unit, BigDecimal baseQuantity, Product product,
+                                 String typed) {
+        String base = product.getUnit() == null ? plain(baseQuantity) : plain(baseQuantity) + " " + product.getUnit();
+        String note = plain(typedQuantity) + " " + unit.label() + " = " + base;
+        return typed == null ? note : note + " -- " + typed;
+    }
+
+    /**
+     * What the stock moves by: minus what was lost, or the count minus what the stock says.
+     *
+     * @param quantity in base units
+     */
+    private static BigDecimal differenceOf(AdjustmentReason reason, BigDecimal quantity, Product product) {
         BigDecimal stock = product.getStockQuantity();
-        if (request.reason().isCount()) {
-            BigDecimal difference = request.quantity().subtract(stock);
+        if (reason.isCount()) {
+            BigDecimal difference = quantity.subtract(stock);
             if (difference.signum() == 0) {
                 throw new BusinessRuleException("ADJUSTMENT_NOTHING_TO_CORRECT",
                         "Le stock de \"" + product.getName() + "\" est deja de " + plain(stock)
@@ -221,17 +238,17 @@ public class StockService {
             }
             return difference;
         }
-        if (request.quantity().signum() <= 0) {
+        if (quantity.signum() <= 0) {
             throw new BusinessRuleException("ADJUSTMENT_QUANTITY_INVALID",
                     "La quantite perdue doit etre superieure a zero.");
         }
-        if (request.quantity().compareTo(stock) > 0) {
+        if (quantity.compareTo(stock) > 0) {
             throw new BusinessRuleException("ADJUSTMENT_EXCEEDS_STOCK",
                     "Le stock de \"" + product.getName() + "\" n'est que de " + plain(stock)
-                            + " : impossible d'en retirer " + plain(request.quantity())
+                            + " : impossible d'en retirer " + plain(quantity)
                             + ". Si le rayon a ete compte, saisissez un inventaire.");
         }
-        return request.quantity().negate();
+        return quantity.negate();
     }
 
     private static String plain(BigDecimal quantity) {

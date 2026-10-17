@@ -71,7 +71,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 
 - [x] **UI-03** — Clic sur un produit (hors vente) : fiche rapide en lecture avec ses actions.
 - [x] **UI-11** — Prix modifiable directement dans le tableau Prix et unités.
-- [ ] **UI-35** — Correction de stock dans une autre unité (« 2 cartons »).
+- [x] **UI-35** — Correction de stock dans une autre unité (« 2 cartons »).
 - [ ] **UI-36** — Inventaire d'un rayon avec résumé des écarts. (serveur)
 - [ ] **UI-51** — « ⋮ » sur les lignes de factures (actions de `invoice-actions.ts`).
 - [ ] **UI-52** — « ⋮ » sur une ligne du panier (unité, quantité, retirer).

@@ -2,7 +2,8 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product } from '../../core/models';
-import { formatAmount, formatQuantity, roundQuantity } from '../../core/sale/sale-unit';
+import { formatAmount, formatQuantity, roundQuantity, unitsOf } from '../../core/sale/sale-unit';
+import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 
 /**
@@ -46,20 +47,42 @@ import { StockUndo } from '../../core/stock/stock-undo';
               }
             </select>
           </div>
-          <div class="fld">
-            <label for="sa-qty">
-              {{ isCount() ? 'Quantité comptée' : 'Quantité perdue' }} ({{ product().unit ?? 'unité' }})
-            </label>
-            <input
-              id="sa-qty"
-              name="quantity"
-              type="text"
-              inputmode="decimal"
-              autocomplete="off"
-              [ngModel]="quantity()"
-              (ngModelChange)="quantity.set($event)"
-            />
+          <div class="sa-qty-row">
+            <div class="fld">
+              <label for="sa-qty">
+                {{ isCount() ? 'Quantité comptée' : 'Quantité perdue' }} ({{ unit().label ?? 'unité' }})
+              </label>
+              <input
+                id="sa-qty"
+                name="quantity"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                [ngModel]="quantity()"
+                (ngModelChange)="quantity.set($event)"
+              />
+            </div>
+            <!-- "2 cartons cassés" rather than "48 pièces": counted in the unit at hand. -->
+            @if (units().length > 1) {
+              <div class="fld">
+                <label for="sa-unit">En</label>
+                <select
+                  id="sa-unit"
+                  name="unit"
+                  class="field"
+                  [ngModel]="unit().packagingId"
+                  (ngModelChange)="unitId.set($event)"
+                >
+                  @for (choice of units(); track choice.packagingId) {
+                    <option [ngValue]="choice.packagingId">{{ choice.label ?? 'unité' }}</option>
+                  }
+                </select>
+              </div>
+            }
           </div>
+          @if (conversion(); as line) {
+            <div class="muted sa-conv">{{ line }}</div>
+          }
           <div class="fld">
             <label for="sa-comment">
               Commentaire {{ reason() === 'OTHER' ? '(obligatoire)' : '(facultatif)' }}
@@ -69,7 +92,7 @@ import { StockUndo } from '../../core/stock/stock-undo';
               name="comment"
               type="text"
               autocomplete="off"
-              maxlength="255"
+              maxlength="200"
               [ngModel]="comment()"
               (ngModelChange)="comment.set($event)"
             />
@@ -93,6 +116,20 @@ import { StockUndo } from '../../core/stock/stock-undo';
     .sa-refused {
       color: var(--red);
     }
+
+    .sa-qty-row {
+      display: flex;
+      gap: 10px;
+
+      .fld:first-child {
+        flex: 1;
+      }
+    }
+
+    .sa-conv {
+      font-size: 12.5px;
+      margin: -4px 0 8px;
+    }
   `,
 })
 export class StockAdjustDialogComponent implements OnInit {
@@ -115,6 +152,14 @@ export class StockAdjustDialogComponent implements OnInit {
 
   protected readonly isCount = computed(() => this.reason() === 'INVENTORY_COUNT');
 
+  protected readonly units = computed(() => unitsOf(this.product()));
+  /** The packaging the quantity is said in; null for the base unit. */
+  protected readonly unitId = signal<number | null>(null);
+  protected readonly unit = computed(
+    () => this.units().find((unit) => unit.packagingId === this.unitId()) ?? this.units()[0],
+  );
+  protected readonly conversion = computed(() => conversionLine(this.quantityNumber(), this.unit(), this.product()));
+
   /** Here rather than in a field: the inputs are not there yet before this. */
   ngOnInit(): void {
     this.reason.set(this.initialReason());
@@ -132,7 +177,8 @@ export class StockAdjustDialogComponent implements OnInit {
     if (quantity === null) {
       return null;
     }
-    return roundQuantity(this.isCount() ? quantity - this.product().stockQuantity : -quantity);
+    const base = inBaseUnits(quantity, this.unit());
+    return roundQuantity(this.isCount() ? base - this.product().stockQuantity : -base);
   });
 
   protected readonly preview = computed<{ text: string; refused: boolean } | null>(() => {
@@ -188,6 +234,7 @@ export class StockAdjustDialogComponent implements OnInit {
         reason: this.reason(),
         quantity,
         comment: this.comment().trim() || null,
+        packagingId: this.unit().packagingId,
       })
       .subscribe({
         next: (adjustment) => {
