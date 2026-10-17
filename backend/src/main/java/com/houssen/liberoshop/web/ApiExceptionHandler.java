@@ -8,6 +8,7 @@ import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
@@ -31,6 +32,8 @@ import java.util.List;
  * renewal banner on that status.
  */
 @RestControllerAdvice
+// Before FallbackExceptionHandler, which catches whatever is left.
+@Order(0)
 public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);

@@ -271,8 +271,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   tableau de bord, gestion des erreurs.
 - [ ] **P2 — Tests manquants côté écran** : authentification, intercepteurs, gardes, écran de
   vente et d'encaissement ; aucun test de bout en bout.
-- [ ] **P3 — Erreurs non prévues** (`ApiExceptionHandler`) : format Spring par défaut au lieu du
+- [x] **P3 — Erreurs non prévues** (`ApiExceptionHandler`) : format Spring par défaut au lieu du
   format de l'application.
+  *Fait — voir `49-erreurs-imprevues.html`.*
 - [ ] **P3 — Code mort** : `SaleRepository.findBySellerIdOrderBySaleDateDesc` (à vérifier).
 
 ## 10. Dépôt git

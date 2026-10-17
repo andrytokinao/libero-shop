@@ -4,6 +4,7 @@ import com.houssen.liberoshop.license.exception.LicenseException;
 import com.houssen.liberoshop.license.exception.LicenseExpiredException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +20,8 @@ import java.time.Instant;
  * banner and disable the "new sale" buttons. Everything else maps to {@code 403}.
  */
 @RestControllerAdvice
+// Before FallbackExceptionHandler, which catches whatever is left.
+@Order(0)
 public class LicenseExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(LicenseExceptionHandler.class);
