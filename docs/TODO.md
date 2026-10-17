@@ -125,7 +125,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P3 — Adresses du réseau local visibles derrière un proxy.** Un visiteur d'Internet
   arrivant par un relais de la boutique ne les reçoit plus.
   *Fait — voir `12-serveur-derriere-un-reverse-proxy.md`.*
-- [ ] **P3 — Messages d'erreur avec chemins absolus** (sauvegarde, licence ; super-admin seulement).
+- [x] **P3 — Messages d'erreur avec chemins absolus** (sauvegarde, licence ; super-admin seulement).
+  *Fait — voir `47-messages-sans-chemins.html`.*
 
 ## 2. Licence
 

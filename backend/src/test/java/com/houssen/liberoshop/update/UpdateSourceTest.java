@@ -25,4 +25,18 @@ class UpdateSourceTest {
         assertThat(new UpdateProperties(true, "https://example.com/u.json", null, true, null)
                 .automaticEnabled()).isTrue();
     }
+
+    @Test
+    void anUnreachableServerIsToldWithoutTheSystemsMessage() {
+        // A port nothing listens on: the connection is refused at once.
+        UpdateSource source = new UpdateSource(
+                new UpdateProperties(true, "http://127.0.0.1:1/manifest.json", null, true, null));
+
+        assertThatThrownBy(source::fetchManifest)
+                .isInstanceOf(BusinessRuleException.class)
+                .satisfies(e -> {
+                    assertThat(((BusinessRuleException) e).code()).isEqualTo("UPDATE_UNREACHABLE");
+                    assertThat(e.getMessage()).doesNotContain("Exception").doesNotContain("127.0.0.1");
+                });
+    }
 }

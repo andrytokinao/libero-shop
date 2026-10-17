@@ -345,8 +345,9 @@ public class BackupService {
             second.get().writeSidecar(entry);
             secondaryError = null;
         } catch (IOException | RuntimeException e) {
-            secondaryError = "Copie vers " + second.get().directory() + " impossible : " + e.getMessage();
-            log.warn(secondaryError);
+            // The folder the administrator chose is named; what the system tripped on stays in the log.
+            secondaryError = "Copie vers " + second.get().directory() + " impossible : " + reasonOf(e);
+            log.warn("Copie vers le second emplacement impossible.", e);
         }
     }
 

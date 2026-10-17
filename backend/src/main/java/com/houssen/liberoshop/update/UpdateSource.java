@@ -57,8 +57,9 @@ public class UpdateSource {
         try {
             response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
         } catch (IOException e) {
+            log.warn("Serveur de mise a jour injoignable.", e);
             throw new BusinessRuleException("UPDATE_UNREACHABLE",
-                    "Le serveur de mise a jour est injoignable : " + e.getMessage());
+                    "Le serveur de mise a jour est injoignable : verifiez la connexion a Internet.");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessRuleException("UPDATE_UNREACHABLE", "Verification interrompue.");
@@ -94,8 +95,9 @@ public class UpdateSource {
             return response.body();
         } catch (IOException e) {
             deleteQuietly(temp);
+            log.warn("Telechargement de la mise a jour impossible.", e);
             throw new BusinessRuleException("UPDATE_UNREACHABLE",
-                    "Le telechargement de la mise a jour a echoue : " + e.getMessage());
+                    "Le telechargement de la mise a jour a echoue : verifiez la connexion et la place sur le disque.");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             deleteQuietly(temp);

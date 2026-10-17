@@ -1,5 +1,7 @@
 package com.houssen.liberoshop.backup;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
@@ -20,6 +22,8 @@ import java.util.stream.Stream;
  * connection, so a damaged backup is found on the day it is made, not on the day it is needed.
  */
 public class H2BackupEngine implements BackupEngine {
+
+    private static final Logger log = LoggerFactory.getLogger(H2BackupEngine.class);
 
     private final DataSource live;
     private final DatabaseFile database;
@@ -63,7 +67,9 @@ public class H2BackupEngine implements BackupEngine {
                 dataSource.destroy();
             }
         } catch (IOException | DataAccessException e) {
-            return new Verification(false, 0, 0, e.getMessage());
+            // The driver's message carries the server's paths and its JDBC address: the log keeps it.
+            log.warn("Verification de la sauvegarde {} impossible.", zip.getFileName(), e);
+            return new Verification(false, 0, 0, "la base qu'elle contient ne s'ouvre pas (fichier abîmé ou incomplet).");
         } finally {
             deleteQuietly(folder);
         }

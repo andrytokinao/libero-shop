@@ -203,4 +203,18 @@ class BackupServiceTest {
         assertEquals("RESTART_UNAVAILABLE", refused.code());
         assertEquals(1, service.overview().backups().size(), "no before-restore backup taken");
     }
+
+    @Test
+    @DisplayName("a backup that does not open is said so in words, without the server's paths")
+    void illisibleSansChemin() throws java.io.IOException {
+        Path broken = folder.resolve("coffre-secret").resolve("abimee.zip");
+        java.nio.file.Files.createDirectories(broken.getParent());
+        java.nio.file.Files.writeString(broken, "pas une archive");
+
+        BackupEngine.Verification check = engine.verify(broken);
+
+        assertFalse(check.readable());
+        assertFalse(check.error().contains("coffre-secret"), check.error());
+        assertFalse(check.error().contains("jdbc"), check.error());
+    }
 }

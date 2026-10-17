@@ -125,7 +125,7 @@ public class UpdateCoordinator {
                 log.error("Echec de l'application de la mise a jour {}.", version, e);
                 notifications.publish(MaintenanceNotice.TOPIC, new MaintenanceNotice(
                         MaintenanceNotice.Kind.CANCELLED, version,
-                        "La mise a jour a echoue : " + e.getMessage()));
+                        "La mise a jour a echoue. Le detail est dans le journal du serveur."));
             }
         });
     }
