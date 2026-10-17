@@ -65,7 +65,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   utilisateurs, tableaux de bord).
 - [x] **UI-83** — Bouton « Annuler » dans le message (`toast.service.ts`) après une action
   réversible ; écrit le mouvement inverse. (serveur)
-- [ ] **UI-84** — Carte « Premiers pas » sur le tableau de bord d'une boutique neuve.
+- [x] **UI-84** — Carte « Premiers pas » sur le tableau de bord d'une boutique neuve.
 
 ## P3
 

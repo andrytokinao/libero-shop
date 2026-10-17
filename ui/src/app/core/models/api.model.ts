@@ -222,6 +222,16 @@ export interface DepotDashboard {
   pendingInvoices: Invoice[];
 }
 
+/** Mirrors FirstStepsResponse: what a new shop has already set up. */
+export interface FirstSteps {
+  product: boolean;
+  purchasePrice: boolean;
+  barcode: boolean;
+  stock: boolean;
+  cashier: boolean;
+  sale: boolean;
+}
+
 export interface StockDashboard {
   stockValue: number;
   referenceCount: number;

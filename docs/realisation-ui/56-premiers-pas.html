@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Premiers pas d'une boutique neuve</title>
+<meta name="ui-id" content="UI-84">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-84</span>Premiers pas d'une boutique neuve</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-84</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Sur le tableau de bord de l'administrateur et du responsable de dépôt, une carte <strong>« Premiers pas — votre boutique est prête à 50 % »</strong> liste six étapes.</li>
+    <li>Les cases <strong>se cochent seules</strong> : le serveur regarde ce que la boutique contient (un produit importé compte autant qu'un produit saisi).</li>
+    <li>Chaque étape à faire est un lien vers l'endroit où la faire ; « Créer un premier produit » ouvre la fenêtre sur place.</li>
+    <li>Ce qu'un compte ne peut pas faire lui-même est dit sans lien : « Créer un compte caissier — par l'administrateur ».</li>
+    <li>La carte disparaît quand tout est fait, ou sur « Masquer ».</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#recap">4. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Une boutique neuve ouvre sur des tableaux de bord à zéro, sans dire par où commencer : produits, prix d'achat,
+  codes-barres, stock, comptes, première vente. L'ordre compte : sans prix d'entrée, pas de bénéfice ; sans caissier,
+  pas de vente.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 150" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Les six étapes">
+  <style>
+    .t { font: 12.5px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="new" x="10" y="40" width="120" height="60" rx="8"/><text class="t" x="20" y="65">1. Produit</text><text class="s" x="20" y="83">fenêtre sur place</text>
+  <rect class="box" x="150" y="40" width="120" height="60" rx="8"/><text class="t" x="160" y="65">2. Prix d'entrée</text><text class="s" x="160" y="83">Prix et unités</text>
+  <rect class="box" x="290" y="40" width="120" height="60" rx="8"/><text class="t" x="300" y="65">3. Code-barres</text><text class="s" x="300" y="83">Prix et unités</text>
+  <rect class="box" x="430" y="40" width="120" height="60" rx="8"/><text class="t" x="440" y="65">4. Stock</text><text class="s" x="440" y="83">Approvisionnement</text>
+  <rect class="box" x="570" y="40" width="130" height="60" rx="8"/><text class="t" x="580" y="65">5. Caissier</text><text class="s" x="580" y="83">Utilisateurs (admin)</text>
+  <rect class="box" x="720" y="40" width="130" height="60" rx="8"/><text class="t" x="730" y="65">6. Première vente</text><text class="s" x="730" y="83">à la caisse</text>
+  <path class="ln" d="M130,70 L148,70"/><path class="ln" d="M270,70 L288,70"/><path class="ln" d="M410,70 L428,70"/><path class="ln" d="M550,70 L568,70"/><path class="ln" d="M700,70 L718,70"/>
+  <text class="s" x="10" y="130">Chaque case est cochée d'après les données de la boutique, relues à chaque mouvement de stock.</text>
+</svg>
+<div class="caption">Figure 1 — Les six étapes, dans l'ordre où elles se font, et où chacune mène.</div>
+</div>
+<p>Le serveur répond en une fois ce qui est déjà en place (<code>GET /api/dashboard/first-steps</code>) : un produit, un
+  prix d'achat connu, un code-barres (sur le produit ou sur un de ses cartons), du stock, un compte caissier actif, une
+  vente. La carte se recharge à chaque mouvement de stock : créer, recevoir ou vendre coche la case sans recharger la page.</p>
+<p>« Masquer » est retenu sur l'appareil. Une boutique déjà en route, comme la boutique de démonstration, ne voit pas la
+  carte : tout y est déjà fait.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p>Captures avec une boutique simulée à mi-chemin (produit, code-barres et stock en place).</p>
+<p><span class="who">Nadia — responsable de dépôt</span></p>
+<div class="shot"><img src="captures/ui-84-premiers-pas-depot.png" alt="Premiers pas, responsable de dépôt">
+<div class="caption">Figure 2 — Prête à 50 % : le prix d'entrée est un lien ; le compte caissier revient à l'administrateur.</div></div>
+<p><span class="who">Mparany — administrateur</span></p>
+<div class="shot"><img src="captures/ui-84-premiers-pas-admin.png" alt="Premiers pas, administrateur">
+<div class="caption">Figure 3 — Pour l'administrateur, « Créer un compte caissier » mène à la page Utilisateurs.</div></div>
+
+<h2 id="recap">4. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/service/FirstStepsService.java</code></td><td>nouveau : les six étapes lues dans les données</td></tr>
+<tr><td><code>backend/…/web/DashboardController.java</code>, <code>web/dto/FirstStepsResponse.java</code></td><td><code>GET /api/dashboard/first-steps</code> (responsable de dépôt, administrateur)</td></tr>
+<tr><td><code>backend/…/repository/ProductRepository.java</code>, <code>ProductPackagingRepository.java</code></td><td>questions « existe-t-il… ? »</td></tr>
+<tr><td><code>ui/…/core/setup/first-steps.ts</code></td><td>nouveau : étapes, liens selon le rôle, pourcentage</td></tr>
+<tr><td><code>ui/…/shared/components/first-steps.component.ts</code></td><td>nouveau : la carte, « Masquer »</td></tr>
+<tr><td><code>manager-dashboard.component.ts</code>, <code>admin-overview.component.ts</code></td><td>la carte en haut ; « Nouveau produit » sur place</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Boutique neuve : rien de fait ; chaque étape suit les données ; un code-barres de carton compte</td><td><code>FirstStepsServiceTest</code></td></tr>
+<tr><td>Pourcentage ; premier produit sur place ; liens propres à chaque rôle ; compte caissier « par l'administrateur »</td><td><code>first-steps.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (625 tests), interface au vert (294 tests).</p>
+</main>
+</body>
+</html>

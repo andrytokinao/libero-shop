@@ -2,9 +2,11 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.DashboardService;
+import com.houssen.liberoshop.service.FirstStepsService;
 import com.houssen.liberoshop.web.dto.AdminDashboardResponse;
 import com.houssen.liberoshop.web.dto.CashierDashboardResponse;
 import com.houssen.liberoshop.web.dto.DepotDashboardResponse;
+import com.houssen.liberoshop.web.dto.FirstStepsResponse;
 import com.houssen.liberoshop.web.dto.RevenueReportResponse;
 import com.houssen.liberoshop.web.dto.StockDashboardResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,10 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final FirstStepsService firstStepsService;
     private final CurrentUser currentUser;
 
-    public DashboardController(DashboardService dashboardService, CurrentUser currentUser) {
+    public DashboardController(DashboardService dashboardService, FirstStepsService firstStepsService,
+                               CurrentUser currentUser) {
         this.dashboardService = dashboardService;
+        this.firstStepsService = firstStepsService;
         this.currentUser = currentUser;
     }
 
@@ -50,6 +55,13 @@ public class DashboardController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public AdminDashboardResponse admin() {
         return dashboardService.forAdmin();
+    }
+
+    /** The "Premiers pas" card of a new shop, for those who set it up. */
+    @GetMapping("/first-steps")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public FirstStepsResponse firstSteps() {
+        return firstStepsService.progress();
     }
 
     @GetMapping("/revenue")

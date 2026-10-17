@@ -6,6 +6,7 @@ import {
   AdminDashboard,
   CashierDashboard,
   DepotDashboard,
+  FirstSteps,
   RevenueReport,
   StockDashboard,
 } from '../models';
@@ -29,6 +30,11 @@ export class DashboardApi {
 
   admin(): Observable<AdminDashboard> {
     return this.http.get<AdminDashboard>(`${API_BASE_URL}/dashboard/admin`);
+  }
+
+  /** The "Premiers pas" of a new shop. */
+  firstSteps(): Observable<FirstSteps> {
+    return this.http.get<FirstSteps>(`${API_BASE_URL}/dashboard/first-steps`);
   }
 
   revenue(): Observable<RevenueReport> {

@@ -15,6 +15,8 @@ public interface ProductPackagingRepository extends JpaRepository<ProductPackagi
 
     boolean existsByBarcode(String barcode);
 
+    boolean existsByBarcodeIsNotNull();
+
     /** The packaging a scanned code designates -- a sack's own barcode -- with its product. */
     @Query("select p from ProductPackaging p join fetch p.product where p.barcode = :barcode")
     Optional<ProductPackaging> findWithProductByBarcode(@Param("barcode") String barcode);

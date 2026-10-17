@@ -4,6 +4,7 @@ import { DashboardApi } from '../../core/api/dashboard.api';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { StockDashboard } from '../../core/models';
 import { reloadOnStockChange } from '../../core/realtime/reload-on';
+import { FirstStepsComponent } from '../../shared/components/first-steps.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
@@ -23,8 +24,11 @@ const EMPTY: StockDashboard = {
 @Component({
   selector: 'app-manager-dashboard',
   standalone: true,
-  imports: [KpiCardComponent, ProductDialogsComponent, StockTableComponent, AriaryPipe],
+  imports: [FirstStepsComponent, KpiCardComponent, ProductDialogsComponent, StockTableComponent, AriaryPipe],
   template: `
+    <!-- A new shop: what is left to set up, each box ticking itself. -->
+    <app-first-steps #steps role="manager" (createProduct)="asked.set({ action: 'create' })" />
+
     <div class="grid g4">
       <app-kpi-card
         label="Valeur totale du stock"
@@ -61,7 +65,7 @@ const EMPTY: StockDashboard = {
       />
     </div>
 
-    <app-product-dialogs [request]="asked()" (changed)="resource.reload()" (closed)="asked.set(null)" />
+    <app-product-dialogs [request]="asked()" (changed)="resource.reload(); steps.refresh()" (closed)="asked.set(null)" />
   `,
 })
 export class ManagerDashboardComponent {

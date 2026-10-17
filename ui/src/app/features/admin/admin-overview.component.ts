@@ -4,6 +4,7 @@ import { DashboardApi } from '../../core/api/dashboard.api';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { AdminDashboard } from '../../core/models';
 import { reloadOnOrderChange, reloadOnStockChange } from '../../core/realtime/reload-on';
+import { FirstStepsComponent } from '../../shared/components/first-steps.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
@@ -30,6 +31,7 @@ const EMPTY: AdminDashboard = {
   selector: 'app-admin-overview',
   standalone: true,
   imports: [
+    FirstStepsComponent,
     KpiCardComponent,
     ProductDialogsComponent,
     RevenueBarsComponent,
@@ -37,6 +39,9 @@ const EMPTY: AdminDashboard = {
     AriaryPipe,
   ],
   template: `
+    <!-- A new shop: what is left to set up, each box ticking itself. -->
+    <app-first-steps #steps role="admin" (createProduct)="asked.set({ action: 'create' })" />
+
     <div class="grid g4">
       <app-kpi-card
         label="Chiffre d'affaires du jour"
@@ -109,7 +114,7 @@ const EMPTY: AdminDashboard = {
       </div>
     </div>
 
-    <app-product-dialogs [request]="asked()" (changed)="resource.reload()" (closed)="asked.set(null)" />
+    <app-product-dialogs [request]="asked()" (changed)="resource.reload(); steps.refresh()" (closed)="asked.set(null)" />
   `,
 })
 export class AdminOverviewComponent {

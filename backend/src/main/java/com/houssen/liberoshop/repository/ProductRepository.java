@@ -25,6 +25,13 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByBarcode(String barcode);
 
+    boolean existsByBarcodeIsNotNull();
+
+    /** A purchase price known for at least one product. */
+    boolean existsByAverageCostIsNotNull();
+
+    boolean existsByStockQuantityGreaterThan(BigDecimal quantity);
+
     /** Whether a product is already called that, capitals aside. */
     boolean existsByNameIgnoreCase(String name);
 
