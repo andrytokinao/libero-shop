@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { PAYMENT_METHOD_LABELS, PaymentMethod, PaymentStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { HelpButtonComponent } from '../../shared/components/help-button.component';
 
 /** How the customer settles, as the checkout dialog hands it back. */
 export interface SaleCheckout {
@@ -23,7 +24,7 @@ export interface SaleCheckout {
 @Component({
   selector: 'app-sale-checkout-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe],
+  imports: [HelpButtonComponent, FormsModule, AriaryPipe],
   host: {
     '(document:keydown.escape)': 'cancel()',
     '(document:keydown.f10)': 'submitFromKey($event)',
@@ -42,6 +43,7 @@ export interface SaleCheckout {
             <h2 id="checkout-title">Encaisser la vente</h2>
             <div class="sub muted">{{ units() }} article(s)</div>
           </div>
+          <app-help topic="checkout" />
           <button class="x" type="button" aria-label="Fermer" (click)="cancel()">✕</button>
         </div>
 

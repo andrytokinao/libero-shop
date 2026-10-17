@@ -5,6 +5,7 @@ import { ADJUSTMENT_REASONS, AdjustmentReason, Product } from '../../core/models
 import { formatAmount, formatQuantity, roundQuantity, unitsOf } from '../../core/sale/sale-unit';
 import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * Corrects one product's stock, from its menu: breakage, loss, or the shelf counted.
@@ -16,7 +17,7 @@ import { StockUndo } from '../../core/stock/stock-undo';
 @Component({
   selector: 'app-stock-adjust-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [HelpButtonComponent, FormsModule],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -29,6 +30,7 @@ import { StockUndo } from '../../core/stock/stock-undo';
               est gardée dans l'historique, avec son motif.
             </div>
           </div>
+          <app-help topic="stock-adjust" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

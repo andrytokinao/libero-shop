@@ -9,6 +9,7 @@ import { CameraScanButtonComponent } from './camera-scan-button.component';
 import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
 import { UnitModelsDialogComponent } from './unit-models-dialog.component';
+import { HelpButtonComponent } from './help-button.component';
 
 /** The form as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -36,6 +37,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
   selector: 'app-product-create-dialog',
   standalone: true,
   imports: [
+    HelpButtonComponent,
     FormsModule,
     CameraScanButtonComponent,
     CategoryPickerComponent,
@@ -54,6 +56,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
               les autres s'ajoutent ensuite avec « Unités et packaging » dans le menu du produit.
             </div>
           </div>
+          <app-help topic="product-create" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

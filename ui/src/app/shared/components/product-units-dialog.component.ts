@@ -40,6 +40,7 @@ import { FilterTab, FilterTabsComponent } from './filter-tabs.component';
 import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
 import { UnitModelsDialogComponent } from './unit-models-dialog.component';
+import { HelpButtonComponent } from './help-button.component';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -111,6 +112,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
   selector: 'app-product-units-dialog',
   standalone: true,
   imports: [
+    HelpButtonComponent,
     FormsModule,
     NgTemplateOutlet,
     AriaryPipe,
@@ -137,6 +139,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
               Les unités courantes (g, kg, tonne…) se cochent depuis un modèle.
             </details>
           </div>
+          <app-help topic="product-config" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

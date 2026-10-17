@@ -8,6 +8,7 @@ import {
   Invoice,
 } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * Cancelling an unpaid order: a reason in one tap, a comment when it is needed, and a sentence
@@ -19,7 +20,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 @Component({
   selector: 'app-cancel-order-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe],
+  imports: [HelpButtonComponent, FormsModule, AriaryPipe],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -31,6 +32,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
               {{ invoice.clientName }} — {{ invoice.sale.totalAmount | ariary }}
             </div>
           </div>
+          <app-help topic="cancel-order" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

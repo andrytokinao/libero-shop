@@ -8,6 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { InventoryGap, readCount, summarize } from '../../core/stock/inventory';
 import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { HelpButtonComponent } from '../../shared/components/help-button.component';
 
 /**
  * "Compter ce rayon": the shelf counted product by product, the gaps summed up before anything
@@ -18,7 +19,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-rayon-count-dialog',
   standalone: true,
-  imports: [AriaryPipe],
+  imports: [HelpButtonComponent, AriaryPipe],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -34,6 +35,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               }
             </div>
           </div>
+          <app-help topic="rayon-count" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

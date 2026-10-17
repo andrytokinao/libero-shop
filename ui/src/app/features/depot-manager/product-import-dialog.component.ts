@@ -12,6 +12,7 @@ import {
 } from '../../core/models';
 import { formatAmount, roundQuantity } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
+import { HelpButtonComponent } from '../../shared/components/help-button.component';
 
 /** How many lines a page shows. A screen's worth, so the ticking stays a scan and not a scroll. */
 const PAGE_SIZE = 25;
@@ -74,7 +75,7 @@ export interface ProductImportRow {
 @Component({
   selector: 'app-product-import-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe],
+  imports: [HelpButtonComponent, FormsModule, AriaryPipe],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -87,6 +88,7 @@ export interface ProductImportRow {
               Rien n'est encore enregistré.
             </div>
           </div>
+          <app-help topic="import" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

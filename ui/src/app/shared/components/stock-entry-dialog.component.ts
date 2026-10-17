@@ -13,6 +13,7 @@ import {
   unitsOf,
 } from '../../core/sale/sale-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * Adds stock to one product, from its menu: how many, in which unit, at what price, from whom.
@@ -24,7 +25,7 @@ import { StockUndo } from '../../core/stock/stock-undo';
 @Component({
   selector: 'app-stock-entry-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [HelpButtonComponent, FormsModule],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -37,6 +38,7 @@ import { StockUndo } from '../../core/stock/stock-undo';
               gardée dans l'historique du produit, à votre nom.
             </div>
           </div>
+          <app-help topic="stock-entry" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { Supplier } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * A wholesaler added without leaving the receipt: a name, a phone number if known. The screen
@@ -14,7 +15,7 @@ import { ToastService } from '../../core/services/toast.service';
 @Component({
   selector: 'app-supplier-create-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [HelpButtonComponent, FormsModule],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -24,6 +25,7 @@ import { ToastService } from '../../core/services/toast.service';
             <h2 id="sn-title">{{ editing() ? 'Modifier le fournisseur' : 'Nouveau fournisseur' }}</h2>
             <div class="sub muted">{{ hint() }}</div>
           </div>
+          <app-help topic="supplier" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
         <div class="modal-body">

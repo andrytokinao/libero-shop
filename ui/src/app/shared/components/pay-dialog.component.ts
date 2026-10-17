@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Invoice, PAYMENT_METHOD_LABELS, PaymentMethod } from '../../core/models';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * Settling an order at the till: the amount in large, then one button per way of paying.
@@ -10,7 +11,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 @Component({
   selector: 'app-pay-dialog',
   standalone: true,
-  imports: [AriaryPipe],
+  imports: [HelpButtonComponent, AriaryPipe],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -20,6 +21,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
             <h2 id="pay-title">Encaisser {{ invoice.invoiceNumber }}</h2>
             <div class="sub muted">{{ invoice.clientName }}</div>
           </div>
+          <app-help topic="pay" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

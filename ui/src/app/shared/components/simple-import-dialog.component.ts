@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HelpButtonComponent } from './help-button.component';
 import {
   ImportAction,
   ImportOutcome,
@@ -44,7 +45,7 @@ interface Row {
 @Component({
   selector: 'app-simple-import-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [HelpButtonComponent, FormsModule],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -57,6 +58,7 @@ interface Row {
               Rien n'est encore enregistré.
             </div>
           </div>
+          <app-help topic="import" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

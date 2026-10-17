@@ -23,6 +23,7 @@ import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { ProductPickerComponent } from './product-picker.component';
 import { SupplierCreateDialogComponent } from './supplier-create-dialog.component';
+import { HelpButtonComponent } from './help-button.component';
 
 /**
  * A delivery note typed in one go: the supplier, then a line per product — scanned or picked —
@@ -35,7 +36,7 @@ import { SupplierCreateDialogComponent } from './supplier-create-dialog.componen
 @Component({
   selector: 'app-delivery-dialog',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, ProductPickerComponent, SupplierCreateDialogComponent],
+  imports: [HelpButtonComponent, FormsModule, AriaryPipe, ProductPickerComponent, SupplierCreateDialogComponent],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -45,6 +46,7 @@ import { SupplierCreateDialogComponent } from './supplier-create-dialog.componen
             <h2 id="dn-title">Réception — bon de livraison</h2>
             <div class="sub muted">Un fournisseur, une ligne par produit, un seul enregistrement.</div>
           </div>
+          <app-help topic="delivery" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

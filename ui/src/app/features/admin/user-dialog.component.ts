@@ -10,6 +10,7 @@ import {
 } from '../../core/models';
 import { ProfilePhotoPickerComponent } from '../../shared/components/profile-photo-picker.component';
 import { RolePickerComponent } from './role-picker.component';
+import { HelpButtonComponent } from '../../shared/components/help-button.component';
 
 /**
  * Opening an account, or correcting one.
@@ -26,7 +27,7 @@ import { RolePickerComponent } from './role-picker.component';
 @Component({
   selector: 'app-user-dialog',
   standalone: true,
-  imports: [FormsModule, RolePickerComponent, ProfilePhotoPickerComponent],
+  imports: [HelpButtonComponent, FormsModule, RolePickerComponent, ProfilePhotoPickerComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -44,6 +45,7 @@ import { RolePickerComponent } from './role-picker.component';
               }
             </div>
           </div>
+          <app-help topic="user" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 

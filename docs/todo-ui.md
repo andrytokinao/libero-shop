@@ -78,7 +78,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [ ] **UI-53** — Fiche courte d'un produit pendant la vente (appui long). Décision attendue.
 - [x] **UI-54** — Bouton « ⌨ » pour la légende des touches sous 980 px.
 - [x] **UI-71** — « ⋮ » des tables (renommer, copier, imprimer QR, nouveau code, supprimer). (serveur)
-- [ ] **UI-85** — « ? » d'aide dans l'en-tête de chaque fenêtre.
+- [x] **UI-85** — « ? » d'aide dans l'en-tête de chaque fenêtre.
 - [ ] **UI-86** — Téléphone : appui long = « ⋮ », menu en panneau du bas sous 600 px.
 - [ ] **UI-89** — Vente : rayons en barre compacte au-dessus de la grille (les tuiles de rayon
   occupent deux rangées avant le premier produit).

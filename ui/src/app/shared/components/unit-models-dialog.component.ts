@@ -5,6 +5,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { UnitModelApi } from '../../core/api/unit-model.api';
 import { formatDecimal, parseDecimal } from '../../core/catalog/decimal-text';
 import { UnitModel, UnitModelUnit } from '../../core/models';
+import { HelpButtonComponent } from './help-button.component';
 
 /** A unit being added to one model, as typed. */
 interface UnitDraft {
@@ -28,7 +29,7 @@ const EMPTY_UNIT: UnitDraft = { label: '', quantity: '', reference: null };
 @Component({
   selector: 'app-unit-models-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [HelpButtonComponent, FormsModule],
   template: `
     <div class="modal-backdrop umd-backdrop" (click)="onBackdrop($event)">
       <div class="modal wide umd" role="dialog" aria-modal="true" aria-labelledby="umd-title">
@@ -41,6 +42,7 @@ const EMPTY_UNIT: UnitDraft = { label: '', quantity: '', reference: null };
               vous modifiez un modèle.
             </div>
           </div>
+          <app-help topic="unit-models" />
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
 
