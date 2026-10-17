@@ -33,7 +33,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [ ] **UI-87** — Menu latéral d'un compte à plusieurs rôles (Caisse · Stock) : deux « Tableau de
   bord » indistincts et liste plus haute que l'écran ; nommer les entrées par section, sections
   repliables.
-- [ ] **UI-88** — Page de vente : une ressource demandée au chargement répond 404 (console) ;
+- [x] **UI-88** — Page de vente : une ressource demandée au chargement répond 404 (console) ;
   la retrouver et la corriger.
 
 ## P2
