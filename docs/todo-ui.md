@@ -74,7 +74,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-35** — Correction de stock dans une autre unité (« 2 cartons »).
 - [x] **UI-36** — Inventaire d'un rayon avec résumé des écarts. (serveur)
 - [x] **UI-51** — « ⋮ » sur les lignes de factures (actions de `invoice-actions.ts`).
-- [ ] **UI-52** — « ⋮ » sur une ligne du panier (unité, quantité, retirer).
+- [x] **UI-52** — « ⋮ » sur une ligne du panier (unité, quantité, retirer).
 - [ ] **UI-53** — Fiche courte d'un produit pendant la vente (appui long). Décision attendue.
 - [ ] **UI-54** — Bouton « ⌨ » pour la légende des touches sous 980 px.
 - [ ] **UI-71** — « ⋮ » des tables (renommer, copier, imprimer QR, nouveau code, supprimer). (serveur)

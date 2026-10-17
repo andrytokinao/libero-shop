@@ -1,5 +1,6 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, ElementRef, Input, computed, signal, viewChild } from '@angular/core';
 import { Cart, CartLine } from '../../core/sale/cart';
+import { cartLineMenu, unitOfEntry } from '../../core/sale/cart-line-menu';
 import {
   SaleUnit,
   formatQuantity,
@@ -7,6 +8,7 @@ import {
   sameUnit,
   unitsOf,
 } from '../../core/sale/sale-unit';
+import { ActionMenuComponent } from './action-menu.component';
 
 /**
  * The quantity of one basket line, and the unit it is sold in.
@@ -21,6 +23,7 @@ import {
 @Component({
   selector: 'app-cart-line-quantity',
   standalone: true,
+  imports: [ActionMenuComponent],
   template: `
     <div class="cq">
       <span class="cq-qty">
@@ -33,6 +36,7 @@ import {
           −
         </button>
         <input
+          #quantityField
           class="cq-input"
           type="text"
           inputmode="decimal"
@@ -70,6 +74,13 @@ import {
       } @else if (line.unit.label) {
         <span class="cq-label muted">{{ line.unit.label }}</span>
       }
+      <!-- The same gestures, said in words: for whoever does not know them yet. -->
+      <app-action-menu
+        class="cq-menu"
+        [actions]="menu()"
+        [label]="'Ligne ' + line.product.name"
+        (picked)="pick($event)"
+      />
     </div>
   `,
   styles: `
@@ -124,6 +135,10 @@ import {
     .cq-label {
       font-size: 12px;
     }
+
+    .cq-menu {
+      margin-left: auto;
+    }
   `,
 })
 export class CartLineQuantityComponent {
@@ -145,6 +160,25 @@ export class CartLineQuantityComponent {
   });
 
   protected readonly formatQuantity = formatQuantity;
+  protected readonly menu = computed(() => {
+    const line = this.current();
+    return line ? cartLineMenu(line) : [];
+  });
+  private readonly quantityField = viewChild.required<ElementRef<HTMLInputElement>>('quantityField');
+
+  protected pick(id: string): void {
+    if (id === 'remove') {
+      this.cart.removeLine(this.line);
+    } else if (id === 'quantity') {
+      this.quantityField().nativeElement.focus();
+      this.quantityField().nativeElement.select();
+    } else {
+      const unit = unitOfEntry(this.line, id);
+      if (unit) {
+        this.cart.setLineUnit(this.line, unit);
+      }
+    }
+  }
 
   protected isCurrent(unit: SaleUnit): boolean {
     return sameUnit(unit, this.line.unit);

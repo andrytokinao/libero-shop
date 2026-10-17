@@ -166,6 +166,11 @@ export class Cart {
     }
   }
 
+  /** Takes the line off the ticket, whatever its quantity: "Retirer" in its menu. */
+  removeLine(line: CartLine): void {
+    this.put(line.product, line.unit, 0);
+  }
+
   /** Sets a line to a typed quantity, capped by the stock. */
   setLineQuantity(line: CartLine, quantity: number): void {
     this.put(line.product, line.unit, roundQuantity(quantity));

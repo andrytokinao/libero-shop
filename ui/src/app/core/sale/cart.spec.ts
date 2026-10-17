@@ -21,6 +21,15 @@ describe('Cart', () => {
 
   beforeEach(() => (cart = new Cart()));
 
+  it('« Retirer du panier » enlève la ligne entière, les autres restent', () => {
+    cart.add(product(1, 10), 4);
+    cart.add(product(2, 10), 1);
+
+    cart.removeLine(cart.lines()[0]);
+
+    expect(cart.lines().map((line) => line.product.id)).toEqual([2]);
+  });
+
   it('keeps lines in the order they were added, and sums them', () => {
     cart.add(product(2, 10, 500), 3);
     cart.add(product(1, 10, 2000));
