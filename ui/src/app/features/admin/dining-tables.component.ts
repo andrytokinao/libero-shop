@@ -9,6 +9,7 @@ import { copyToClipboard } from '../../core/utils/clipboard.util';
 import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { QrCodeComponent } from '../../shared/components/qr-code.component';
+import { LongPressMenuDirective } from '../../shared/directives/long-press-menu.directive';
 
 type TableAction = 'rename' | 'copy' | 'print' | 'regenerate' | 'delete';
 
@@ -40,7 +41,7 @@ interface BaseAddress {
 @Component({
   selector: 'app-dining-tables',
   standalone: true,
-  imports: [FormsModule, QrCodeComponent, ActionMenuComponent, ConfirmDialogComponent],
+  imports: [LongPressMenuDirective, FormsModule, QrCodeComponent, ActionMenuComponent, ConfirmDialogComponent],
   template: `
     <div class="card no-print">
       <h2>Tables <small>une table = un QR code à poser dessus</small></h2>
@@ -92,7 +93,7 @@ interface BaseAddress {
     @if (tables().length) {
       <div class="qr-grid">
         @for (table of tables(); track table.id) {
-          <div class="qr-card" [class.no-print]="printing() !== null && printing() !== table.id">
+          <div class="qr-card" appLongPressMenu [class.no-print]="printing() !== null && printing() !== table.id">
             <div class="qr-head">
               <div class="qr-name">{{ table.name }}</div>
               <app-action-menu

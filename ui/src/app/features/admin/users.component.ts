@@ -21,6 +21,7 @@ import { LoadStateComponent } from '../../shared/components/load-state.component
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { UserDialogComponent } from './user-dialog.component';
 import { UserPasswordDialogComponent } from './user-password-dialog.component';
+import { LongPressMenuDirective } from '../../shared/directives/long-press-menu.directive';
 
 /**
  * Account administration: who works here, what each of them may do, and what they did today.
@@ -45,6 +46,7 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
   selector: 'app-users',
   standalone: true,
   imports: [
+    LongPressMenuDirective,
     LoadStateComponent,
     AriaryPipe,
     UserDialogComponent,
@@ -82,7 +84,7 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
             </thead>
             <tbody>
               @for (row of activity(); track row.user.id) {
-                <tr [class.off]="!row.user.enabled">
+                <tr appLongPressMenu [class.off]="!row.user.enabled">
                   <td><app-user-avatar [user]="row.user" [showName]="true" /></td>
                   <td class="muted">{{ row.user.username }}</td>
                   <td class="muted">{{ describe(row.user.roles) }}</td>

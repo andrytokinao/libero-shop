@@ -7,11 +7,18 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 import { LoadStateComponent, showsEmpty } from './load-state.component';
 import { ProductMenuComponent } from './product-menu.component';
 import { StockStatusBadgeComponent } from './status-badges.component';
+import { LongPressMenuDirective } from '../directives/long-press-menu.directive';
 
 @Component({
   selector: 'app-stock-table',
   standalone: true,
-  imports: [AriaryPipe, LoadStateComponent, ProductMenuComponent, StockStatusBadgeComponent],
+  imports: [
+    AriaryPipe,
+    LoadStateComponent,
+    LongPressMenuDirective,
+    ProductMenuComponent,
+    StockStatusBadgeComponent,
+  ],
   template: `
     <app-load-state [of]="state" what="le stock" />
     @if (products.length) {
@@ -34,7 +41,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
           </thead>
           <tbody>
             @for (product of products; track product.id) {
-              <tr>
+              <tr appLongPressMenu>
                 <td>
                   <!-- Touching the name opens the product at a glance, its actions as buttons. -->
                   @if (manage) {

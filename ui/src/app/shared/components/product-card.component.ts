@@ -5,6 +5,7 @@ import { formatAmount, stockLabel } from '../../core/sale/sale-unit';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { ProductMenuComponent } from './product-menu.component';
 import { StockStatusBadgeComponent } from './status-badges.component';
+import { LongPressMenuDirective } from '../directives/long-press-menu.directive';
 
 /**
  * One product as a card: what it is, what it sells for, what is left of it — and its "⋮" menu
@@ -17,9 +18,9 @@ import { StockStatusBadgeComponent } from './status-badges.component';
 @Component({
   selector: 'app-product-card',
   standalone: true,
-  imports: [AriaryPipe, ProductMenuComponent, StockStatusBadgeComponent],
+  imports: [LongPressMenuDirective, AriaryPipe, ProductMenuComponent, StockStatusBadgeComponent],
   template: `
-    <article class="pc" [class.low]="product().lowStock">
+    <article class="pc" appLongPressMenu [class.low]="product().lowStock">
       <header class="pc-head">
         <div class="pc-title">
           @if (manage()) {

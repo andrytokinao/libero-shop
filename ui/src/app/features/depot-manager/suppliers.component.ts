@@ -10,6 +10,7 @@ import { SimpleImportComponent } from '../../shared/components/simple-import.com
 import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
 import { SupplierPurchasesDialogComponent } from '../../shared/components/supplier-purchases-dialog.component';
 import { LoadStateComponent } from '../../shared/components/load-state.component';
+import { LongPressMenuDirective } from '../../shared/directives/long-press-menu.directive';
 
 /** What can be done to one supplier from its "⋮". */
 type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
@@ -18,6 +19,7 @@ type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
   selector: 'app-suppliers',
   standalone: true,
   imports: [
+    LongPressMenuDirective,
     LoadStateComponent,
     SimpleImportComponent,
     SupplierCreateDialogComponent,
@@ -53,7 +55,7 @@ type SupplierAction = 'edit' | 'prices' | 'receive' | 'retire';
             </thead>
             <tbody>
               @for (supplier of suppliers(); track supplier.id) {
-                <tr [class.sp-retired]="supplier.retired">
+                <tr appLongPressMenu [class.sp-retired]="supplier.retired">
                   <td>
                     {{ supplier.name }}
                     @if (supplier.retired) {

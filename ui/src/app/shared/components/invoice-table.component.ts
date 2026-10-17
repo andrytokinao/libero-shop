@@ -12,6 +12,7 @@ import { InvoiceDetailFlowComponent } from './invoice-detail-flow.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 import { HandlerChipComponent } from './handler-chip.component';
 import { UserAvatarComponent } from './user-avatar.component';
+import { LongPressMenuDirective } from '../directives/long-press-menu.directive';
 
 /**
  * The invoice list shared by the cash-desk, depot and admin screens.
@@ -25,6 +26,7 @@ import { UserAvatarComponent } from './user-avatar.component';
   selector: 'app-invoice-table',
   standalone: true,
   imports: [
+    LongPressMenuDirective,
     ActionMenuComponent,
     LoadStateComponent,
     DatePipe,
@@ -64,7 +66,7 @@ import { UserAvatarComponent } from './user-avatar.component';
           </thead>
           <tbody>
             @for (invoice of invoices; track invoice.id) {
-              <tr>
+              <tr appLongPressMenu>
                 <td>{{ invoice.invoiceNumber }}</td>
                 @if (showDate) {
                   <td class="muted">{{ invoice.invoiceDate | date: 'dd/MM HH:mm' }}</td>
@@ -123,7 +125,7 @@ import { UserAvatarComponent } from './user-avatar.component';
       <!-- Same rows, phone layout. Hidden by CSS above the breakpoint. -->
       <ul class="inv-cards">
         @for (invoice of invoices; track invoice.id) {
-          <li class="inv-card">
+          <li class="inv-card" appLongPressMenu>
             <div class="head">
               <strong>{{ invoice.invoiceNumber }}</strong>
               @if (showDate) {

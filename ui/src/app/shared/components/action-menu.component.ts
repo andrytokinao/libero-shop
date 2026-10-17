@@ -72,6 +72,8 @@ const GROUP_HEIGHT = 24;
         [style.max-height.px]="place().maxHeight"
         (keydown)="onKey($event)"
       >
+        <!-- On a phone the menu is a panel from the bottom: it says what it is about. -->
+        <div class="am-sheet-title" role="presentation">{{ label() }}</div>
         @for (action of actions(); track action.id; let i = $index) {
           @if (action.group && action.group !== actions()[i - 1]?.group) {
             <div class="am-group" role="presentation">{{ action.group }}</div>
@@ -139,6 +141,50 @@ const GROUP_HEIGHT = 24;
       box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
       display: flex;
       flex-direction: column;
+      /* Not the alignment of the cell it was opened from: a figure column is right-aligned. */
+      text-align: left;
+    }
+
+    .am-sheet-title {
+      display: none;
+    }
+
+    /*
+     * On a phone, a panel from the bottom of the screen, under the thumb, with taller entries —
+     * rather than a small list under a small button.
+     */
+    @media (max-width: 600px) {
+      .am-catch {
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      .am-panel {
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        bottom: 0 !important;
+        max-width: none;
+        max-height: 75vh !important;
+        border-radius: 16px 16px 0 0;
+        padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+      }
+
+      .am-sheet-title {
+        display: block;
+        padding: 8px 12px 10px;
+        font-weight: 700;
+        font-size: 14px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .am-item {
+        font-size: 15px;
+        padding: 14px 12px;
+      }
     }
 
     .am-group {
@@ -197,8 +243,15 @@ export class ActionMenuComponent<T extends string = string> {
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
 
-  /** Listened to while open only, and in the capture phase: a scroll does not bubble. */
-  private readonly onScroll = (): void => this.close();
+  /**
+   * Listened to while open only, and in the capture phase: a scroll does not bubble. The page
+   * moving closes the menu; the menu scrolling through its own entries does not.
+   */
+  private readonly onScroll = (event: Event): void => {
+    if (!this.panel()?.nativeElement.contains(event.target as Node)) {
+      this.close();
+    }
+  };
 
   constructor() {
     inject(DestroyRef).onDestroy(() => document.removeEventListener('scroll', this.onScroll, true));
