@@ -326,6 +326,14 @@ export const routes: Routes = [
           import('./features/admin/global-stock.component').then((m) => m.GlobalStockComponent),
       },
       {
+        path: 'corrections',
+        title: 'Corrections de stock',
+        loadComponent: () =>
+          import('./features/depot-manager/stock-adjustments.component').then(
+            (m) => m.StockAdjustmentsComponent,
+          ),
+      },
+      {
         path: 'factures',
         title: 'Toutes les factures',
         loadComponent: () =>

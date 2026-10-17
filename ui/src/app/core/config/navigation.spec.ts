@@ -22,4 +22,9 @@ describe('sidebar sections', () => {
   it('opens the first section on a page that belongs to none, such as the profile', () => {
     expect([...openSections(cashierAndStock, null, new Set())]).toEqual([cashierAndStock[0].segment]);
   });
+
+  it('offre au super-admin les corrections de stock, que le serveur lui permet', () => {
+    const admin = navigationFor([RoleApp.SUPER_ADMIN]);
+    expect(admin[0].items.map((item) => item.path)).toContain('/admin/corrections');
+  });
 });

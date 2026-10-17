@@ -101,6 +101,8 @@ export const ROLE_NAVIGATION: Record<RoleApp, RoleNavigation> = {
       { icon: 'percent', label: 'Bénéfices & stock', path: '/admin/marges' },
       { icon: 'tag', label: 'Prix et unités', path: '/admin/prix-et-unites' },
       { icon: 'warehouse', label: 'Stock global', path: '/admin/stock-global' },
+      // The server lets the administrator correct the stock; the screen is the depot's own.
+      { icon: 'clipboard', label: 'Corrections de stock', path: '/admin/corrections' },
       { icon: 'invoice', label: 'Toutes les factures', path: '/admin/factures' },
       { icon: 'users', label: 'Utilisateurs', path: '/admin/utilisateurs' },
       { icon: 'settings', label: 'Configuration', path: '/admin/configuration' },

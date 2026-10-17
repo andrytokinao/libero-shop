@@ -183,8 +183,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste
   déroulante complète (même limite sur l'écran d'approvisionnement).
   *Fait — voir `realisation-ui/32-selecteur-de-produit.html` (UI-30).*
-- [ ] **P3 — Corrections de stock dans le menu du super-admin** (autorisé côté serveur, absent de
+- [x] **P3 — Corrections de stock dans le menu du super-admin** (autorisé côté serveur, absent de
   son menu).
+  *Fait — voir `46-corrections-dans-le-menu-admin.html`.*
 - [x] **P3 — Inventaire complet (idée).** Saisir le comptage de tout un rayon en une fois, avec
   récapitulatif des écarts avant validation.
   *Fait — voir `realisation-ui/60-inventaire-d-un-rayon.html` (UI-36).*
