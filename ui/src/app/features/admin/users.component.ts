@@ -14,6 +14,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -36,6 +37,9 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
  * your own account off, and switching off the last super-admin who can still sign in. The
  * server refuses both anyway; showing why up front beats a toast after the click.
  */
+/** What can be done to one account from its "⋮". */
+type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
+
 @Component({
   selector: 'app-users',
   standalone: true,
@@ -45,6 +49,7 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
     UserPasswordDialogComponent,
     UserAvatarComponent,
     ConfirmDialogComponent,
+    ActionMenuComponent,
   ],
   template: `
     <div class="card">
@@ -90,44 +95,11 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
                   <td class="num">{{ row.deliveriesToday || '—' }}</td>
                   <td class="num">{{ row.remittances || '—' }}</td>
                   <td class="col-actions">
-                    <div class="actions">
-                      <button
-                        class="btn small ghost"
-                        type="button"
-                        [disabled]="busyId() === row.user.id"
-                        (click)="openEdit(row.user)"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        class="btn small ghost"
-                        type="button"
-                        [disabled]="busyId() === row.user.id"
-                        (click)="passwordFor.set(row.user)"
-                      >
-                        Mot de passe
-                      </button>
-                      @if (row.user.enabled) {
-                        <button
-                          class="btn small ghost danger"
-                          type="button"
-                          [disabled]="busyId() === row.user.id || !!blockedReason(row.user)"
-                          [title]="blockedReason(row.user) ?? 'Coupe l’accès sans rien effacer'"
-                          (click)="disabling.set(row.user)"
-                        >
-                          Désactiver
-                        </button>
-                      } @else {
-                        <button
-                          class="btn small ghost"
-                          type="button"
-                          [disabled]="busyId() === row.user.id"
-                          (click)="setEnabled(row.user, true)"
-                        >
-                          Réactiver
-                        </button>
-                      }
-                    </div>
+                    <app-action-menu
+                      [actions]="actionsFor(row.user)"
+                      [label]="'Actions sur le compte de ' + row.user.fullName"
+                      (picked)="pick(row.user, $event)"
+                    />
                   </td>
                 </tr>
               }
@@ -296,6 +268,38 @@ export class UsersComponent {
    * is reading this page is one, so any *other* admin row means there are two, and that
    * refusal cannot be reached from here.
    */
+  /** Your own account cannot be disabled from here: no entry rather than one that refuses. */
+  protected actionsFor(user: UserApp): MenuAction<UserAction>[] {
+    return [
+      { id: 'edit', label: 'Modifier', hint: 'nom, identifiant' },
+      { id: 'roles', label: 'Rôles', hint: this.describe(user.roles) },
+      { id: 'password', label: 'Changer le mot de passe' },
+      ...(user.enabled
+        ? this.blockedReason(user)
+          ? []
+          : [{ id: 'disable' as const, label: 'Désactiver', danger: true }]
+        : [{ id: 'enable' as const, label: 'Réactiver' }]),
+    ];
+  }
+
+  protected pick(user: UserApp, action: UserAction): void {
+    switch (action) {
+      case 'edit':
+      case 'roles':
+        this.openEdit(user);
+        break;
+      case 'password':
+        this.passwordFor.set(user);
+        break;
+      case 'disable':
+        this.disabling.set(user);
+        break;
+      case 'enable':
+        this.setEnabled(user, true);
+        break;
+    }
+  }
+
   protected blockedReason(user: UserApp): string | null {
     return user.id === this.auth.currentUser()?.id
       ? 'Vous ne pouvez pas désactiver votre propre compte.'
