@@ -171,8 +171,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   caissier), ou est-il suivi à part ?
 - [ ] **P2 — Retirer un produit de la vente** (désactivation, sans perdre l'historique).
 - [ ] **P2 — Remises** par ligne ou sur le total.
-- [ ] **P2 — Seuil de stock bas par produit** (aujourd'hui 10 pour tout le catalogue,
-  `StockPolicy`).
+- [x] **P2 — Seuil de stock bas par produit** (aujourd'hui 10 pour tout le catalogue,
+  `StockPolicy`). *Fait — voir `41-seuil-d-alerte-par-produit.html`.*
 - [ ] **P3 — Corrections de stock dans une autre unité** (« 2 cartons ») : aujourd'hui en unité de
   base seulement.
 - [x] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste

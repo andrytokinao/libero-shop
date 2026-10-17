@@ -15,6 +15,7 @@ import java.util.List;
  *                      a word for
  * @param lowStock      decided server-side so the alert threshold has a single definition;
  *                      the UI only has to style what it is told
+ * @param lowStockThreshold the threshold it is judged by, in base units: its own or the shop's
  * @param packagings    the other units it sells in, smallest first -- what the till offers beside
  *                      the base unit. Empty for most products, and on the responses nested in an
  *                      invoice or a movement, which describe what moved rather than what is for sale
@@ -27,6 +28,7 @@ public record ProductResponse(Long id,
                               String barcode,
                               CategoryResponse category,
                               boolean lowStock,
+                              BigDecimal lowStockThreshold,
                               BigDecimal stockValue,
                               List<Packaging> packagings) {
 
@@ -53,6 +55,7 @@ public record ProductResponse(Long id,
                 product.getBarcode(),
                 CategoryResponse.of(product.getCategory()),
                 StockPolicy.isLowStock(product),
+                StockPolicy.thresholdOf(product),
                 product.getPrice().multiply(product.getStockQuantity()).setScale(2, RoundingMode.HALF_UP),
                 packagings);
     }

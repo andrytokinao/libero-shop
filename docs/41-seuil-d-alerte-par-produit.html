@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seuil de stock bas par produit</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Seuil de stock bas par produit</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point « Seuil de stock bas par produit » de <code>docs/TODO.md</code> (§ 4, P2)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Chaque produit peut avoir <strong>son propre seuil d'alerte</strong> : 50 sacs de riz, 2 cartons d'huile.</li>
+    <li>Sans seuil propre, le <strong>seuil commun de 10</strong> s'applique, comme avant : rien ne change pour les produits non réglés.</li>
+    <li>Le seuil se règle dans la configuration du produit, onglet <strong>Fiche</strong> ; un champ vide rend le seuil commun.</li>
+    <li>Les listes, les tableaux de bord et le filtre « Alertes uniquement » suivent tous la même règle, à un seul endroit du serveur (<code>StockPolicy</code>).</li>
+    <li>Les écrans ouverts voient le changement tout de suite.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#exemples">4. À éviter / attendu</a></li>
+  <li><a href="#recap">5. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Un produit était « en alerte » sous 10 unités, quel qu'il soit. Pour le riz vendu par dizaines de sacs par jour,
+  l'alerte arrivait trop tard ; pour un produit vendu une fois par mois, elle restait allumée en permanence.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 200" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quel seuil s'applique">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .q { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="72" width="150" height="56" rx="8"/><text class="t" x="34" y="96">Un produit</text><text class="s" x="34" y="114">son stock</text>
+  <rect class="q" x="215" y="67" width="210" height="66" rx="8"/><text class="t" x="229" y="93">A-t-il un seuil propre ?</text><text class="s" x="229" y="113">réglé dans « Fiche »</text>
+  <rect class="new" x="470" y="15" width="170" height="54" rx="8"/><text class="t" x="484" y="38">Oui : ce seuil</text><text class="s" x="484" y="56">ex. 50 sacs</text>
+  <rect class="box" x="470" y="130" width="170" height="54" rx="8"/><text class="t" x="484" y="153">Non : seuil commun</text><text class="s" x="484" y="171">10, comme avant</text>
+  <rect class="new" x="680" y="72" width="160" height="56" rx="8"/><text class="t" x="694" y="96">stock &lt; seuil</text><text class="s" x="694" y="114">→ « Stock bas »</text>
+  <path class="ln" d="M170,100 L213,100"/><path class="ln" d="M425,88 L468,45"/><path class="ln" d="M425,112 L468,155"/>
+  <path class="ln" d="M640,42 L678,90"/><path class="ln" d="M640,157 L678,110"/>
+</svg>
+<div class="caption">Figure 1 — Un seul calcul, pour tous les écrans : le seuil du produit s'il en a un, sinon le seuil commun.</div>
+</div>
+
+<p>Le seuil est compté dans l'<strong>unité de base</strong> du produit (celle du stock). Il est gardé dans une nouvelle
+  colonne du produit, vide par défaut ; la base existante n'a rien à reprendre. La requête des produits en alerte (tableaux
+  de bord) compare chaque produit à son propre seuil, ou au seuil commun.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span> Le riz se vend vite : alerte sous 50.</p>
+<div class="shot"><img src="realisation-ui/captures/41-seuil-saisi.png" alt="Seuil d'alerte saisi dans l'onglet Fiche">
+<div class="caption">Figure 2 — Onglet Fiche : le champ montre le seuil commun en grisé tant qu'il est vide.</div></div>
+<div class="shot"><img src="realisation-ui/captures/41-seuil-enregistre.png" alt="Seuil enregistré">
+<div class="caption">Figure 3 — Enregistré : « En alerte sous 50 ».</div></div>
+<div class="shot"><img src="realisation-ui/captures/41-seuil-stock-en-alerte.png" alt="Le riz en stock bas dans la liste">
+<div class="caption">Figure 4 — Avec 37 sacs, le riz passe en « Stock bas » dans la liste.</div></div>
+
+<h2 id="exemples">4. À éviter / attendu</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>
+<pre><code>// le seuil répété dans chaque écran
+product.getStockQuantity()
+    .compareTo(BigDecimal.TEN) &lt; 0</code></pre></div>
+  <div class="good"><div class="good-title">Attendu</div>
+<pre><code>// une seule règle
+StockPolicy.isLowStock(product)
+// = stock &lt; thresholdOf(product)</code></pre></div>
+</div>
+
+<h2 id="recap">5. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/entity/Product.java</code></td><td>nouvelle colonne <code>lowStockThreshold</code>, vide par défaut</td></tr>
+<tr><td><code>backend/…/service/StockPolicy.java</code></td><td><code>thresholdOf</code> : seuil propre ou commun ; <code>isLowStock</code> l'utilise</td></tr>
+<tr><td><code>backend/…/repository/ProductRepository.java</code></td><td>produits en alerte : chacun selon son seuil</td></tr>
+<tr><td><code>backend/…/service/ProductEditService.java</code></td><td><code>changeAlertThreshold</code> : négatif refusé, écrans prévenus</td></tr>
+<tr><td><code>backend/…/web/ProductController.java</code>, <code>web/dto/AlertThresholdRequest.java</code></td><td><code>PUT /api/products/{id}/alert-threshold</code></td></tr>
+<tr><td><code>backend/…/web/dto/ProductResponse.java</code>, <code>ProductUnitsResponse.java</code></td><td>le seuil appliqué, le seuil propre et le seuil commun</td></tr>
+<tr><td><code>ui/…/shared/components/product-units-dialog.component.ts</code></td><td>champ « Seuil d'alerte » dans l'onglet Fiche</td></tr>
+<tr><td><code>ui/…/core/api/catalog.api.ts</code>, <code>core/models/*</code></td><td>appel et types</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Sans seuil propre : 10 ; un seuil propre plus haut ou plus bas s'applique ; 0 n'alerte jamais</td><td><code>StockPolicyTest</code></td></tr>
+<tr><td>Le seuil est gardé, vide rend le commun, négatif refusé ; écrans prévenus</td><td><code>ProductEditServiceTest</code> — <code>seuilDAlertePropreAuProduit</code>, <code>seuilVideRendLeSeuilCommun</code>, <code>seuilNegatifRefuse</code></td></tr>
+<tr><td>Le champ enregistre le seuil, la virgule lue comme un point</td><td><code>product-units-dialog.component.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (602 tests), interface au vert (237 tests).</p>
+<p><strong>Signalé :</strong> <code>ProductEditService</code> renvoie des DTO de <code>web/dto</code> (déjà le cas avant) ; la nouvelle méthode suit
+  ce qui existe pour rester cohérente. À reprendre dans un point dédié à la séparation des couches.</p>
+</main>
+</body>
+</html>

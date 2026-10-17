@@ -14,6 +14,8 @@ describe('BarcodeAssignment', () => {
     stockQuantity: 100,
     category: { id: 3, name: 'Épicerie' } as ProductUnits['category'],
     purchaseUnitId: 40,
+    lowStockThreshold: null,
+    defaultLowStockThreshold: 10,
     packagings: [
       { id: 40, label: 'sac', factor: 25, price: 70000, barcode: '111', reference: 'kg', referenceQuantity: 25 },
     ],

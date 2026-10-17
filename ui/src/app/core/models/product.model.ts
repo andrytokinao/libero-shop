@@ -23,6 +23,8 @@ export interface Product {
   category: Category | null;
   /** Decided by the server's StockPolicy, so the threshold has one definition. */
   lowStock: boolean;
+  /** The threshold it is judged by, in base units: its own or the shop's. Optional for old payloads. */
+  lowStockThreshold?: number;
   /** price × stockQuantity, precomputed server-side. */
   stockValue: number;
   /**

@@ -35,7 +35,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("select p from Product p left join fetch p.category order by p.name")
     List<Product> findAllWithCategory();
 
-    @Query("select p from Product p left join fetch p.category where p.stockQuantity < :threshold order by p.stockQuantity")
+    /** Below its own threshold, or below {@code threshold} for a product that has none. */
+    @Query("select p from Product p left join fetch p.category"
+            + " where p.stockQuantity < coalesce(p.lowStockThreshold, :threshold) order by p.stockQuantity")
     List<Product> findLowStock(@Param("threshold") BigDecimal threshold);
 
     /**

@@ -179,6 +179,11 @@ export class CatalogApi {
       );
   }
 
+  /** The product's own alert threshold; null gives it back the shop's common one. */
+  changeAlertThreshold(productId: number, threshold: number | null): Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/alert-threshold`, { threshold });
+  }
+
   // ------------------------------------------------------------------- sale units
 
   /** The base unit and the other units of one product. Every write below answers the same shape. */

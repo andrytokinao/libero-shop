@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.ProductPackaging;
+import com.houssen.liberoshop.service.StockPolicy;
 import com.houssen.liberoshop.web.dto.ProductResponse.Packaging;
 
 import java.math.BigDecimal;
@@ -17,6 +18,8 @@ import java.util.List;
  * @param category       the rayon it is filed under, or null for none
  * @param purchaseUnitId the packaging the shop buys it in, or null for the base unit. Which unit,
  *                       not at what price: the price is served by the costing API alone.
+ * @param lowStockThreshold        the product's own alert threshold in base units, or null
+ * @param defaultLowStockThreshold the shop's common one, which applies when it has none
  */
 public record ProductUnitsResponse(Long productId,
                                    String productName,
@@ -26,7 +29,9 @@ public record ProductUnitsResponse(Long productId,
                                    BigDecimal stockQuantity,
                                    CategoryResponse category,
                                    List<Packaging> packagings,
-                                   Long purchaseUnitId) {
+                                   Long purchaseUnitId,
+                                   BigDecimal lowStockThreshold,
+                                   BigDecimal defaultLowStockThreshold) {
 
     public static ProductUnitsResponse of(Product product, List<ProductPackaging> packagings) {
         return new ProductUnitsResponse(
@@ -38,6 +43,8 @@ public record ProductUnitsResponse(Long productId,
                 product.getStockQuantity(),
                 CategoryResponse.of(product.getCategory()),
                 packagings.stream().map(Packaging::of).toList(),
-                product.getPurchaseUnit() == null ? null : product.getPurchaseUnit().getId());
+                product.getPurchaseUnit() == null ? null : product.getPurchaseUnit().getId(),
+                product.getLowStockThreshold(),
+                StockPolicy.LOW_STOCK_THRESHOLD);
     }
 }

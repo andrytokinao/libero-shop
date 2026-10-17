@@ -209,4 +209,36 @@ class ProductEditServiceTest {
         assertEquals("PURCHASE_UNIT_UNKNOWN", refused.code());
         assertNull(rice.getAverageCost());
     }
+
+    @Test
+    @DisplayName("Un seuil d'alerte propre au produit est garde, et les ecrans sont prevenus")
+    void seuilDAlertePropreAuProduit() {
+        ProductUnitsResponse response = service.changeAlertThreshold(1L, new BigDecimal("50"));
+
+        assertEquals(new BigDecimal("50.000"), rice.getLowStockThreshold());
+        assertEquals(new BigDecimal("50.000"), response.lowStockThreshold());
+        verify(events).publishEvent(any(StockChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("Un seuil vide rend le seuil commun de la boutique")
+    void seuilVideRendLeSeuilCommun() {
+        rice.setLowStockThreshold(qty(50));
+
+        ProductUnitsResponse response = service.changeAlertThreshold(1L, null);
+
+        assertNull(rice.getLowStockThreshold());
+        assertEquals(StockPolicy.LOW_STOCK_THRESHOLD, response.defaultLowStockThreshold());
+    }
+
+    @Test
+    @DisplayName("Un seuil negatif est refuse, rien n'est ecrit")
+    void seuilNegatifRefuse() {
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> service.changeAlertThreshold(1L, new BigDecimal("-1")));
+
+        assertEquals("ALERT_THRESHOLD_INVALID", refused.code());
+        assertNull(rice.getLowStockThreshold());
+        verify(events, never()).publishEvent(any());
+    }
 }

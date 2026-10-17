@@ -37,6 +37,13 @@ public class Product {
     private BigDecimal stockQuantity;
 
     /**
+     * Below this many base units the product is "en alerte" -- 10 sacs of rice, 2 cartons of
+     * oil. Null keeps the shop's common threshold ({@code StockPolicy}).
+     */
+    @Column(precision = Quantities.PRECISION, scale = Quantities.SCALE)
+    private BigDecimal lowStockThreshold;
+
+    /**
      * Weighted average purchase cost of one unit of the stock on hand -- the "coût moyen
      * pondéré". Moved only by {@code PurchaseCosting}, on every receipt that states a cost.
      * Null while no receipt of this product has ever carried one. Six places, so that a cost

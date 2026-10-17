@@ -158,6 +158,26 @@ public class ProductEditService {
         return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
     }
 
+    /**
+     * The product's own alert threshold, in base units; null gives it back the shop's common one.
+     * The lists and the dashboards follow at once: whether it is in alert may just have changed.
+     *
+     * @throws BusinessRuleException for a negative threshold
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public ProductUnitsResponse changeAlertThreshold(Long productId, BigDecimal threshold) {
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
+        if (threshold != null && threshold.signum() < 0) {
+            throw new BusinessRuleException("ALERT_THRESHOLD_INVALID",
+                    "Le seuil d'alerte ne peut pas etre negatif.");
+        }
+        product.setLowStockThreshold(threshold == null ? null : Quantities.scaled(threshold));
+        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
+        return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
+    }
+
     // ------------------------------------------------------------------- internals
 
     private static String requireName(String typed) {

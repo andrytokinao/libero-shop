@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 /**
  * Where "the stock is low" is defined, once.
  *
- * <p>The threshold drove four separate dashboards in the mock-up; keeping it here means
- * turning it into a per-category or per-product reorder level later is a change to this
- * class alone.
+ * <p>Each product may have its own threshold, in base units; the others share
+ * {@link #LOW_STOCK_THRESHOLD}. The dashboards, the stock list and the database query all go
+ * through here, so they agree on which products are in alert.
  */
 public final class StockPolicy {
 
@@ -18,7 +18,12 @@ public final class StockPolicy {
     private StockPolicy() {
     }
 
+    /** The product's own threshold, or the shop's common one. */
+    public static BigDecimal thresholdOf(Product product) {
+        return product.getLowStockThreshold() != null ? product.getLowStockThreshold() : LOW_STOCK_THRESHOLD;
+    }
+
     public static boolean isLowStock(Product product) {
-        return product.getStockQuantity().compareTo(LOW_STOCK_THRESHOLD) < 0;
+        return product.getStockQuantity().compareTo(thresholdOf(product)) < 0;
     }
 }

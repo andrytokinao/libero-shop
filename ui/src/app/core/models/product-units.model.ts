@@ -18,6 +18,10 @@ export interface ProductUnits {
   packagings: Packaging[];
   /** The packaging the shop buys it in — "tonne" — or null for the base unit. */
   purchaseUnitId: number | null;
+  /** Its own alert threshold, in base units; null when the shop's common one applies. */
+  lowStockThreshold: number | null;
+  /** The shop's common alert threshold. */
+  defaultLowStockThreshold: number;
 }
 
 /** Another unit than the base one: "kg = 3.5 kapoka, 3 000 Ar", "sac 25 kg = 25 kg". */

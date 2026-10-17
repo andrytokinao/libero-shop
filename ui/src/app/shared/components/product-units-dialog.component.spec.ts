@@ -19,16 +19,30 @@ describe('ProductUnitsDialogComponent', () => {
     category: null,
     packagings: [],
     purchaseUnitId: null,
+    lowStockThreshold: null,
+    defaultLowStockThreshold: 10,
   };
 
   let fixture: ComponentFixture<ProductUnitsDialogComponent>;
+  let thresholds: (number | null)[];
 
   function render(tab?: 'fiche' | 'prix' | 'unites' | 'codes'): void {
+    thresholds = [];
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: CatalogApi, useValue: { productUnits: () => of(rice), categories: () => of([]) } },
+        {
+          provide: CatalogApi,
+          useValue: {
+            productUnits: () => of(rice),
+            categories: () => of([]),
+            changeAlertThreshold: (_id: number, threshold: number | null) => {
+              thresholds.push(threshold);
+              return of({ ...rice, lowStockThreshold: threshold });
+            },
+          },
+        },
         { provide: CostingApi, useValue: { productCost: () => of(null) } },
         { provide: UnitModelApi, useValue: { models: () => of([]) } },
       ],
@@ -73,5 +87,19 @@ describe('ProductUnitsDialogComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance['draft']().label).toBe('carton');
+  });
+
+  it('saves the alert threshold of this product from the sheet, a comma read as a point', () => {
+    render();
+    const field = fixture.nativeElement.querySelector('#un-alert') as HTMLInputElement;
+    expect(field.placeholder).toContain('10');
+    field.value = '2,5';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.un-alert button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(thresholds).toEqual([2.5]);
+    expect(fixture.nativeElement.querySelector('.un-alert').textContent).toContain('En alerte sous 2,5');
   });
 });

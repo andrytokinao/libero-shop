@@ -246,6 +246,35 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
               }
             </form>
 
+            <!-- Its own alert threshold, saved apart from the sheet: a change here sets nothing else. -->
+            <div class="un-alert" [class.un-off]="tab() !== 'fiche'">
+              <div class="fld">
+                <label for="un-alert">Seuil d'alerte ({{ baseName() }})</label>
+                <input
+                  id="un-alert"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [placeholder]="formatFactor(u.defaultLowStockThreshold) + ' (seuil commun)'"
+                  [ngModel]="alertDraft()"
+                  (ngModelChange)="alertDraft.set($event)"
+                  (keydown.enter)="saveAlert()"
+                />
+              </div>
+              @if (alertChanged()) {
+                <button class="btn small" type="button" [disabled]="busy() || !alertValid()" (click)="saveAlert()">
+                  Enregistrer le seuil
+                </button>
+              }
+              <div class="un-base-facts muted">
+                En alerte sous {{ formatFactor(u.lowStockThreshold ?? u.defaultLowStockThreshold) }} {{ baseName() }}
+                @if (u.lowStockThreshold === null) {
+                  (seuil commun de la boutique)
+                }
+                · Stock {{ formatFactor(u.stockQuantity) }} {{ baseName() }}
+              </div>
+            </div>
+
             <div class="un-base" [class.un-off]="tab() !== 'unites'">
               <div class="fld">
                 <label for="un-base">Unité de base (stock)</label>
@@ -596,6 +625,20 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
       margin-bottom: 14px;
     }
 
+    .un-alert {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 10px;
+      margin-bottom: 14px;
+
+      .fld {
+        margin-bottom: 0;
+        width: 220px;
+        max-width: 100%;
+      }
+    }
+
     .un-chips {
       display: flex;
       flex-wrap: wrap;
@@ -934,6 +977,21 @@ export class ProductUnitsDialogComponent implements OnInit {
   protected readonly units = signal<ProductUnits | null>(null);
   protected readonly busy = signal(false);
   protected readonly baseDraft = signal('');
+  /** The alert threshold as typed; empty for the shop's common one. */
+  protected readonly alertDraft = signal('');
+  /** What the threshold field would save: a number, null for the common one, undefined if unreadable. */
+  private readonly alertValue = computed<number | null | undefined>(() => {
+    const typed = this.alertDraft().trim();
+    if (!typed) {
+      return null;
+    }
+    const value = Number(typed.replace(',', '.'));
+    return Number.isFinite(value) && value >= 0 ? value : undefined;
+  });
+  protected readonly alertValid = computed(() => this.alertValue() !== undefined);
+  protected readonly alertChanged = computed(
+    () => this.alertValue() !== (this.units()?.lowStockThreshold ?? null),
+  );
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
   protected readonly editingId = signal<number | null>(null);
   protected readonly removingId = signal<number | null>(null);
@@ -1201,6 +1259,18 @@ export class ProductUnitsDialogComponent implements OnInit {
     setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-factor')?.focus());
   }
 
+  protected saveAlert(): void {
+    const threshold = this.alertValue();
+    if (threshold === undefined || !this.alertChanged() || this.busy()) {
+      return;
+    }
+    this.run(this.api.changeAlertThreshold(this.productId, threshold), true, () =>
+      this.toasts.show(
+        threshold === null ? 'Seuil commun de la boutique rétabli.' : `Seuil d'alerte : ${this.formatFactor(threshold)} ${this.baseName()}.`,
+      ),
+    );
+  }
+
   protected patch(change: Partial<Draft>): void {
     this.draft.update((draft) => ({ ...draft, ...change }));
   }
@@ -1349,6 +1419,7 @@ export class ProductUnitsDialogComponent implements OnInit {
       next: (units) => {
         this.units.set(units);
         this.baseDraft.set(units.baseUnit ?? '');
+        this.alertDraft.set(units.lowStockThreshold === null ? '' : String(units.lowStockThreshold));
         this.sheet.update((sheet) => ({
           ...sheet,
           name: units.productName,

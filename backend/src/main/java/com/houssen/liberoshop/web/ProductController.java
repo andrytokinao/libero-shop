@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.ProductEditService;
+import com.houssen.liberoshop.web.dto.AlertThresholdRequest;
 import com.houssen.liberoshop.web.dto.CreateProductRequest;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
@@ -49,5 +50,13 @@ public class ProductController {
     public ProductUnitsResponse edit(@PathVariable Long productId,
                                      @Valid @RequestBody UpdateProductRequest request) {
         return productEditService.edit(productId, request);
+    }
+
+    /** "Seuil d'alerte" in the product's menu: its own, or back to the shop's common one. */
+    @PutMapping("/{productId}/alert-threshold")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public ProductUnitsResponse changeAlertThreshold(@PathVariable Long productId,
+                                                     @Valid @RequestBody AlertThresholdRequest request) {
+        return productEditService.changeAlertThreshold(productId, request.threshold());
     }
 }
