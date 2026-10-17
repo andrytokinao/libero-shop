@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La fenêtre Configuration en onglets</title>
+<meta name="ui-id" content="UI-10">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-10</span>La fenêtre « Configuration » en onglets</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-10</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>La configuration d'un produit est rangée en <strong>quatre onglets</strong> : Fiche, Prix, Unités et packaging, Codes-barres.</li>
+    <li>Chaque onglet montre moins de choses à la fois ; c'est toujours <strong>une seule fenêtre</strong> : on ajoute une tonne, puis on tape son prix, sans rien fermer.</li>
+    <li>La fenêtre peut s'ouvrir directement sur un onglet : le badge « prix d'achat inconnu » (UI-61) ouvre « Prix », et le menu « ⋮ » (UI-02) pourra ouvrir chacun.</li>
+    <li>Dans « Unités et packaging », des <strong>pastilles</strong> (carton, sac, paquet, douzaine, kg, litre) remplissent le nom de l'unité d'un clic.</li>
+    <li>Sur téléphone, les onglets passent sur deux lignes au lieu de défiler de côté.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#reste">4. Ce qui reste</a></li>
+  <li><a href="#recap">5. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>La fenêtre « Configuration » montrait tout d'un coup : la fiche, les prix, l'unité de base, le tableau des unités, les
+  modèles et le formulaire d'ajout. Pour changer seulement un prix, il fallait parcourir toute la fenêtre.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 210" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ce que contient chaque onglet">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .tab { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+  </style>
+  <rect class="tab" x="20" y="15" width="190" height="34" rx="8"/><text class="t" x="34" y="37" style="font-weight:700">Fiche</text>
+  <rect class="tab" x="230" y="15" width="190" height="34" rx="8"/><text class="t" x="244" y="37" style="font-weight:700">Prix</text>
+  <rect class="tab" x="440" y="15" width="190" height="34" rx="8"/><text class="t" x="454" y="37" style="font-weight:700">Unités et packaging</text>
+  <rect class="tab" x="650" y="15" width="190" height="34" rx="8"/><text class="t" x="664" y="37" style="font-weight:700">Codes-barres</text>
+  <rect class="box" x="20" y="60" width="190" height="135" rx="8"/><text class="s" x="32" y="84">nom du produit</text><text class="s" x="32" y="104">catégorie</text>
+  <rect class="box" x="230" y="60" width="190" height="135" rx="8"/><text class="s" x="242" y="84">prix de vente</text><text class="s" x="242" y="104">prix d'entrée + unité d'achat</text><text class="s" x="242" y="124">tableau : vente, entrée,</text><text class="s" x="242" y="140">bénéfice par unité</text>
+  <rect class="box" x="440" y="60" width="190" height="135" rx="8"/><text class="s" x="452" y="84">unité de base</text><text class="s" x="452" y="104">tableau des unités</text><text class="s" x="452" y="124">modèles (g, kg, tonne…)</text><text class="s" x="452" y="144">ajouter : pastilles + formulaire</text>
+  <rect class="box" x="650" y="60" width="190" height="135" rx="8"/><text class="s" x="662" y="84">code de l'unité de base</text><text class="s" x="662" y="104">tableau : le code</text><text class="s" x="662" y="120">de chaque unité</text>
+</svg>
+<div class="caption">Figure 1 — Le contenu de la fenêtre, réparti en quatre onglets.</div>
+</div>
+
+<p>Rien n'a changé dans la façon d'enregistrer : la fiche (nom, catégorie, prix, code) reste un seul formulaire, et son
+  bouton « Enregistrer » apparaît dès qu'une valeur change, dans n'importe quel onglet. Les onglets ne font que montrer
+  la bonne partie. La barre d'onglets est celle déjà utilisée ailleurs dans l'application (<code>app-filter-tabs</code>),
+  avec une option nouvelle pour passer à la ligne.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span> Configuration du « Riz 5kg ».</p>
+<div class="shot"><img src="captures/ui-10-fiche.png" alt="Onglet Fiche">
+<div class="caption">Figure 2 — Fiche : nom et catégorie.</div></div>
+<div class="shot"><img src="captures/ui-10-prix.png" alt="Onglet Prix">
+<div class="caption">Figure 3 — Prix : vente, entrée, et le bénéfice de chaque unité.</div></div>
+<div class="shot"><img src="captures/ui-10-unites.png" alt="Onglet Unités et packaging">
+<div class="caption">Figure 4 — Unités et packaging : les pastilles au-dessus du formulaire d'ajout.</div></div>
+<div class="shot"><img src="captures/ui-10-codes.png" alt="Onglet Codes-barres">
+<div class="caption">Figure 5 — Codes-barres : le code de l'unité de base et celui de chaque unité.</div></div>
+<div class="shot"><img src="captures/ui-10-telephone-unites.png" alt="Onglets sur téléphone" style="max-width:390px">
+<div class="caption">Figure 6 — Téléphone : les onglets sur deux lignes, aucun défilement de côté.</div></div>
+
+<h2 id="reste">4. Ce qui reste</h2>
+<ul>
+  <li>Le rayon se choisit encore dans la liste des catégories (pas d'arbre ni de « ＋ Nouveau rayon ») : prévu avec UI-40/UI-41.</li>
+  <li>Seuil d'alerte et « en vente oui/non » dans l'onglet Fiche : ils demandent le serveur (TODO §4), traités avec UI-02.</li>
+  <li>L'onglet Codes-barres sera complété par UI-20 (une ligne par unité, bouton « Scanner »).</li>
+  <li>« Proposer les prix avec une marge » reste une décision attendue (liste de travail).</li>
+</ul>
+
+<h2 id="recap">5. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>ui/…/shared/components/product-units-dialog.component.ts</code></td><td>quatre onglets, onglet de départ, pastilles d'unités</td></tr>
+<tr><td><code>ui/…/shared/components/filter-tabs.component.ts</code></td><td>option <code>wrap</code> : les onglets passent à la ligne</td></tr>
+<tr><td><code>ui/…/core/catalog/product-rights.ts</code></td><td>type <code>ConfigTab</code> ; une demande peut nommer l'onglet</td></tr>
+<tr><td><code>ui/…/shared/components/product-dialogs.component.ts</code></td><td>transmet l'onglet demandé</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>S'ouvre sur la fiche ; prix et unités dans leurs onglets</td><td><code>product-units-dialog.component.spec.ts</code></td></tr>
+<tr><td>S'ouvre sur l'onglet demandé</td><td>idem</td></tr>
+<tr><td>Le code-barres est dans « Codes-barres »</td><td>idem</td></tr>
+<tr><td>Une pastille nomme l'unité ajoutée</td><td>idem</td></tr>
+</table></div>
+<p><strong>Tests :</strong> interface au vert (236 tests). Aucun changement côté serveur.</p>
+</main>
+</body>
+</html>

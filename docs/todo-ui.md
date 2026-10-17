@@ -42,7 +42,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   produit, nom et rayon, prix, unités et packaging, codes-barres, seuil d'alerte, dupliquer,
   retirer de la vente. Étendre `MenuAction` (`group`, `hint`, `disabledReason`).
   (serveur : seuil par produit, produit retiré de la vente)
-- [ ] **UI-10** — Fenêtre de configuration en onglets (Fiche, Prix, Unités et packaging,
+- [x] **UI-10** — Fenêtre de configuration en onglets (Fiche, Prix, Unités et packaging,
   Codes-barres), ouverte sur l'onglet demandé (`initialTab`) ; pastilles d'unités toutes prêtes.
 - [ ] **UI-12** — Nouveau produit : nom, prix, unité d'abord, le reste replié ; message avec
   « Ajouter du stock » / « Codes-barres ».

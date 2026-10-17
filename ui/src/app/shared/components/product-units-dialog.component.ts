@@ -19,7 +19,7 @@ import { CostingApi } from '../../core/api/costing.api';
 import { UnitModelApi } from '../../core/api/unit-model.api';
 import { parseDecimal } from '../../core/catalog/decimal-text';
 import { fold } from '../../core/catalog/unit-model-plan';
-import { ProductRights } from '../../core/catalog/product-rights';
+import { ConfigTab, ProductRights } from '../../core/catalog/product-rights';
 import {
   CategoryNode,
   Packaging,
@@ -34,6 +34,7 @@ import {
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
+import { FilterTab, FilterTabsComponent } from './filter-tabs.component';
 import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
 import { UnitModelsDialogComponent } from './unit-models-dialog.component';
@@ -101,6 +102,9 @@ const EMPTY_SHEET: Sheet = {
  * base unit's name beside the box, never as a bare "facteur". A comma is accepted as well as a
  * point: it is the decimal separator on every keyboard here.
  */
+/** The packagings a shop sells in most: a tap names the unit being added. */
+const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'kg', 'litre'];
+
 @Component({
   selector: 'app-product-units-dialog',
   standalone: true,
@@ -112,6 +116,7 @@ const EMPTY_SHEET: Sheet = {
     CategoryPickerComponent,
     UnitModelPickerComponent,
     UnitModelsDialogComponent,
+    FilterTabsComponent,
   ],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
@@ -133,11 +138,16 @@ const EMPTY_SHEET: Sheet = {
 
         <div class="modal-body">
           @if (units(); as u) {
+            <!-- Four tabs over one sheet: the price depends on the units, so adding a tonne and
+                 typing its price is done without closing anything. -->
+            <app-filter-tabs class="cfg-tabs" label="Parties de la configuration" [tabs]="tabs" [wrap]="true" [(value)]="tab" />
+
             <!-- ------------------------------------------------- the sheet -->
             <!-- A past ticket keeps the name and price it was sold at: correcting them here only
                  changes what the next sale reads. -->
-            <form class="un-sheet" (ngSubmit)="saveSheet()">
-              <div class="fld un-sheet-name">
+            <!-- Nothing of the sheet is in the units tab; its "Enregistrer" still is, if a change waits. -->
+            <form class="un-sheet" [class.un-off]="tab() === 'unites' && !sheetChanged()" (ngSubmit)="saveSheet()">
+              <div class="fld un-sheet-name" [class.un-off]="tab() !== 'fiche'">
                 <label for="un-name">Nom du produit</label>
                 <input
                   id="un-name"
@@ -149,7 +159,7 @@ const EMPTY_SHEET: Sheet = {
                   (ngModelChange)="patchSheet({ name: $event })"
                 />
               </div>
-              <div class="fld">
+              <div class="fld" [class.un-off]="tab() !== 'fiche'">
                 <label for="un-category">Catégorie</label>
                 <app-category-picker
                   fieldId="un-category"
@@ -159,7 +169,7 @@ const EMPTY_SHEET: Sheet = {
                   (valueChange)="patchSheet({ categoryId: $event })"
                 />
               </div>
-              <div class="fld">
+              <div class="fld" [class.un-off]="tab() !== 'codes'">
                 <label for="un-base-barcode">Code-barres</label>
                 <!-- Typed, read by a USB scanner (which types it and presses Entrée), or read by
                      the phone camera. Entrée stays in the field: a scan must not save the sheet. -->
@@ -178,7 +188,7 @@ const EMPTY_SHEET: Sheet = {
                   <app-camera-scan-button (scanned)="patchSheet({ barcode: $event })" />
                 </div>
               </div>
-              <div class="fld">
+              <div class="fld" [class.un-off]="tab() !== 'prix'">
                 <label for="un-base-price">Prix de vente (Ar) par {{ baseName() }}</label>
                 <input
                   id="un-base-price"
@@ -192,7 +202,7 @@ const EMPTY_SHEET: Sheet = {
               </div>
               <!-- What the shop pays, said in the unit it buys in: a tonne, not a kapoka. The
                    server keeps it per base unit and works out every other unit from it. -->
-              <div class="fld un-cost">
+              <div class="fld un-cost" [class.un-off]="tab() !== 'prix'">
                 <label for="un-cost">Prix d'entrée (Ar)</label>
                 <div class="un-suffixed">
                   <input
@@ -219,7 +229,7 @@ const EMPTY_SHEET: Sheet = {
                   </select>
                 </div>
               </div>
-              <div class="un-cost-hint muted">
+              <div class="un-cost-hint muted" [class.un-off]="tab() !== 'prix'">
                 @if (costHint(); as hint) {
                   {{ hint }}
                 } @else if (u.packagings.length === 0) {
@@ -236,7 +246,7 @@ const EMPTY_SHEET: Sheet = {
               }
             </form>
 
-            <div class="un-base">
+            <div class="un-base" [class.un-off]="tab() !== 'unites'">
               <div class="fld">
                 <label for="un-base">Unité de base (stock)</label>
                 <input
@@ -265,7 +275,7 @@ const EMPTY_SHEET: Sheet = {
                  what is left. Worked out by the server, so a tonne reads back to the ariary.
                  A table on a wide screen; on a narrow one each row becomes a card (data-label),
                  so the dialog never scrolls sideways. -->
-            <table class="un-table">
+            <table class="un-table" [class.un-off]="tab() === 'fiche'">
               <thead>
                 <tr>
                   <th>Unité</th>
@@ -359,7 +369,7 @@ const EMPTY_SHEET: Sheet = {
 
             <!-- --------------------------------------------- units from a model -->
             <!-- g, kg, tonne… ticked rather than typed again for every product. -->
-            <details class="un-model" [open]="modelOpen()" (toggle)="onModelToggle($event)">
+            <details class="un-model" [class.un-off]="tab() !== 'unites'" [open]="modelOpen()" (toggle)="onModelToggle($event)">
               <summary>Ajouter des unités depuis un modèle (g, kg, tonne…)</summary>
               @if (modelOpen()) {
                 <app-unit-model-picker
@@ -385,10 +395,25 @@ const EMPTY_SHEET: Sheet = {
             </details>
 
             <!-- ------------------------------------------------------- the form -->
-            <form class="un-form" (ngSubmit)="save()">
+            <form class="un-form" [class.un-off]="tab() !== 'unites'" (ngSubmit)="save()">
               <div class="un-form-title">
                 {{ editingId() === null ? 'Ajouter une unité' : 'Modifier « ' + editingLabel() + ' »' }}
               </div>
+              @if (editingId() === null) {
+                <!-- The usual packagings, one tap away: the name is filled in, the content is still asked. -->
+                <div class="un-chips" role="group" aria-label="Unités courantes">
+                  @for (chip of unitChips; track chip) {
+                    <button
+                      type="button"
+                      class="un-chip"
+                      [class.on]="draft().label === chip"
+                      (click)="pickChip(chip)"
+                    >
+                      {{ chip }}
+                    </button>
+                  }
+                </div>
+              }
               <div class="un-fields">
                 <div class="fld">
                   <label for="un-label">Unité</label>
@@ -561,6 +586,40 @@ const EMPTY_SHEET: Sheet = {
     }
 
     /* The sheet: as many fields a line as fit, never narrower than a price. */
+    /* A part of the sheet that belongs to another tab. */
+    .un-off {
+      display: none !important;
+    }
+
+    .cfg-tabs {
+      display: block;
+      margin-bottom: 14px;
+    }
+
+    .un-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .un-chip {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      color: inherit;
+      font: inherit;
+      font-size: 12.5px;
+      padding: 3px 11px;
+      cursor: pointer;
+
+      &:hover,
+      &.on {
+        border-color: var(--brand);
+        background: var(--brand-soft);
+      }
+    }
+
     .un-sheet {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -653,6 +712,7 @@ const EMPTY_SHEET: Sheet = {
     .un-empty {
       font-size: 12.5px;
       padding: 12px 8px;
+      white-space: normal;
     }
 
     .un-model {
@@ -851,6 +911,20 @@ export class ProductUnitsDialogComponent implements OnInit {
   @Input() productName = '';
   /** Opened to give a purchase price ("partiel" on the profit page): the cursor waits in it. */
   @Input() focusCost = false;
+  /** The tab it opens on — the menu entry picked says which. */
+  @Input() set initialTab(tab: ConfigTab | undefined) {
+    if (tab) {
+      this.tab.set(tab);
+    }
+  }
+
+  protected readonly tab = signal<ConfigTab>('fiche');
+  protected readonly tabs: readonly FilterTab<ConfigTab>[] = [
+    { value: 'fiche', label: 'Fiche' },
+    { value: 'prix', label: 'Prix' },
+    { value: 'unites', label: 'Unités et packaging' },
+    { value: 'codes', label: 'Codes-barres' },
+  ];
   /** After any successful write: the stock list may show the base unit's new name. */
   @Output() readonly changed = new EventEmitter<void>();
   @Output() readonly closed = new EventEmitter<void>();
@@ -1069,6 +1143,7 @@ export class ProductUnitsDialogComponent implements OnInit {
       if (this.focusCost) {
         // Once: a later save reloads the cost, and the cursor may be elsewhere by then.
         this.focusCost = false;
+        this.tab.set('prix');
         setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-cost')?.focus());
       }
     });
@@ -1115,6 +1190,15 @@ export class ProductUnitsDialogComponent implements OnInit {
 
   protected formatFactor(factor: number): string {
     return factor.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+  }
+
+  /** The packagings most shops sell in, offered as chips above the form. */
+  protected readonly unitChips = UNIT_CHIPS;
+
+  /** A chip names the unit; what it contains depends on the product, so the cursor goes there. */
+  protected pickChip(label: string): void {
+    this.patch({ label });
+    setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-factor')?.focus());
   }
 
   protected patch(change: Partial<Draft>): void {

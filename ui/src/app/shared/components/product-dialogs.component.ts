@@ -38,6 +38,7 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
             [productId]="asked.product.id"
             [productName]="asked.product.name"
             [focusCost]="asked.focus === 'cost'"
+            [initialTab]="asked.tab"
             (changed)="changed.emit()"
             (addStock)="shown.set({ action: 'addStock', product: $event })"
             (closed)="closed.emit()"

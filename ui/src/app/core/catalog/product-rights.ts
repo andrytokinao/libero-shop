@@ -5,6 +5,9 @@ import { AuthService } from '../services/auth.service';
 /** What can be done to one product from its menu. */
 export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history';
 
+/** The parts of a product's configuration, one tab each. */
+export type ConfigTab = 'fiche' | 'prix' | 'unites' | 'codes';
+
 /** A product's menu entry picked, or the "Nouveau produit" button. */
 export type ProductDialogRequest =
   | { readonly action: 'create' }
@@ -13,6 +16,8 @@ export type ProductDialogRequest =
       readonly product: Product;
       /** Where the dialog puts the cursor: the purchase price, to fill in a missing one. */
       readonly focus?: 'cost';
+      /** The configuration tab it opens on; the sheet ("Fiche") otherwise. */
+      readonly tab?: ConfigTab;
     };
 
 /**

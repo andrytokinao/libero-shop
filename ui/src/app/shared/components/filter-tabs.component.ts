@@ -29,7 +29,7 @@ export interface FilterTab<T> {
   standalone: true,
   imports: [IconComponent],
   template: `
-    <div class="tabs" role="tablist" [attr.aria-label]="label()">
+    <div class="tabs" role="tablist" [class.wrap]="wrap()" [attr.aria-label]="label()">
       @for (tab of tabs(); track tab.value; let i = $index) {
         <button
           #tabButton
@@ -62,6 +62,12 @@ export interface FilterTab<T> {
       /* Scrolls sideways on a narrow phone; never vertically, which only drew arrows. */
       overflow-x: auto;
       overflow-y: hidden;
+
+      /* In a dialog the tabs go on two lines rather than scroll: every one stays in sight. */
+      &.wrap {
+        flex-wrap: wrap;
+        overflow-x: visible;
+      }
     }
 
     .tab {
@@ -117,6 +123,8 @@ export class FilterTabsComponent<T> {
   readonly value = model.required<T>();
   /** What the tabs choose, for a screen reader: "Commandes". */
   readonly label = input('Filtre');
+  /** On two lines when too narrow, instead of scrolling sideways — for the tabs of a dialog. */
+  readonly wrap = input(false);
 
   private readonly buttons = viewChildren<ElementRef<HTMLButtonElement>>('tabButton');
 
