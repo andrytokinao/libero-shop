@@ -212,8 +212,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,
   listes chargées pour un simple `.size()`.
 - [ ] **P2 — Requêtes en cascade (N+1)** sur les remises et l'activité des utilisateurs.
-- [ ] **P3 — Index manquants** sur les colonnes de date (`sale_date`, `invoice_date`,
+- [x] **P3 — Index manquants** sur les colonnes de date (`sale_date`, `invoice_date`,
   `payment_date`, `movement_date`).
+  *Fait — voir `52-index-sur-les-dates.html`.*
 - [x] **P3 — Recherche sans temporisation** sur « Toutes les factures » : une requête par frappe.
   *Fait — voir `51-recherche-temporisee.html`.*
 
