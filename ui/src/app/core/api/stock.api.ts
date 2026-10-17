@@ -49,6 +49,15 @@ export class StockApi {
     return this.http.post<Supply>(`${API_BASE_URL}/stock/supplies`, request);
   }
 
+  /** An opposite correction puts the stock back; the receipt stays, marked cancelled. */
+  cancelSupply(supplyId: number): Observable<StockAdjustment> {
+    return this.http.post<StockAdjustment>(`${API_BASE_URL}/stock/supplies/${supplyId}/cancel`, {});
+  }
+
+  cancelAdjustment(adjustmentId: number): Observable<StockAdjustment> {
+    return this.http.post<StockAdjustment>(`${API_BASE_URL}/stock/adjustments/${adjustmentId}/cancel`, {});
+  }
+
   /** Every line of the note, or none: a refused line leaves the stock as it was. */
   registerDelivery(request: CreateDeliveryRequest): Observable<Supply[]> {
     return this.http.post<Supply[]>(`${API_BASE_URL}/stock/deliveries`, request);

@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.DeliveryService;
+import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
 import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
@@ -30,11 +31,14 @@ public class StockController {
 
     private final StockService stockService;
     private final DeliveryService deliveryService;
+    private final MovementCancellationService cancellations;
     private final CurrentUser currentUser;
 
-    public StockController(StockService stockService, DeliveryService deliveryService, CurrentUser currentUser) {
+    public StockController(StockService stockService, DeliveryService deliveryService,
+                           MovementCancellationService cancellations, CurrentUser currentUser) {
         this.stockService = stockService;
         this.deliveryService = deliveryService;
+        this.cancellations = cancellations;
         this.currentUser = currentUser;
     }
 
@@ -86,6 +90,20 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public List<SupplyResponse> registerDelivery(@Valid @RequestBody CreateDeliveryRequest request) {
         return deliveryService.receive(request, currentUser.require());
+    }
+
+    /** A receipt entered by mistake, put back by an opposite correction; the receipt stays, marked. */
+    @PostMapping("/supplies/{supplyId}/cancel")
+    @PreAuthorize("hasRole('DEPOT_MANAGER')")
+    public StockAdjustmentResponse cancelSupply(@PathVariable Long supplyId) {
+        return cancellations.cancelSupply(supplyId, currentUser.require());
+    }
+
+    /** A correction entered by mistake, put back the same way. */
+    @PostMapping("/adjustments/{adjustmentId}/cancel")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public StockAdjustmentResponse cancelAdjustment(@PathVariable Long adjustmentId) {
+        return cancellations.cancelAdjustment(adjustmentId, currentUser.require());
     }
 
     /** The corrections made by hand, with what each loss cost -- hence the same roles as receipts. */

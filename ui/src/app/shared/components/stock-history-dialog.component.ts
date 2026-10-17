@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, OnInit, inject, input, output, signal } from '@angular/core';
 import { StockApi } from '../../core/api/stock.api';
-import { ADJUSTMENT_REASONS, Product, ProductMovement } from '../../core/models';
+import { Product, ProductMovement, adjustmentReasonLabel } from '../../core/models';
 import { formatAmount } from '../../core/sale/sale-unit';
 import { InvoiceLinkComponent } from './invoice-link.component';
 import { AriaryPipe } from '../pipes/ariary.pipe';
@@ -149,9 +149,7 @@ export class StockHistoryDialogComponent implements OnInit {
       case 'OUTPUT':
         return 'Vente';
       case 'ADJUSTMENT':
-        return (
-          ADJUSTMENT_REASONS.find((choice) => choice.value === movement.reason)?.label ?? 'Correction'
-        );
+        return movement.reason ? adjustmentReasonLabel(movement.reason) : 'Correction';
     }
   }
 

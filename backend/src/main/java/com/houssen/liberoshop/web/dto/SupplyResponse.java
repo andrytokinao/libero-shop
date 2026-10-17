@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
  * @param unitCost         what one unit as received cost -- the sack's price -- or null when it
  *                         was not given
  * @param totalCost        {@code unitCost × receivedQuantity}, the supplier invoice's line, or null
+ * @param cancelledAt      when it was cancelled by an opposite correction, or null
  */
 public record SupplyResponse(Long id,
                              BigDecimal quantity,
@@ -30,7 +31,8 @@ public record SupplyResponse(Long id,
                              SupplierRefResponse supplier,
                              boolean withoutSupplier,
                              BigDecimal unitCost,
-                             BigDecimal totalCost) {
+                             BigDecimal totalCost,
+                             LocalDateTime cancelledAt) {
 
     public static SupplyResponse of(Supply supply) {
         return new SupplyResponse(
@@ -46,7 +48,8 @@ public record SupplyResponse(Long id,
                                 supply.getSupplier().getName()),
                 supply.isWithoutSupplier(),
                 supply.getUnitCost(),
-                supply.totalCost());
+                supply.totalCost(),
+                supply.getCancelledAt());
     }
 
     /** Just enough of the supplier to label the row. */

@@ -7,7 +7,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
 import { StockApi } from '../../core/api/stock.api';
-import { PackagingRequest, ProductCost, RoleApp, Supplier, SupplierPrice, Supply } from '../../core/models';
+import { PackagingRequest, Product, ProductCost, RoleApp, Supplier, SupplierPrice, Supply } from '../../core/models';
 import {
   SaleUnit,
   formatAmount,
@@ -19,7 +19,12 @@ import {
 } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
+import { ActionMenuComponent } from '../../shared/components/action-menu.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { ProductPickerComponent } from '../../shared/components/product-picker.component';
+import { StockHistoryDialogComponent } from '../../shared/components/stock-history-dialog.component';
+import { MovementAction, receiptHtml, supplyActions } from '../../core/stock/movement-actions';
+import { printPage } from '../../core/utils/print.util';
 import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
@@ -49,6 +54,9 @@ const NEW_SUPPLIER = -1;
     AriaryPipe,
     ProductPickerComponent,
     SupplierCreateDialogComponent,
+    ActionMenuComponent,
+    ConfirmDialogComponent,
+    StockHistoryDialogComponent,
   ],
   template: `
     <div class="grid g2">
@@ -324,12 +332,18 @@ const NEW_SUPPLIER = -1;
                 <th>Fournisseur</th>
                 <th>Date</th>
                 <th>Par</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               @for (supply of supplies(); track supply.id) {
-                <tr>
-                  <td>{{ supply.product.name }}</td>
+                <tr [class.sp-cancelled]="supply.cancelledAt">
+                  <td>
+                    {{ supply.product.name }}
+                    @if (supply.cancelledAt) {
+                      <span class="badge grey" [title]="'Annulée le ' + (supply.cancelledAt | date: 'dd/MM HH:mm')">Annulée</span>
+                    }
+                  </td>
                   <td class="num">
                     +{{ formatAmount(supply.receivedQuantity, supply.unitLabel) }}
                     @if (supply.unitLabel) {
@@ -361,6 +375,13 @@ const NEW_SUPPLIER = -1;
                   </td>
                   <td class="muted">{{ supply.movementDate | date: 'dd/MM HH:mm' }}</td>
                   <td>{{ supply.performedBy.fullName }}</td>
+                  <td class="num">
+                    <app-action-menu
+                      [actions]="supplyActions(supply, true)"
+                      [label]="'Actions sur la réception de ' + supply.product.name"
+                      (picked)="onSupplyAction(supply, $event)"
+                    />
+                  </td>
                 </tr>
               }
             </tbody>
@@ -371,6 +392,22 @@ const NEW_SUPPLIER = -1;
       }
     </div>
 
+    @if (historyOf(); as product) {
+      <app-stock-history-dialog [product]="product" (closed)="historyOf.set(null)" />
+    }
+
+    @if (cancelling(); as supply) {
+      <app-confirm-dialog
+        title="Annuler cette réception ?"
+        [message]="'Le stock de « ' + supply.product.name + ' » baisse de ' + formatAmount(supply.receivedQuantity, supply.unitLabel ?? supply.product.unit) + '. La réception reste dans l’historique, marquée annulée, avec la correction qui l’annule.'"
+        confirmLabel="Annuler la réception"
+        [danger]="true"
+        [busy]="busy()"
+        (confirmed)="cancelSupply(supply)"
+        (closed)="cancelling.set(null)"
+      />
+    }
+
     @if (creatingSupplier()) {
       <app-supplier-create-dialog
         (created)="onSupplierCreated($event)"
@@ -379,6 +416,16 @@ const NEW_SUPPLIER = -1;
     }
   `,
   styles: `
+    .sp-cancelled td {
+      color: var(--ink-soft);
+      text-decoration: line-through;
+    }
+
+    .sp-cancelled td:first-child,
+    .sp-cancelled td:last-child {
+      text-decoration: none;
+    }
+
     .cost-hint {
       font-size: 12px;
       margin-top: 6px;
@@ -618,6 +665,40 @@ export class SupplyComponent {
   protected onSupplierCreated(supplier: Supplier): void {
     this.supplierResource.reload();
     this.supplierId.set(supplier.id);
+  }
+
+  protected readonly supplyActions = supplyActions;
+  /** The product whose history is open, from a receipt's menu. */
+  protected readonly historyOf = signal<Product | null>(null);
+  /** The receipt about to be cancelled, while the confirmation is on screen. */
+  protected readonly cancelling = signal<Supply | null>(null);
+
+  protected onSupplyAction(supply: Supply, action: MovementAction): void {
+    if (action === 'history') {
+      this.historyOf.set(supply.product);
+    } else if (action === 'print') {
+      printPage(receiptHtml(supply, 'Libero Shop'));
+    } else {
+      this.cancelling.set(supply);
+    }
+  }
+
+  /** Undone by an opposite correction: the stock goes back, the receipt stays, marked. */
+  protected cancelSupply(supply: Supply): void {
+    this.busy.set(true);
+    this.stock.cancelSupply(supply.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.cancelling.set(null);
+        this.supplyResource.reload();
+        this.productResource.reload();
+        this.toasts.show(`Réception de « ${supply.product.name} » annulée ; le stock est corrigé.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.cancelling.set(null);
+      },
+    });
   }
 
   protected sayUnknown(code: string): void {

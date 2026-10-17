@@ -50,7 +50,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-22** — Douchette et caméra dans la recherche de Stock, Prix et unités, Corrections.
 - [x] **UI-31** — « ＋ Réception » : fenêtre bon de livraison multi-produits, un fournisseur, un
   seul enregistrement. (serveur)
-- [ ] **UI-33** — « ⋮ » sur les réceptions et corrections passées : voir le produit, imprimer,
+- [x] **UI-33** — « ⋮ » sur les réceptions et corrections passées : voir le produit, imprimer,
   annuler par mouvement inverse. (serveur)
 - [ ] **UI-34** — Page Fournisseurs : « ＋ Nouveau » et « ⋮ » (modifier, ses prix, nouvelle
   réception, ne plus proposer). (serveur)

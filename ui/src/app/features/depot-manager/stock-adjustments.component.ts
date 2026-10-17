@@ -3,11 +3,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
-import { ADJUSTMENT_REASONS, AdjustmentReason, StockAdjustment } from '../../core/models';
+import { ADJUSTMENT_REASONS, AdjustmentReason, Product, StockAdjustment, adjustmentReasonLabel } from '../../core/models';
+import { MovementAction, adjustmentActions, countsAsLoss } from '../../core/stock/movement-actions';
 import { formatAmount, formatQuantity, parseQuantity, roundQuantity } from '../../core/sale/sale-unit';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
+import { ActionMenuComponent } from '../../shared/components/action-menu.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { StockHistoryDialogComponent } from '../../shared/components/stock-history-dialog.component';
 import { ProductPickerComponent } from '../../shared/components/product-picker.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -22,7 +26,16 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-stock-adjustments',
   standalone: true,
-  imports: [FormsModule, DatePipe, KpiCardComponent, AriaryPipe, ProductPickerComponent],
+  imports: [
+    FormsModule,
+    DatePipe,
+    KpiCardComponent,
+    AriaryPipe,
+    ProductPickerComponent,
+    ActionMenuComponent,
+    ConfirmDialogComponent,
+    StockHistoryDialogComponent,
+  ],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Corrections enregistrées" [value]="adjustments().length" />
@@ -116,13 +129,19 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                 <th class="num">Valeur d'achat</th>
                 <th>Par</th>
                 <th>Commentaire</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               @for (adjustment of adjustments(); track adjustment.id) {
-                <tr>
+                <tr [class.adj-cancelled]="adjustment.cancelledAt">
                   <td class="muted">{{ adjustment.movementDate | date: 'dd/MM/yy HH:mm' }}</td>
-                  <td>{{ adjustment.product.name }}</td>
+                  <td>
+                    {{ adjustment.product.name }}
+                    @if (adjustment.cancelledAt) {
+                      <span class="badge grey">Annulée</span>
+                    }
+                  </td>
                   <td>{{ reasonLabel(adjustment.reason) }}</td>
                   <td class="num">{{ signed(adjustment) }}</td>
                   <td class="num">
@@ -134,6 +153,13 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                   </td>
                   <td>{{ adjustment.performedBy.fullName }}</td>
                   <td class="muted">{{ adjustment.comment ?? '—' }}</td>
+                  <td class="num">
+                    <app-action-menu
+                      [actions]="adjustmentActions(adjustment)"
+                      [label]="'Actions sur la correction de ' + adjustment.product.name"
+                      (picked)="onAdjustmentAction(adjustment, $event)"
+                    />
+                  </td>
                 </tr>
               }
             </tbody>
@@ -143,8 +169,28 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         <div class="empty">Aucune correction de stock pour l'instant.</div>
       }
     </div>
+
+    @if (historyOf(); as product) {
+      <app-stock-history-dialog [product]="product" (closed)="historyOf.set(null)" />
+    }
+
+    @if (cancelling(); as adjustment) {
+      <app-confirm-dialog
+        title="Annuler cette correction ?"
+        [message]="'Le stock de « ' + adjustment.product.name + ' » revient de ' + signed(adjustment) + '. La correction reste dans l’historique, marquée annulée.'"
+        confirmLabel="Annuler la correction"
+        [danger]="true"
+        [busy]="busy()"
+        (confirmed)="cancelAdjustment(adjustment)"
+        (closed)="cancelling.set(null)"
+      />
+    }
   `,
   styles: `
+    .adj-cancelled td {
+      color: var(--ink-soft);
+    }
+
     .warn {
       color: var(--danger, #c0392b);
     }
@@ -224,12 +270,12 @@ export class StockAdjustmentsComponent {
   /** Losses only: what a count found in excess is not a loss paid back. */
   protected readonly lostUnits = computed(() =>
     roundQuantity(
-      this.adjustments().reduce((total, a) => total + (a.quantity < 0 ? -a.quantity : 0), 0),
+      this.adjustments().reduce((total, a) => total + (countsAsLoss(a) ? -a.quantity : 0), 0),
     ),
   );
   protected readonly lostValue = computed(() =>
     this.adjustments().reduce(
-      (total, a) => total + (a.costValue !== null && a.costValue < 0 ? -a.costValue : 0),
+      (total, a) => total + (countsAsLoss(a) && a.costValue !== null && a.costValue < 0 ? -a.costValue : 0),
       0,
     ),
   );
@@ -237,7 +283,37 @@ export class StockAdjustmentsComponent {
   protected readonly formatQuantity = formatQuantity;
 
   protected reasonLabel(reason: AdjustmentReason): string {
-    return ADJUSTMENT_REASONS.find((choice) => choice.value === reason)?.label ?? reason;
+    return adjustmentReasonLabel(reason);
+  }
+
+  protected readonly adjustmentActions = adjustmentActions;
+  protected readonly historyOf = signal<Product | null>(null);
+  protected readonly cancelling = signal<StockAdjustment | null>(null);
+
+  protected onAdjustmentAction(adjustment: StockAdjustment, action: MovementAction): void {
+    if (action === 'history') {
+      this.historyOf.set(adjustment.product);
+    } else if (action === 'cancel') {
+      this.cancelling.set(adjustment);
+    }
+  }
+
+  /** Undone by an opposite correction: the stock goes back, both stay in the history. */
+  protected cancelAdjustment(adjustment: StockAdjustment): void {
+    this.busy.set(true);
+    this.api.cancelAdjustment(adjustment.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.cancelling.set(null);
+        this.adjustmentResource.reload();
+        this.productResource.reload();
+        this.toasts.show(`Correction de « ${adjustment.product.name} » annulée ; le stock est corrigé.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.cancelling.set(null);
+      },
+    });
   }
 
   protected signed(adjustment: StockAdjustment): string {

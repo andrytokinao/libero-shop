@@ -22,7 +22,8 @@ public record StockAdjustmentResponse(Long id,
                                       UserResponse performedBy,
                                       AdjustmentReason reason,
                                       String comment,
-                                      BigDecimal costValue) {
+                                      BigDecimal costValue,
+                                      LocalDateTime cancelledAt) {
 
     public static StockAdjustmentResponse of(StockAdjustment adjustment) {
         BigDecimal cost = adjustment.getProduct().getAverageCost();
@@ -35,6 +36,7 @@ public record StockAdjustmentResponse(Long id,
                 adjustment.getReason(),
                 adjustment.getComment(),
                 cost == null ? null
-                        : cost.multiply(adjustment.getQuantity()).setScale(2, RoundingMode.HALF_UP));
+                        : cost.multiply(adjustment.getQuantity()).setScale(2, RoundingMode.HALF_UP),
+                adjustment.getCancelledAt());
     }
 }

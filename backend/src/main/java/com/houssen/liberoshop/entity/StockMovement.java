@@ -37,4 +37,10 @@ public abstract class StockMovement {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "performed_by")
     private UserApp performedBy;
+
+    /**
+     * When this receipt or correction was cancelled by an opposite movement -- kept, never
+     * deleted, so the history still reads what happened. Null while it stands.
+     */
+    private LocalDateTime cancelledAt;
 }

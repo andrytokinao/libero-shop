@@ -36,6 +36,8 @@ export interface Supply extends StockMovementBase {
   unitCost: number | null;
   /** unitCost × receivedQuantity, the supplier invoice's line, or null with it. */
   totalCost: number | null;
+  /** When it was cancelled by an opposite correction; null while it stands. Optional for old payloads. */
+  cancelledAt?: string | null;
 }
 
 /**
@@ -54,7 +56,18 @@ export interface StockOutputPage {
 }
 
 /** Mirrors com.houssen.liberoshop.entity.AdjustmentReason. */
-export type AdjustmentReason = 'BREAKAGE' | 'THEFT' | 'EXPIRED' | 'INVENTORY_COUNT' | 'OTHER';
+/**
+ * Mirrors com.houssen.liberoshop.entity.AdjustmentReason. CANCELLATION is written by a
+ * cancellation only, never offered in the list.
+ */
+export type AdjustmentReason = 'BREAKAGE' | 'THEFT' | 'EXPIRED' | 'INVENTORY_COUNT' | 'OTHER' | 'CANCELLATION';
+
+/** Every reason as the screens name it, the reserved one included. */
+export function adjustmentReasonLabel(reason: AdjustmentReason): string {
+  return reason === 'CANCELLATION'
+    ? 'Annulation'
+    : (ADJUSTMENT_REASONS.find((choice) => choice.value === reason)?.label ?? reason);
+}
 
 /** The reasons as the screens name them, in the order they are offered. */
 export const ADJUSTMENT_REASONS: readonly { value: AdjustmentReason; label: string }[] = [
@@ -73,6 +86,8 @@ export interface StockAdjustment extends StockMovementBase {
   comment: string | null;
   /** `quantity` at the average purchase cost, signed like it; null while the product has none. */
   costValue: number | null;
+  /** When it was cancelled by an opposite correction; null while it stands. */
+  cancelledAt?: string | null;
 }
 
 /** Mirrors CreateStockAdjustmentRequest. */

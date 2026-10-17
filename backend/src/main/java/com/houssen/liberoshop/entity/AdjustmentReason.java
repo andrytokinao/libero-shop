@@ -11,7 +11,12 @@ public enum AdjustmentReason {
     /** The shelf was counted, and the count is what the stock becomes -- up or down. */
     INVENTORY_COUNT,
     /** Any other loss; the comment then says what. */
-    OTHER;
+    OTHER,
+    /**
+     * The opposite of a receipt or a correction entered by mistake: not a loss, the comment names
+     * the movement it cancels. Never picked from the list -- written by the cancellation itself.
+     */
+    CANCELLATION;
 
     /** Whether the quantity given is what was counted rather than what was lost. */
     public boolean isCount() {

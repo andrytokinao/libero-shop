@@ -183,6 +183,11 @@ public class StockService {
             throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
                     "Une quantite se saisit au millieme au plus (" + request.quantity() + ").");
         }
+        if (request.reason() == AdjustmentReason.CANCELLATION) {
+            // Written by MovementCancellationService only, with the movement it cancels named.
+            throw new BusinessRuleException("ADJUSTMENT_REASON_RESERVED",
+                    "Une annulation se fait depuis la saisie a annuler, pas comme une correction.");
+        }
         String comment = PackagingRules.squeeze(request.comment());
         if (request.reason() == AdjustmentReason.OTHER && comment == null) {
             throw new BusinessRuleException("ADJUSTMENT_COMMENT_REQUIRED",
