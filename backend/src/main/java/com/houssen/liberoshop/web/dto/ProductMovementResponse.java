@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
  * @param performedBy   the full name of who booked it
  * @param supplierName  on a SUPPLY, who delivered; null when no supplier was named
  * @param unitCost      on a SUPPLY, what one base unit cost, or null when it was not given
- * @param invoiceNumber on an OUTPUT, the invoice the goods left against
+ * @param invoiceId     on an OUTPUT, the invoice the goods left against -- what opens it
+ * @param invoiceNumber on an OUTPUT, that invoice's number
  * @param reason        on an ADJUSTMENT, why
  * @param comment       on an ADJUSTMENT, what the operator had to say
  */
@@ -28,6 +29,7 @@ public record ProductMovementResponse(Long id,
                                       String performedBy,
                                       String supplierName,
                                       BigDecimal unitCost,
+                                      Long invoiceId,
                                       String invoiceNumber,
                                       AdjustmentReason reason,
                                       String comment) {
@@ -38,13 +40,14 @@ public record ProductMovementResponse(Long id,
             case Supply supply -> new ProductMovementResponse(supply.getId(), "SUPPLY",
                     supply.getQuantity(), supply.getMovementDate(), author,
                     supply.getSupplier() == null ? null : supply.getSupplier().getName(),
-                    supply.baseUnitCost(), null, null, null);
+                    supply.baseUnitCost(), null, null, null, null);
             case StockOutput output -> new ProductMovementResponse(output.getId(), "OUTPUT",
                     output.getQuantity().negate(), output.getMovementDate(), author,
-                    null, null, output.getInvoice().getInvoiceNumber(), null, null);
+                    null, null, output.getInvoice().getId(), output.getInvoice().getInvoiceNumber(),
+                    null, null);
             case StockAdjustment adjustment -> new ProductMovementResponse(adjustment.getId(), "ADJUSTMENT",
                     adjustment.getQuantity(), adjustment.getMovementDate(), author,
-                    null, null, null, adjustment.getReason(), adjustment.getComment());
+                    null, null, null, null, adjustment.getReason(), adjustment.getComment());
             default -> throw new IllegalStateException(
                     "Mouvement de stock de type inconnu : " + movement.getClass().getSimpleName());
         };

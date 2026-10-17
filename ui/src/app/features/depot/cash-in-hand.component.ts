@@ -9,6 +9,7 @@ import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -22,7 +23,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-cash-in-hand',
   standalone: true,
-  imports: [DatePipe, KpiCardComponent, AriaryPipe],
+  imports: [DatePipe, KpiCardComponent, AriaryPipe, InvoiceLinkComponent],
   template: `
     <div class="card">
       <h2>
@@ -51,7 +52,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             <tbody>
               @for (payment of payments(); track payment.id) {
                 <tr>
-                  <td>{{ payment.invoice.invoiceNumber }}</td>
+                  <td><app-invoice-link [invoiceId]="payment.invoice.id" [number]="payment.invoice.invoiceNumber" /></td>
                   <td>{{ payment.invoice.clientName }}</td>
                   <td class="muted">{{ payment.paymentDate | date: 'dd/MM HH:mm' }}</td>
                   <td class="num">{{ payment.amount | ariary }}</td>
@@ -76,7 +77,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
           @for (payment of payments(); track payment.id) {
             <li class="inv-card">
               <div class="head">
-                <strong>{{ payment.invoice.invoiceNumber }}</strong>
+                <strong><app-invoice-link [invoiceId]="payment.invoice.id" [number]="payment.invoice.invoiceNumber" /></strong>
                 <span class="muted">{{ payment.paymentDate | date: 'dd/MM HH:mm' }}</span>
               </div>
               <div class="who">{{ payment.invoice.clientName }}</div>

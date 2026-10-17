@@ -3,6 +3,7 @@ import { Component, OnInit, inject, input, output, signal } from '@angular/core'
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, Product, ProductMovement } from '../../core/models';
 import { formatAmount } from '../../core/sale/sale-unit';
+import { InvoiceLinkComponent } from './invoice-link.component';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 
 /**
@@ -15,7 +16,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
 @Component({
   selector: 'app-stock-history-dialog',
   standalone: true,
-  imports: [DatePipe, AriaryPipe],
+  imports: [DatePipe, AriaryPipe, InvoiceLinkComponent],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
@@ -61,7 +62,10 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
                             }
                           }
                           @case ('OUTPUT') {
-                            Facture {{ movement.invoiceNumber }}
+                            Facture
+                            @if (movement.invoiceId !== null && movement.invoiceNumber !== null) {
+                              <app-invoice-link [invoiceId]="movement.invoiceId" [number]="movement.invoiceNumber" />
+                            }
                           }
                           @default {
                             {{ movement.comment ?? '—' }}

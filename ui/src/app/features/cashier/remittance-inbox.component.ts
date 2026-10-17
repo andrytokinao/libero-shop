@@ -4,6 +4,7 @@ import { RemittanceStore } from '../../core/store/remittance.store';
 import { CashRemittance, RemittanceStatus, RoleApp } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
@@ -20,6 +21,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     HasRoleDirective,
     AriaryPipe,
     UserAvatarComponent,
+    InvoiceLinkComponent,
   ],
   styles: `
     .small {
@@ -75,7 +77,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                     <!-- What to count against: each order and its amount. -->
                     @for (invoice of remittance.invoices; track invoice.invoiceId) {
                       <div class="small">
-                        {{ invoice.invoiceNumber }} · {{ invoice.clientName }} ·
+                        <app-invoice-link [invoiceId]="invoice.invoiceId" [number]="invoice.invoiceNumber" /> ·
+                        {{ invoice.clientName }} ·
                         {{ invoice.amount | ariary }}
                       </div>
                     }
@@ -104,7 +107,8 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               </div>
               @for (invoice of remittance.invoices; track invoice.invoiceId) {
                 <div class="who small muted">
-                  {{ invoice.invoiceNumber }} · {{ invoice.clientName }} · {{ invoice.amount | ariary }}
+                  <app-invoice-link [invoiceId]="invoice.invoiceId" [number]="invoice.invoiceNumber" /> ·
+                  {{ invoice.clientName }} · {{ invoice.amount | ariary }}
                 </div>
               }
               <div class="foot">

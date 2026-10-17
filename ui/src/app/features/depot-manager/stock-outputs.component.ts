@@ -6,13 +6,21 @@ import { StockOutput, StockOutputPage } from '../../core/models';
 import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { formatQuantity } from '../../core/sale/sale-unit';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { DeliveryStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 @Component({
   selector: 'app-stock-outputs',
   standalone: true,
-  imports: [FormsModule, DatePipe, KpiCardComponent, DeliveryStatusBadgeComponent, AriaryPipe],
+  imports: [
+    FormsModule,
+    DatePipe,
+    KpiCardComponent,
+    DeliveryStatusBadgeComponent,
+    AriaryPipe,
+    InvoiceLinkComponent,
+  ],
   template: `
     <div class="grid g3">
       <!-- The whole answer's figures, from the server: the table below only holds a page of it. -->
@@ -58,7 +66,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                   <td class="muted">{{ output.movementDate | date: 'dd/MM HH:mm' }}</td>
                   <td>{{ output.product.name }}</td>
                   <td class="num">−{{ output.quantity }}</td>
-                  <td>{{ output.invoice.invoiceNumber }}</td>
+                  <td><app-invoice-link [invoiceId]="output.invoice.id" [number]="output.invoice.invoiceNumber" /></td>
                   <td>{{ output.invoice.clientName }}</td>
                   <td class="num">{{ output.value | ariary }}</td>
                   <td><app-delivery-status-badge [status]="output.invoice.deliveryStatus" /></td>

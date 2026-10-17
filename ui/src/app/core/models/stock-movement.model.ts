@@ -102,7 +102,9 @@ export interface ProductMovement {
   supplierName: string | null;
   /** On a SUPPLY: what one base unit cost, or null when it was not given. */
   unitCost: number | null;
-  /** On an OUTPUT: the invoice the goods left against. */
+  /** On an OUTPUT: the invoice the goods left against — what opens it. */
+  invoiceId: number | null;
+  /** On an OUTPUT: that invoice's number. */
   invoiceNumber: string | null;
   /** On an ADJUSTMENT. */
   reason: AdjustmentReason | null;

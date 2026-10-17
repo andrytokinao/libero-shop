@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RemittanceStore } from '../../core/store/remittance.store';
-import { CashRemittance } from '../../core/models';
+import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CashInHandComponent } from './cash-in-hand.component';
@@ -10,7 +10,7 @@ import { CashInHandComponent } from './cash-in-hand.component';
 @Component({
   selector: 'app-depot-cash',
   standalone: true,
-  imports: [DatePipe, CashInHandComponent, RemittanceStatusBadgeComponent, AriaryPipe],
+  imports: [DatePipe, CashInHandComponent, RemittanceStatusBadgeComponent, AriaryPipe, InvoiceLinkComponent],
   template: `
     <div class="grid g2">
       <app-cash-in-hand />
@@ -33,7 +33,11 @@ import { CashInHandComponent } from './cash-in-hand.component';
                 @for (remittance of myRemittances(); track remittance.id) {
                   <tr>
                     <td>V-{{ remittance.id }}</td>
-                    <td class="muted">{{ invoiceNumbers(remittance) }}</td>
+                    <td class="muted">
+                      @for (invoice of remittance.invoices; track invoice.invoiceId; let last = $last) {
+                        <app-invoice-link [invoiceId]="invoice.invoiceId" [number]="invoice.invoiceNumber" />@if (!last) {, }
+                      }
+                    </td>
                     <td class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</td>
                     <td class="num">{{ remittance.amount | ariary }}</td>
                     <td>
@@ -56,7 +60,11 @@ import { CashInHandComponent } from './cash-in-hand.component';
                   <strong>V-{{ remittance.id }}</strong>
                   <span class="muted">{{ remittance.remittanceDate | date: 'dd/MM HH:mm' }}</span>
                 </div>
-                <div class="who muted">{{ invoiceNumbers(remittance) }}</div>
+                <div class="who muted">
+                  @for (invoice of remittance.invoices; track invoice.invoiceId; let last = $last) {
+                    <app-invoice-link [invoiceId]="invoice.invoiceId" [number]="invoice.invoiceNumber" />@if (!last) {, }
+                  }
+                </div>
                 <div class="foot">
                   <span class="amount">{{ remittance.amount | ariary }}</span>
                   <app-remittance-status-badge
@@ -79,7 +87,4 @@ export class DepotCashComponent {
   // "Confirmé" the moment the cashier signs for it.
   protected readonly myRemittances = inject(RemittanceStore).list(() => ({ mine: true })).value;
 
-  protected invoiceNumbers(remittance: CashRemittance): string {
-    return remittance.invoices.map((invoice) => invoice.invoiceNumber).join(', ');
-  }
 }

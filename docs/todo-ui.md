@@ -23,7 +23,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   affiché) à la place des listes déroulantes d'Approvisionnement et de Corrections.
 - [x] **UI-32** — « ＋ Nouveau fournisseur… » en fin de liste des fournisseurs (mini-fenêtre nom,
   téléphone ; choisi d'office). (serveur : création de fournisseur)
-- [ ] **UI-50** — Numéro de facture cliquable (sorties, versements, historique du stock) →
+- [x] **UI-50** — Numéro de facture cliquable (sorties, versements, historique du stock) →
   `invoice-detail-dialog`.
 - [ ] **UI-61** — Badge « prix d'achat inconnu » (Bénéfices & stock) → configuration du produit,
   onglet Prix.
