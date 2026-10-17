@@ -7,6 +7,7 @@ import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
+import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.InsufficientStockException;
 import com.houssen.liberoshop.service.exception.InsufficientStockException.Shortage;
 import com.houssen.liberoshop.util.Quantities;
@@ -23,7 +24,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
-import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
 import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -92,7 +92,7 @@ class SaleStockShortageTest {
                 shortage);
 
         String other = json.writeValueAsString(handler.handleBusinessRule(
-                new com.houssen.liberoshop.service.exception.BusinessRuleException("EMPTY_CART", "Le panier est vide."))
+                new BusinessRuleException("EMPTY_CART", "Le panier est vide."))
                 .getBody());
         assertFalse(other.contains("\"data\""), other);
     }
@@ -110,5 +110,20 @@ class SaleStockShortageTest {
 
         assertEquals("PRODUCT_RETIRED", refused.code());
         assertQuantity(20, products.findById(bougie.getId()).orElseThrow().getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("une vente au-dela de 9 999 999 999 Ar est refusee en mots, rien n'est vendu")
+    void venteTropGrandeRefusee() {
+        Product precieux = products.save(Product.builder().name("Lingot " + UUID.randomUUID())
+                .price(new BigDecimal("9000000000")).stockQuantity(qty(5)).build());
+
+        BusinessRuleException refused = assertThrows(
+                BusinessRuleException.class, () ->
+                        saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.PAID, PaymentMethod.CASH,
+                                List.of(new CreateSaleRequest.Line(precieux.getId(), new BigDecimal("2")))), cashier()));
+
+        assertEquals("AMOUNT_TOO_LARGE", refused.code());
+        assertEquals(0, new BigDecimal("5").compareTo(products.findById(precieux.getId()).orElseThrow().getStockQuantity()));
     }
 }

@@ -8,6 +8,7 @@ import com.houssen.liberoshop.service.exception.OutsideLocalNetworkException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -67,6 +68,19 @@ public class ApiExceptionHandler {
                 .body(new ApiError("CONCURRENT_UPDATE",
                         "Quelqu'un d'autre vient de modifier cette commande au meme moment. "
                                 + "Rien n'a ete enregistre de votre cote : verifiez son etat avant de recommencer.",
+                        List.of(), Instant.now()));
+    }
+
+    /**
+     * What the database itself refused -- a figure too large for its column, a value already
+     * taken -- that no rule caught before: said as a refusal, not as a breakdown.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError("VALUE_REFUSED",
+                        "Valeur refusee : un nombre trop grand, ou une valeur deja utilisee. "
+                                + "Rien n'a ete enregistre ; verifiez la saisie.",
                         List.of(), Instant.now()));
     }
 

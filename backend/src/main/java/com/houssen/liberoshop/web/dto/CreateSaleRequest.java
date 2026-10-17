@@ -3,6 +3,7 @@ package com.houssen.liberoshop.web.dto;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -42,7 +43,8 @@ public record CreateSaleRequest(@Size(max = 120) String clientName,
      * @param packagingId the unit sold -- "kg", "sac" -- or null for the product's base unit
      * @param quantity    in that unit, to the thousandth: 0.5 for half a kilo
      */
-    public record Line(@NotNull Long productId, Long packagingId, @NotNull @Positive BigDecimal quantity) {
+    public record Line(@NotNull Long productId, Long packagingId,
+                       @NotNull @Positive @Digits(integer = 9, fraction = 3) BigDecimal quantity) {
 
         /** A line in the base unit, the only kind there was before units. */
         public Line(Long productId, BigDecimal quantity) {

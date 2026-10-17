@@ -2,9 +2,11 @@ package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -22,11 +24,11 @@ import java.util.List;
  */
 public record ApplyUnitModelRequest(@NotNull Long modelId,
                                     @Size(max = Product.MAX_UNIT_LENGTH) String anchorLabel,
-                                    BigDecimal anchorQuantity,
+                                    @Positive @Digits(integer = 9, fraction = 3) BigDecimal anchorQuantity,
                                     @NotEmpty @Valid List<Choice> units) {
 
     /** One unit of the model, at its price for this product. */
     public record Choice(@NotBlank @Size(max = Product.MAX_UNIT_LENGTH) String label,
-                         @NotNull BigDecimal price) {
+                         @NotNull @Positive @Digits(integer = 10, fraction = 2) BigDecimal price) {
     }
 }

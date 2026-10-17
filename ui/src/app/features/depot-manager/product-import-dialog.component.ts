@@ -717,7 +717,7 @@ export class ProductImportDialogComponent {
     if (!row.name.trim()) {
       return 'Donnez un nom au produit, ou décochez la ligne.';
     }
-    if (row.action === ImportAction.CREATE && (row.price === null || row.price < 0)) {
+    if (row.action === ImportAction.CREATE && (row.price === null || row.price <= 0)) {
       return 'Saisissez le prix de vente : un nouveau produit ne peut pas être enregistré sans prix.';
     }
     if (row.quantity < 0) {

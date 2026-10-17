@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.web.dto;
 
 import com.houssen.liberoshop.entity.Product;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,8 +22,8 @@ import java.math.BigDecimal;
  * @param barcode   optional; blank means none
  */
 public record PackagingRequest(@NotBlank @Size(max = Product.MAX_UNIT_LENGTH) String label,
-                               @NotNull BigDecimal factor,
-                               @NotNull BigDecimal price,
+                               @NotNull @Digits(integer = 9, fraction = 3) BigDecimal factor,
+                               @NotNull @Digits(integer = 10, fraction = 2) BigDecimal price,
                                @Size(max = 64) String barcode,
                                @Size(max = Product.MAX_UNIT_LENGTH) String reference) {
 

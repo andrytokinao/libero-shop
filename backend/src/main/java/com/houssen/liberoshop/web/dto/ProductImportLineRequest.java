@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
@@ -51,10 +52,12 @@ public record ProductImportLineRequest(
         String unit,
 
         @NotNull
-        @PositiveOrZero(message = "le prix ne peut pas etre negatif")
+        @Positive(message = "le prix de vente doit etre superieur a zero")
+        @Digits(integer = 10, fraction = 2)
         BigDecimal price,
 
         @PositiveOrZero(message = "le prix d'achat ne peut pas etre negatif")
+        @Digits(integer = 10, fraction = 2)
         BigDecimal cost,
 
         @Size(max = 64)

@@ -51,6 +51,9 @@ import java.util.TreeSet;
 @Service
 public class SaleService {
 
+    /** The largest amount a sale or a line is kept at: twelve digits, two of them decimals. */
+    static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999.99");
+
     private final SaleRepository sales;
     private final InvoiceRepository invoices;
     private final ProductRepository products;
@@ -134,6 +137,7 @@ public class SaleService {
         sale.getLines().forEach(line -> line.getProduct().adjustStock(line.baseQuantity().negate()));
 
         sale.calculateTotal();
+        refuseOversized(sale);
         // Flushed now so the generated identifier can number the invoice.
         Sale savedSale = sales.saveAndFlush(sale);
 
@@ -317,5 +321,19 @@ public class SaleService {
 
     private static PaymentMethod methodOf(CreateSaleRequest request) {
         return request.paymentMethod() == null ? PaymentMethod.CASH : request.paymentMethod();
+    }
+
+    /**
+     * A line or a sale beyond what the books hold (twelve digits, two of them after the comma):
+     * a price or a quantity typed with too many zeros, said in words instead of failing in the
+     * database.
+     */
+    private static void refuseOversized(Sale sale) {
+        boolean tooLarge = sale.getTotalAmount().compareTo(MAX_AMOUNT) > 0
+                || sale.getLines().stream().anyMatch(line -> line.lineTotal().compareTo(MAX_AMOUNT) > 0);
+        if (tooLarge) {
+            throw new BusinessRuleException("AMOUNT_TOO_LARGE",
+                    "Le montant de cette vente depasse 9 999 999 999 Ar : verifiez les quantites et les prix.");
+        }
     }
 }
