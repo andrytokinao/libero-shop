@@ -4,11 +4,18 @@ import { apiResource } from '../../core/api/api-resource';
 import { RemittanceApi } from '../../core/api/remittance.api';
 import { RemittanceStore } from '../../core/store/remittance.store';
 import { Payment } from '../../core/models';
-import { confirmsOwnSlip, describeSlip, remitLabel } from '../../core/orders/remittance';
+import {
+  RemitQuestion,
+  confirmsOwnSlip,
+  describeSlip,
+  remitLabel,
+  remitQuestion,
+} from '../../core/orders/remittance';
 import { reloadOnOrderChange } from '../../core/realtime/reload-on';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -23,7 +30,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-cash-in-hand',
   standalone: true,
-  imports: [DatePipe, KpiCardComponent, AriaryPipe, InvoiceLinkComponent],
+  imports: [DatePipe, KpiCardComponent, AriaryPipe, InvoiceLinkComponent, ConfirmDialogComponent],
   template: `
     <div class="card">
       <h2>
@@ -61,7 +68,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                       class="btn small"
                       type="button"
                       [disabled]="busy()"
-                      (click)="remit([payment.invoice.id])"
+                      (click)="ask([payment], [payment.invoice.id])"
                     >
                       {{ remitLabel() }}
                     </button>
@@ -87,7 +94,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
                   class="btn small"
                   type="button"
                   [disabled]="busy()"
-                  (click)="remit([payment.invoice.id])"
+                  (click)="ask([payment], [payment.invoice.id])"
                 >
                   {{ remitLabel() }}
                 </button>
@@ -102,13 +109,24 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             type="button"
             style="margin-top:14px;"
             [disabled]="busy()"
-            (click)="remit([])"
+            (click)="ask(payments(), [])"
           >
             {{ selfConfirming() ? 'Tout mettre en caisse' : 'Tout remettre à la caisse' }} ({{ total() | ariary }})
           </button>
         }
       } @else {
         <div class="empty" style="margin-top:14px;">Aucun argent à remettre pour le moment.</div>
+      }
+
+      @if (asking(); as question) {
+        <app-confirm-dialog
+          [title]="question.title"
+          [message]="question.message"
+          [confirmLabel]="question.confirmLabel"
+          [busy]="busy()"
+          (confirmed)="remit(question.invoiceIds)"
+          (closed)="asking.set(null)"
+        />
       }
     </div>
   `,
@@ -121,6 +139,8 @@ export class CashInHandComponent {
   private readonly auth = inject(AuthService);
 
   protected readonly busy = signal(false);
+  /** The question on screen before cash is handed over, with the orders it would send. */
+  protected readonly asking = signal<(RemitQuestion & { invoiceIds: number[] }) | null>(null);
 
   /** A cashier with no second person to count puts the cash straight in the till. */
   protected readonly selfConfirming = computed(() =>
@@ -144,17 +164,31 @@ export class CashInHandComponent {
     this.resource.reload();
   }
 
+  /**
+   * Cash leaving one's hands is said first, amount and orders in full: a tap on the wrong row
+   * would otherwise send money that has not been counted out.
+   *
+   * @param invoiceIds what the server is sent: one order's, or none for everything in hand
+   */
+  protected ask(payments: readonly Payment[], invoiceIds: number[]): void {
+    const amount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const numbers = payments.map((payment) => payment.invoice.invoiceNumber);
+    this.asking.set({ ...remitQuestion(numbers, amount, this.selfConfirming()), invoiceIds });
+  }
+
   /** @param invoiceIds one order's, or none for everything in hand */
   protected remit(invoiceIds: number[]): void {
     this.busy.set(true);
     this.remittances.submit(invoiceIds).subscribe({
       next: (slip) => {
         this.busy.set(false);
+        this.asking.set(null);
         this.resource.reload();
         this.toasts.show(describeSlip(slip));
       },
       error: () => {
         this.busy.set(false);
+        this.asking.set(null);
         this.resource.reload();
       },
     });

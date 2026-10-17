@@ -1,10 +1,11 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, input, output, signal } from '@angular/core';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, Product, ProductMovement } from '../../core/models';
 import { formatAmount } from '../../core/sale/sale-unit';
 import { InvoiceLinkComponent } from './invoice-link.component';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 
 /**
  * Everything that moved one product's stock — receipts, sales, corrections — newest first.
@@ -17,7 +18,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
   selector: 'app-stock-history-dialog',
   standalone: true,
   imports: [DatePipe, AriaryPipe, InvoiceLinkComponent],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="sh-title">
@@ -105,6 +106,8 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
   `,
 })
 export class StockHistoryDialogComponent implements OnInit {
+  private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
+
   private readonly api = inject(StockApi);
 
   readonly product = input.required<Product>();
@@ -155,6 +158,13 @@ export class StockHistoryDialogComponent implements OnInit {
   protected signed(movement: ProductMovement): string {
     const sign = movement.quantity > 0 ? '+' : '−';
     return `${sign}${formatAmount(Math.abs(movement.quantity), this.product().unit)}`;
+  }
+
+  /** Only the dialog on top closes: an invoice opened over a history leaves the history open. */
+  protected onEscape(): void {
+    if (isTopmostDialog(this.hostElement.nativeElement)) {
+      this.closed.emit();
+    }
   }
 
   protected onBackdrop(event: MouseEvent): void {

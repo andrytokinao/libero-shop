@@ -1,5 +1,5 @@
 import { CashRemittance, RemittanceStatus, RoleApp, ShopFeatures } from '../models';
-import { confirmsOwnSlip, describeSlip, remitLabel } from './remittance';
+import { confirmsOwnSlip, describeSlip, remitLabel, remitQuestion } from './remittance';
 
 describe('remittance rules', () => {
   const features = (dualControlRemittance: boolean) => ({ dualControlRemittance }) as ShopFeatures;
@@ -20,5 +20,21 @@ describe('remittance rules', () => {
 
     expect(describeSlip(slip)).toContain('mis en caisse');
     expect(describeSlip({ ...slip, status: RemittanceStatus.PENDING })).toContain('en attente de confirmation');
+  });
+
+  it('asks before handing cash over, with the amount and the order it is for', () => {
+    const question = remitQuestion(['F-1007'], 14000, false);
+
+    expect(question.message).toContain('la facture F-1007');
+    expect(question.message).toContain('un caissier comptera');
+    expect(question.confirmLabel).toBe(`Remettre ${(14000).toLocaleString('fr-FR')} Ar`);
+  });
+
+  it('names every order of "Tout remettre", and says the cash goes in the till for a cashier alone', () => {
+    const question = remitQuestion(['F-1004', 'F-1006'], 30000, true);
+
+    expect(question.message).toContain('2 factures (F-1004, F-1006)');
+    expect(question.title).toBe('Mettre en caisse ?');
+    expect(question.confirmLabel).toContain('en caisse');
   });
 });

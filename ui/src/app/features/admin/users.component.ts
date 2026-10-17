@@ -14,6 +14,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { UserDialogComponent } from './user-dialog.component';
@@ -38,7 +39,13 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [AriaryPipe, UserDialogComponent, UserPasswordDialogComponent, UserAvatarComponent],
+  imports: [
+    AriaryPipe,
+    UserDialogComponent,
+    UserPasswordDialogComponent,
+    UserAvatarComponent,
+    ConfirmDialogComponent,
+  ],
   template: `
     <div class="card">
       <div class="head-row">
@@ -106,7 +113,7 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
                           type="button"
                           [disabled]="busyId() === row.user.id || !!blockedReason(row.user)"
                           [title]="blockedReason(row.user) ?? 'Coupe l’accès sans rien effacer'"
-                          (click)="setEnabled(row.user, false)"
+                          (click)="disabling.set(row.user)"
                         >
                           Désactiver
                         </button>
@@ -181,6 +188,18 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
       />
     }
 
+    @if (disabling(); as target) {
+      <app-confirm-dialog
+        title="Désactiver ce compte ?"
+        [message]="target.fullName + ' ne pourra plus se connecter ni rien enregistrer. Son historique est conservé ; le compte peut être réactivé à tout moment.'"
+        [confirmLabel]="'Désactiver ' + target.fullName"
+        [danger]="true"
+        [busy]="busyId() === target.id"
+        (confirmed)="setEnabled(target, false)"
+        (closed)="disabling.set(null)"
+      />
+    }
+
     @if (passwordFor(); as target) {
       <app-user-password-dialog
         [user]="target"
@@ -245,6 +264,8 @@ export class UsersComponent {
   /** The account being corrected; null while the dialog is opening a new one. */
   protected readonly editing = signal<UserApp | null>(null);
   protected readonly passwordFor = signal<UserApp | null>(null);
+  /** The account about to be cut off, while the confirmation is on screen. */
+  protected readonly disabling = signal<UserApp | null>(null);
 
   private readonly users = computed<UserApp[]>(() => this.activity().map((row) => row.user));
 
@@ -356,6 +377,7 @@ export class UsersComponent {
     this.api.setEnabled(user.id, enabled).subscribe({
       next: (updated) => {
         this.busyId.set(null);
+        this.disabling.set(null);
         this.resource.reload();
         // Precise on purpose: a token already issued still opens read-only screens until
         // it expires, so promising "plus aucun accès" would be a promise the server keeps

@@ -3,6 +3,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api/api.config';
 import { UpdateApi, UpdateCheck, UpdateStatus } from '../../core/api/update.api';
 import { SILENT_ERRORS } from '../../core/interceptors/error.interceptor';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 
 /** How long to wait for the server to come back after an update before saying so. */
 const RESTART_TIMEOUT_MS = 3 * 60_000;
@@ -20,6 +21,7 @@ const RESTART_TIMEOUT_MS = 3 * 60_000;
 @Component({
   selector: 'app-update',
   standalone: true,
+  imports: [ConfirmDialogComponent],
   template: `
     @if (status(); as s) {
       <div class="grid g4">
@@ -158,6 +160,18 @@ const RESTART_TIMEOUT_MS = 3 * 60_000;
         </div>
       </div>
     }
+
+    @if (asking(); as question) {
+      <app-confirm-dialog
+        [title]="question.title"
+        [message]="question.message"
+        [confirmLabel]="question.confirmLabel"
+        [danger]="question.danger ?? false"
+        [busy]="busy()"
+        (confirmed)="asking.set(null); question.run()"
+        (closed)="asking.set(null)"
+      />
+    }
   `,
   styles: `
     .upd-file {
@@ -204,6 +218,14 @@ export class UpdateComponent {
   protected readonly chosen = signal<File | null>(null);
   protected readonly lastCheck = signal<UpdateCheck | null>(null);
   protected readonly busy = signal(false);
+  /** The question asked before the server restarts, and what to do once it is answered yes. */
+  protected readonly asking = signal<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    danger?: boolean;
+    run: () => void;
+  } | null>(null);
   protected readonly waitingForRestart = signal(false);
   protected readonly restartMessage = signal('');
 
@@ -225,9 +247,15 @@ export class UpdateComponent {
     if (!file || this.busy()) {
       return;
     }
-    if (!confirm(`Installer « ${file.name} » ? Le serveur va s'arrêter puis redémarrer.`)) {
-      return;
-    }
+    this.asking.set({
+      title: `Installer « ${file.name} » ?`,
+      message: "Le serveur va s'arrêter puis redémarrer, environ une minute : tous les postes seront déconnectés.",
+      confirmLabel: "Installer et redémarrer",
+      run: () => this.upload(file),
+    });
+  }
+
+  private upload(file: File): void {
     this.busy.set(true);
     this.api.upload(file).subscribe({
       next: (r) => {
@@ -257,9 +285,15 @@ export class UpdateComponent {
     if (this.busy() || !c?.available) {
       return;
     }
-    if (!confirm(`Télécharger et installer la version ${c.latestVersion} ? Le serveur va redémarrer.`)) {
-      return;
-    }
+    this.asking.set({
+      title: `Installer la version ${c.latestVersion} ?`,
+      message: "Elle est téléchargée puis installée ; le serveur redémarre, environ une minute : tous les postes seront déconnectés.",
+      confirmLabel: "Télécharger et installer",
+      run: () => this.download(),
+    });
+  }
+
+  private download(): void {
     this.busy.set(true);
     this.api.online().subscribe({
       next: (r) => {
@@ -271,9 +305,19 @@ export class UpdateComponent {
   }
 
   protected rollback(): void {
-    if (this.busy() || !confirm('Remettre la version précédente ? Le serveur va redémarrer.')) {
+    if (this.busy()) {
       return;
     }
+    this.asking.set({
+      title: 'Remettre la version précédente ?',
+      message: "Le serveur redémarre sur la version d'avant, environ une minute : tous les postes seront déconnectés.",
+      confirmLabel: 'Revenir en arrière',
+      danger: true,
+      run: () => this.goBack(),
+    });
+  }
+
+  private goBack(): void {
     this.busy.set(true);
     this.api.rollback().subscribe({
       next: () => {

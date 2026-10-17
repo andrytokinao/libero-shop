@@ -1,11 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CANCEL_REASON_LABELS, CashTrail, Invoice, UserRef } from '../../core/models';
 import { InvoiceAction } from '../../core/orders/invoice-actions';
 import { InvoiceLinesComponent } from './invoice-lines.component';
 import { DeliveryStatusBadgeComponent, PaymentStatusBadgeComponent } from './status-badges.component';
 import { HandlerChipComponent } from './handler-chip.component';
 import { UserAvatarComponent } from './user-avatar.component';
+import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 
 /**
  * The articles sold on one invoice, in a dialog.
@@ -29,7 +30,7 @@ import { UserAvatarComponent } from './user-avatar.component';
     UserAvatarComponent,
     HandlerChipComponent,
   ],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="inv-detail-title">
@@ -156,6 +157,8 @@ import { UserAvatarComponent } from './user-avatar.component';
   `,
 })
 export class InvoiceDetailDialogComponent {
+  private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
+
   @Input({ required: true }) invoice!: Invoice;
   /** The cash-desk screens show one seller's own invoices; naming them there says nothing. */
   @Input() showSeller = true;
@@ -202,6 +205,13 @@ export class InvoiceDetailDialogComponent {
         return 'btn ghost danger-text';
       default:
         return 'btn ghost';
+    }
+  }
+
+  /** Only the dialog on top closes: an invoice opened over a history leaves the history open. */
+  protected onEscape(): void {
+    if (isTopmostDialog(this.hostElement.nativeElement)) {
+      this.closed.emit();
     }
   }
 
