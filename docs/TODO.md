@@ -182,8 +182,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   *Fait — voir `realisation-ui/32-selecteur-de-produit.html` (UI-30).*
 - [ ] **P3 — Corrections de stock dans le menu du super-admin** (autorisé côté serveur, absent de
   son menu).
-- [ ] **P3 — Inventaire complet (idée).** Saisir le comptage de tout un rayon en une fois, avec
+- [x] **P3 — Inventaire complet (idée).** Saisir le comptage de tout un rayon en une fois, avec
   récapitulatif des écarts avant validation.
+  *Fait — voir `realisation-ui/60-inventaire-d-un-rayon.html` (UI-36).*
 - [ ] **P3 — Pertes dans les rapports (idée).** Faire apparaître casse, vol et périmés dans
   « Bénéfices & stock ».
 - [ ] **P3 — Dates de péremption et lots (idée).**

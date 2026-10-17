@@ -9,15 +9,17 @@ import {
   MAX_CATEGORY_DEPTH,
 } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { ProductRights } from '../../core/catalog/product-rights';
 import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CategoryImagePickerComponent } from './category-image-picker.component';
+import { RayonCountDialogComponent } from './rayon-count-dialog.component';
 import { RayonProductsDialogComponent } from './rayon-products-dialog.component';
 
 /** What can be done to one rayon from its "⋮". */
-type RayonAction = 'rename' | 'child' | 'products' | 'move' | 'delete';
+type RayonAction = 'rename' | 'child' | 'products' | 'count' | 'move' | 'delete';
 
 /**
  * The rayons of the shop, and the tree they make.
@@ -46,6 +48,7 @@ type RayonAction = 'rename' | 'child' | 'products' | 'move' | 'delete';
     AriaryPipe,
     CategoryImagePickerComponent,
     ActionMenuComponent,
+    RayonCountDialogComponent,
     RayonProductsDialogComponent,
   ],
   template: `
@@ -194,6 +197,10 @@ type RayonAction = 'rename' | 'child' | 'products' | 'move' | 'delete';
         (changed)="reload()"
         (closed)="showingProducts.set(null)"
       />
+    }
+
+    @if (counting(); as rayon) {
+      <app-rayon-count-dialog [rayon]="rayon" (changed)="reload()" (closed)="counting.set(null)" />
     }
 
     @if (movingFrom(); as rayon) {
@@ -406,6 +413,9 @@ export class CategoriesComponent {
   });
 
   protected readonly showingProducts = signal<CategoryNode | null>(null);
+  /** The rayon being counted, product by product. */
+  protected readonly counting = signal<CategoryNode | null>(null);
+  protected readonly canCount = inject(ProductRights).canAdjustStock;
   protected readonly movingFrom = signal<CategoryNode | null>(null);
 
   /** Renaming, a sub-rayon, its products; deleting only once it holds no sub-rayon. */
@@ -414,6 +424,9 @@ export class CategoriesComponent {
       { id: 'rename', label: 'Renommer ou déplacer' },
       ...(node.depth + 1 < this.maxDepth ? [{ id: 'child' as const, label: 'Ajouter un sous-rayon' }] : []),
       { id: 'products', label: 'Voir ses produits' },
+      ...(this.canCount() && this.statOf(node.id).references
+        ? [{ id: 'count' as const, label: 'Compter ce rayon', hint: 'inventaire' }]
+        : []),
       ...(this.statOf(node.id).references ? [{ id: 'move' as const, label: 'Déplacer ses produits vers…' }] : []),
       ...(node.children ? [] : [{ id: 'delete' as const, label: 'Supprimer', danger: true }]),
     ];
@@ -430,6 +443,9 @@ export class CategoriesComponent {
         break;
       case 'products':
         this.showingProducts.set(node);
+        break;
+      case 'count':
+        this.counting.set(node);
         break;
       case 'move':
         this.moveTo.set(null);

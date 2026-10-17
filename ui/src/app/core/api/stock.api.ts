@@ -5,6 +5,7 @@ import { API_BASE_URL } from './api.config';
 import {
   CreateStockAdjustmentRequest,
   CreateDeliveryRequest,
+  CreateInventoryRequest,
   CreateSupplyRequest,
   ProductMovementPage,
   StockAdjustment,
@@ -66,6 +67,11 @@ export class StockApi {
   /** A delivery note taken back whole: every receipt or none. */
   cancelDelivery(supplyIds: readonly number[]): Observable<StockAdjustment[]> {
     return this.http.post<StockAdjustment[]>(`${API_BASE_URL}/stock/deliveries/cancel`, { supplyIds });
+  }
+
+  /** A rayon counted in one go: answers the corrections written, one per product found different. */
+  registerInventory(request: CreateInventoryRequest): Observable<StockAdjustment[]> {
+    return this.http.post<StockAdjustment[]>(`${API_BASE_URL}/stock/inventories`, request);
   }
 
   /** The corrections made by hand, newest first. */

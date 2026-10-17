@@ -2,10 +2,12 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.DeliveryService;
+import com.houssen.liberoshop.service.InventoryService;
 import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
 import com.houssen.liberoshop.web.dto.CancelDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
+import com.houssen.liberoshop.web.dto.CreateInventoryRequest;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.ProductMovementResponse;
@@ -33,13 +35,16 @@ public class StockController {
     private final StockService stockService;
     private final DeliveryService deliveryService;
     private final MovementCancellationService cancellations;
+    private final InventoryService inventories;
     private final CurrentUser currentUser;
 
     public StockController(StockService stockService, DeliveryService deliveryService,
-                           MovementCancellationService cancellations, CurrentUser currentUser) {
+                           MovementCancellationService cancellations, InventoryService inventories,
+                           CurrentUser currentUser) {
         this.stockService = stockService;
         this.deliveryService = deliveryService;
         this.cancellations = cancellations;
+        this.inventories = inventories;
         this.currentUser = currentUser;
     }
 
@@ -105,6 +110,14 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public List<StockAdjustmentResponse> cancelDelivery(@Valid @RequestBody CancelDeliveryRequest request) {
         return cancellations.cancelDelivery(request.supplyIds(), currentUser.require());
+    }
+
+    /** A rayon counted in one go: a correction per product found different, all or none. */
+    @PostMapping("/inventories")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public List<StockAdjustmentResponse> registerInventory(@Valid @RequestBody CreateInventoryRequest request) {
+        return inventories.count(request, currentUser.require());
     }
 
     /** A correction entered by mistake, put back the same way. */

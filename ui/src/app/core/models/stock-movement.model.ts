@@ -101,6 +101,14 @@ export interface CreateStockAdjustmentRequest {
   packagingId?: number | null;
 }
 
+/** Mirrors CreateInventoryRequest: a rayon counted in one go. */
+export interface CreateInventoryRequest {
+  /** The rayon counted, named in the history. */
+  categoryId: number | null;
+  /** Only the products counted; in base units, zero included. */
+  lines: { productId: number; counted: number }[];
+}
+
 /** What kind of movement a line of a product's history is. */
 export type ProductMovementType = 'SUPPLY' | 'OUTPUT' | 'ADJUSTMENT';
 
