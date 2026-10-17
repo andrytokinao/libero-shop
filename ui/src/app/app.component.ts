@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { LiveUpdateService } from './core/config/live-update/live-update.service';
-import { moduleMenuPath, sectionOfUrl } from './core/config/navigation';
+import { moduleMenuPath, openSections, sectionOfUrl } from './core/config/navigation';
 import { ServerConfig } from './core/config/server-config.service';
 import { RoleApp } from './core/models';
 import { OrderEvents } from './core/realtime/order-events.service';
@@ -80,6 +80,22 @@ export class AppComponent {
   });
 
   protected readonly moduleMenuPath = moduleMenuPath;
+
+  /** The role sections unfolded by hand in the sidebar, besides the one of the page on screen. */
+  private readonly unfolded = signal<ReadonlySet<string>>(new Set());
+  protected readonly openSegments = computed(() =>
+    openSections(this.auth.menu(), this.currentSection()?.segment ?? null, this.unfolded()),
+  );
+
+  protected toggleSection(segment: string): void {
+    const unfolded = new Set(this.unfolded());
+    if (this.openSegments().has(segment)) {
+      unfolded.delete(segment);
+    } else {
+      unfolded.add(segment);
+    }
+    this.unfolded.set(unfolded);
+  }
 
   /**
    * The phone's always-there button to serve the next customer: taking an order for whoever

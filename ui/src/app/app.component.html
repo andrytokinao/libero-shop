@@ -61,13 +61,26 @@
         <!-- One section per role. The heading only appears when the account holds several:
              three of the sections open on a "Tableau de bord" of their own. -->
         @for (section of auth.menu(); track section.segment) {
+          @let open = openSegments().has(section.segment);
           @if (auth.menu().length > 1) {
-            <div class="group">{{ section.label }}</div>
+            <!-- Folded but for the current section: the menu fits the screen, one "Tableau de
+                 bord" at a time. -->
+            <button
+              type="button"
+              class="group"
+              [attr.aria-expanded]="open"
+              (click)="toggleSection(section.segment)"
+            >
+              <span class="group-label">{{ section.label }}</span>
+              <span class="group-chevron" aria-hidden="true" [class.open]="open">›</span>
+            </button>
           }
-          @for (item of section.items; track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="active">
-              <span class="ic"><app-icon [name]="item.icon" /></span>{{ item.label }}
-            </a>
+          @if (open) {
+            @for (item of section.items; track item.path) {
+              <a [routerLink]="item.path" routerLinkActive="active">
+                <span class="ic"><app-icon [name]="item.icon" /></span>{{ item.label }}
+              </a>
+            }
           }
         }
       </nav>

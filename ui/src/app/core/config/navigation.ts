@@ -170,3 +170,24 @@ export function sectionOfUrl(url: string): RoleNavigation | null {
 export function ownsSegment(roles: readonly RoleApp[], segment: string): boolean {
   return roles.some((role) => ROLE_NAVIGATION[role].segment === segment);
 }
+
+/**
+ * The sections whose entries the sidebar shows. A single-role account sees its whole menu. An
+ * account holding several roles sees the section of the page it is on, and those it unfolded;
+ * the others are their heading only — otherwise three "Tableau de bord" and twenty entries push
+ * the bottom of the menu off the screen.
+ *
+ * @param current the segment of the page on screen, or null on a page of no section (profile)
+ * @param opened  the sections unfolded by hand
+ */
+export function openSections(
+  menu: readonly RoleNavigation[],
+  current: string | null,
+  opened: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (menu.length <= 1) {
+    return new Set(menu.map((section) => section.segment));
+  }
+  const here = menu.some((section) => section.segment === current) ? current : menu[0].segment;
+  return new Set([...opened, here!]);
+}

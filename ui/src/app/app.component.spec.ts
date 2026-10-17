@@ -139,9 +139,13 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
-    // Six entries at the desk, four at the depot, and a heading over each set.
+    // A heading over each set; only the first is unfolded until its heading is clicked.
+    expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(6);
+    (sidebar.querySelectorAll('nav.menu-full button.group')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    // Six entries at the desk, four at the depot.
     expect(sidebar.querySelectorAll('nav.menu-full a').length).toBe(10);
-    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group')).map((el) =>
+    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group-label')).map((el) =>
       el.textContent?.trim(),
     );
     expect(groups).toEqual(['Caisse', 'Dépôt']);
@@ -180,10 +184,12 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     const sidebar = fixture.nativeElement.querySelector('.side') as HTMLElement;
-    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group')).map((el) =>
+    const groups = Array.from(sidebar.querySelectorAll('nav.menu-full .group-label')).map((el) =>
       el.textContent?.trim(),
     );
     expect(groups).toEqual(['Caisse', 'Cuisine']);
+    (sidebar.querySelectorAll('nav.menu-full button.group')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
     const links = sidebar.querySelector('nav.menu-full')?.textContent ?? '';
     expect(links).toContain('Commandes à servir');
     expect(links).not.toContain('Versements dépôt');
