@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -60,6 +61,26 @@ public class MovementCancellationService {
                 .filter(Supply.class::isInstance).map(Supply.class::cast)
                 .orElseThrow(() -> ResourceNotFoundException.of("Reception", supplyId));
         return cancel(supply, "Annulation de la reception du " + DAY.format(supply.getMovementDate()), author);
+    }
+
+    /**
+     * A whole delivery note cancelled: every receipt or none, like the note was booked. The
+     * products are locked in id order, as {@link DeliveryService} does, so two notes never wait
+     * on each other.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public List<StockAdjustmentResponse> cancelDelivery(List<Long> supplyIds, UserApp author) {
+        List<Supply> supplies = supplyIds.stream().distinct()
+                .map(id -> movements.findById(id)
+                        .filter(Supply.class::isInstance).map(Supply.class::cast)
+                        .orElseThrow(() -> ResourceNotFoundException.of("Reception", id)))
+                .sorted(Comparator.comparing((Supply supply) -> supply.getProduct().getId()))
+                .toList();
+        return supplies.stream()
+                .map(supply -> cancel(supply,
+                        "Annulation de la reception du " + DAY.format(supply.getMovementDate()), author))
+                .toList();
     }
 
     /** A correction cancelled: the stock moves back by what it moved. */

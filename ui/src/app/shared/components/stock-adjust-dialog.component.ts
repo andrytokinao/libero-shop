@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product } from '../../core/models';
 import { formatAmount, formatQuantity, roundQuantity } from '../../core/sale/sale-unit';
-import { ToastService } from '../../core/services/toast.service';
+import { StockUndo } from '../../core/stock/stock-undo';
 
 /**
  * Corrects one product's stock, from its menu: breakage, loss, or the shelf counted.
@@ -97,7 +97,7 @@ import { ToastService } from '../../core/services/toast.service';
 })
 export class StockAdjustDialogComponent implements OnInit {
   private readonly api = inject(StockApi);
-  private readonly toasts = inject(ToastService);
+  private readonly undo = inject(StockUndo);
 
   readonly product = input.required<Product>();
   /** "Compter ce produit" opens on the count, "Corriger le stock" on a loss. */
@@ -192,9 +192,10 @@ export class StockAdjustDialogComponent implements OnInit {
       .subscribe({
         next: (adjustment) => {
           const sign = adjustment.quantity > 0 ? '+' : '−';
-          this.toasts.show(
+          this.undo.corrected(
             `Stock de ${adjustment.product.name} corrigé : ` +
               `${sign}${formatAmount(Math.abs(adjustment.quantity), adjustment.product.unit)}.`,
+            adjustment,
           );
           this.changed.emit();
           this.closed.emit();

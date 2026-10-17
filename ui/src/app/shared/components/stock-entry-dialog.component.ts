@@ -12,7 +12,7 @@ import {
   roundQuantity,
   unitsOf,
 } from '../../core/sale/sale-unit';
-import { ToastService } from '../../core/services/toast.service';
+import { StockUndo } from '../../core/stock/stock-undo';
 
 /**
  * Adds stock to one product, from its menu: how many, in which unit, at what price, from whom.
@@ -140,7 +140,7 @@ export class StockEntryDialogComponent implements OnInit {
   private readonly stock = inject(StockApi);
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
-  private readonly toasts = inject(ToastService);
+  private readonly undo = inject(StockUndo);
 
   readonly product = input.required<Product>();
   /** After the entry is booked: the lists showing this product's stock are out of date. */
@@ -240,8 +240,9 @@ export class StockEntryDialogComponent implements OnInit {
       })
       .subscribe({
         next: (supply) => {
-          this.toasts.show(
+          this.undo.received(
             `${formatAmount(supply.receivedQuantity, supply.unitLabel ?? supply.product.unit)} de ${supply.product.name} ajouté(s) au stock.`,
+            [supply],
           );
           this.changed.emit();
           this.closed.emit();

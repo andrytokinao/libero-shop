@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { catchError, of, switchMap } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
@@ -17,6 +17,7 @@ import {
   stockLabel,
   unitsOf,
 } from '../../core/sale/sale-unit';
+import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
 import { ActionMenuComponent } from '../../shared/components/action-menu.component';
@@ -486,6 +487,16 @@ export class SupplyComponent {
   private readonly stock = inject(StockApi);
   private readonly costing = inject(CostingApi);
   private readonly toasts = inject(ToastService);
+  private readonly undo = inject(StockUndo);
+
+  constructor() {
+    // Taken back from the message: the lists show the movement cancelled.
+    this.undo.undone$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.supplyResource.reload();
+      this.productResource.reload();
+      this.costResource.reload();
+    });
+  }
 
   protected readonly RoleApp = RoleApp;
   protected readonly NEW_SUPPLIER = NEW_SUPPLIER;
@@ -783,9 +794,10 @@ export class SupplyComponent {
           this.supplierResource.reload();
           this.costResource.reload();
           this.pricesVersion.update((version) => version + 1);
-          this.toasts.show(
+          this.undo.received(
             `${formatAmount(supply.receivedQuantity, supply.unitLabel ?? supply.product.unit)} de ${supply.product.name} ajouté(s) au stock ` +
               `(${supply.supplier?.name ?? 'sans fournisseur'}).`,
+            [supply],
           );
         },
         error: () => this.busy.set(false),

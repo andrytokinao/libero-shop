@@ -63,6 +63,11 @@ export class StockApi {
     return this.http.post<Supply[]>(`${API_BASE_URL}/stock/deliveries`, request);
   }
 
+  /** A delivery note taken back whole: every receipt or none. */
+  cancelDelivery(supplyIds: readonly number[]): Observable<StockAdjustment[]> {
+    return this.http.post<StockAdjustment[]>(`${API_BASE_URL}/stock/deliveries/cancel`, { supplyIds });
+  }
+
   /** The corrections made by hand, newest first. */
   adjustments(): Observable<StockAdjustment[]> {
     return this.http.get<StockAdjustment[]>(`${API_BASE_URL}/stock/adjustments`);

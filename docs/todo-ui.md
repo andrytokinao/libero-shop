@@ -63,7 +63,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   d'enregistrer.
 - [x] **UI-81** — États chargement / vide / erreur distincts (factures, stock, fournisseurs,
   utilisateurs, tableaux de bord).
-- [ ] **UI-83** — Bouton « Annuler » dans le message (`toast.service.ts`) après une action
+- [x] **UI-83** — Bouton « Annuler » dans le message (`toast.service.ts`) après une action
   réversible ; écrit le mouvement inverse. (serveur)
 - [ ] **UI-84** — Carte « Premiers pas » sur le tableau de bord d'une boutique neuve.
 

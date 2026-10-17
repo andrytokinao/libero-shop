@@ -4,6 +4,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.DeliveryService;
 import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.web.dto.CancelDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
@@ -97,6 +98,13 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public StockAdjustmentResponse cancelSupply(@PathVariable Long supplyId) {
         return cancellations.cancelSupply(supplyId, currentUser.require());
+    }
+
+    /** A whole delivery note taken back: every receipt or none. */
+    @PostMapping("/deliveries/cancel")
+    @PreAuthorize("hasRole('DEPOT_MANAGER')")
+    public List<StockAdjustmentResponse> cancelDelivery(@Valid @RequestBody CancelDeliveryRequest request) {
+        return cancellations.cancelDelivery(request.supplyIds(), currentUser.require());
     }
 
     /** A correction entered by mistake, put back the same way. */

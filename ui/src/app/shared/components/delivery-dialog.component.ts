@@ -7,6 +7,7 @@ import { StockApi } from '../../core/api/stock.api';
 import { CodeMatch } from '../../core/catalog/product-pick';
 import { ProductCost, Supplier } from '../../core/models';
 import { formatAmount, unitsOf } from '../../core/sale/sale-unit';
+import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
 import {
   DeliveryLine,
@@ -265,6 +266,7 @@ export class DeliveryDialogComponent implements OnInit {
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
   protected readonly toasts = inject(ToastService);
+  private readonly undo = inject(StockUndo);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** The note was booked: the stock lists are out of date. */
@@ -330,9 +332,10 @@ export class DeliveryDialogComponent implements OnInit {
     this.stock.registerDelivery(request).subscribe({
       next: (supplies) => {
         const amount = this.total().amount;
-        this.toasts.show(
+        this.undo.received(
           `Réception enregistrée : ${supplies.length} produit(s)` +
             (amount ? `, ${formatAmount(amount, null)} Ar.` : '.'),
+          supplies,
         );
         this.changed.emit();
         this.closed.emit();

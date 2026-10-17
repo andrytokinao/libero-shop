@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 
 import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
@@ -120,5 +121,28 @@ class MovementCancellationServiceTest {
         BusinessRuleException refused = assertThrows(BusinessRuleException.class, () -> stock.registerAdjustment(
                 new CreateStockAdjustmentRequest(riz.getId(), AdjustmentReason.CANCELLATION, qty(1), "x"), manager()));
         assertEquals("ADJUSTMENT_REASON_RESERVED", refused.code());
+    }
+
+    @Test
+    @DisplayName("a delivery note taken back whole: every receipt or none")
+    void bonDeLivraisonAnnuleEnEntierOuPas() {
+        Product riz = product(0);
+        Product sucre = product(0);
+        UserApp nadia = manager();
+        SupplyResponse rizRecu = stock.registerSupply(new CreateSupplyRequest(riz.getId(), null, qty(20), null), nadia);
+        SupplyResponse sucreRecu = stock.registerSupply(new CreateSupplyRequest(sucre.getId(), null, qty(10), null), nadia);
+        stock.registerAdjustment(new CreateStockAdjustmentRequest(sucre.getId(), AdjustmentReason.BREAKAGE, qty(4), null), nadia);
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> cancellations.cancelDelivery(List.of(rizRecu.id(), sucreRecu.id()), nadia));
+        assertEquals("CANCELLATION_EXCEEDS_STOCK", refused.code());
+        assertQuantity(20, products.findById(riz.getId()).orElseThrow().getStockQuantity());
+        assertEquals(null, movements.findById(rizRecu.id()).orElseThrow().getCancelledAt());
+
+        Product huile = product(0);
+        SupplyResponse huileRecue = stock.registerSupply(new CreateSupplyRequest(huile.getId(), null, qty(6), null), nadia);
+        assertEquals(2, cancellations.cancelDelivery(List.of(rizRecu.id(), huileRecue.id()), nadia).size());
+        assertQuantity(0, products.findById(riz.getId()).orElseThrow().getStockQuantity());
+        assertQuantity(0, products.findById(huile.getId()).orElseThrow().getStockQuantity());
     }
 }

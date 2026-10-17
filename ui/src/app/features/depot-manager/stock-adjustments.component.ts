@@ -1,11 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product, StockAdjustment, adjustmentReasonLabel } from '../../core/models';
 import { MovementAction, adjustmentActions, countsAsLoss } from '../../core/stock/movement-actions';
 import { formatAmount, formatQuantity, parseQuantity, roundQuantity } from '../../core/sale/sale-unit';
+import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
 import { ProductStore } from '../../core/store/product.store';
 import { ActionMenuComponent } from '../../shared/components/action-menu.component';
@@ -199,6 +201,15 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 export class StockAdjustmentsComponent {
   private readonly api = inject(StockApi);
   private readonly toasts = inject(ToastService);
+  private readonly undo = inject(StockUndo);
+
+  constructor() {
+    // Taken back from the message: the lists show the movement cancelled.
+    this.undo.undone$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.adjustmentResource.reload();
+      this.productResource.reload();
+    });
+  }
 
   protected readonly reasons = ADJUSTMENT_REASONS;
 
@@ -356,9 +367,10 @@ export class StockAdjustmentsComponent {
           this.comment.set('');
           this.productResource.reload();
           this.adjustmentResource.reload();
-          this.toasts.show(
+          this.undo.corrected(
             `Stock de ${adjustment.product.name} corrigé : ${this.signed(adjustment)} ` +
               `(${this.reasonLabel(adjustment.reason)}).`,
+            adjustment,
           );
         },
         error: () => this.busy.set(false),
