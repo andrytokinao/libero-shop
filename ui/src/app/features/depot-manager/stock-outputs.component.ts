@@ -62,9 +62,17 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </thead>
             <tbody>
               @for (output of outputs(); track output.id) {
-                <tr>
+                <!-- An order cancelled before hand-over: the goods came back, the line stays, crossed out. -->
+                <tr [class.so-cancelled]="output.cancelledAt">
                   <td class="muted">{{ output.movementDate | date: 'dd/MM HH:mm' }}</td>
-                  <td>{{ output.product.name }}</td>
+                  <td>
+                    {{ output.product.name }}
+                    @if (output.cancelledAt) {
+                      <span class="badge grey" [title]="'Commande annulée le ' + (output.cancelledAt | date: 'dd/MM HH:mm')">
+                        Annulée
+                      </span>
+                    }
+                  </td>
                   <td class="num">−{{ output.quantity }}</td>
                   <td><app-invoice-link [invoiceId]="output.invoice.id" [number]="output.invoice.invoiceNumber" /></td>
                   <td>{{ output.invoice.clientName }}</td>
@@ -91,6 +99,14 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
     </div>
   `,
   styles: `
+    .so-cancelled td {
+      color: var(--ink-soft);
+    }
+
+    .so-cancelled td.num {
+      text-decoration: line-through;
+    }
+
     .more-row {
       display: flex;
       align-items: center;

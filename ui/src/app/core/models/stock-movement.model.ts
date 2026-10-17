@@ -150,4 +150,6 @@ export interface StockOutput extends StockMovementBase {
   invoice: InvoiceRef;
   /** unit price × quantity, precomputed server-side. */
   value: number;
+  /** Its order was cancelled and the goods given back; listed, not counted. Optional for old payloads. */
+  cancelledAt?: string | null;
 }

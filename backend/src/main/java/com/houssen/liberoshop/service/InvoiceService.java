@@ -8,15 +8,11 @@ import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
 import com.houssen.liberoshop.entity.PaymentTransition;
-import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.RoleApp;
-import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.InvoiceRepository;
 import com.houssen.liberoshop.repository.PaymentRepository;
-import com.houssen.liberoshop.repository.ProductRepository;
-import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
@@ -62,15 +58,15 @@ public class InvoiceService {
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
     private final ShopSettingsService settings;
-    private final ProductRepository products;
-    private final StockMovementRepository movements;
     private final InvoiceAccess access;
     private final UserAppRepository users;
+    private final MovementCancellationService cancellations;
 
     public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
                           ApplicationEventPublisher events, ShopSettingsService settings,
-                          ProductRepository products, StockMovementRepository movements,
-                          InvoiceAccess access, UserAppRepository users) {
+                          InvoiceAccess access, UserAppRepository users,
+                          MovementCancellationService cancellations) {
+        this.cancellations = cancellations;
         this.users = users;
         this.access = access;
         this.invoices = invoices;
@@ -78,8 +74,6 @@ public class InvoiceService {
         this.calendar = calendar;
         this.events = events;
         this.settings = settings;
-        this.products = products;
-        this.movements = movements;
     }
 
     /**
@@ -341,9 +335,9 @@ public class InvoiceService {
     /**
      * Cancels an unpaid order.
      *
-     * <p>Not handed over yet, its goods go back on the shelf: the stock outputs it wrote are
-     * removed with the units they took, so the stock and its history read as if the order had
-     * never left -- the order itself keeps who cancelled it, when and why. Already handed over,
+     * <p>Not handed over yet, its goods go back on the shelf by opposite corrections; its outputs
+     * stay in the history, marked cancelled -- nothing is deleted. The order itself keeps who
+     * cancelled it, when and why. Already handed over,
      * the goods are gone: the cancellation is only allowed when the shop says so, and only
      * records what happened (the customer left without paying), with a comment that says it.
      *
@@ -378,28 +372,13 @@ public class InvoiceService {
                         "Commande deja remise : notez ce qui s'est passe avec le client.");
             }
         } else {
-            giveBackStock(invoice);
+            cancellations.giveBackOrder(invoice, actor);
         }
 
         invoice.cancel(actor, reason, note, calendar.now());
 
         events.publishEvent(new OrderCancelledEvent(invoice.getId(), number));
         return InvoiceResponse.of(invoice);
-    }
-
-    private void giveBackStock(Invoice invoice) {
-        List<StockOutput> outputs = movements.findOutputsOfInvoice(invoice.getId());
-        for (StockOutput output : outputs) {
-            // Locked like at checkout: a sale of the same product at that moment must see the units.
-            Product product = products.findByIdForUpdate(output.getProduct().getId())
-                    .orElseThrow(() -> ResourceNotFoundException.of("Produit", output.getProduct().getId()));
-            product.adjustStock(output.getQuantity());
-        }
-        movements.deleteAll(outputs);
-        if (!outputs.isEmpty()) {
-            events.publishEvent(new StockChangedEvent(
-                    outputs.stream().map(output -> output.getProduct().getId()).toList()));
-        }
     }
 
     /** Front-end counterpart of {@code Invoice#print()}. */

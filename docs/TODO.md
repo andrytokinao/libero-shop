@@ -156,8 +156,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   rapprochement de caisse.
 - [ ] **P2 — Piste d'audit.** Ni `createdAt`/`updatedBy`, ni journal ; aucune trace de qui a
   changé un prix ou une unité.
-- [ ] **P2 — Annulation de commande.** Les sorties de stock sont supprimées au lieu d'être
+- [x] **P2 — Annulation de commande.** Les sorties de stock sont supprimées au lieu d'être
   contre-passées (`InvoiceService`).
+  *Fait — voir `43-annulation-de-commande-contre-passee.html`.*
 - [ ] **P3 — Montants non bornés.** Une quantité ou un prix trop grand renvoie une erreur 500 ;
   l'import accepte un prix à 0.
 - [ ] **P3 — Numéros de facture.** Uniques, mais avec des trous quand une vente échoue.

@@ -12,7 +12,8 @@ public record StockOutputResponse(Long id,
                                   ProductResponse product,
                                   UserResponse performedBy,
                                   InvoiceRefResponse invoice,
-                                  BigDecimal value) {
+                                  BigDecimal value,
+                                  LocalDateTime cancelledAt) {
 
     public static StockOutputResponse of(StockOutput output) {
         return new StockOutputResponse(
@@ -22,6 +23,7 @@ public record StockOutputResponse(Long id,
                 ProductResponse.withoutUnits(output.getProduct()),
                 UserResponse.of(output.getPerformedBy()),
                 InvoiceRefResponse.of(output.getInvoice()),
-                output.value());
+                output.value(),
+                output.getCancelledAt());
     }
 }

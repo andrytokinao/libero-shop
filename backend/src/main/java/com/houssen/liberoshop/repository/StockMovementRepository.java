@@ -91,11 +91,13 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
      * What all the outputs matching {@code needle} add up to, as {@code [units, value]} -- the
      * value each was sold for, like the rows ({@link StockOutput#value()}: the current price only
      * for outputs older than that). Summed here because the screen only holds a page of them.
+     * The outputs of a cancelled order are listed, marked, but not counted: the goods came back.
      */
     @Query("""
             select coalesce(sum(o.quantity), 0), coalesce(sum(coalesce(o.saleValue, o.quantity * p.price)), 0)
             from StockOutput o join o.product p join o.invoice i
-            where (:needle is null
+            where o.cancelledAt is null
+              and (:needle is null
                    or lower(p.name) like :needle escape '\\'
                    or lower(i.invoiceNumber) like :needle escape '\\'
                    or lower(i.clientName) like :needle escape '\\')

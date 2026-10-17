@@ -1,9 +1,11 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.AdjustmentReason;
+import com.houssen.liberoshop.entity.Invoice;
 import com.houssen.liberoshop.entity.Product;
 import com.houssen.liberoshop.entity.StockAdjustment;
 import com.houssen.liberoshop.entity.StockMovement;
+import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
@@ -81,6 +83,43 @@ public class MovementCancellationService {
                 .map(supply -> cancel(supply,
                         "Annulation de la reception du " + DAY.format(supply.getMovementDate()), author))
                 .toList();
+    }
+
+    /**
+     * An order cancelled before it was handed over: what it took off the shelves goes back, by
+     * an opposite correction per line. Its outputs stay in the history, marked cancelled, so the
+     * product's history still reads "sold, then given back" rather than losing the sale.
+     *
+     * <p>Called from the order's own cancellation, which holds the transaction and the licence
+     * check. Products are locked in id order, as everywhere stock moves for several at once.
+     */
+    @Transactional
+    public void giveBackOrder(Invoice invoice, UserApp author) {
+        List<StockOutput> outputs = movements.findOutputsOfInvoice(invoice.getId()).stream()
+                .filter(output -> output.getCancelledAt() == null)
+                .sorted(Comparator.comparing((StockOutput output) -> output.getProduct().getId()))
+                .toList();
+        String comment = "Annulation de la commande " + invoice.getInvoiceNumber();
+        for (StockOutput output : outputs) {
+            Product product = products.findByIdForUpdate(output.getProduct().getId())
+                    .orElseThrow(() -> ResourceNotFoundException.of("Produit", output.getProduct().getId()));
+            // An output is kept as the positive quantity sold: giving it back adds it.
+            BigDecimal back = output.getQuantity();
+            product.adjustStock(back);
+            output.setCancelledAt(calendar.now());
+            movements.save(StockAdjustment.builder()
+                    .quantity(Quantities.scaled(back))
+                    .movementDate(calendar.now())
+                    .product(product)
+                    .performedBy(author)
+                    .reason(AdjustmentReason.CANCELLATION)
+                    .comment(comment)
+                    .build());
+        }
+        if (!outputs.isEmpty()) {
+            events.publishEvent(new StockChangedEvent(
+                    outputs.stream().map(output -> output.getProduct().getId()).distinct().toList()));
+        }
     }
 
     /** A correction cancelled: the stock moves back by what it moved. */
