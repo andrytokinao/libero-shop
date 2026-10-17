@@ -28,6 +28,7 @@ import { CatalogViewService } from '../../core/services/catalog-view.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
+import { ShortcutLegendComponent } from '../../shared/components/shortcut-legend.component';
 import {
   CatalogNavigatorComponent,
   CatalogScope,
@@ -67,6 +68,7 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
     InvoiceDetailFlowComponent,
     IconComponent,
     CartLineQuantityComponent,
+    ShortcutLegendComponent,
     CatalogNavigatorComponent,
     CatalogGridComponent,
     CatalogListComponent,
@@ -279,6 +281,8 @@ const COMPACT_LAYOUT = '(max-width: 980px)';
           />
           <app-camera-scan-button (scanned)="entry.submit($event)" />
           <app-catalog-view-toggle />
+          <!-- The function keys, on demand: F2, F4, F8, F9, F10 are otherwise learnt by heart. -->
+          <app-shortcut-legend [shortcuts]="keys.shortcuts" />
         </div>
         <app-catalog-navigator [categories]="rayons()" [scope]="scope()" (scopeChange)="scope.set($event)" />
         <!-- Tiles or lines, as the seller chose: the same products, folders and basket either way. -->
@@ -546,7 +550,7 @@ export class NewSaleComponent {
   protected readonly canResume = computed(() => this.held.count() > 0 && !this.dialogOpen());
 
   /**
-   * The till's function keys — bound without a legend, the header keeping to the search. F10
+   * The till's function keys, their legend behind the "⌨" beside the search. F10
    * opens the checkout here, and records the sale inside it — so a cashier pays with F10, F10.
    */
   protected readonly keys = new ShortcutMap([

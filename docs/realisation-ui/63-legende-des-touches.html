@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Légende des touches à la demande</title>
+<meta name="ui-id" content="UI-54">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-54</span>Légende des touches à la demande</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-54</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Sur la page de vente, un bouton <strong>« ⌨ »</strong> à côté de la recherche ouvre la liste des touches : F2 Produit, F4 Mettre en attente, F8 Retirer le dernier article, F9 Reprendre une vente, F10 Valider.</li>
+    <li>Une touche qui ne peut rien faire à cet instant est <strong>grisée</strong> (F4 avec un panier vide).</li>
+    <li>La liste est lue dans la même liste que les touches réellement actives : elle ne peut pas promettre une touche qui ne fait rien.</li>
+    <li>Le bouton est présent à toutes les largeurs (la légende permanente avait disparu), et caché sur un téléphone tenu en main, qui n'a pas de touches F.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#fait">1. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">2. Le résultat en images</a></li>
+  <li><a href="#recap">3. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="fait">1. Ce qui a été fait</h2>
+<p>La page de vente gère cinq touches de fonction, mais seules F4 et F10 étaient écrites sur leur bouton. Les autres
+  s'apprenaient par cœur. Le nouveau bouton les montre toutes, à la demande, sans prendre de place à l'écran.</p>
+<div class="figure">
+<svg viewBox="0 0 860 140" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Une seule liste pour les touches et leur légende">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="40" width="250" height="60" rx="8"/><text class="t" x="34" y="65">Liste des touches de la caisse</text><text class="s" x="34" y="83">touche, nom, action, disponible ?</text>
+  <rect class="box" x="360" y="10" width="220" height="50" rx="8"/><text class="t" x="374" y="40">Clavier : F2 … F10</text>
+  <rect class="new" x="360" y="80" width="220" height="50" rx="8"/><text class="t" x="374" y="110">Légende « ⌨ »</text>
+  <path class="ln" d="M270,60 L358,35"/><path class="ln" d="M270,80 L358,105"/>
+  <text class="s" x="610" y="75">les deux lisent la même liste</text>
+</svg>
+<div class="caption">Figure 1 — La légende et le clavier lisent la même liste : ils ne peuvent pas se contredire.</div>
+</div>
+
+<h2 id="ecrans">2. Le résultat en images</h2>
+<p><span class="who">Fatima — caisse</span></p>
+<div class="shot"><img src="captures/ui-54-touches-ordinateur.png" alt="Légende des touches sur ordinateur">
+<div class="caption">Figure 2 — Sur ordinateur : la légende ouverte, panier vide donc F4, F8, F9, F10 grisées.</div></div>
+<div class="shot"><img src="captures/ui-54-touches-tablette.png" alt="Légende des touches sous 980 px" style="max-width:900px">
+<div class="caption">Figure 3 — Sous 980 px (tablette avec clavier) : le même bouton, sans défilement de côté.</div></div>
+
+<h2 id="recap">3. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>ui/…/shared/components/shortcut-legend.component.ts</code></td><td>nouveau : bouton « ⌨ » et sa liste</td></tr>
+<tr><td><code>ui/…/features/cashier/new-sale.component.ts</code></td><td>le bouton à côté de la recherche</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Fermée au départ, « ⌨ » ouvre la liste des touches</td><td rowspan="3"><code>shortcut-legend.component.spec.ts</code></td></tr>
+<tr><td>Une touche indisponible est grisée</td></tr>
+<tr><td>Un clic ailleurs la referme</td></tr>
+</table></div>
+<p><strong>Tests :</strong> interface au vert (316 tests). Aucun changement côté serveur.</p>
+</main>
+</body>
+</html>
