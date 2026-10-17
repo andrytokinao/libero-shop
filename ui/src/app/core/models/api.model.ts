@@ -85,6 +85,17 @@ export interface CreateSupplyRequest {
   unitCost: number | null;
 }
 
+/** POST /api/stock/deliveries — a delivery note: one supplier, several products, booked together. */
+export interface CreateDeliveryRequest {
+  supplierId: number | null;
+  lines: {
+    productId: number;
+    packagingId: number | null;
+    quantity: number;
+    unitCost: number | null;
+  }[];
+}
+
 /**
  * POST /api/users. The handle is lower-cased by the server, since sign-in matches it
  * exactly; the screen says so rather than silently changing what was typed.

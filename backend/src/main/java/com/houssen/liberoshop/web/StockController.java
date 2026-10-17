@@ -1,7 +1,9 @@
 package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.security.CurrentUser;
+import com.houssen.liberoshop.service.DeliveryService;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.ProductMovementResponse;
@@ -27,10 +29,12 @@ import java.util.List;
 public class StockController {
 
     private final StockService stockService;
+    private final DeliveryService deliveryService;
     private final CurrentUser currentUser;
 
-    public StockController(StockService stockService, CurrentUser currentUser) {
+    public StockController(StockService stockService, DeliveryService deliveryService, CurrentUser currentUser) {
         this.stockService = stockService;
+        this.deliveryService = deliveryService;
         this.currentUser = currentUser;
     }
 
@@ -74,6 +78,14 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public SupplyResponse registerSupply(@Valid @RequestBody CreateSupplyRequest request) {
         return stockService.registerSupply(request, currentUser.require());
+    }
+
+    /** A delivery note: several products from one supplier, booked together or not at all. */
+    @PostMapping("/deliveries")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('DEPOT_MANAGER')")
+    public List<SupplyResponse> registerDelivery(@Valid @RequestBody CreateDeliveryRequest request) {
+        return deliveryService.receive(request, currentUser.require());
     }
 
     /** The corrections made by hand, with what each loss cost -- hence the same roles as receipts. */

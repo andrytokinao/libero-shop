@@ -9,6 +9,7 @@ import { CategoryNode } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
+import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductCardComponent } from '../../shared/components/product-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
@@ -33,6 +34,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
     ProductImportComponent,
     StockTableComponent,
     CameraScanButtonComponent,
+    DeliveryDialogComponent,
     AriaryPipe,
   ],
   template: `
@@ -46,6 +48,10 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
       <div class="head-row">
         <h2>Stock du dépôt</h2>
         <div class="st-actions">
+          <!-- A delivery note with several products: one form, one save. -->
+          @if (rights.canAddStock()) {
+            <button class="btn small" type="button" (click)="receiving.set(true)">＋ Réception</button>
+          }
           <!-- One product at a time, by hand: no file needed. -->
           @if (rights.canEdit()) {
             <button class="btn small" type="button" (click)="asked.set({ action: 'create' })">
@@ -164,6 +170,10 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
     </div>
 
     <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
+
+    @if (receiving()) {
+      <app-delivery-dialog (changed)="onChanged()" (closed)="receiving.set(false)" />
+    }
   `,
   styles: `
     .st-search {
@@ -242,6 +252,9 @@ export class StockComponent {
     this.openMenuOf.set(null);
     this.resource.reload();
   }
+
+  /** The delivery note open. */
+  protected readonly receiving = signal(false);
 
   /** The product a scanned code found: its menu opens in the list. */
   protected readonly openMenuOf = signal<number | null>(null);

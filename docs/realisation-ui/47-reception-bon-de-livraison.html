@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réception de plusieurs produits en une fenêtre</title>
+<meta name="ui-id" content="UI-31">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-31</span>Réception de plusieurs produits en une fenêtre</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-31</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Un bouton <strong>« ＋ Réception »</strong> en haut de la page Stock ouvre un <strong>bon de livraison</strong> : un fournisseur, puis une ligne par produit.</li>
+    <li>Chaque produit s'ajoute en le <strong>scannant</strong> ou en tapant deux lettres ; scanner deux fois le même carton compte <strong>deux cartons</strong>.</li>
+    <li>Le prix de chaque ligne est prérempli avec le <strong>dernier prix payé</strong> pour cette unité ; le total du bon s'affiche en bas.</li>
+    <li>Un seul « Enregistrer » : <strong>tout est enregistré, ou rien</strong> si une ligne est refusée. Le bon n'est jamais à moitié saisi.</li>
+    <li>La page Approvisionnement garde l'historique des réceptions et la comparaison des prix par fournisseur.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#exemples">4. À éviter / attendu</a></li>
+  <li><a href="#recap">5. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Un livreur apporte dix produits : il fallait remplir dix fois le formulaire d'approvisionnement, en choisissant chaque
+  fois le fournisseur. Et si la saisie s'arrêtait au milieu, le stock était à moitié à jour.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 220" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Le bon de livraison, du scan à l'enregistrement">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="80" width="170" height="60" rx="8"/><text class="t" x="34" y="104">Fournisseur</text><text class="s" x="34" y="122">ou « ＋ » pour en créer un</text>
+  <rect class="new" x="230" y="80" width="190" height="60" rx="8"/><text class="t" x="244" y="104">Scan / 2 lettres</text><text class="s" x="244" y="122">ligne, ou +1 si déjà là</text>
+  <rect class="new" x="460" y="80" width="160" height="60" rx="8"/><text class="t" x="474" y="104">Unité, quantité, prix</text><text class="s" x="474" y="122">dernier prix prérempli</text>
+  <rect class="new" x="660" y="15" width="180" height="56" rx="8"/><text class="t" x="674" y="39">Tout est valable :</text><text class="s" x="674" y="57">toutes les lignes entrent</text>
+  <rect class="ko" x="660" y="150" width="180" height="56" rx="8"/><text class="t" x="674" y="174">Une ligne refusée :</text><text class="s" x="674" y="192">rien n'entre, bon gardé</text>
+  <path class="ln" d="M190,110 L228,110"/><path class="ln" d="M420,110 L458,110"/><path class="ln" d="M620,100 L658,45"/><path class="ln" d="M620,120 L658,175"/>
+</svg>
+<div class="caption">Figure 1 — Un bon, plusieurs lignes, un seul enregistrement : tout ou rien.</div>
+</div>
+
+<p>Côté serveur, chaque ligne est une réception ordinaire (même calcul du coût moyen, même ligne dans l'historique du
+  produit) ; le nouveau service les enregistre ensemble, dans une seule opération. Les produits sont verrouillés dans
+  l'ordre de leur numéro, comme pour une vente, pour que deux réceptions simultanées ne se bloquent pas.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span> Livraison de Distri Lait : deux scans du carton de lait, un yaourt, une huile.</p>
+<div class="shot"><img src="captures/ui-31-bon-de-livraison.png" alt="Bon de livraison avec trois lignes">
+<div class="caption">Figure 2 — Deux scans du même carton : « 2 cartons », au dernier prix payé (85 200 Ar). Les lignes sans prix sont comptées à part.</div></div>
+<div class="shot"><img src="captures/ui-31-enregistre.png" alt="Réception enregistrée">
+<div class="caption">Figure 3 — Un seul enregistrement ; le stock affiché suit aussitôt.</div></div>
+<div class="shot"><img src="captures/ui-31-telephone.png" alt="Bon de livraison sur téléphone" style="max-width:390px">
+<div class="caption">Figure 4 — Sur téléphone, chaque ligne devient une petite carte ; pas de défilement de côté.</div></div>
+
+<h2 id="exemples">4. À éviter / attendu</h2>
+<div class="compare">
+  <div class="bad"><div class="bad-title">À éviter</div>Envoyer dix réceptions l'une après l'autre : la cinquième refusée laisse quatre produits reçus et six non.</div>
+  <div class="good"><div class="good-title">Attendu</div>Un seul envoi pour le bon : refusé, le stock reste comme avant et le bon reste à l'écran, à corriger.</div>
+</div>
+
+<h2 id="recap">5. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/service/DeliveryService.java</code></td><td>nouveau : toutes les lignes d'un bon dans une seule opération</td></tr>
+<tr><td><code>backend/…/web/StockController.java</code>, <code>web/dto/CreateDeliveryRequest.java</code></td><td><code>POST /api/stock/deliveries</code> (responsable de dépôt)</td></tr>
+<tr><td><code>ui/…/core/stock/delivery-note.ts</code></td><td>nouveau : lignes, +1 au second scan, dernier prix, total</td></tr>
+<tr><td><code>ui/…/shared/components/delivery-dialog.component.ts</code></td><td>nouveau : la fenêtre « bon de livraison »</td></tr>
+<tr><td><code>ui/…/features/depot-manager/stock.component.ts</code></td><td>bouton « ＋ Réception »</td></tr>
+<tr><td><code>ui/…/core/api/stock.api.ts</code>, <code>core/models/api.model.ts</code></td><td>appel et type</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Chaque ligne entre en stock, dans l'ordre du bon</td><td><code>DeliveryServiceTest</code> — <code>receptionDePlusieursProduitsEnUneFois</code></td></tr>
+<tr><td>Une ligne refusée : rien n'entre</td><td><code>DeliveryServiceTest</code> — <code>uneLigneRefuseeRienNEstEnregistre</code></td></tr>
+<tr><td>Dernier prix prérempli ; second scan = +1 ; pièce et carton séparés ; total ; prix vide = inconnu</td><td><code>delivery-note.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (607 tests), interface au vert (261 tests).</p>
+</main>
+</body>
+</html>

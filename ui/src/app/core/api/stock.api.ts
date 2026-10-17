@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api.config';
 import {
   CreateStockAdjustmentRequest,
+  CreateDeliveryRequest,
   CreateSupplyRequest,
   ProductMovementPage,
   StockAdjustment,
@@ -46,6 +47,11 @@ export class StockApi {
 
   registerSupply(request: CreateSupplyRequest): Observable<Supply> {
     return this.http.post<Supply>(`${API_BASE_URL}/stock/supplies`, request);
+  }
+
+  /** Every line of the note, or none: a refused line leaves the stock as it was. */
+  registerDelivery(request: CreateDeliveryRequest): Observable<Supply[]> {
+    return this.http.post<Supply[]>(`${API_BASE_URL}/stock/deliveries`, request);
   }
 
   /** The corrections made by hand, newest first. */
