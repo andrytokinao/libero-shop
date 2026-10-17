@@ -4,7 +4,6 @@ import { Cart } from '../../core/sale/cart';
 import { stockLabel } from '../../core/sale/sale-unit';
 import { FavoritesStore } from '../../core/store/favorites.store';
 import { AriaryPipe } from '../pipes/ariary.pipe';
-import { FolderTileComponent } from './folder-tile.component';
 import { UnitPicked, UnitPickerComponent } from './unit-picker.component';
 
 /** A unit tile tapped on a product sold in several units. */
@@ -14,8 +13,8 @@ export interface GridUnitPicked {
 }
 
 /**
- * The till's grid as a file explorer: the rayons as folders first — the seller's favourites as
- * one more folder at the top of the shop — then the products, as tiles.
+ * The till's grid as a file explorer: the rayons as a row of buttons first — the seller's
+ * favourites as one more at the top of the shop — then the products, as tiles.
  *
  * <p>A product sold one way goes in on a tap; one sold in several units opens its unit buttons
  * under the tile instead. The count and the "−" sit beside the card, not in it: a button cannot
@@ -27,18 +26,26 @@ export interface GridUnitPicked {
 @Component({
   selector: 'app-catalog-grid',
   standalone: true,
-  imports: [AriaryPipe, FolderTileComponent, UnitPickerComponent],
+  imports: [AriaryPipe, UnitPickerComponent],
   template: `
+    <!-- The rayons as one compact row of buttons above the grid, which wraps rather than scrolls:
+         the first products are in sight at once instead of two rows of folder tiles down. -->
+    @if ((showFavorites() && favorites.any()) || folders().length) {
+      <nav class="cg-rayons" aria-label="Rayons">
+        @if (showFavorites() && favorites.any()) {
+          <button type="button" class="cg-rayon cg-fav" (click)="favoritesOpened.emit()">
+            <span class="cg-star" aria-hidden="true">★</span> Favoris
+          </button>
+        }
+        @for (folder of folders(); track folder.rayon.id) {
+          <button type="button" class="cg-rayon" (click)="folderOpened.emit(folder)">
+            {{ folder.rayon.name }}
+            <span class="cg-count">{{ folder.products }}</span>
+          </button>
+        }
+      </nav>
+    }
     <div class="prod-grid">
-      @if (showFavorites() && favorites.any()) {
-        <button type="button" class="cg-favorites" (click)="favoritesOpened.emit()">
-          <span class="cg-star" aria-hidden="true">★</span>
-          <span class="cg-favorites-name">Favoris</span>
-        </button>
-      }
-      @for (folder of folders(); track folder.rayon.id) {
-        <app-folder-tile [folder]="folder" (opened)="folderOpened.emit($event)" />
-      }
       @for (product of products(); track product.id) {
         <div class="prod-item">
           <button
@@ -105,33 +112,48 @@ export interface GridUnitPicked {
       display: block;
     }
 
-    .cg-favorites {
+    .cg-rayons {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .cg-rayon {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
-      min-height: 120px;
+      gap: 6px;
+      min-height: 36px;
+      padding: 4px 12px;
       border: 1px solid var(--line);
-      border-radius: 9px;
+      border-radius: 20px;
       background: var(--bg);
       color: inherit;
       font: inherit;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
 
-      &:hover {
+      &:hover,
+      &:focus-visible {
         border-color: var(--brand);
+        color: var(--brand-dark);
       }
     }
 
-    .cg-star {
-      font-size: 30px;
-      color: var(--amber);
+    .cg-count {
+      min-width: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
     }
 
-    .cg-favorites-name {
-      font-weight: 600;
-      font-size: 13px;
+    .cg-star {
+      color: var(--amber);
     }
   `,
 })
