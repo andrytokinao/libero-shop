@@ -99,6 +99,21 @@ public class OnlineOrderService {
         return DiningTableResponse.of(tables.save(DiningTable.builder().name(trimmed).token(newToken()).build()));
     }
 
+    /**
+     * Renames a table -- "Table 4" becoming "Terrasse 1". Its QR code is kept: the printed code
+     * still works, only the name on the orders changes from now on.
+     */
+    @Transactional
+    public DiningTableResponse renameTable(Long id, String name) {
+        DiningTable table = tables.findById(id).orElseThrow(() -> ResourceNotFoundException.of("Table", id));
+        String trimmed = name.trim();
+        if (tables.existsByNameIgnoreCaseAndIdNot(trimmed, id)) {
+            throw new BusinessRuleException("TABLE_EXISTS", "La table \"" + trimmed + "\" existe deja.");
+        }
+        table.setName(trimmed);
+        return DiningTableResponse.of(table);
+    }
+
     /** Withdraws the table's printed QR code: the old link stops working, a new one is issued. */
     @Transactional
     public DiningTableResponse regenerateToken(Long id) {

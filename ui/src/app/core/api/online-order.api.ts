@@ -40,6 +40,11 @@ export class OnlineOrderApi {
   }
 
   /** Withdraws the printed QR code: the old link stops working. */
+  /** Same QR code, new name: the printed code keeps working. */
+  renameTable(id: number, name: string): Observable<DiningTable> {
+    return this.http.put<DiningTable>(`${API_BASE_URL}/tables/${id}`, { name });
+  }
+
   regenerate(id: number): Observable<DiningTable> {
     return this.http.post<DiningTable>(`${API_BASE_URL}/tables/${id}/regenerate`, {});
   }

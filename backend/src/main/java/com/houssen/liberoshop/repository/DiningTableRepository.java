@@ -12,5 +12,8 @@ public interface DiningTableRepository extends JpaRepository<DiningTable, Long> 
 
     boolean existsByNameIgnoreCase(String name);
 
+    /** Another table already called that, whatever the case, apart from this one. */
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+
     List<DiningTable> findAllByOrderByNameAsc();
 }

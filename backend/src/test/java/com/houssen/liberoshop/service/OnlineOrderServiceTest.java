@@ -188,4 +188,23 @@ class OnlineOrderServiceTest {
         configure(new ShopFeatures(true, true, false, false, false, false));
         assertThrows(ResourceNotFoundException.class, () -> onlineOrders.menu(renewed.token()));
     }
+
+    @Test
+    @DisplayName("a table renamed keeps its QR code; a name already taken by another table is refused")
+    void tableRenommeeGardeSonQrCode() {
+        DiningTableResponse table = table();
+        DiningTableResponse other = table();
+        String newName = "Terrasse " + UUID.randomUUID().toString().substring(0, 6);
+
+        DiningTableResponse renamed = onlineOrders.renameTable(table.id(), "  " + newName + " ");
+
+        assertEquals(newName, renamed.name());
+        assertEquals(table.token(), renamed.token());
+        assertEquals(newName, onlineOrders.menu(table.token()).tableName());
+        // Its own name in another case is no clash.
+        assertEquals(newName.toUpperCase(), onlineOrders.renameTable(table.id(), newName.toUpperCase()).name());
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class,
+                () -> onlineOrders.renameTable(table.id(), other.name()));
+        assertEquals("TABLE_EXISTS", refused.code());
+    }
 }
