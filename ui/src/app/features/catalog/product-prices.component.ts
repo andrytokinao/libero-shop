@@ -119,6 +119,9 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
                   }
                   <td>
                     {{ unit.label ?? 'unité' }}
+                    @if (unit.packagingId === null) {
+                      <small class="muted">(unité de base)</small>
+                    }
                     @if (unit.packagingId === cost.purchaseUnitId) {
                       <span class="badge grey">achat</span>
                     }

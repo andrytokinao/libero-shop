@@ -6,7 +6,14 @@ import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product, StockAdjustment, adjustmentReasonLabel } from '../../core/models';
 import { MovementAction, adjustmentActions, countsAsLoss } from '../../core/stock/movement-actions';
-import { formatAmount, formatQuantity, parseQuantity, roundQuantity, unitsOf } from '../../core/sale/sale-unit';
+import {
+  formatAmount,
+  formatQuantity,
+  parseQuantity,
+  roundQuantity,
+  unitChoiceLabel,
+  unitsOf,
+} from '../../core/sale/sale-unit';
 import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
@@ -106,7 +113,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
               (ngModelChange)="unitId.set($event)"
             >
               @for (choice of units(); track choice.packagingId) {
-                <option [ngValue]="choice.packagingId">{{ choice.label ?? 'unité' }}</option>
+                <option [ngValue]="choice.packagingId">{{ unitChoiceLabel(choice) }}</option>
               }
             </select>
           </div>
@@ -221,6 +228,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 })
 export class StockAdjustmentsComponent {
   private readonly api = inject(StockApi);
+  protected readonly unitChoiceLabel = unitChoiceLabel;
   private readonly toasts = inject(ToastService);
   private readonly undo = inject(StockUndo);
 

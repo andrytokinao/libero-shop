@@ -15,6 +15,7 @@ import {
   parseQuantity,
   roundQuantity,
   stockLabel,
+  unitChoiceLabel,
   unitsOf,
 } from '../../core/sale/sale-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
@@ -106,7 +107,7 @@ const NEW_SUPPLIER = -1;
               >
                 @for (unit of units(); track unit.packagingId) {
                   <option [ngValue]="unit.packagingId">
-                    {{ unit.label ?? 'unité' }}
+                    {{ unitChoiceLabel(unit) }}
                     @if (unit.packagingId !== null) {
                       (× {{ formatAmount(unit.factor, selectedProduct()?.unit ?? null) }})
                     }
@@ -484,6 +485,7 @@ const NEW_SUPPLIER = -1;
 })
 export class SupplyComponent {
   private readonly catalog = inject(CatalogApi);
+  protected readonly unitChoiceLabel = unitChoiceLabel;
   private readonly stock = inject(StockApi);
   private readonly costing = inject(CostingApi);
   private readonly toasts = inject(ToastService);

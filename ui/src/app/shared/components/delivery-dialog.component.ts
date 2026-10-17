@@ -6,7 +6,7 @@ import { CostingApi } from '../../core/api/costing.api';
 import { StockApi } from '../../core/api/stock.api';
 import { CodeMatch } from '../../core/catalog/product-pick';
 import { ProductCost, Supplier } from '../../core/models';
-import { formatAmount, unitsOf } from '../../core/sale/sale-unit';
+import { formatAmount, unitChoiceLabel, unitsOf } from '../../core/sale/sale-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { ToastService } from '../../core/services/toast.service';
 import {
@@ -96,7 +96,7 @@ import { HelpButtonComponent } from './help-button.component';
                       (ngModelChange)="setUnit(i, $event)"
                     >
                       @for (unit of unitsOf(line.product); track unit.packagingId) {
-                        <option [ngValue]="unit.packagingId">{{ unit.label ?? 'unité' }}</option>
+                        <option [ngValue]="unit.packagingId">{{ unitChoiceLabel(unit) }}</option>
                       }
                     </select>
                   </div>
@@ -265,6 +265,7 @@ import { HelpButtonComponent } from './help-button.component';
 })
 export class DeliveryDialogComponent implements OnInit {
   private readonly stock = inject(StockApi);
+  protected readonly unitChoiceLabel = unitChoiceLabel;
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
   protected readonly toasts = inject(ToastService);

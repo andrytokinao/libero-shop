@@ -43,12 +43,14 @@ describe('ProductCreateDialogComponent', () => {
     render();
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(missing()).toBe('Il manque : le nom et un prix de vente');
+    expect(missing()).toBe("Il manque : le nom et un prix de vente et l'unité de base (pièce, sac, kg…)");
 
     type('pn-name', 'Riz 25 kg');
-    expect(missing()).toBe('Il manque : un prix de vente');
-
     type('pn-price', '70000');
+    expect(missing()).toBe("Il manque : l'unité de base (pièce, sac, kg…)");
+
+    // "10" in stock must say 10 of what: the unit is asked rather than left to "unité".
+    type('pn-unit', 'sac');
     expect(missing()).toBeUndefined();
   });
 

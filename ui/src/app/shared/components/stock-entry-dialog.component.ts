@@ -10,6 +10,7 @@ import {
   formatAmount,
   parseQuantity,
   roundQuantity,
+  unitChoiceLabel,
   unitsOf,
 } from '../../core/sale/sale-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
@@ -68,7 +69,7 @@ import { HelpButtonComponent } from './help-button.component';
               >
                 @for (unit of units(); track unit.packagingId) {
                   <option [ngValue]="unit.packagingId">
-                    {{ unit.label ?? 'unité' }}
+                    {{ unitChoiceLabel(unit) }}
                     @if (unit.packagingId !== null) {
                       (× {{ formatAmount(unit.factor, product().unit) }})
                     }
@@ -140,6 +141,7 @@ import { HelpButtonComponent } from './help-button.component';
 })
 export class StockEntryDialogComponent implements OnInit {
   private readonly stock = inject(StockApi);
+  protected readonly unitChoiceLabel = unitChoiceLabel;
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
   private readonly undo = inject(StockUndo);

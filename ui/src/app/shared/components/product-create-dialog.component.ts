@@ -52,7 +52,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
           <div>
             <h2 id="pn-title">Nouveau produit</h2>
             <div class="sub muted">
-              Le nom et le prix suffisent. Les unités courantes (g, kg, tonne…) se cochent ci-dessous ;
+              Le nom, le prix et l'unité suffisent. Les unités courantes (g, kg, tonne…) se cochent ci-dessous ;
               les autres s'ajoutent ensuite avec « Unités et packaging » dans le menu du produit.
             </div>
           </div>
@@ -88,6 +88,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             </div>
             <div class="fld">
               <label for="pn-unit">Unité de base (stock)</label>
+              <!-- Asked rather than left to "unité": "10" in stock must say 10 of what. -->
               <input
                 id="pn-unit"
                 name="unit"
@@ -302,7 +303,7 @@ export class ProductCreateDialogComponent implements OnInit {
     const price = amount(draft.price, 2);
     const cost = amount(draft.cost, 2);
     const stock = amount(draft.stock, 3);
-    if (!draft.name.trim() || price === null || price === undefined || price <= 0) {
+    if (!draft.name.trim() || !draft.unit.trim() || price === null || price === undefined || price <= 0) {
       return null;
     }
     if (cost === undefined || stock === undefined || this.picker()?.blocking()) {
@@ -311,7 +312,7 @@ export class ProductCreateDialogComponent implements OnInit {
     return {
       name: draft.name.trim(),
       price,
-      unit: draft.unit.trim() || null,
+      unit: draft.unit.trim(),
       barcode: draft.barcode.trim() || null,
       categoryId: draft.categoryId,
       purchaseCost: cost,
@@ -338,6 +339,7 @@ export class ProductCreateDialogComponent implements OnInit {
     const absent = [
       !draft.name.trim() && 'le nom',
       !(price && price > 0) && 'un prix de vente',
+      !draft.unit.trim() && "l'unité de base (pièce, sac, kg…)",
       amount(draft.cost, 2) === undefined && "un prix d'achat en chiffres",
       amount(draft.stock, 3) === undefined && 'un stock de départ en chiffres',
       this.picker()?.blocking() && 'le choix des unités du modèle',

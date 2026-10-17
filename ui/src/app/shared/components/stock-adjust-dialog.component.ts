@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { StockApi } from '../../core/api/stock.api';
 import { ADJUSTMENT_REASONS, AdjustmentReason, Product } from '../../core/models';
-import { formatAmount, formatQuantity, roundQuantity, unitsOf } from '../../core/sale/sale-unit';
+import { formatAmount, formatQuantity, roundQuantity, unitChoiceLabel, unitsOf } from '../../core/sale/sale-unit';
 import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { HelpButtonComponent } from './help-button.component';
@@ -76,7 +76,7 @@ import { HelpButtonComponent } from './help-button.component';
                   (ngModelChange)="unitId.set($event)"
                 >
                   @for (choice of units(); track choice.packagingId) {
-                    <option [ngValue]="choice.packagingId">{{ choice.label ?? 'unité' }}</option>
+                    <option [ngValue]="choice.packagingId">{{ unitChoiceLabel(choice) }}</option>
                   }
                 </select>
               </div>
@@ -213,6 +213,7 @@ export class StockAdjustDialogComponent implements OnInit {
   });
 
   protected readonly formatAmount = formatAmount;
+  protected readonly unitChoiceLabel = unitChoiceLabel;
 
   protected canSubmit(): boolean {
     const preview = this.preview();

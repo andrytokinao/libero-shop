@@ -1,5 +1,13 @@
 import { Product } from '../models';
-import { formatQuantity, parseQuantity, roundQuantity, stockLabel, unitByBarcode, unitsOf } from './sale-unit';
+import {
+  formatQuantity,
+  parseQuantity,
+  roundQuantity,
+  stockLabel,
+  unitByBarcode,
+  unitChoiceLabel,
+  unitsOf,
+} from './sale-unit';
 
 /** Loose rice counted in kapoka, sold by the kilo (3.5 kapoka) and the 50 kg sack (175). */
 const vrac: Product = {
@@ -50,5 +58,11 @@ describe('sale units', () => {
   it('keeps floating point out of the quantities', () => {
     expect(roundQuantity(0.1 * 3.5)).toBe(0.35);
     expect(formatQuantity(1.75)).toBe('1,75');
+  });
+
+  it('dit l unité de base comme telle là où se compte le stock', () => {
+    expect(unitChoiceLabel({ packagingId: null, label: 'sac', factor: 1, price: 1 })).toBe('sac (unité de base)');
+    expect(unitChoiceLabel({ packagingId: null, label: null, factor: 1, price: 1 })).toBe('unité (unité de base)');
+    expect(unitChoiceLabel({ packagingId: 4, label: 'carton', factor: 12, price: 1 })).toBe('carton');
   });
 });

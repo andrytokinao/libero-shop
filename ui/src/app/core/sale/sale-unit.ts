@@ -21,6 +21,19 @@ export function baseUnitOf(product: Product): SaleUnit {
   return { packagingId: null, label: product.unit, factor: 1, price: product.price };
 }
 
+/** A unit's name, "unité" for the base unit of a product counted in bare units. */
+export function unitName(label: string | null): string {
+  return label ?? 'unité';
+}
+
+/**
+ * How a unit is offered where stock is counted or bought: the base unit says it is the one the
+ * stock is kept in — "sac (unité de base)" — so "10" is never read in the wrong unit.
+ */
+export function unitChoiceLabel(unit: SaleUnit): string {
+  return unit.packagingId === null ? `${unitName(unit.label)} (unité de base)` : unitName(unit.label);
+}
+
 /** Every unit the product sells in, the base one first, then the packagings smallest first. */
 export function unitsOf(product: Product): SaleUnit[] {
   return [

@@ -62,7 +62,12 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
                 <tbody>
                   @for (unit of cost.units; track unit.packagingId) {
                     <tr>
-                      <td>{{ unit.label ?? 'unité' }}</td>
+                      <td>
+                        {{ unit.label ?? 'unité' }}
+                        @if (unit.packagingId === null) {
+                          <small class="muted">(unité de base)</small>
+                        }
+                      </td>
                       <td class="num">{{ unit.salePrice | ariary }}</td>
                       <td class="num">{{ unit.cost === null ? '—' : (unit.cost | ariary) }}</td>
                       <td class="num" [class.po-loss]="unit.margin !== null && unit.margin < 0">
