@@ -3,6 +3,7 @@ import {
   DestroyRef,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -68,6 +69,7 @@ const GROUP_HEIGHT = 24;
         [style.right.px]="place().right"
         [style.top.px]="place().top"
         [style.bottom.px]="place().bottom"
+        [style.max-height.px]="place().maxHeight"
         (keydown)="onKey($event)"
       >
         @for (action of actions(); track action.id; let i = $index) {
@@ -186,6 +188,8 @@ export class ActionMenuComponent<T extends string = string> {
   /** What the button says to a screen reader and on hover. */
   readonly label = input('Actions');
   readonly picked = output<T>();
+  /** Opened as soon as it is true: a product found by its code shows its menu at once. */
+  readonly openNow = input(false);
 
   protected readonly open = signal(false);
   private readonly anchor = signal<DOMRect | null>(null);
@@ -198,6 +202,15 @@ export class ActionMenuComponent<T extends string = string> {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => document.removeEventListener('scroll', this.onScroll, true));
+    effect(() => {
+      if (this.openNow()) {
+        // Once the row is laid out and in sight — a scroll closes an open menu, so it comes first.
+        setTimeout(() => {
+          this.trigger().nativeElement.scrollIntoView({ block: 'nearest' });
+          setTimeout(() => this.show(), 150);
+        });
+      }
+    });
   }
 
   /**
@@ -207,15 +220,20 @@ export class ActionMenuComponent<T extends string = string> {
   protected readonly place = computed(() => {
     const rect = this.anchor();
     if (!rect) {
-      return { right: 0, top: 0, bottom: null };
+      return { right: 0, top: 0, bottom: null, maxHeight: null };
     }
     const right = Math.max(8, window.innerWidth - rect.right);
     const groups = new Set(this.actions().map((action) => action.group).filter(Boolean)).size;
     const height = this.actions().length * ITEM_HEIGHT + groups * GROUP_HEIGHT + PANEL_PADDING;
-    const fitsBelow = rect.bottom + 4 + height <= window.innerHeight || rect.top < height;
-    return fitsBelow
-      ? { right, top: rect.bottom + 4, bottom: null }
-      : { right, top: null, bottom: window.innerHeight - rect.top + 4 };
+    const below = window.innerHeight - rect.bottom - 12;
+    const above = rect.top - 12;
+    // Where it fits whole; else on the roomier side, scrolling inside itself.
+    const downward = height <= below || (height > above && below >= above);
+    const room = downward ? below : above;
+    const maxHeight = height > room ? room : null;
+    return downward
+      ? { right, top: rect.bottom + 4, bottom: null, maxHeight }
+      : { right, top: null, bottom: window.innerHeight - rect.top + 4, maxHeight };
   });
 
   protected toggle(event: Event): void {
@@ -223,6 +241,13 @@ export class ActionMenuComponent<T extends string = string> {
     event.stopPropagation();
     if (this.open()) {
       this.close();
+      return;
+    }
+    this.show();
+  }
+
+  private show(): void {
+    if (this.open()) {
       return;
     }
     this.anchor.set(this.trigger().nativeElement.getBoundingClientRect());

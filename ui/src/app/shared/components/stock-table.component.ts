@@ -54,7 +54,11 @@ import { StockStatusBadgeComponent } from './status-badges.component';
                 </td>
                 @if (manage) {
                   <td class="num">
-                    <app-product-menu [product]="product" (action)="action.emit($event)" />
+                    <app-product-menu
+                      [product]="product"
+                      [openNow]="product.id === openMenuOf"
+                      (action)="action.emit($event)"
+                    />
                   </td>
                 }
               </tr>
@@ -76,6 +80,8 @@ export class StockTableComponent {
    * screens where the catalogue is managed turn it on.
    */
   @Input() manage = false;
+  /** The product whose menu opens at once: the one a scanned code found. */
+  @Input() openMenuOf: number | null = null;
   /** What a row's menu was asked; the screen hands it to `app-product-dialogs`. */
   @Output() readonly action = new EventEmitter<ProductDialogRequest>();
 

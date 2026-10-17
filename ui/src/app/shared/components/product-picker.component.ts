@@ -1,5 +1,5 @@
 import { Component, ElementRef, computed, input, output, signal, viewChild } from '@angular/core';
-import { CodeMatch, MIN_PICK_LETTERS, findByCode, matchProducts } from '../../core/catalog/product-pick';
+import { CodeMatch, MIN_PICK_LETTERS, findByCode, looksLikeCode, matchProducts } from '../../core/catalog/product-pick';
 import { Product } from '../../core/models';
 import { stockLabel } from '../../core/sale/sale-unit';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
@@ -219,7 +219,7 @@ export class ProductPickerComponent {
     const proposal = this.results()[this.active()];
     if (proposal) {
       this.pick({ product: proposal, packagingId: null });
-    } else if (/^\d{6,}$/.test(text)) {
+    } else if (looksLikeCode(text)) {
       this.unknownCode.emit(text);
     }
   }

@@ -20,6 +20,7 @@ import { ActionMenuComponent } from './action-menu.component';
       <app-action-menu
         [actions]="entries()"
         [label]="'Actions sur ' + product().name"
+        [openNow]="openNow()"
         (picked)="pick($event)"
       />
     }
@@ -30,6 +31,8 @@ export class ProductMenuComponent {
 
   readonly product = input.required<Product>();
   readonly action = output<ProductDialogRequest>();
+  /** Opened at once — the product a scanned code designates. */
+  readonly openNow = input(false);
 
   protected readonly entries = computed(() => productMenu(this.product(), this.rights.menuRights()));
 

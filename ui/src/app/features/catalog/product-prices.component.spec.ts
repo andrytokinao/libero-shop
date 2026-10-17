@@ -20,7 +20,7 @@ describe('ProductPricesComponent', () => {
     stockValue: 0,
     packagings: [],
   };
-  const salt: Product = { ...rice, id: 8, name: 'Sel', unit: null };
+  const salt: Product = { ...rice, id: 8, name: 'Sel', unit: null, barcode: '6001007000007' };
 
   const costs: ProductCost[] = [
     {
@@ -123,6 +123,15 @@ describe('ProductPricesComponent', () => {
     TestBed.resetTestingModule();
     render(RoleApp.DEPOT_MANAGER);
     expect(menuOfFirstProduct()).toContain('Ajouter du stock');
+  });
+
+  it('shows alone the product a scanned code designates', () => {
+    render(RoleApp.SUPER_ADMIN);
+    fixture.componentInstance['search'].set('6001007000007');
+    fixture.detectChanges();
+
+    expect(text()).toContain('Sel');
+    expect(text()).not.toContain('Riz vrac');
   });
 
   /** Opens the first product's "⋮" and reads its entries. */

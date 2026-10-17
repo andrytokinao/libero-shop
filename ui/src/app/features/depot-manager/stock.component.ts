@@ -2,10 +2,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
+import { looksLikeCode } from '../../core/catalog/product-pick';
 import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
+import { ToastService } from '../../core/services/toast.service';
 import { CategoryNode } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
+import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductCardComponent } from '../../shared/components/product-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
@@ -29,6 +32,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
     ProductDialogsComponent,
     ProductImportComponent,
     StockTableComponent,
+    CameraScanButtonComponent,
     AriaryPipe,
   ],
   template: `
@@ -52,15 +56,22 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
         </div>
       </div>
       <div class="form-row">
-        <div class="fld" style="flex:1; max-width:280px;">
+        <div class="fld" style="flex:1; max-width:320px;">
           <label for="stock-search">Recherche</label>
+          <!-- A scanner types the code and presses Entrée; the camera reads it on a phone. Either way
+               the product found opens with its menu, ready for what is to be done with it. -->
+          <div class="st-search">
           <input
             id="stock-search"
             type="text"
             placeholder="Nom, catégorie ou code-barres"
             [ngModel]="search()"
             (ngModelChange)="onSearch($event)"
+            (focus)="$any($event.target).select()"
+            (keydown.enter)="scan(search())"
           />
+          <app-camera-scan-button (scanned)="scan($event)" />
+          </div>
         </div>
         <div class="fld">
           <label for="stock-category">Catégorie</label>
@@ -132,13 +143,19 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
         <app-stock-table
           [products]="products()"
           [manage]="true"
+          [openMenuOf]="openMenuOf()"
           emptyMessage="Aucun produit ne correspond aux filtres."
           (action)="asked.set($event)"
         />
       } @else {
         <div class="st-cards">
           @for (product of products(); track product.id) {
-            <app-product-card [product]="product" [manage]="true" (action)="asked.set($event)" />
+            <app-product-card
+              [product]="product"
+              [manage]="true"
+              [openMenu]="product.id === openMenuOf()"
+              (action)="asked.set($event)"
+            />
           } @empty {
             <div class="empty">Aucun produit ne correspond aux filtres.</div>
           }
@@ -149,6 +166,20 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
     <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
   `,
   styles: `
+    .st-search {
+      display: flex;
+      gap: 6px;
+
+      input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      app-camera-scan-button:empty {
+        display: none;
+      }
+    }
+
     .st-actions {
       display: flex;
       gap: 8px;
@@ -208,7 +239,32 @@ export class StockComponent {
 
   protected onSearch(value: string): void {
     this.search.set(value);
+    this.openMenuOf.set(null);
     this.resource.reload();
+  }
+
+  /** The product a scanned code found: its menu opens in the list. */
+  protected readonly openMenuOf = signal<number | null>(null);
+  private readonly toasts = inject(ToastService);
+
+  /**
+   * A code scanned or typed then Entrée: the list narrows to its product, whose menu opens. A
+   * carton's code finds its product too; the list then shows it by name.
+   */
+  protected scan(text: string): void {
+    const code = text.trim();
+    if (!looksLikeCode(code)) {
+      return;
+    }
+    this.api.productByCode(code).subscribe((product) => {
+      if (!product) {
+        this.toasts.show(`Aucun produit ne porte le code ${code}.`);
+        return;
+      }
+      this.search.set(product.barcode === code ? code : product.name);
+      this.resource.reload();
+      this.openMenuOf.set(product.id);
+    });
   }
 
   protected onCategory(categoryId: number | null): void {

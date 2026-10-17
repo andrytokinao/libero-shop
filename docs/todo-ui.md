@@ -47,7 +47,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-12** — Nouveau produit : nom, prix, unité d'abord, le reste replié ; message avec
   « Ajouter du stock » / « Codes-barres ».
 - [x] **UI-20** — Onglet Codes-barres : une ligne par unité, bouton « Scanner », code déjà pris signalé.
-- [ ] **UI-22** — Douchette et caméra dans la recherche de Stock, Prix et unités, Corrections.
+- [x] **UI-22** — Douchette et caméra dans la recherche de Stock, Prix et unités, Corrections.
 - [ ] **UI-31** — « ＋ Réception » : fenêtre bon de livraison multi-produits, un fournisseur, un
   seul enregistrement. (serveur)
 - [ ] **UI-33** — « ⋮ » sur les réceptions et corrections passées : voir le produit, imprimer,

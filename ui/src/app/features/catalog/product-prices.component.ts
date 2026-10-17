@@ -2,10 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CostingApi } from '../../core/api/costing.api';
-import { searchKey } from '../../core/catalog/product-pick';
+import { findByCode, looksLikeCode, searchKey } from '../../core/catalog/product-pick';
 import { ProductDialogRequest } from '../../core/catalog/product-rights';
 import { Product, ProductCost } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
+import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { ProductMenuComponent } from '../../shared/components/product-menu.component';
@@ -29,7 +30,14 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
 @Component({
   selector: 'app-product-prices',
   standalone: true,
-  imports: [FormsModule, AriaryPipe, KpiCardComponent, ProductDialogsComponent, ProductMenuComponent],
+  imports: [
+    FormsModule,
+    AriaryPipe,
+    KpiCardComponent,
+    ProductDialogsComponent,
+    ProductMenuComponent,
+    CameraScanButtonComponent,
+  ],
   template: `
     <div class="grid g3">
       <app-kpi-card label="Produits" [value]="costs().length" />
@@ -52,13 +60,20 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
       <div class="form-row">
         <div class="fld" style="flex:1; max-width:280px;">
           <label for="pp-search">Recherche</label>
-          <input
-            id="pp-search"
-            type="text"
-            placeholder="Nom du produit"
-            [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
-          />
+          <!-- A name, or a code from the scanner or the camera: the product it designates is shown
+               alone, with its menu open. -->
+          <div class="pp-search">
+            <input
+              id="pp-search"
+              type="text"
+              placeholder="Nom du produit ou code-barres"
+              [ngModel]="search()"
+              (ngModelChange)="search.set($event)"
+              (focus)="$any($event.target).select()"
+              (keydown.enter)="$event.preventDefault()"
+            />
+            <app-camera-scan-button (scanned)="search.set($event)" />
+          </div>
         </div>
         <div class="fld">
           <label for="pp-filter">Filtre</label>
@@ -117,7 +132,11 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
                   @if (first) {
                     <td class="pp-actions" [attr.rowspan]="cost.units.length">
                       @if (productOf(cost); as product) {
-                        <app-product-menu [product]="product" (action)="asked.set($event)" />
+                        <app-product-menu
+                          [product]="product"
+                          [openNow]="product.id === scanned()?.id"
+                          (action)="asked.set($event)"
+                        />
                       }
                     </td>
                   }
@@ -140,6 +159,20 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
     <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
   `,
   styles: `
+    .pp-search {
+      display: flex;
+      gap: 6px;
+
+      input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      app-camera-scan-button:empty {
+        display: none;
+      }
+    }
+
     .pp-intro {
       font-size: 12.5px;
       margin: 0 0 12px;
@@ -190,11 +223,19 @@ export class ProductPricesComponent {
   );
   protected readonly atLoss = computed(() => this.costs().filter(isAtLoss).length);
 
+  /** The product a code in the search designates — its own or a carton's — or null. */
+  protected readonly scanned = computed(() =>
+    looksLikeCode(this.search()) ? (findByCode(this.products(), this.search())?.product ?? null) : null,
+  );
+
   protected readonly shown = computed(() => {
-    const words = searchKey(this.search());
+    const code = looksLikeCode(this.search());
+    const scanned = this.scanned();
+    const words = code ? '' : searchKey(this.search());
     const filter = this.filter();
     return this.costs().filter(
       (cost) =>
+        (!code || cost.productId === scanned?.id) &&
         (!words || searchKey(cost.name).includes(words)) &&
         (filter === 'all' ||
           (filter === 'uncosted' && cost.units[0]?.cost === null) ||

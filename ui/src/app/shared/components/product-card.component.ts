@@ -26,7 +26,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
           <div class="pc-cat">{{ product().category?.name ?? 'Sans catégorie' }}</div>
         </div>
         @if (manage()) {
-          <app-product-menu [product]="product()" (action)="action.emit($event)" />
+          <app-product-menu [product]="product()" [openNow]="openMenu()" (action)="action.emit($event)" />
         }
       </header>
       <div class="pc-price">
@@ -120,6 +120,8 @@ export class ProductCardComponent {
   readonly product = input.required<Product>();
   /** Shows the "⋮" menu; what it offers still depends on the account. Off for a read-only list. */
   readonly manage = input(false);
+  /** Its menu opened at once: the product a scanned code found. */
+  readonly openMenu = input(false);
   readonly action = output<ProductDialogRequest>();
 
   protected readonly formatAmount = formatAmount;

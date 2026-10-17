@@ -1,5 +1,5 @@
 import { Product } from '../models';
-import { findByCode, matchProducts, searchKey } from './product-pick';
+import { findByCode, looksLikeCode, matchProducts, searchKey } from './product-pick';
 
 function product(id: number, name: string, barcode: string | null = null, cartonCode: string | null = null): Product {
   return {
@@ -54,5 +54,11 @@ describe('product-pick', () => {
   it('takes only a whole code, never the start of one', () => {
     expect(findByCode(catalogue, '600100')).toBeNull();
     expect(findByCode(catalogue, '')).toBeNull();
+  });
+
+  it('reads six digits or more as a code, anything shorter or with letters as words', () => {
+    expect(looksLikeCode(' 6001001000015 ')).toBeTrue();
+    expect(looksLikeCode('12')).toBeFalse();
+    expect(looksLikeCode('riz 5kg')).toBeFalse();
   });
 });
