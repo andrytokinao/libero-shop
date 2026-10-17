@@ -6,6 +6,7 @@ import { ToastAction, ToastService } from '../../core/services/toast.service';
 import { formatAmount } from '../../core/sale/sale-unit';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { ProductCreateDialogComponent } from './product-create-dialog.component';
+import { ProductOverviewDialogComponent } from './product-overview-dialog.component';
 import { ProductUnitsDialogComponent } from './product-units-dialog.component';
 import { StockAdjustDialogComponent } from './stock-adjust-dialog.component';
 import { StockEntryDialogComponent } from './stock-entry-dialog.component';
@@ -27,6 +28,7 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
   standalone: true,
   imports: [
     ProductCreateDialogComponent,
+    ProductOverviewDialogComponent,
     ProductUnitsDialogComponent,
     StockAdjustDialogComponent,
     StockEntryDialogComponent,
@@ -68,6 +70,13 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
             [product]="asked.product"
             [initialReason]="asked.count ? 'INVENTORY_COUNT' : 'BREAKAGE'"
             (changed)="changed.emit()"
+            (closed)="closed.emit()"
+          />
+        }
+        @case ('overview') {
+          <app-product-overview-dialog
+            [product]="asked.product"
+            (picked)="shown.set($event)"
             (closed)="closed.emit()"
           />
         }

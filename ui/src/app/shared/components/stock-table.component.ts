@@ -35,7 +35,16 @@ import { StockStatusBadgeComponent } from './status-badges.component';
           <tbody>
             @for (product of products; track product.id) {
               <tr>
-                <td>{{ product.name }}</td>
+                <td>
+                  <!-- Touching the name opens the product at a glance, its actions as buttons. -->
+                  @if (manage) {
+                    <button class="st-name" type="button" (click)="action.emit({ action: 'overview', product })">
+                      {{ product.name }}
+                    </button>
+                  } @else {
+                    {{ product.name }}
+                  }
+                </td>
                 <td class="muted">{{ product.category?.name ?? '—' }}</td>
                 <td class="muted">{{ product.barcode ?? '—' }}</td>
                 <td class="num">
@@ -71,6 +80,24 @@ import { StockStatusBadgeComponent } from './status-badges.component';
       </div>
     } @else if (showsEmpty(state)) {
       <div class="empty">{{ emptyMessage }}</div>
+    }
+  `,
+  styles: `
+    /* The name, a link to the product at a glance: looks like text, underlined on hover. */
+    .st-name {
+      border: 0;
+      background: none;
+      padding: 0;
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--brand);
+        text-decoration: underline;
+      }
     }
   `,
 })

@@ -69,7 +69,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 
 ## P3
 
-- [ ] **UI-03** — Clic sur un produit (hors vente) : fiche rapide en lecture avec ses actions.
+- [x] **UI-03** — Clic sur un produit (hors vente) : fiche rapide en lecture avec ses actions.
 - [ ] **UI-11** — Prix modifiable directement dans le tableau Prix et unités.
 - [ ] **UI-35** — Correction de stock dans une autre unité (« 2 cartons »).
 - [ ] **UI-36** — Inventaire d'un rayon avec résumé des écarts. (serveur)

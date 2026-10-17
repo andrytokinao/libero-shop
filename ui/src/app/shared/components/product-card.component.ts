@@ -22,7 +22,14 @@ import { StockStatusBadgeComponent } from './status-badges.component';
     <article class="pc" [class.low]="product().lowStock">
       <header class="pc-head">
         <div class="pc-title">
-          <div class="pc-name">{{ product().name }}</div>
+          @if (manage()) {
+            <!-- Touching the name opens the product at a glance, its actions as buttons. -->
+            <button class="pc-name pc-link" type="button" (click)="action.emit({ action: 'overview', product: product() })">
+              {{ product().name }}
+            </button>
+          } @else {
+            <div class="pc-name">{{ product().name }}</div>
+          }
           <div class="pc-cat">{{ product().category?.name ?? 'Sans catégorie' }}</div>
         </div>
         @if (manage()) {
@@ -78,6 +85,23 @@ import { StockStatusBadgeComponent } from './status-badges.component';
       font-weight: 600;
       font-size: 13.5px;
       overflow-wrap: anywhere;
+    }
+
+/* The name, a link to the product at a glance: looks like text, underlined on hover. */
+    .pc-link {
+      border: 0;
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--brand);
+        text-decoration: underline;
+      }
     }
 
     .pc-cat {

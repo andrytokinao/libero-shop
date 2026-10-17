@@ -3,7 +3,8 @@ import { Product, RoleApp } from '../models';
 import { AuthService } from '../services/auth.service';
 
 /** What can be done to one product from its menu. */
-export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history' | 'retire';
+/** `overview` is the quick sheet read by touching the product's name. */
+export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history' | 'retire' | 'overview';
 
 /** The parts of a product's configuration, one tab each. */
 export type ConfigTab = 'fiche' | 'prix' | 'unites' | 'codes';
