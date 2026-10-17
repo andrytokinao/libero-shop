@@ -514,7 +514,8 @@ export class SupplyComponent {
   );
 
   protected readonly products = this.productResource.value;
-  protected readonly suppliers = this.supplierResource.value;
+  /** The suppliers still offered at a receipt. */
+  protected readonly suppliers = computed(() => this.supplierResource.value().filter((s) => !s.retired));
   protected readonly supplies = this.supplyResource.value;
 
   /**

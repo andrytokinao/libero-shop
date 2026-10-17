@@ -5,6 +5,7 @@ import com.houssen.liberoshop.service.SupplierImportService;
 import com.houssen.liberoshop.service.SupplierService;
 import com.houssen.liberoshop.web.dto.CreateSupplierRequest;
 import com.houssen.liberoshop.web.dto.ImportPreviewRequest;
+import com.houssen.liberoshop.web.dto.RetiredRequest;
 import com.houssen.liberoshop.web.dto.SimpleImportPreviewResponse;
 import com.houssen.liberoshop.web.dto.SimpleImportRequest;
 import com.houssen.liberoshop.web.dto.SimpleImportResultResponse;
@@ -13,7 +14,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -60,6 +63,20 @@ public class SupplierController {
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public SupplierResponse create(@Valid @RequestBody CreateSupplierRequest request) {
         return SupplierResponse.created(supplierService.create(request.name(), request.contact()));
+    }
+
+    /** Its name or its phone corrected. */
+    @PutMapping("/{supplierId}")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public SupplierResponse update(@PathVariable Long supplierId, @Valid @RequestBody CreateSupplierRequest request) {
+        return SupplierResponse.created(supplierService.update(supplierId, request.name(), request.contact()));
+    }
+
+    /** "Ne plus proposer", or offered again. */
+    @PutMapping("/{supplierId}/retired")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public SupplierResponse changeRetired(@PathVariable Long supplierId, @Valid @RequestBody RetiredRequest request) {
+        return SupplierResponse.created(supplierService.changeRetired(supplierId, request.retired()));
     }
 
     /** What the file says, and what it would add to the list. Nothing is written. */

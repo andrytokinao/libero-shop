@@ -238,6 +238,15 @@ export class CatalogApi {
     return this.http.post<Supplier>(`${API_BASE_URL}/suppliers`, request);
   }
 
+  updateSupplier(supplierId: number, request: CreateSupplierRequest): Observable<Supplier> {
+    return this.http.put<Supplier>(`${API_BASE_URL}/suppliers/${supplierId}`, request);
+  }
+
+  /** "Ne plus proposer", or offered again; its receipts and prices stay. */
+  changeSupplierRetired(supplierId: number, retired: boolean): Observable<Supplier> {
+    return this.http.put<Supplier>(`${API_BASE_URL}/suppliers/${supplierId}/retired`, { retired });
+  }
+
   stockByCategory(): Observable<CategoryStock[]> {
     return this.http.get<CategoryStock[]>(`${API_BASE_URL}/stock/by-category`);
   }

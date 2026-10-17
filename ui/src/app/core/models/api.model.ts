@@ -141,6 +141,8 @@ export interface Supplier {
   suppliedProducts: string | null;
   deliveryCount: number;
   unitsReceived: number;
+  /** No longer offered when a receipt is booked. Optional for old payloads. */
+  retired?: boolean;
 }
 
 /** POST /api/suppliers — mirrors CreateSupplierRequest. */

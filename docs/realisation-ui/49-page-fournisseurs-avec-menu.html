@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page Fournisseurs avec un menu</title>
+<meta name="ui-id" content="UI-34">
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="index.html">← Tous les comptes rendus de l'interface</a></p>
+<h1><span class="id">UI-34</span>Page Fournisseurs avec un menu</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point <code>UI-34</code> de <code>docs/todo-ui.md</code></p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Chaque fournisseur a un « ⋮ » : <strong>Modifier</strong>, <strong>Ses prix</strong>, <strong>Nouvelle réception</strong>, <strong>Ne plus proposer</strong>.</li>
+    <li>« Ses prix » montre ce qu'on lui a acheté : le dernier prix payé par produit et par unité, la date, le nombre de réceptions.</li>
+    <li>« Nouvelle réception » ouvre le bon de livraison (UI-31) avec ce fournisseur déjà choisi.</li>
+    <li>« Ne plus proposer » le retire des listes de la réception sans rien effacer ; un bouton « Annuler » dans le message le remet.</li>
+    <li>« ＋ Nouveau fournisseur » et la liste vide qui propose le bouton étaient déjà faits (UI-32, UI-80).</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#recap">4. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>La page Fournisseurs n'était qu'une liste. Corriger un numéro de téléphone, voir combien on payait un grossiste ou
+  cesser de travailler avec lui n'était possible nulle part.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 200" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Le menu d'un fournisseur">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="75" width="180" height="50" rx="8"/><text class="t" x="34" y="98">« ⋮ » d'un fournisseur</text><text class="s" x="34" y="115">Distri Lait SARL</text>
+  <rect class="new" x="280" y="10" width="250" height="38" rx="8"/><text class="t" x="294" y="34">Modifier : nom, téléphone</text>
+  <rect class="new" x="280" y="56" width="250" height="38" rx="8"/><text class="t" x="294" y="80">Ses prix : d'après les réceptions</text>
+  <rect class="new" x="280" y="102" width="250" height="38" rx="8"/><text class="t" x="294" y="126">Nouvelle réception : bon prérempli</text>
+  <rect class="new" x="280" y="148" width="250" height="38" rx="8"/><text class="t" x="294" y="172">Ne plus proposer : réversible</text>
+  <rect class="box" x="600" y="148" width="240" height="38" rx="8"/><text class="s" x="614" y="172">hors des listes ; réceptions et prix gardés</text>
+  <path class="ln" d="M200,95 L278,30"/><path class="ln" d="M200,98 L278,75"/><path class="ln" d="M200,102 L278,120"/><path class="ln" d="M200,106 L278,166"/><path class="ln" d="M530,167 L598,167"/>
+</svg>
+<div class="caption">Figure 1 — Quatre gestes depuis la ligne du fournisseur.</div>
+</div>
+
+<p>Côté serveur : la modification d'un fournisseur (le même nom écrit autrement qu'un autre fournisseur reste refusé)
+  et un indicateur « ne plus proposer », ajouté aux fournisseurs existants avec la valeur « proposé ». « Ses prix » est
+  calculé à l'écran à partir des réceptions, sans nouvel appel au serveur ; les réceptions annulées (UI-33) n'y comptent pas.</p>
+<p>« Ne plus proposer » ne demande pas de confirmation : rien n'est perdu et le message propose « Annuler ».</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span></p>
+<div class="shot"><img src="captures/ui-34-menu.png" alt="Menu d'un fournisseur">
+<div class="caption">Figure 2 — Le menu de Distri Lait.</div></div>
+<div class="shot"><img src="captures/ui-34-ses-prix.png" alt="Ses prix">
+<div class="caption">Figure 3 — Ses prix : le lait à l'unité (7 100 Ar) et au carton (85 200 Ar).</div></div>
+<div class="shot"><img src="captures/ui-34-nouvelle-reception.png" alt="Nouvelle réception de ce fournisseur">
+<div class="caption">Figure 4 — Le bon de livraison s'ouvre avec Distri Lait déjà choisi.</div></div>
+<div class="shot"><img src="captures/ui-34-plus-propose.png" alt="Fournisseur plus proposé">
+<div class="caption">Figure 5 — Hygiene Mada n'est plus proposé ; le message permet d'annuler.</div></div>
+
+<h2 id="recap">4. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/service/SupplierService.java</code></td><td>modifier un fournisseur ; ne plus le proposer</td></tr>
+<tr><td><code>backend/…/entity/Supplier.java</code>, <code>web/SupplierController.java</code>, <code>web/dto/SupplierResponse.java</code></td><td>colonne <code>retired</code> ; <code>PUT /api/suppliers/{id}</code> et <code>…/retired</code></td></tr>
+<tr><td><code>ui/…/features/depot-manager/suppliers.component.ts</code></td><td>« ⋮ » par fournisseur</td></tr>
+<tr><td><code>ui/…/core/stock/supplier-purchases.ts</code>, <code>shared/components/supplier-purchases-dialog.component.ts</code></td><td>« Ses prix »</td></tr>
+<tr><td><code>ui/…/shared/components/supplier-create-dialog.component.ts</code></td><td>sert aussi à modifier</td></tr>
+<tr><td><code>ui/…/shared/components/delivery-dialog.component.ts</code>, <code>features/depot-manager/supply.component.ts</code></td><td>fournisseur de départ ; fournisseurs écartés hors des listes</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Corriger garde son propre nom ; le nom d'un autre est refusé ; écarter puis reproposer</td><td><code>SupplierServiceTest</code> (3 tests)</td></tr>
+<tr><td>Dernier prix par produit et unité ; réceptions annulées exclues</td><td><code>supplier-purchases.spec.ts</code></td></tr>
+<tr><td>Le menu selon que le fournisseur est proposé ou non</td><td><code>suppliers-menu.component.spec.ts</code></td></tr>
+<tr><td>« Ses prix » s'affiche, une ligne par unité</td><td><code>supplier-purchases-dialog.component.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (618 tests), interface au vert (270 tests).</p>
+<p><strong>Signalé :</strong> un défaut du compilateur Angular (« <code>tmp_26_0 is not defined</code> ») apparaît quand
+  l'expression <code>track</code> d'une liste contient <code>??</code>. Vu sur la vraie page pendant les captures, corrigé
+  par une petite fonction ; le test qui affiche la fenêtre l'aurait attrapé, il a été ajouté.</p>
+</main>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, inject, output, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
@@ -260,7 +260,7 @@ import { SupplierCreateDialogComponent } from './supplier-create-dialog.componen
     }
   `,
 })
-export class DeliveryDialogComponent {
+export class DeliveryDialogComponent implements OnInit {
   private readonly stock = inject(StockApi);
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
@@ -268,12 +268,17 @@ export class DeliveryDialogComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** The note was booked: the stock lists are out of date. */
+  /** "Nouvelle réception" from a supplier's menu: the note starts with it. */
+  readonly initialSupplierId = input<number | null>(null);
   readonly changed = output<void>();
   readonly closed = output<void>();
 
   protected readonly products = inject(ProductStore).list().value;
   private readonly supplierResource = apiResource<Supplier[]>([], () => this.catalog.suppliers());
-  protected readonly suppliers = this.supplierResource.value;
+  /** The suppliers still offered — and the one picked, even if it was set aside meanwhile. */
+  protected readonly suppliers = computed(() =>
+    this.supplierResource.value().filter((s) => !s.retired || s.id === this.supplierId()),
+  );
   private readonly costs = apiResource<ProductCost[]>([], () => this.costing.productCosts()).value;
 
   protected readonly supplierId = signal<number | null>(null);
@@ -282,6 +287,11 @@ export class DeliveryDialogComponent {
   protected readonly creatingSupplier = signal(false);
 
   protected readonly total = computed(() => noteTotal(this.lines()));
+
+  /** Here rather than in a field: the inputs are not there yet before this. */
+  ngOnInit(): void {
+    this.supplierId.set(this.initialSupplierId());
+  }
   protected readonly request = computed(() => deliveryRequest(this.supplierId(), this.lines()));
 
   protected readonly unitsOf = unitsOf;

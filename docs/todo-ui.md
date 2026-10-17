@@ -52,7 +52,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   seul enregistrement. (serveur)
 - [x] **UI-33** — « ⋮ » sur les réceptions et corrections passées : voir le produit, imprimer,
   annuler par mouvement inverse. (serveur)
-- [ ] **UI-34** — Page Fournisseurs : « ＋ Nouveau » et « ⋮ » (modifier, ses prix, nouvelle
+- [x] **UI-34** — Page Fournisseurs : « ＋ Nouveau » et « ⋮ » (modifier, ses prix, nouvelle
   réception, ne plus proposer). (serveur)
 - [ ] **UI-40** — « ⋮ » par rayon : renommer, image, sous-rayon, voir/déplacer ses produits,
   compter, supprimer.

@@ -1,4 +1,4 @@
-import { Component, ElementRef, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { Supplier } from '../../core/models';
@@ -21,7 +21,7 @@ import { ToastService } from '../../core/services/toast.service';
       <form class="modal" role="dialog" aria-modal="true" aria-labelledby="sn-title" (ngSubmit)="create()">
         <div class="modal-head">
           <div>
-            <h2 id="sn-title">Nouveau fournisseur</h2>
+            <h2 id="sn-title">{{ editing() ? 'Modifier le fournisseur' : 'Nouveau fournisseur' }}</h2>
             <div class="sub muted">{{ hint() }}</div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
@@ -57,19 +57,22 @@ import { ToastService } from '../../core/services/toast.service';
         <div class="modal-foot">
           <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
           <button class="btn" type="submit" [disabled]="busy() || !ready()">
-            {{ busy() ? 'Enregistrement...' : 'Ajouter le fournisseur' }}
+            {{ busy() ? 'Enregistrement...' : editing() ? 'Enregistrer' : 'Ajouter le fournisseur' }}
           </button>
         </div>
       </form>
     </div>
   `,
 })
-export class SupplierCreateDialogComponent {
+export class SupplierCreateDialogComponent implements OnInit {
   private readonly api = inject(CatalogApi);
   private readonly toasts = inject(ToastService);
 
   /** Under the title: what happens to the new supplier on the screen that opened the dialog. */
   readonly hint = input('Il sera choisi pour cette réception.');
+  /** A supplier to correct; null to add a new one. */
+  readonly editing = input<Supplier | null>(null);
+  /** The supplier as saved: created, or corrected. */
   readonly created = output<Supplier>();
   readonly closed = output<void>();
 
@@ -84,14 +87,26 @@ export class SupplierCreateDialogComponent {
     afterNextRender(() => this.nameField()?.nativeElement.focus());
   }
 
+  /** Here rather than in a field: the inputs are not there yet before this. */
+  ngOnInit(): void {
+    const supplier = this.editing();
+    if (supplier) {
+      this.name.set(supplier.name);
+      this.contact.set(supplier.contact ?? '');
+    }
+  }
+
   protected create(): void {
     if (!this.ready() || this.busy()) {
       return;
     }
     this.busy.set(true);
-    this.api.createSupplier({ name: this.name().trim(), contact: this.contact().trim() || null }).subscribe({
+    const request = { name: this.name().trim(), contact: this.contact().trim() || null };
+    const editing = this.editing();
+    const call = editing ? this.api.updateSupplier(editing.id, request) : this.api.createSupplier(request);
+    call.subscribe({
       next: (supplier) => {
-        this.toasts.show(`Fournisseur « ${supplier.name} » ajouté.`);
+        this.toasts.show(`Fournisseur « ${supplier.name} » ${editing ? 'enregistré' : 'ajouté'}.`);
         this.created.emit(supplier);
         this.closed.emit();
       },
