@@ -175,8 +175,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   `StockPolicy`).
 - [ ] **P3 — Corrections de stock dans une autre unité** (« 2 cartons ») : aujourd'hui en unité de
   base seulement.
-- [ ] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste
+- [x] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste
   déroulante complète (même limite sur l'écran d'approvisionnement).
+  *Fait — voir `realisation-ui/32-selecteur-de-produit.html` (UI-30).*
 - [ ] **P3 — Corrections de stock dans le menu du super-admin** (autorisé côté serveur, absent de
   son menu).
 - [ ] **P3 — Inventaire complet (idée).** Saisir le comptage de tout un rayon en une fois, avec
