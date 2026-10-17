@@ -128,7 +128,12 @@ import { UserPasswordDialogComponent } from './user-password-dialog.component';
           </table>
         </div>
       } @else {
-        <div class="empty">Aucun utilisateur enregistré.</div>
+        <div class="empty">
+          Aucun utilisateur pour l'instant.
+          <div class="empty-actions">
+            <button class="btn small" type="button" (click)="openCreate()">＋ Nouveau compte</button>
+          </div>
+        </div>
       }
     </div>
 

@@ -27,7 +27,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
   `invoice-detail-dialog`.
 - [x] **UI-61** — Badge « prix d'achat inconnu » (Bénéfices & stock) → configuration du produit,
   onglet Prix.
-- [ ] **UI-80** — Listes vides : une phrase + le bouton de l'action (fournisseurs, produits, rayons…).
+- [x] **UI-80** — Listes vides : une phrase + le bouton de l'action (fournisseurs, produits, rayons…).
 - [ ] **UI-82** — Confirmations cohérentes : remise d'argent depuis « Argent en main » et « Tout
   remettre », désactivation d'utilisateur ; fenêtre de l'application au lieu de `window.confirm()`.
 - [ ] **UI-87** — Menu latéral d'un compte à plusieurs rôles (Caisse · Stock) : deux « Tableau de

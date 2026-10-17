@@ -125,8 +125,11 @@ import { CategoryImagePickerComponent } from './category-image-picker.component'
         </div>
       } @else {
         <div class="empty">
-          Aucune catégorie. Créez-en une, ou laissez un import de produits les créer à partir de la
-          colonne « catégorie » du fichier.
+          Aucune catégorie pour l'instant. Un import de produits les crée aussi, d'après la colonne
+          « catégorie » du fichier.
+          <div class="empty-actions">
+            <button class="btn small" type="button" (click)="openCreate()">＋ Nouvelle catégorie</button>
+          </div>
         </div>
       }
     </div>

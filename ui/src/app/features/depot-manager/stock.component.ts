@@ -108,7 +108,27 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
           </button>
         </div>
       </div>
-      @if (view() === 'list') {
+      @if (!products().length && !resource.loading()) {
+        <!-- An empty list says what to do next, with the button to do it. -->
+        <div class="empty">
+          @if (filtered()) {
+            Aucun produit ne correspond aux filtres.
+            <div class="empty-actions">
+              <button class="btn small ghost" type="button" (click)="clearFilters()">Effacer les filtres</button>
+            </div>
+          } @else {
+            Aucun produit pour l'instant.
+            <div class="empty-actions">
+              @if (rights.canEdit()) {
+                <button class="btn small" type="button" (click)="asked.set({ action: 'create' })">
+                  ＋ Nouveau produit
+                </button>
+              }
+              <app-product-import (imported)="onChanged()" />
+            </div>
+          }
+        </div>
+      } @else if (view() === 'list') {
         <app-stock-table
           [products]="products()"
           [manage]="true"
@@ -198,6 +218,18 @@ export class StockComponent {
 
   protected onLowStock(onlyLowStock: boolean): void {
     this.onlyLowStock.set(onlyLowStock);
+    this.resource.reload();
+  }
+
+  /** A search, a rayon or "Alertes uniquement" narrows the list: empty may just mean too narrow. */
+  protected readonly filtered = computed(
+    () => this.search().trim() !== '' || this.categoryId() !== null || this.onlyLowStock(),
+  );
+
+  protected clearFilters(): void {
+    this.search.set('');
+    this.categoryId.set(null);
+    this.onlyLowStock.set(false);
     this.resource.reload();
   }
 

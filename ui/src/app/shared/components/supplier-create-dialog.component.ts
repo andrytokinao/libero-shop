@@ -1,4 +1,4 @@
-import { Component, ElementRef, afterNextRender, computed, inject, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { Supplier } from '../../core/models';
@@ -22,7 +22,7 @@ import { ToastService } from '../../core/services/toast.service';
         <div class="modal-head">
           <div>
             <h2 id="sn-title">Nouveau fournisseur</h2>
-            <div class="sub muted">Il sera choisi pour cette réception.</div>
+            <div class="sub muted">{{ hint() }}</div>
           </div>
           <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
         </div>
@@ -68,6 +68,8 @@ export class SupplierCreateDialogComponent {
   private readonly api = inject(CatalogApi);
   private readonly toasts = inject(ToastService);
 
+  /** Under the title: what happens to the new supplier on the screen that opened the dialog. */
+  readonly hint = input('Il sera choisi pour cette réception.');
   readonly created = output<Supplier>();
   readonly closed = output<void>();
 

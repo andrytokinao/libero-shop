@@ -1139,6 +1139,15 @@ tr.short td {
   text-align: center;
 }
 
+/* The buttons under an empty list: what to do to fill it, without looking for it elsewhere. */
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .total-row {
   display: flex;
   justify-content: space-between;
