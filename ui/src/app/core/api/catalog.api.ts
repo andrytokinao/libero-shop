@@ -179,6 +179,11 @@ export class CatalogApi {
       );
   }
 
+  /** Takes the product off sale, or puts it back; its stock and history stay. */
+  changeRetired(productId: number, retired: boolean): Observable<ProductUnits> {
+    return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/retired`, { retired });
+  }
+
   /** The product's own alert threshold; null gives it back the shop's common one. */
   changeAlertThreshold(productId: number, threshold: number | null): Observable<ProductUnits> {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/alert-threshold`, { threshold });

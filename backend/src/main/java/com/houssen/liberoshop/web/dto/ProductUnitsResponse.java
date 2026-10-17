@@ -20,6 +20,7 @@ import java.util.List;
  *                       not at what price: the price is served by the costing API alone.
  * @param lowStockThreshold        the product's own alert threshold in base units, or null
  * @param defaultLowStockThreshold the shop's common one, which applies when it has none
+ * @param retired                  no longer offered for sale
  */
 public record ProductUnitsResponse(Long productId,
                                    String productName,
@@ -31,7 +32,8 @@ public record ProductUnitsResponse(Long productId,
                                    List<Packaging> packagings,
                                    Long purchaseUnitId,
                                    BigDecimal lowStockThreshold,
-                                   BigDecimal defaultLowStockThreshold) {
+                                   BigDecimal defaultLowStockThreshold,
+                                   boolean retired) {
 
     public static ProductUnitsResponse of(Product product, List<ProductPackaging> packagings) {
         return new ProductUnitsResponse(
@@ -45,6 +47,7 @@ public record ProductUnitsResponse(Long productId,
                 packagings.stream().map(Packaging::of).toList(),
                 product.getPurchaseUnit() == null ? null : product.getPurchaseUnit().getId(),
                 product.getLowStockThreshold(),
-                StockPolicy.LOW_STOCK_THRESHOLD);
+                StockPolicy.LOW_STOCK_THRESHOLD,
+                product.isRetired());
     }
 }

@@ -178,6 +178,20 @@ public class ProductEditService {
         return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
     }
 
+    /**
+     * Takes the product off sale, or puts it back. Nothing is deleted: its stock, its movements
+     * and its invoices stay, and the stock screens keep showing it. The tills drop it at once.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public ProductUnitsResponse changeRetired(Long productId, boolean retired) {
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
+        product.setRetired(retired);
+        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
+        return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
+    }
+
     // ------------------------------------------------------------------- internals
 
     private static String requireName(String typed) {

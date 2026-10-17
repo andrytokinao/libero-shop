@@ -39,6 +39,11 @@ public final class ProductSpecifications {
         return Specification.allOf(words.stream().map(ProductSpecifications::containsWord).toList());
     }
 
+    /** Still offered for sale: what every sale screen lists. */
+    public static Specification<Product> onSale() {
+        return (root, query, cb) -> cb.isFalse(root.get("retired"));
+    }
+
     /** Filed in one of these rayons; no restriction at all for an empty collection. */
     public static Specification<Product> inCategories(Collection<Long> categoryIds) {
         if (categoryIds.isEmpty()) {

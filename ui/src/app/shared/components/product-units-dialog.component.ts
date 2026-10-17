@@ -34,6 +34,7 @@ import {
 import { ToastService } from '../../core/services/toast.service';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { CameraScanButtonComponent } from './camera-scan-button.component';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { FilterTab, FilterTabsComponent } from './filter-tabs.component';
 import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
@@ -117,6 +118,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
     UnitModelPickerComponent,
     UnitModelsDialogComponent,
     FilterTabsComponent,
+    ConfirmDialogComponent,
   ],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
@@ -273,6 +275,22 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
                 }
                 · Stock {{ formatFactor(u.stockQuantity) }} {{ baseName() }}
               </div>
+            </div>
+
+            <!-- On sale or not: nothing is deleted, the tills only stop offering it. -->
+            <div class="un-sale" [class.un-off]="tab() !== 'fiche'">
+              @if (u.retired) {
+                <span class="badge grey">Retiré de la vente</span>
+                <span class="muted">Les caisses et les commandes ne le proposent plus ; son stock et son historique restent.</span>
+                <button class="btn small" type="button" [disabled]="busy()" (click)="setRetired(false)">
+                  Remettre en vente
+                </button>
+              } @else {
+                <span class="muted">En vente aux caisses et aux commandes.</span>
+                <button class="btn small ghost danger" type="button" [disabled]="busy()" (click)="retiring.set(true)">
+                  Retirer de la vente
+                </button>
+              }
             </div>
 
             <div class="un-base" [class.un-off]="tab() !== 'unites'">
@@ -589,6 +607,18 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
       </div>
     </div>
 
+    @if (retiring()) {
+      <app-confirm-dialog
+        title="Retirer de la vente ?"
+        [message]="'« ' + (units()?.productName ?? productName) + ' » ne sera plus proposé aux caisses ni aux commandes. Son stock, son historique et ses factures restent ; il peut être remis en vente.'"
+        confirmLabel="Retirer de la vente"
+        [danger]="true"
+        [busy]="busy()"
+        (confirmed)="setRetired(true)"
+        (closed)="retiring.set(false)"
+      />
+    }
+
     @if (modelsOpen()) {
       <app-unit-models-dialog (changed)="onModelsChanged()" (closed)="modelsOpen.set(false)" />
     }
@@ -623,6 +653,15 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
     .cfg-tabs {
       display: block;
       margin-bottom: 14px;
+    }
+
+    .un-sale {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 13px;
     }
 
     .un-alert {
@@ -1257,6 +1296,19 @@ export class ProductUnitsDialogComponent implements OnInit {
   protected pickChip(label: string): void {
     this.patch({ label });
     setTimeout(() => this.host.nativeElement.querySelector<HTMLInputElement>('#un-factor')?.focus());
+  }
+
+  /** "Retirer de la vente" asked, waiting for its confirmation. */
+  protected readonly retiring = signal(false);
+
+  protected setRetired(retired: boolean): void {
+    if (this.busy()) {
+      return;
+    }
+    this.run(this.api.changeRetired(this.productId, retired), true, () => {
+      this.retiring.set(false);
+      this.toasts.show(retired ? 'Produit retiré de la vente.' : 'Produit remis en vente.');
+    });
   }
 
   protected saveAlert(): void {

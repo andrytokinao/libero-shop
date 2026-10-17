@@ -44,6 +44,15 @@ public class Product {
     private BigDecimal lowStockThreshold;
 
     /**
+     * No longer offered for sale: out of the tills, the order screens and the QR menu, refused at
+     * checkout. Its stock, its history and its past invoices stay as they were, and it can be put
+     * back on sale. False on every product of an older database.
+     */
+    @org.hibernate.annotations.ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean retired;
+
+    /**
      * Weighted average purchase cost of one unit of the stock on hand -- the "coût moyen
      * pondéré". Moved only by {@code PurchaseCosting}, on every receipt that states a cost.
      * Null while no receipt of this product has ever carried one. Six places, so that a cost

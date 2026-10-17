@@ -321,4 +321,17 @@ class ProductSearchServiceTest {
         assertEquals(List.of("Gazeux"), categoryService.search("gaz", 8).stream().map(n -> n.name()).toList());
         assertEquals(List.of(), categoryService.search("  ", 8));
     }
+
+    // ------------------------------------------------------------------ off sale
+
+    @Test
+    @DisplayName("a product retired from sale is no longer offered: not by name, not by its code")
+    void produitRetireHorsDesEcransDeVente() {
+        riz.setRetired(true);
+        db.flush();
+
+        assertTrue(service.search("riz", null, 10).isEmpty());
+        assertThrows(ResourceNotFoundException.class, () -> service.findByCode("6111234567812"));
+        assertTrue(service.featured(10).stream().noneMatch(p -> p.name().startsWith("Riz")));
+    }
 }

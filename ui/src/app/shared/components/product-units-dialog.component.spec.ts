@@ -21,13 +21,16 @@ describe('ProductUnitsDialogComponent', () => {
     purchaseUnitId: null,
     lowStockThreshold: null,
     defaultLowStockThreshold: 10,
+    retired: false,
   };
 
   let fixture: ComponentFixture<ProductUnitsDialogComponent>;
   let thresholds: (number | null)[];
+  let retirements: boolean[];
 
   function render(tab?: 'fiche' | 'prix' | 'unites' | 'codes'): void {
     thresholds = [];
+    retirements = [];
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -37,6 +40,10 @@ describe('ProductUnitsDialogComponent', () => {
           useValue: {
             productUnits: () => of(rice),
             categories: () => of([]),
+            changeRetired: (_id: number, retired: boolean) => {
+              retirements.push(retired);
+              return of({ ...rice, retired });
+            },
             changeAlertThreshold: (_id: number, threshold: number | null) => {
               thresholds.push(threshold);
               return of({ ...rice, lowStockThreshold: threshold });
@@ -101,5 +108,20 @@ describe('ProductUnitsDialogComponent', () => {
 
     expect(thresholds).toEqual([2.5]);
     expect(fixture.nativeElement.querySelector('.un-alert').textContent).toContain('En alerte sous 2,5');
+  });
+
+  it('asks before taking the product off sale, then says it is off sale', () => {
+    render();
+    (fixture.nativeElement.querySelector('.un-sale button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(retirements).toEqual([]);
+
+    const confirm = fixture.nativeElement.querySelectorAll('app-confirm-dialog .modal-foot button')[1] as HTMLButtonElement;
+    confirm.click();
+    fixture.detectChanges();
+
+    expect(retirements).toEqual([true]);
+    expect(fixture.nativeElement.querySelector('.un-sale').textContent).toContain('Retiré de la vente');
+    expect(fixture.nativeElement.querySelector('app-confirm-dialog')).toBeNull();
   });
 });

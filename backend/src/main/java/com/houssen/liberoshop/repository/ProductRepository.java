@@ -68,7 +68,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
      * How many products each rayon holds directly, as {@code [categoryId, count]} -- one grouped
      * query for every folder of an explorer page, rather than a count per folder.
      */
-    @Query("select p.category.id, count(p) from Product p where p.category is not null group by p.category.id")
+    @Query("select p.category.id, count(p) from Product p where p.category is not null and p.retired = false"
+            + " group by p.category.id")
     List<Object[]> countByCategory();
 
     /**

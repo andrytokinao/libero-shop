@@ -120,6 +120,7 @@ public class OnlineOrderService {
     public PublicMenuResponse menu(String token) {
         DiningTable table = openTable(token);
         List<PublicMenuResponse.Item> items = catalog.findProducts(null, null, false).stream()
+                .filter(p -> !p.retired())
                 .map(p -> new PublicMenuResponse.Item(p.id(), p.name(), p.price(), p.unit(),
                         p.category() == null ? null : p.category().name(), p.stockQuantity().signum() > 0,
                         p.packagings().stream()

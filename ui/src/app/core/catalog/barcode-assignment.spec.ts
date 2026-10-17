@@ -16,6 +16,7 @@ describe('BarcodeAssignment', () => {
     purchaseUnitId: 40,
     lowStockThreshold: null,
     defaultLowStockThreshold: 10,
+    retired: false,
     packagings: [
       { id: 40, label: 'sac', factor: 25, price: 70000, barcode: '111', reference: 'kg', referenceQuantity: 25 },
     ],

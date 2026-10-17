@@ -34,7 +34,11 @@ import { StockStatusBadgeComponent } from './status-badges.component';
       </div>
       <div class="pc-stock">
         <span>Stock : {{ formatAmount(product().stockQuantity, product().unit) }}</span>
-        <app-stock-status-badge [quantity]="product().stockQuantity" [lowStock]="product().lowStock" />
+        <app-stock-status-badge
+          [quantity]="product().stockQuantity"
+          [lowStock]="product().lowStock"
+          [retired]="!!product().retired"
+        />
       </div>
       @if (product().packagings?.length) {
         <!-- Sold in several units: the stock again in the one that reads best. -->

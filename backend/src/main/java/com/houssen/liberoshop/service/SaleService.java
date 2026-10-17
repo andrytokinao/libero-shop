@@ -129,6 +129,7 @@ public class SaleService {
                     .quantity(quantity)
                     .build());
         });
+        refuseRetired(locked.values());
         refuseShortages(sale.getLines());
         sale.getLines().forEach(line -> line.getProduct().adjustStock(line.baseQuantity().negate()));
 
@@ -228,6 +229,14 @@ public class SaleService {
      * order, so two sales sharing products always take their locks in the same order and cannot
      * deadlock.
      */
+    /** A till that still showed it, or an order sent before it was retired, is told so. */
+    private static void refuseRetired(Collection<Product> products) {
+        products.stream().filter(Product::isRetired).findFirst().ifPresent(product -> {
+            throw new BusinessRuleException("PRODUCT_RETIRED",
+                    "« " + product.getName() + " » a ete retire de la vente.");
+        });
+    }
+
     private Map<Long, Product> lock(Collection<LineKey> keys) {
         Map<Long, Product> locked = new LinkedHashMap<>();
         for (Long productId : new TreeSet<>(keys.stream().map(LineKey::productId).toList())) {

@@ -90,7 +90,10 @@ export class ProductFinder {
     const answer = this.answer();
     const more = this.more();
     const extra = more && more.to === answer ? more.page.products : [];
-    return [...(answer?.products ?? []), ...extra].map((product) => known.get(product.id) ?? product);
+    return [...(answer?.products ?? []), ...extra]
+      .map((product) => known.get(product.id) ?? product)
+      // Retired while on screen: the store has heard it, the grid drops it before the next search.
+      .filter((product) => !product.retired);
   });
 
   /** The rayons the grid shows as folders, before the products — from the current answer. */

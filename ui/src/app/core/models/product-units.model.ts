@@ -22,6 +22,8 @@ export interface ProductUnits {
   lowStockThreshold: number | null;
   /** The shop's common alert threshold. */
   defaultLowStockThreshold: number;
+  /** No longer offered for sale. */
+  retired: boolean;
 }
 
 /** Another unit than the base one: "kg = 3.5 kapoka, 3 000 Ar", "sac 25 kg = 25 kg". */

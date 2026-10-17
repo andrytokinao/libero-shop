@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import static com.houssen.liberoshop.util.QuantityAssertions.assertQuantity;
 import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -94,5 +95,20 @@ class SaleStockShortageTest {
                 new com.houssen.liberoshop.service.exception.BusinessRuleException("EMPTY_CART", "Le panier est vide."))
                 .getBody());
         assertFalse(other.contains("\"data\""), other);
+    }
+
+    @Test
+    @DisplayName("a product retired from sale is refused at checkout, and no stock moves")
+    void venteDUnProduitRetireRefusee() {
+        Product bougie = product("Bougie", 20);
+        bougie.setRetired(true);
+        products.save(bougie);
+
+        BusinessRuleException refused = assertThrows(BusinessRuleException.class, () ->
+                saleService.checkout(new CreateSaleRequest("Client", PaymentStatus.PAID, PaymentMethod.CASH,
+                        List.of(new CreateSaleRequest.Line(bougie.getId(), qty(1)))), cashier()));
+
+        assertEquals("PRODUCT_RETIRED", refused.code());
+        assertQuantity(20, products.findById(bougie.getId()).orElseThrow().getStockQuantity());
     }
 }

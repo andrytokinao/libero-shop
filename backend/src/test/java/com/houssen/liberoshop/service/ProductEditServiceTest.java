@@ -30,8 +30,10 @@ import java.util.Optional;
 
 import static com.houssen.liberoshop.util.QuantityAssertions.qty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -240,5 +242,19 @@ class ProductEditServiceTest {
         assertEquals("ALERT_THRESHOLD_INVALID", refused.code());
         assertNull(rice.getLowStockThreshold());
         verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Retirer de la vente ne touche ni au stock ni au reste ; remettre en vente le rend")
+    void retirerPuisRemettreEnVente() {
+        ProductUnitsResponse retired = service.changeRetired(1L, true);
+
+        assertTrue(rice.isRetired());
+        assertTrue(retired.retired());
+        assertEquals(qty(1750), rice.getStockQuantity());
+        verify(events).publishEvent(any(StockChangedEvent.class));
+
+        service.changeRetired(1L, false);
+        assertFalse(rice.isRetired());
     }
 }

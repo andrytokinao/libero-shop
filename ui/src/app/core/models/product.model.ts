@@ -25,6 +25,8 @@ export interface Product {
   lowStock: boolean;
   /** The threshold it is judged by, in base units: its own or the shop's. Optional for old payloads. */
   lowStockThreshold?: number;
+  /** No longer offered for sale; still in the stock lists. Optional for old payloads. */
+  retired?: boolean;
   /** price × stockQuantity, precomputed server-side. */
   stockValue: number;
   /**

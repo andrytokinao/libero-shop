@@ -4,6 +4,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.ProductEditService;
 import com.houssen.liberoshop.web.dto.AlertThresholdRequest;
 import com.houssen.liberoshop.web.dto.CreateProductRequest;
+import com.houssen.liberoshop.web.dto.RetiredRequest;
 import com.houssen.liberoshop.web.dto.ProductResponse;
 import com.houssen.liberoshop.web.dto.ProductUnitsResponse;
 import com.houssen.liberoshop.web.dto.UpdateProductRequest;
@@ -50,6 +51,14 @@ public class ProductController {
     public ProductUnitsResponse edit(@PathVariable Long productId,
                                      @Valid @RequestBody UpdateProductRequest request) {
         return productEditService.edit(productId, request);
+    }
+
+    /** "Retirer de la vente" / "Remettre en vente" in the product's menu. */
+    @PutMapping("/{productId}/retired")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public ProductUnitsResponse changeRetired(@PathVariable Long productId,
+                                              @Valid @RequestBody RetiredRequest request) {
+        return productEditService.changeRetired(productId, request.retired());
     }
 
     /** "Seuil d'alerte" in the product's menu: its own, or back to the shop's common one. */

@@ -49,6 +49,7 @@ import { StockStatusBadgeComponent } from './status-badges.component';
                   <app-stock-status-badge
                     [quantity]="product.stockQuantity"
                     [lowStock]="product.lowStock"
+                    [retired]="!!product.retired"
                   />
                 </td>
                 @if (manage) {

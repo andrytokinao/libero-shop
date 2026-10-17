@@ -169,7 +169,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P1 — Retours et remboursements.** Une vente payée ne s'annule pas.
   **Décision attendue :** l'argent rendu sort-il de la caisse du jour (et réduit la remise du
   caissier), ou est-il suivi à part ?
-- [ ] **P2 — Retirer un produit de la vente** (désactivation, sans perdre l'historique).
+- [x] **P2 — Retirer un produit de la vente** (désactivation, sans perdre l'historique).
+  *Fait — voir `42-retirer-un-produit-de-la-vente.html`.*
 - [ ] **P2 — Remises** par ligne ou sur le total.
 - [x] **P2 — Seuil de stock bas par produit** (aujourd'hui 10 pour tout le catalogue,
   `StockPolicy`). *Fait — voir `41-seuil-d-alerte-par-produit.html`.*

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retirer un produit de la vente</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Retirer un produit de la vente</h1>
+<p class="meta">17 octobre 2026 · branche <code>develop</code> · point « Retirer un produit de la vente » de <code>docs/TODO.md</code> (§ 4, P2)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Un produit peut être <strong>retiré de la vente</strong> sans être supprimé : son stock, son historique et ses factures restent.</li>
+    <li>Retiré, il disparaît des <strong>caisses</strong>, de la <strong>prise de commande</strong> et du <strong>menu QR</strong> ; son code-barres n'est plus reconnu à la vente.</li>
+    <li>Une vente qui le contient encore (une caisse restée ouverte) est <strong>refusée</strong> avec son nom.</li>
+    <li>Dans le stock, il reste visible avec le badge « Retiré de la vente » ; on peut encore recevoir, corriger et consulter son historique.</li>
+    <li>Le geste se fait dans la configuration du produit, onglet Fiche, avec une confirmation ; « Remettre en vente » l'annule.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#ecrans">3. Le résultat en images</a></li>
+  <li><a href="#import">4. Et l'import de produits ?</a></li>
+  <li><a href="#recap">5. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Un article qu'on ne vend plus restait proposé aux caisses. Le supprimer aurait effacé son historique et cassé les
+  anciennes factures. Il fallait pouvoir dire « on ne le vend plus » sans rien perdre.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+
+<div class="figure">
+<svg viewBox="0 0 860 230" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Où un produit retiré apparaît encore">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .ok { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+  </style>
+  <rect class="box" x="300" y="90" width="260" height="50" rx="8"/><text class="t" x="314" y="113" style="font-weight:700">Produit « retiré de la vente »</text><text class="s" x="314" y="130">rien n'est supprimé</text>
+  <rect class="ko" x="20" y="15" width="240" height="40" rx="8"/><text class="t" x="34" y="40">Caisse, prise de commande : absent</text>
+  <rect class="ko" x="20" y="65" width="240" height="40" rx="8"/><text class="t" x="34" y="90">Code-barres à la vente : inconnu</text>
+  <rect class="ko" x="20" y="115" width="240" height="40" rx="8"/><text class="t" x="34" y="140">Menu QR des tables : absent</text>
+  <rect class="ko" x="20" y="165" width="240" height="40" rx="8"/><text class="t" x="34" y="190">Vente envoyée quand même : refusée</text>
+  <rect class="ok" x="600" y="15" width="240" height="40" rx="8"/><text class="t" x="614" y="40">Stock : visible, badge gris</text>
+  <rect class="ok" x="600" y="65" width="240" height="40" rx="8"/><text class="t" x="614" y="90">Réception, correction : possibles</text>
+  <rect class="ok" x="600" y="115" width="240" height="40" rx="8"/><text class="t" x="614" y="140">Historique, factures : intacts</text>
+  <rect class="ok" x="600" y="165" width="240" height="40" rx="8"/><text class="t" x="614" y="190">Remettre en vente : un clic</text>
+</svg>
+<div class="caption">Figure 1 — À gauche, ce qui le cache ; à droite, ce qui le garde.</div>
+</div>
+
+<p>Côté serveur, toutes les listes des écrans de vente passent déjà par un même filtre : on y a ajouté « encore en
+  vente ». Trois chemins ne passaient pas par là et ont reçu le même test : la lecture d'un code-barres, les meilleures
+  ventes affichées au démarrage de la caisse, et le menu QR. Enfin, l'enregistrement d'une vente refuse un produit retiré :
+  c'est la dernière barrière, pour une caisse restée ouverte avant le retrait.</p>
+
+<h2 id="ecrans">3. Le résultat en images</h2>
+<p><span class="who">Nadia — responsable de dépôt</span> « Bougie blanche » ne se vend plus.</p>
+<div class="shot"><img src="realisation-ui/captures/42-retrait-confirmation.png" alt="Confirmation du retrait">
+<div class="caption">Figure 2 — La confirmation dit ce qui change et ce qui reste.</div></div>
+<div class="shot"><img src="realisation-ui/captures/42-retrait-fait.png" alt="Produit retiré, bouton Remettre en vente">
+<div class="caption">Figure 3 — Retiré : « Remettre en vente » est à la même place.</div></div>
+<div class="shot"><img src="realisation-ui/captures/42-retrait-stock.png" alt="Badge Retiré de la vente dans le stock">
+<div class="caption">Figure 4 — Dans le stock, le produit reste, avec le badge « Retiré de la vente ».</div></div>
+<p><span class="who">Fatima — caisse</span></p>
+<div class="shot"><img src="realisation-ui/captures/42-retrait-caisse.png" alt="La caisse ne trouve plus la bougie">
+<div class="caption">Figure 5 — À la caisse, « bougie » ne trouve plus rien.</div></div>
+
+<h2 id="import">4. Et l'import de produits ?</h2>
+<p>Un fichier qui contient un produit retiré le <strong>reconnaît</strong> (même nom ou même code-barres) : les quantités
+  s'ajoutent à son stock, sans le remettre en vente. Sinon l'import tenterait de créer un doublon, refusé par le code-barres
+  unique. Le remettre en vente reste un geste volontaire.</p>
+
+<h2 id="recap">5. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/entity/Product.java</code></td><td>colonne <code>retired</code>, fausse pour tous les produits existants</td></tr>
+<tr><td><code>backend/…/repository/ProductSpecifications.java</code>, <code>service/ProductSearchService.java</code></td><td>filtre « en vente » commun ; code-barres et meilleures ventes</td></tr>
+<tr><td><code>backend/…/repository/ProductRepository.java</code></td><td>les comptes des rayons ne comptent que les produits en vente</td></tr>
+<tr><td><code>backend/…/service/OnlineOrderService.java</code></td><td>menu QR sans les produits retirés</td></tr>
+<tr><td><code>backend/…/service/SaleService.java</code></td><td>vente refusée : <code>PRODUCT_RETIRED</code></td></tr>
+<tr><td><code>backend/…/service/ProductEditService.java</code>, <code>web/ProductController.java</code>, <code>web/dto/RetiredRequest.java</code></td><td><code>PUT /api/products/{id}/retired</code></td></tr>
+<tr><td><code>ui/…/shared/components/product-units-dialog.component.ts</code></td><td>« Retirer de la vente / Remettre en vente » dans l'onglet Fiche, avec confirmation</td></tr>
+<tr><td><code>ui/…/shared/components/status-badges.component.ts</code>, <code>stock-table</code>, <code>product-card</code></td><td>badge « Retiré de la vente »</td></tr>
+<tr><td><code>ui/…/core/sale/product-finder.ts</code></td><td>une caisse ouverte retire le produit de sa grille dès qu'elle est prévenue</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Ni par le nom, ni par le code, ni dans les meilleures ventes</td><td><code>ProductSearchServiceTest</code> — <code>produitRetireHorsDesEcransDeVente</code></td></tr>
+<tr><td>Vente refusée, stock inchangé</td><td><code>SaleStockShortageTest</code> — <code>venteDUnProduitRetireRefusee</code></td></tr>
+<tr><td>Retirer ne touche pas au stock ; remettre en vente l'annule</td><td><code>ProductEditServiceTest</code> — <code>retirerPuisRemettreEnVente</code></td></tr>
+<tr><td>Confirmation demandée avant le retrait</td><td><code>product-units-dialog.component.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert, interface au vert (238 tests).</p>
+</main>
+</body>
+</html>

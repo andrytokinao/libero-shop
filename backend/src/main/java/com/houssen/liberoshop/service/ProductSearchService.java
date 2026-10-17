@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import static com.houssen.liberoshop.repository.ProductSpecifications.containsAllWords;
 import static com.houssen.liberoshop.repository.ProductSpecifications.inCategories;
+import static com.houssen.liberoshop.repository.ProductSpecifications.onSale;
 
 /**
  * How the screens that sell find a product among thousands: by its code, by a few words, or
@@ -88,6 +89,8 @@ public class ProductSearchService {
         String key = code == null ? "" : code.trim();
         return products.findWithCategoryByBarcode(key)
                 .or(() -> packagings.findWithProductByBarcode(key).map(ProductPackaging::getProduct))
+                // A product retired from sale is not sold by its code either.
+                .filter(product -> !product.isRetired())
                 .map(ProductResponse::of)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aucun produit ne porte le code « " + key + " »."));
@@ -120,7 +123,7 @@ public class ProductSearchService {
         Map<Long, Product> byId = products.findAllWithCategoryByIdIn(bestIds).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
         List<Product> featured = new ArrayList<>(
-                bestIds.stream().map(byId::get).filter(Objects::nonNull).toList());
+                bestIds.stream().map(byId::get).filter(Objects::nonNull).filter(p -> !p.isRetired()).toList());
 
         if (featured.size() < size) {
             // Asking for `size` is enough: at most featured.size() of them are repeats.
@@ -160,7 +163,8 @@ public class ProductSearchService {
      * @param size clamped to {@code 1..MAX_LIMIT}
      */
     public ProductPageResponse page(Specification<Product> criteria, int page, int size) {
-        Page<Product> found = products.findBy(criteria, fluent -> fluent
+        // Every sale screen goes through here or find(): a retired product is never offered.
+        Page<Product> found = products.findBy(criteria.and(onSale()), fluent -> fluent
                 .project("category")
                 .page(PageRequest.of(Math.max(page, 0), clamp(size), BY_NAME)));
         return new ProductPageResponse(
@@ -172,7 +176,7 @@ public class ProductSearchService {
     }
 
     private List<Product> find(Specification<Product> criteria, int limit) {
-        return products.findBy(criteria, query -> query
+        return products.findBy(criteria.and(onSale()), query -> query
                 .sortBy(BY_NAME)
                 .limit(limit)
                 .project("category")

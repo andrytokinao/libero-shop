@@ -73,7 +73,10 @@ export class RemittanceStatusBadgeComponent {
   selector: 'app-stock-status-badge',
   standalone: true,
   template: `
-    @if (quantity <= 0) {
+    @if (retired) {
+      <!-- Off sale says more than its stock: the tills no longer offer it at all. -->
+      <span class="badge grey" title="Plus proposé aux caisses ni aux commandes">Retiré de la vente</span>
+    } @else if (quantity <= 0) {
       <span class="badge red">Épuisé</span>
     } @else if (lowStock) {
       <span class="badge red">Stock bas</span>
@@ -85,4 +88,5 @@ export class RemittanceStatusBadgeComponent {
 export class StockStatusBadgeComponent {
   @Input({ required: true }) quantity!: number;
   @Input({ required: true }) lowStock!: boolean;
+  @Input() retired = false;
 }
