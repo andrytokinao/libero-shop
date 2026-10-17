@@ -174,8 +174,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P2 — Remises** par ligne ou sur le total.
 - [x] **P2 — Seuil de stock bas par produit** (aujourd'hui 10 pour tout le catalogue,
   `StockPolicy`). *Fait — voir `41-seuil-d-alerte-par-produit.html`.*
-- [ ] **P3 — Corrections de stock dans une autre unité** (« 2 cartons ») : aujourd'hui en unité de
+- [x] **P3 — Corrections de stock dans une autre unité** (« 2 cartons ») : aujourd'hui en unité de
   base seulement.
+  *Fait — voir `realisation-ui/59-correction-dans-une-autre-unite.html` (UI-35).*
 - [x] **P3 — Corrections de stock : choix du produit par recherche** au lieu d'une liste
   déroulante complète (même limite sur l'écran d'approvisionnement).
   *Fait — voir `realisation-ui/32-selecteur-de-produit.html` (UI-30).*
