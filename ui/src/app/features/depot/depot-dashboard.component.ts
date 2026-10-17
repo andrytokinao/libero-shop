@@ -30,7 +30,7 @@ const EMPTY: DepotDashboard = {
   imports: [KpiCardComponent, InvoiceTableComponent, AriaryPipe, HandOverDialogComponent],
   template: `
     <div class="grid g4">
-      <app-kpi-card label="Commandes à remettre" [value]="data().pendingDeliveries" />
+      <app-kpi-card label="Commandes à remettre" [value]="data().pendingDeliveries" link="/depot/remise" />
       <app-kpi-card
         label="Dont non payées"
         [value]="data().unpaidPendingDeliveries"
@@ -44,12 +44,14 @@ const EMPTY: DepotDashboard = {
         <app-kpi-card
           label="Espèces en main"
           [value]="data().cashInHand | ariary"
+          link="/depot/caisse"
           [hint]="data().cashInHandCount + ' encaissement(s) à verser'"
         />
       }
       <app-kpi-card
         label="Remises effectuées"
         [value]="data().deliveredTotal"
+        link="/depot/historique"
         [hint]="data().deliveredToday + ' aujourd\\'hui'"
       />
     </div>

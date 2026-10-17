@@ -51,9 +51,16 @@ const EMPTY: AdminDashboard = {
       <app-kpi-card
         label="Factures non payées"
         [value]="data().unpaidInvoices"
+        link="/admin/factures"
+        [linkQuery]="{ filtre: 'UNPAID' }"
         [hint]="data().unpaidAmount | ariary"
       />
-      <app-kpi-card label="Commandes en attente de remise" [value]="data().pendingDeliveries" />
+      <app-kpi-card
+        label="Commandes en attente de remise"
+        [value]="data().pendingDeliveries"
+        link="/admin/factures"
+        [linkQuery]="{ filtre: 'PENDING_DELIVERY' }"
+      />
     </div>
 
     <div class="grid g2" style="margin-top:16px;">

@@ -44,9 +44,17 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
       <app-kpi-card
         label="Sans prix d'entrée"
         [value]="uncosted()"
+        [action]="true"
+        (opened)="filter.set('uncosted')"
         hint="bénéfice inconnu tant qu'il manque"
       />
-      <app-kpi-card label="Vendus à perte" [value]="atLoss()" hint="au moins une unité sous son coût" />
+      <app-kpi-card
+        label="Vendus à perte"
+        [value]="atLoss()"
+        hint="au moins une unité sous son coût"
+        [action]="true"
+        (opened)="filter.set('loss')"
+      />
     </div>
 
     <div class="card" style="margin-top:16px;">

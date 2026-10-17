@@ -514,6 +514,24 @@ main {
 }
 
 .kpi {
+  /* A figure that opens what it counts. */
+  &.kpi-link {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 1px var(--brand);
+      outline: none;
+    }
+
+    .label::after {
+      content: ' ›';
+      color: var(--brand);
+    }
+  }
+
   .label {
     font-size: 12px;
     color: var(--ink-soft);

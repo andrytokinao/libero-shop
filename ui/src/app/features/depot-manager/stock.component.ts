@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { apiResource } from '../../core/api/api-resource';
 import { CatalogApi } from '../../core/api/catalog.api';
 import { looksLikeCode } from '../../core/catalog/product-pick';
@@ -220,7 +221,8 @@ export class StockComponent {
 
   protected readonly search = signal('');
   protected readonly categoryId = signal<number | null>(null);
-  protected readonly onlyLowStock = signal(false);
+  /** "Références en alerte" on the dashboard opens this list with the filter on (?alertes=1). */
+  protected readonly onlyLowStock = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('alertes') === '1');
   protected readonly view = signal<StockView>(storedView());
 
   /** What a product's menu or "Nouveau produit" asked for, or null while no dialog is open. */

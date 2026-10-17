@@ -34,10 +34,13 @@ const EMPTY: StockDashboard = {
       <app-kpi-card
         label="Références en alerte"
         [value]="data().lowStockCount"
-        hint="stock inférieur à 10"
+        hint="sous leur seuil d'alerte"
+        link="/gestion-depot/stock"
+        [linkQuery]="{ alertes: '1' }"
       />
       <app-kpi-card
         label="Approvisionnements (7 j)"
+        link="/gestion-depot/approvisionnement"
         [value]="data().suppliesLastWeek"
         [hint]="data().unitsSuppliedLastWeek + ' unités reçues'"
       />

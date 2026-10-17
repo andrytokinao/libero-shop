@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { InvoiceStore } from '../../core/store/invoice.store';
 import { DeliveryStatus, PaymentStatus } from '../../core/models';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
@@ -7,15 +8,18 @@ import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { Period, PeriodFilterComponent } from '../../shared/components/period-filter.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
-type InvoiceFilter =
-  | 'ALL'
-  | 'UNPAID'
-  | 'COLLECTED'
-  | 'REMITTED'
-  | 'PENDING_DELIVERY'
-  | 'IN_PROGRESS'
-  | 'DELIVERED'
-  | 'CANCELLED';
+const FILTERS = [
+  'ALL',
+  'UNPAID',
+  'COLLECTED',
+  'REMITTED',
+  'PENDING_DELIVERY',
+  'IN_PROGRESS',
+  'DELIVERED',
+  'CANCELLED',
+] as const;
+
+type InvoiceFilter = (typeof FILTERS)[number];
 
 /** The filters that are a payment status, and which one. */
 const PAYMENT_FILTERS: Partial<Record<InvoiceFilter, PaymentStatus>> = {
@@ -31,6 +35,11 @@ const DELIVERY_FILTERS: Partial<Record<InvoiceFilter, DeliveryStatus>> = {
   IN_PROGRESS: DeliveryStatus.IN_PROGRESS,
   DELIVERED: DeliveryStatus.DELIVERED,
 };
+
+/** The filter named in the address, if it is one of the list's; every invoice otherwise. */
+function filterFrom(asked: string | null): InvoiceFilter {
+  return asked !== null && FILTERS.includes(asked as InvoiceFilter) ? (asked as InvoiceFilter) : 'ALL';
+}
 
 @Component({
   selector: 'app-all-invoices',
@@ -99,7 +108,8 @@ export class AllInvoicesComponent {
   private readonly invoiceStore = inject(InvoiceStore);
 
   protected readonly search = signal('');
-  protected readonly filter = signal<InvoiceFilter>('ALL');
+  /** A dashboard counter opens this list filtered (?filtre=UNPAID). */
+  protected readonly filter = signal<InvoiceFilter>(filterFrom(inject(ActivatedRoute).snapshot.queryParamMap.get('filtre')));
 
   protected readonly period = signal<Period>({});
 
