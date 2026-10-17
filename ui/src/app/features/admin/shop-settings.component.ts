@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { ModuleChange, menuChanges, switchEffect } from '../../core/config/settings-impact';
 import { SettingsApi } from '../../core/api/settings.api';
 import {
   BUSINESS_TYPES,
@@ -11,6 +12,7 @@ import {
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 
 interface FeatureRow {
   key: keyof ShopFeatures;
@@ -30,6 +32,7 @@ interface FeatureRow {
 @Component({
   selector: 'app-shop-settings',
   standalone: true,
+  imports: [ConfirmDialogComponent],
   template: `
     <div class="card">
       <h2>Type d'activité <small>coche les réglages adaptés, modifiables ensuite</small></h2>
@@ -66,6 +69,9 @@ interface FeatureRow {
               <span>
                 <strong>{{ row.label }}</strong>
                 <span class="hint">{{ row.hint }}</span>
+                @if (effectOf(row); as effect) {
+                  <span class="effect">Ajoute au menu : {{ effect }}</span>
+                }
               </span>
             </label>
           </li>
@@ -80,11 +86,45 @@ interface FeatureRow {
             Configuration en vigueur.
           }
         </span>
-        <button class="btn" type="button" [disabled]="!dirty() || saving()" (click)="save()">
+        <button class="btn" type="button" [disabled]="!dirty() || saving()" (click)="reviewing.set(true)">
           {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
         </button>
       </div>
     </div>
+
+    @if (reviewing()) {
+      <!-- These switches change the menu of the whole staff: said in full before it happens. -->
+      <app-confirm-dialog
+        title="Enregistrer la configuration ?"
+        [message]="
+          changes().length
+            ? 'Le menu de tout le personnel change dès sa prochaine connexion :'
+            : 'Le menu du personnel ne change pas.'
+        "
+        confirmLabel="Enregistrer"
+        [busy]="saving()"
+        (confirmed)="save()"
+        (closed)="reviewing.set(false)"
+      >
+        @if (changes().length) {
+          <ul class="changes">
+            @for (change of changes(); track change.role) {
+              <li>
+                <strong>{{ change.module }}</strong>
+                @for (line of linesOf(change); track line) {
+                  <span class="line">{{ line }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+        <ul class="changes">
+          @for (line of switched(); track line) {
+            <li>{{ line }}</li>
+          }
+        </ul>
+      </app-confirm-dialog>
+    }
   `,
   styles: `
     .types {
@@ -185,6 +225,28 @@ interface FeatureRow {
         color: var(--ink-soft);
         margin-top: 2px;
       }
+
+      .effect {
+        display: block;
+        font-size: 12.5px;
+        color: var(--brand);
+        margin-top: 2px;
+      }
+    }
+
+    .changes {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      font-size: 14px;
+
+      li {
+        margin: 4px 0;
+      }
+
+      .line {
+        display: block;
+        color: var(--ink-soft);
+      }
     }
 
     .foot {
@@ -274,6 +336,42 @@ export class ShopSettingsComponent {
     ];
   });
 
+  /** The summary shown before saving. */
+  protected readonly reviewing = signal(false);
+
+  /** The menus the draft changes, compared with the configuration in force. */
+  protected readonly changes = computed(() => menuChanges(this.auth.settings(), this.effective()));
+
+  /** The type and the switches changed, in plain words: what the menus do not show. */
+  protected readonly switched = computed(() => {
+    const saved = this.auth.settings();
+    const now = this.effective();
+    const type =
+      saved.businessType !== now.businessType
+        ? [`Type d'activité : ${businessTypeInfo(saved.businessType).label} → ${businessTypeInfo(now.businessType).label}`]
+        : [];
+    return [
+      ...type,
+      ...this.rows()
+        .filter((row) => saved[row.key] !== now[row.key])
+        .map((row) => `${now[row.key] ? 'Activé' : 'Désactivé'} : ${row.label}`),
+    ];
+  });
+
+  protected linesOf(change: ModuleChange): string[] {
+    const quoted = (labels: string[]) => labels.map((label) => `« ${label} »`).join(', ');
+    return [
+      ...(change.added.length ? [`ajouté : ${quoted(change.added)}`] : []),
+      ...(change.removed.length ? [`retiré : ${quoted(change.removed)}`] : []),
+      ...change.renamed.map(({ from, to }) => `« ${from} » s'appelle « ${to} »`),
+    ];
+  }
+
+  /** "Ajoute au menu : …" under a switch, so its weight is seen before it is ticked. */
+  protected effectOf(row: FeatureRow): string {
+    return switchEffect(this.effective(), row.key);
+  }
+
   protected available(row: FeatureRow): boolean {
     return !row.dependsOn || row.dependsOn(this.effective());
   }
@@ -291,6 +389,7 @@ export class ShopSettingsComponent {
     this.api.update(this.effective()).subscribe({
       next: (saved) => {
         this.saving.set(false);
+        this.reviewing.set(false);
         this.auth.applySettings(saved);
         this.draft.set({ ...saved });
         this.toasts.show(

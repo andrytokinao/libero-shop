@@ -23,6 +23,8 @@ import { isTopmostDialog } from '../../core/ui/topmost-dialog';
         </div>
         <div class="modal-body">
           <p id="cf-text" class="cf-text" [class.cf-danger]="danger()">{{ message() }}</p>
+          <!-- The detail of what will happen, when one sentence is not enough. -->
+          <ng-content />
         </div>
         <div class="modal-foot">
           <button #cancel class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>

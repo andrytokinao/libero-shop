@@ -59,7 +59,7 @@ Priorités : **P1** gain immédiat, peu de code · **P2** important · **P3** co
 - [x] **UI-41** — Fenêtre « produits du rayon » : ajouter un produit au rayon, changer de rayon.
 - [x] **UI-60** — Compteurs des tableaux de bord cliquables (liste filtrée).
 - [x] **UI-70** — « ⋮ » des utilisateurs (modifier, rôles, mot de passe, désactiver confirmé).
-- [ ] **UI-72** — Configuration de la boutique : phrase « ce que ça change », résumé avant
+- [x] **UI-72** — Configuration de la boutique : phrase « ce que ça change », résumé avant
   d'enregistrer.
 - [ ] **UI-81** — États chargement / vide / erreur distincts (factures, stock, fournisseurs,
   utilisateurs, tableaux de bord).
