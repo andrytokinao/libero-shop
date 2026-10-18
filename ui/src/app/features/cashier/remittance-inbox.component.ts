@@ -7,6 +7,7 @@ import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -14,6 +15,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   selector: 'app-remittance-inbox',
   standalone: true,
   imports: [
+    LoadStateComponent,
     DatePipe,
     NgTemplateOutlet,
     KpiCardComponent,
@@ -54,6 +56,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         Versements en attente de confirmation
         <small>argent apporté par le dépôt ou la prise de commande</small>
       </h2>
+      <app-load-state [of]="remittanceList" what="les versements" />
       @if (pending().length) {
         <div class="table-scroll">
           <table class="inv-table">
@@ -121,7 +124,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </li>
           }
         </ul>
-      } @else {
+      } @else if (remittanceList.loaded()) {
         <div class="empty">Aucun versement en attente.</div>
       }
     </div>
@@ -209,7 +212,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </li>
           }
         </ul>
-      } @else {
+      } @else if (remittanceList.loaded()) {
         <div class="empty">Aucun versement confirmé pour le moment.</div>
       }
     </div>
@@ -226,7 +229,8 @@ export class RemittanceInboxComponent {
 
   // Kept current by the store: a slip brought by the depot appears without a refresh, and one
   // confirmed at another till moves to the confirmed ones.
-  private readonly remittances = this.remittanceStore.list().value;
+  protected readonly remittanceList = this.remittanceStore.list();
+  private readonly remittances = this.remittanceList.value;
 
   protected readonly pending = computed(() =>
     this.remittances().filter((r) => r.status === RemittanceStatus.PENDING),

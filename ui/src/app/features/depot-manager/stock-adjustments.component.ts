@@ -11,6 +11,7 @@ import {
   formatQuantity,
   parseQuantity,
   roundQuantity,
+  SaleUnit,
   unitChoiceLabel,
   unitsOf,
 } from '../../core/sale/sale-unit';
@@ -23,6 +24,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.c
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { StockHistoryDialogComponent } from '../../shared/components/stock-history-dialog.component';
 import { ProductPickerComponent } from '../../shared/components/product-picker.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -37,6 +39,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   selector: 'app-stock-adjustments',
   standalone: true,
   imports: [
+    LoadStateComponent,
     FormsModule,
     DatePipe,
     KpiCardComponent,
@@ -147,6 +150,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         Historique des corrections
         <small>un mouvement ADJUSTMENT par correction</small>
       </h2>
+      <app-load-state [of]="adjustmentResource" what="les corrections" />
       @if (adjustments().length) {
         <div class="table-scroll">
           <table>
@@ -195,7 +199,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             </tbody>
           </table>
         </div>
-      } @else {
+      } @else if (adjustmentResource.loaded()) {
         <div class="empty">Aucune correction de stock pour l'instant.</div>
       }
     </div>
@@ -251,7 +255,7 @@ export class StockAdjustmentsComponent {
 
   // The store keeps each "stock N" current, whoever sells or receives meanwhile.
   private readonly productResource = inject(ProductStore).list();
-  private readonly adjustmentResource = apiResource<StockAdjustment[]>([], () => this.api.adjustments());
+  protected readonly adjustmentResource = apiResource<StockAdjustment[]>([], () => this.api.adjustments());
 
   protected readonly products = this.productResource.value;
   protected readonly adjustments = this.adjustmentResource.value;
@@ -269,7 +273,8 @@ export class StockAdjustmentsComponent {
   });
   /** The packaging the quantity is said in; null for the base unit. Another product: its base unit. */
   protected readonly unitId = signal<number | null>(null);
-  protected readonly unit = computed(
+  /** Undefined while no product is chosen. */
+  protected readonly unit = computed<SaleUnit | undefined>(
     () => this.units().find((unit) => unit.packagingId === this.unitId()) ?? this.units()[0],
   );
   protected readonly isCount = computed(() => this.reason() === 'INVENTORY_COUNT');

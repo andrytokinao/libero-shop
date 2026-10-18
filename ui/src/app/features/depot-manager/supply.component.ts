@@ -28,6 +28,7 @@ import { StockHistoryDialogComponent } from '../../shared/components/stock-histo
 import { MovementAction, receiptHtml, supplyActions } from '../../core/stock/movement-actions';
 import { printPage } from '../../core/utils/print.util';
 import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { HasRoleDirective } from '../../shared/directives/has-role.directive';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
@@ -49,6 +50,7 @@ const NEW_SUPPLIER = -1;
   selector: 'app-supply',
   standalone: true,
   imports: [
+    LoadStateComponent,
     FormsModule,
     DatePipe,
     DecimalPipe,
@@ -322,6 +324,7 @@ const NEW_SUPPLIER = -1;
 
     <div class="card" style="margin-top:16px;">
       <h2>Derniers approvisionnements</h2>
+      <app-load-state [of]="supplyResource" what="les approvisionnements" />
       @if (supplies().length) {
         <div class="table-scroll">
           <table>
@@ -389,7 +392,7 @@ const NEW_SUPPLIER = -1;
             </tbody>
           </table>
         </div>
-      } @else {
+      } @else if (supplyResource.loaded()) {
         <div class="empty">Aucun approvisionnement enregistré.</div>
       }
     </div>
@@ -521,7 +524,7 @@ export class SupplyComponent {
   // The store keeps each "stock N" current, whoever sells or receives meanwhile.
   private readonly productResource = inject(ProductStore).list();
   private readonly supplierResource = apiResource<Supplier[]>([], () => this.catalog.suppliers());
-  private readonly supplyResource = apiResource<Supply[]>([], () => this.stock.supplies());
+  protected readonly supplyResource = apiResource<Supply[]>([], () => this.stock.supplies());
   private readonly costResource = apiResource<ProductCost[]>([], () =>
     this.costing.productCosts(),
   );

@@ -13,6 +13,7 @@ import { CameraScanButtonComponent } from '../../shared/components/camera-scan-b
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { ProductMenuComponent } from '../../shared/components/product-menu.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** Which products the table keeps. */
@@ -34,6 +35,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
   selector: 'app-product-prices',
   standalone: true,
   imports: [
+    LoadStateComponent,
     FormsModule,
     AriaryPipe,
     KpiCardComponent,
@@ -96,6 +98,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
         </div>
       </div>
 
+      <app-load-state [of]="resource" what="les prix" />
       <div class="table-scroll">
         <table class="pp-table">
           <thead>
@@ -196,7 +199,9 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
             <tbody>
               <tr>
                 <td colspan="8" class="empty">
-                  {{ resource.loading() ? 'Chargement…' : 'Aucun produit ne correspond.' }}
+                  @if (resource.loaded()) {
+                    Aucun produit ne correspond.
+                  }
                 </td>
               </tr>
             </tbody>

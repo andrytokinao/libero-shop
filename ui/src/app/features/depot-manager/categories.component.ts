@@ -13,6 +13,7 @@ import { ProductRights } from '../../core/catalog/product-rights';
 import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CategoryImagePickerComponent } from './category-image-picker.component';
 import { RayonCountDialogComponent } from './rayon-count-dialog.component';
@@ -42,6 +43,7 @@ type RayonAction = 'rename' | 'child' | 'products' | 'count' | 'move' | 'delete'
   selector: 'app-categories',
   standalone: true,
   imports: [
+    LoadStateComponent,
     FormsModule,
     CategoryPickerComponent,
     SimpleImportComponent,
@@ -69,6 +71,7 @@ type RayonAction = 'rename' | 'child' | 'products' | 'count' | 'move' | 'delete'
         </div>
       </div>
 
+      <app-load-state [of]="treeResource" what="les rayons" />
       @if (tree().length) {
         <div class="table-scroll">
           <table>
@@ -115,7 +118,7 @@ type RayonAction = 'rename' | 'child' | 'products' | 'count' | 'move' | 'delete'
             </tbody>
           </table>
         </div>
-      } @else {
+      } @else if (treeResource.loaded()) {
         <div class="empty">
           Aucune catégorie pour l'instant. Un import de produits les crée aussi, d'après la colonne
           « catégorie » du fichier.
@@ -332,7 +335,7 @@ export class CategoriesComponent {
   protected readonly maxDepth = MAX_CATEGORY_DEPTH;
   protected readonly importKind = CATEGORY_IMPORT;
 
-  private readonly treeResource = apiResource<CategoryNode[]>([], () => this.api.categories());
+  protected readonly treeResource = apiResource<CategoryNode[]>([], () => this.api.categories());
   // What each rayon holds. From the same endpoint the stock screens use, so the figures agree.
   private readonly statResource = apiResource<CategoryStock[]>([], () =>
     this.api.stockByCategory(),

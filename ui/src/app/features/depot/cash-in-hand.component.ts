@@ -17,6 +17,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /**
@@ -30,7 +31,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 @Component({
   selector: 'app-cash-in-hand',
   standalone: true,
-  imports: [DatePipe, KpiCardComponent, AriaryPipe, InvoiceLinkComponent, ConfirmDialogComponent],
+  imports: [LoadStateComponent, DatePipe, KpiCardComponent, AriaryPipe, InvoiceLinkComponent, ConfirmDialogComponent],
   template: `
     <div class="card">
       <h2>
@@ -44,6 +45,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
         [hint]="payments().length + ' commande(s)'"
       />
 
+      <app-load-state [of]="resource" what="l'argent en main" />
       @if (payments().length) {
         <div class="table-scroll">
           <table class="inv-table" style="margin-top:14px;">
@@ -114,7 +116,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
             {{ selfConfirming() ? 'Tout mettre en caisse' : 'Tout remettre à la caisse' }} ({{ total() | ariary }})
           </button>
         }
-      } @else {
+      } @else if (resource.loaded()) {
         <div class="empty" style="margin-top:14px;">Aucun argent à remettre pour le moment.</div>
       }
 
@@ -148,7 +150,7 @@ export class CashInHandComponent {
   );
   protected readonly remitLabel = computed(() => remitLabel(this.selfConfirming()));
 
-  private readonly resource = apiResource<Payment[]>([], () => this.api.cashInHand());
+  protected readonly resource = apiResource<Payment[]>([], () => this.api.cashInHand());
   protected readonly payments = this.resource.value;
   protected readonly total = computed(() =>
     this.payments().reduce((sum, payment) => sum + payment.amount, 0),

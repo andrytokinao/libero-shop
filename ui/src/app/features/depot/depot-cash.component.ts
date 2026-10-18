@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { RemittanceStore } from '../../core/store/remittance.store';
 import { InvoiceLinkComponent } from '../../shared/components/invoice-link.component';
 import { RemittanceStatusBadgeComponent } from '../../shared/components/status-badges.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { CashInHandComponent } from './cash-in-hand.component';
 
@@ -10,13 +11,14 @@ import { CashInHandComponent } from './cash-in-hand.component';
 @Component({
   selector: 'app-depot-cash',
   standalone: true,
-  imports: [DatePipe, CashInHandComponent, RemittanceStatusBadgeComponent, AriaryPipe, InvoiceLinkComponent],
+  imports: [LoadStateComponent, DatePipe, CashInHandComponent, RemittanceStatusBadgeComponent, AriaryPipe, InvoiceLinkComponent],
   template: `
     <div class="grid g2">
       <app-cash-in-hand />
 
       <div class="card">
         <h2>Mes versements <small>confirmés par le caissier une fois l'argent compté</small></h2>
+        <app-load-state [of]="myRemittancesList" what="les versements" />
         @if (myRemittances().length) {
           <div class="table-scroll">
             <table class="inv-table">
@@ -75,7 +77,7 @@ import { CashInHandComponent } from './cash-in-hand.component';
               </li>
             }
           </ul>
-        } @else {
+        } @else if (myRemittancesList.loaded()) {
           <div class="empty">Aucun versement effectué.</div>
         }
       </div>
@@ -85,6 +87,7 @@ import { CashInHandComponent } from './cash-in-hand.component';
 export class DepotCashComponent {
   // Kept current by the store: a slip just brought appears, and "En attente" turns to
   // "Confirmé" the moment the cashier signs for it.
-  protected readonly myRemittances = inject(RemittanceStore).list(() => ({ mine: true })).value;
+  protected readonly myRemittancesList = inject(RemittanceStore).list(() => ({ mine: true }));
+  protected readonly myRemittances = this.myRemittancesList.value;
 
 }

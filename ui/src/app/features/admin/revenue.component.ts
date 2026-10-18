@@ -7,6 +7,7 @@ import { InvoiceStore } from '../../core/store/invoice.store';
 import { InvoiceTableComponent } from '../../shared/components/invoice-table.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { RevenueBarsComponent } from '../../shared/components/revenue-bars.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 const EMPTY: RevenueReport = {
@@ -20,7 +21,7 @@ const EMPTY: RevenueReport = {
 @Component({
   selector: 'app-revenue',
   standalone: true,
-  imports: [KpiCardComponent, RevenueBarsComponent, InvoiceTableComponent, AriaryPipe],
+  imports: [LoadStateComponent, KpiCardComponent, RevenueBarsComponent, InvoiceTableComponent, AriaryPipe],
   template: `
     <div class="grid g3">
       <app-kpi-card
@@ -46,6 +47,7 @@ const EMPTY: RevenueReport = {
 
     <div class="card" style="margin-top:16px;">
       <h2>Répartition par mode de paiement <small>encaissements du jour</small></h2>
+      <app-load-state [of]="reportResource" what="le chiffre d'affaires" />
       @if (report().byPaymentMethod.length) {
         <div class="table-scroll">
           <table>
@@ -67,7 +69,7 @@ const EMPTY: RevenueReport = {
             </tbody>
           </table>
         </div>
-      } @else {
+      } @else if (reportResource.loaded()) {
         <div class="empty">Aucun encaissement aujourd'hui.</div>
       }
     </div>
@@ -89,7 +91,7 @@ export class RevenueComponent {
 
   protected readonly methodLabels = PAYMENT_METHOD_LABELS;
 
-  private readonly reportResource = apiResource(EMPTY, () => this.dashboardApi.revenue());
+  protected readonly reportResource = apiResource(EMPTY, () => this.dashboardApi.revenue());
   protected readonly paidTodayList = this.invoices.list(() => ({
     todayOnly: true,
     paymentStatus: PaymentStatus.PAID,

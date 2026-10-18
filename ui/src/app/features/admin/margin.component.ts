@@ -12,6 +12,7 @@ import { isoDate } from '../../core/utils/date.util';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { ProductMenuComponent } from '../../shared/components/product-menu.component';
+import { LoadStateComponent } from '../../shared/components/load-state.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 /** The periods a manager actually asks about; anything else goes through the two dates. */
@@ -60,6 +61,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
   selector: 'app-margin',
   standalone: true,
   imports: [
+    LoadStateComponent,
     FormsModule,
     DatePipe,
     KpiCardComponent,
@@ -198,6 +200,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
     }
 
     <!-- ================================================= what the shelves hold -->
+    <app-load-state [of]="valuationResource" what="la valeur du stock" />
     @if (valuation(); as v) {
       <div class="card" style="margin-top:24px;">
         <h2>
@@ -353,7 +356,7 @@ export class MarginComponent {
   );
 
   /** Loaded once: the stock does not depend on the period chosen. */
-  private readonly valuationResource = apiResource<StockValuation | null>(null, () =>
+  protected readonly valuationResource = apiResource<StockValuation | null>(null, () =>
     this.costing.stockValuation(),
   );
   protected readonly valuation = this.valuationResource.value;

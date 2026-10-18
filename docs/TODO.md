@@ -240,8 +240,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   réessaie toute seule. *Fait — voir `25-session-gardee-quand-le-serveur-ne-repond-pas.md`.*
 - [ ] **P2 — Session qui expire sans prévenir** en plein service : ni jeton de rafraîchissement,
   ni alerte.
-- [ ] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on
+- [x] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on
   lit « Aucune facture… ».
+  *Fait — voir `54-chargement-et-erreur-partout.html`.*
 - [ ] **P2 — Aucun mode hors ligne** à la caisse.
 - [x] **P3 — Écran de licence** : installation et renouvellement sans protection contre le double
   clic.
