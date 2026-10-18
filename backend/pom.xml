@@ -10,22 +10,15 @@
     </parent>
     <groupId>com.houssen</groupId>
     <artifactId>liberoshop</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>backend</name>
-    <description>backend</description>
-    <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
+    <!-- The version the running server reports (build-info) and the installer carries: the update
+         check compares it with the published one, so both must say the same number. Plain digits:
+         jpackage refuses a suffix such as -SNAPSHOT. -->
+    <version>1.0.0</version>
+    <name>Libero Shop</name>
+    <description>Serveur de caisse et de gestion de stock Libero Shop</description>
+    <organization>
+        <name>Kinga Digital</name>
+    </organization>
     <properties>
         <java.version>21</java.version>
         <!-- Explicit, so accented French text in sources and license payloads is read
@@ -416,7 +409,7 @@
             <id>installer</id>
             <properties>
                 <!-- jpackage rejects SNAPSHOT / a 0 major on Windows; keep it numeric. -->
-                <installer.version>1.0.0</installer.version>
+                <installer.version>${project.version}</installer.version>
                 <jpackage.input>${project.build.directory}/jpackage/input</jpackage.input>
                 <jpackage.dest>${project.build.directory}/jpackage/dist</jpackage.dest>
                 <jpackage.config>${project.basedir}/src/main/jpackage</jpackage.config>

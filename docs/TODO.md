@@ -227,7 +227,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   sauvegarde ne fonctionne que sur H2. Retirer les deux pilotes ou les tester.
 - [ ] **P2 — Les tests n'utilisent pas la configuration de production (à vérifier).** H2 en
   mémoire, jamais le fichier ni `ddl-auto=update`.
-- [ ] **P3 — Version `0.0.1-SNAPSHOT`** et métadonnées vides dans `pom.xml`.
+- [x] **P3 — Version `0.0.1-SNAPSHOT`** et métadonnées vides dans `pom.xml`.
+  *Fait — voir `57-version-1-0-0.html`.*
 - [ ] **P3 — Sauvegarde hors du poste (idée).** Copie automatique sur clé USB ou stockage
   distant, avec alerte si la dernière sauvegarde est ancienne.
 
