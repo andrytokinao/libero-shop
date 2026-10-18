@@ -9,6 +9,7 @@ import com.houssen.liberoshop.repository.ProductPackagingRepository;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
+import com.houssen.liberoshop.web.dto.AdjustmentSummaryResponse;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,8 @@ class StockAdjustmentTest {
     private UserAppRepository users;
     @Autowired
     private ProductPackagingRepository packagings;
+    @Autowired
+    private MovementCancellationService cancellations;
 
     private Product juice;
     private UserApp manager;
@@ -167,6 +170,22 @@ class StockAdjustmentTest {
         assertEquals(last.id(), first.id());
         assertTrue(stockService.findAdjustments().stream()
                 .filter(a -> a.product().id().equals(juice.getId())).count() >= 2);
+    }
+
+    @Test
+    @DisplayName("les chiffres des corrections couvrent tout : un surplus compte n'est pas une perte, une perte annulee non plus")
+    void resumeDesCorrectionsParLaBase() {
+        AdjustmentSummaryResponse before = stockService.summarizeAdjustments();
+
+        adjust(AdjustmentReason.BREAKAGE, "3", null);
+        adjust(AdjustmentReason.INVENTORY_COUNT, "45", null);
+        StockAdjustmentResponse theft = adjust(AdjustmentReason.THEFT, "2", null);
+        cancellations.cancelAdjustment(theft.id(), manager);
+
+        AdjustmentSummaryResponse after = stockService.summarizeAdjustments();
+        assertEquals(before.count() + 4, after.count());
+        assertEquals(0, new BigDecimal("3").compareTo(after.lostUnits().subtract(before.lostUnits())));
+        assertEquals(0, new BigDecimal("6000").compareTo(after.lostValue().subtract(before.lostValue())));
     }
 
     private ProductPackaging cartonOfTwelve() {

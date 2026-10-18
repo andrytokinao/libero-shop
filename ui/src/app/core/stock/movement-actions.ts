@@ -32,11 +32,6 @@ export function adjustmentActions(adjustment: StockAdjustment): MovementMenuEntr
   ];
 }
 
-/** A loss the shop suffered: not a cancellation, and not a correction that was itself undone. */
-export function countsAsLoss(adjustment: StockAdjustment): boolean {
-  return adjustment.quantity < 0 && adjustment.reason !== 'CANCELLATION' && !adjustment.cancelledAt;
-}
-
 /** The receipt as a small page to print: product, quantity, price, supplier, who and when. */
 export function receiptHtml(supply: Supply, shopName: string): string {
   const escape = (text: string) =>

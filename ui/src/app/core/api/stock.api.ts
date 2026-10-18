@@ -8,6 +8,7 @@ import {
   CreateInventoryRequest,
   CreateSupplyRequest,
   ProductMovementPage,
+  AdjustmentSummary,
   StockAdjustment,
   StockOutputPage,
   Supply,
@@ -17,8 +18,15 @@ import {
 export class StockApi {
   private readonly http = inject(HttpClient);
 
+  /** The latest receipts, newest first; the server keeps the list short. */
   supplies(): Observable<Supply[]> {
     return this.http.get<Supply[]>(`${API_BASE_URL}/stock/supplies`);
+  }
+
+  /** Everything one supplier delivered, filtered by the server. */
+  suppliesOf(supplierId: number): Observable<Supply[]> {
+    const params = new HttpParams().set('supplierId', supplierId);
+    return this.http.get<Supply[]>(`${API_BASE_URL}/stock/supplies`, { params });
   }
 
   /**
@@ -74,9 +82,14 @@ export class StockApi {
     return this.http.post<StockAdjustment[]>(`${API_BASE_URL}/stock/inventories`, request);
   }
 
-  /** The corrections made by hand, newest first. */
+  /** The latest corrections made by hand, newest first. */
   adjustments(): Observable<StockAdjustment[]> {
     return this.http.get<StockAdjustment[]>(`${API_BASE_URL}/stock/adjustments`);
+  }
+
+  /** Count and losses over every correction, not only those listed. */
+  adjustmentSummary(): Observable<AdjustmentSummary> {
+    return this.http.get<AdjustmentSummary>(`${API_BASE_URL}/stock/adjustments/summary`);
   }
 
   /** Breakage, loss or a shelf counted; the server works out and answers the difference. */

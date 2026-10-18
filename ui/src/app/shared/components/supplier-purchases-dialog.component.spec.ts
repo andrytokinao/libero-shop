@@ -29,8 +29,9 @@ describe('SupplierPurchasesDialogComponent', () => {
 
   let fixture: ComponentFixture<SupplierPurchasesDialogComponent>;
 
-  it('lists one line per product and unit, the base unit named when it has no name', () => {
-    TestBed.configureTestingModule({ providers: [{ provide: StockApi, useValue: { supplies: () => of(supplies) } }] });
+  it('asks the server for this supplier only, and lists one line per product and unit', () => {
+    const suppliesOf = jasmine.createSpy('suppliesOf').and.returnValue(of(supplies));
+    TestBed.configureTestingModule({ providers: [{ provide: StockApi, useValue: { suppliesOf } }] });
     fixture = TestBed.createComponent(SupplierPurchasesDialogComponent);
     fixture.componentRef.setInput('supplier', supplier);
     fixture.detectChanges();
@@ -38,6 +39,7 @@ describe('SupplierPurchasesDialogComponent', () => {
     const rows = Array.from(fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLElement>, (r) =>
       r.textContent?.replace(/\s+/g, ' ').trim(),
     );
+    expect(suppliesOf).toHaveBeenCalledWith(2);
     expect(rows.length).toBe(2);
     expect(rows[0]).toContain('unité');
     expect(rows[1]).toContain('carton');

@@ -15,6 +15,7 @@ import com.houssen.liberoshop.repository.SupplierRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
+import com.houssen.liberoshop.web.dto.AdjustmentSummaryResponse;
 import com.houssen.liberoshop.web.dto.CreateStockAdjustmentRequest;
 import com.houssen.liberoshop.web.dto.CreateSupplyRequest;
 import com.houssen.liberoshop.web.dto.ProductMovementResponse;
@@ -46,6 +47,8 @@ public class StockService {
 
     public static final int DEFAULT_PAGE_SIZE = 50;
     public static final int MAX_PAGE_SIZE = 200;
+    /** How many receipts and corrections the stock screens list; their figures still count them all. */
+    public static final int LATEST_LIMIT = 200;
 
     private final StockMovementRepository movements;
     private final ProductRepository products;
@@ -63,8 +66,15 @@ public class StockService {
         this.events = events;
     }
 
+    /** The latest receipts, newest first: the screen shows the recent ones, not years of them. */
     public List<SupplyResponse> findSupplies() {
-        return movements.findSupplies().stream().map(SupplyResponse::of).toList();
+        return movements.findLatestSupplies(PageRequest.of(0, LATEST_LIMIT)).stream()
+                .map(SupplyResponse::of).toList();
+    }
+
+    /** Everything one supplier delivered: filtered by the database, never the whole list. */
+    public List<SupplyResponse> findSuppliesOf(Long supplierId) {
+        return movements.findSuppliesOf(supplierId).stream().map(SupplyResponse::of).toList();
     }
 
     /**
@@ -161,8 +171,18 @@ public class StockService {
                 found.getTotalElements(), found.getNumber(), found.getSize(), found.hasNext());
     }
 
+    /** The latest corrections, newest first. */
     public List<StockAdjustmentResponse> findAdjustments() {
-        return movements.findAdjustments().stream().map(StockAdjustmentResponse::of).toList();
+        return movements.findLatestAdjustments(PageRequest.of(0, LATEST_LIMIT)).stream()
+                .map(StockAdjustmentResponse::of).toList();
+    }
+
+    /** Count and losses over every correction, summed by the database. */
+    public AdjustmentSummaryResponse summarizeAdjustments() {
+        Object[] row = movements.summarizeAdjustments(AdjustmentReason.CANCELLATION).get(0);
+        return new AdjustmentSummaryResponse(((Number) row[0]).longValue(),
+                Quantities.scaled(Quantities.orZero(row[1])),
+                Quantities.orZero(row[2]).setScale(2, RoundingMode.HALF_UP));
     }
 
     /**

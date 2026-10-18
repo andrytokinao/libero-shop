@@ -5,6 +5,7 @@ import com.houssen.liberoshop.service.DeliveryService;
 import com.houssen.liberoshop.service.InventoryService;
 import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.web.dto.AdjustmentSummaryResponse;
 import com.houssen.liberoshop.web.dto.CancelDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateInventoryRequest;
@@ -54,8 +55,8 @@ public class StockController {
      */
     @GetMapping("/supplies")
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
-    public List<SupplyResponse> supplies() {
-        return stockService.findSupplies();
+    public List<SupplyResponse> supplies(@RequestParam(required = false) Long supplierId) {
+        return supplierId == null ? stockService.findSupplies() : stockService.findSuppliesOf(supplierId);
     }
 
     /**
@@ -132,6 +133,13 @@ public class StockController {
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public List<StockAdjustmentResponse> adjustments() {
         return stockService.findAdjustments();
+    }
+
+    /** What every correction adds up to, while the list above holds only the latest. */
+    @GetMapping("/adjustments/summary")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public AdjustmentSummaryResponse adjustmentSummary() {
+        return stockService.summarizeAdjustments();
     }
 
     /**

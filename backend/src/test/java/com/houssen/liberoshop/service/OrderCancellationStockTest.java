@@ -69,7 +69,7 @@ class OrderCancellationStockTest {
         List<StockOutput> outputs = movements.findOutputsOfInvoice(order.id());
         assertEquals(1, outputs.size(), "the sale stays in the history");
         assertNotNull(outputs.getFirst().getCancelledAt());
-        StockAdjustment opposite = movements.findAdjustments().stream()
+        StockAdjustment opposite = movements.findLatestAdjustments(org.springframework.data.domain.PageRequest.of(0, 50)).stream()
                 .filter(adjustment -> adjustment.getProduct().getId().equals(huile.getId()))
                 .findFirst().orElseThrow();
         assertEquals(AdjustmentReason.CANCELLATION, opposite.getReason());

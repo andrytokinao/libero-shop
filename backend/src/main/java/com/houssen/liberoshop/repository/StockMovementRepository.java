@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.repository;
 
+import com.houssen.liberoshop.entity.AdjustmentReason;
 import com.houssen.liberoshop.entity.StockAdjustment;
 import com.houssen.liberoshop.entity.StockMovement;
 import com.houssen.liberoshop.entity.StockOutput;
@@ -34,7 +35,18 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
               join fetch s.performedBy
             order by s.movementDate desc, s.id desc
             """)
-    List<Supply> findSupplies();
+    List<Supply> findLatestSupplies(Pageable limit);
+
+    /** Everything one supplier delivered, newest first: what the supplier's purchases sum up. */
+    @Query("""
+            select s from Supply s
+              join fetch s.product
+              join fetch s.supplier sp
+              join fetch s.performedBy
+            where sp.id = :supplierId
+            order by s.movementDate desc, s.id desc
+            """)
+    List<Supply> findSuppliesOf(@Param("supplierId") Long supplierId);
 
     /**
      * One page of everything that moved one product's stock, newest first -- receipts, sales and
@@ -110,7 +122,23 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
               join fetch a.performedBy
             order by a.movementDate desc, a.id desc
             """)
-    List<StockAdjustment> findAdjustments();
+    List<StockAdjustment> findLatestAdjustments(Pageable limit);
+
+    /**
+     * Every correction counted, and the losses among them summed, as {@code [count, units, value]}.
+     * A loss is a correction that took stock away, was not itself an undo, and was not undone;
+     * its value is the product's average cost, rounded to the cent per line as the list shows it.
+     */
+    @Query("""
+            select count(a),
+                   coalesce(sum(case when a.quantity < 0 and a.reason <> :undo and a.cancelledAt is null
+                                     then -a.quantity end), 0),
+                   coalesce(sum(case when a.quantity < 0 and a.reason <> :undo and a.cancelledAt is null
+                                          and p.averageCost is not null
+                                     then -round(p.averageCost * a.quantity, 2) end), 0)
+            from StockAdjustment a join a.product p
+            """)
+    List<Object[]> summarizeAdjustments(@Param("undo") AdjustmentReason undo);
 
     /** What one order took off the shelves -- given back when it is cancelled before hand-over. */
     @Query("select o from StockOutput o where o.invoice.id = :invoiceId")

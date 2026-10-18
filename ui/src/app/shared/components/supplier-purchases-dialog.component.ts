@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, computed, inject, input, output } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StockApi } from '../../core/api/stock.api';
 import { Supplier, Supply } from '../../core/models';
 import { SupplierPurchase, purchasesFrom } from '../../core/stock/supplier-purchases';
@@ -52,7 +52,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
                 </tbody>
               </table>
             </div>
-          } @else if (!resource.loading()) {
+          } @else if (!loading()) {
             <div class="empty">Aucune réception de ce fournisseur pour l'instant.</div>
           }
         </div>
@@ -63,15 +63,31 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
     </div>
   `,
 })
-export class SupplierPurchasesDialogComponent {
+export class SupplierPurchasesDialogComponent implements OnInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly stock = inject(StockApi);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly supplier = input.required<Supplier>();
   readonly closed = output<void>();
 
-  protected readonly resource = apiResource<Supply[]>([], () => this.stock.supplies());
-  protected readonly lines = computed(() => purchasesFrom(this.resource.value(), this.supplier().id));
+  /** This supplier's receipts only, filtered by the server: read once the supplier is known. */
+  private readonly supplies = signal<Supply[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly lines = computed(() => purchasesFrom(this.supplies(), this.supplier().id));
+
+  ngOnInit(): void {
+    this.stock
+      .suppliesOf(this.supplier().id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (supplies) => {
+          this.supplies.set(supplies);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
+  }
 
   /** One line per product and unit. A function: `??` inside a `track` trips the template compiler. */
   protected keyOf(line: SupplierPurchase): string {

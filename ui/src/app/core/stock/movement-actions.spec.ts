@@ -1,5 +1,5 @@
 import { StockAdjustment, Supply } from '../models';
-import { adjustmentActions, countsAsLoss, receiptHtml, supplyActions } from './movement-actions';
+import { adjustmentActions, receiptHtml, supplyActions } from './movement-actions';
 
 describe('movement actions', () => {
   const supply = {
@@ -31,12 +31,6 @@ describe('movement actions', () => {
   it('never offers to cancel a cancellation', () => {
     expect(adjustmentActions(broken).map((a) => a.id)).toEqual(['history', 'cancel']);
     expect(adjustmentActions({ ...broken, reason: 'CANCELLATION' }).map((a) => a.id)).toEqual(['history']);
-  });
-
-  it('counts neither a cancellation nor a cancelled loss as a loss', () => {
-    expect(countsAsLoss(broken)).toBeTrue();
-    expect(countsAsLoss({ ...broken, cancelledAt: '2026-10-17T10:00:00' })).toBeFalse();
-    expect(countsAsLoss({ ...broken, quantity: -20, reason: 'CANCELLATION' })).toBeFalse();
   });
 
   it('prints the receipt with its figures, the product name escaped', () => {

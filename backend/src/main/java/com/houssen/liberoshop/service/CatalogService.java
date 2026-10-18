@@ -19,7 +19,6 @@ import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,14 +56,10 @@ public class CatalogService {
      * @param lowStockOnly keep only the references under the alert threshold
      */
     public List<ProductResponse> findProducts(String search, Long categoryId, boolean lowStockOnly) {
-        String needle = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         Set<Long> branch = categoryService.branchOf(categoryId);
-        return products.findAllWithCategory().stream()
-                .filter(product -> categoryId == null
-                        || (product.getCategory() != null
-                        && branch.contains(product.getCategory().getId())))
-                .filter(product -> !lowStockOnly || StockPolicy.isLowStock(product))
-                .filter(product -> needle.isEmpty() || matches(product, needle))
+        return products.findFiltered(categoryId == null, branch.isEmpty() ? Set.of(-1L) : branch,
+                        lowStockOnly, StockPolicy.LOW_STOCK_THRESHOLD, StockService.likePattern(search))
+                .stream()
                 .map(ProductResponse::of)
                 .toList();
     }
@@ -167,13 +162,4 @@ public class CatalogService {
                 .intValue();
     }
 
-    private static boolean matches(Product product, String needle) {
-        return contains(product.getName(), needle)
-                || contains(product.getBarcode(), needle)
-                || (product.getCategory() != null && contains(product.getCategory().getName(), needle));
-    }
-
-    private static boolean contains(String value, String needle) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(needle);
-    }
 }

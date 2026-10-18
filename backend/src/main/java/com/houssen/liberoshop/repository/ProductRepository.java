@@ -43,6 +43,29 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findAllWithCategory();
 
     /**
+     * The catalogue as the lists filter it, filtered by the database rather than loaded whole.
+     *
+     * @param anyRayon  true to ignore {@code rayons}
+     * @param rayons    the rayon picked and everything below it; never empty
+     * @param lowOnly   true to keep the references under their alert threshold
+     * @param threshold the threshold of a product that sets none
+     * @param needle    a {@code like} pattern on name, barcode or rayon name, or null for all
+     */
+    @Query("""
+            select p from Product p left join fetch p.category c
+            where (:anyRayon = true or c.id in :rayons)
+              and (:lowOnly = false or p.stockQuantity < coalesce(p.lowStockThreshold, :threshold))
+              and (:needle is null
+                   or lower(p.name) like :needle escape '\\'
+                   or lower(p.barcode) like :needle escape '\\'
+                   or lower(c.name) like :needle escape '\\')
+            order by p.name
+            """)
+    List<Product> findFiltered(@Param("anyRayon") boolean anyRayon, @Param("rayons") Collection<Long> rayons,
+                               @Param("lowOnly") boolean lowOnly, @Param("threshold") BigDecimal threshold,
+                               @Param("needle") String needle);
+
+    /**
      * The whole stock at its sale price and in base units, summed by the database -- what the
      * dashboards show at the top -- as {@code [value, units]}. Each product's value is rounded to
      * the cent before adding, as the lists show it, so the total matches their sum.

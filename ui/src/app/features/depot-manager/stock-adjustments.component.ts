@@ -4,8 +4,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { apiResource } from '../../core/api/api-resource';
 import { StockApi } from '../../core/api/stock.api';
-import { ADJUSTMENT_REASONS, AdjustmentReason, Product, StockAdjustment, adjustmentReasonLabel } from '../../core/models';
-import { MovementAction, adjustmentActions, countsAsLoss } from '../../core/stock/movement-actions';
+import {
+  ADJUSTMENT_REASONS,
+  AdjustmentReason,
+  AdjustmentSummary,
+  Product,
+  StockAdjustment,
+  adjustmentReasonLabel,
+} from '../../core/models';
+import { MovementAction, adjustmentActions } from '../../core/stock/movement-actions';
 import {
   formatAmount,
   formatQuantity,
@@ -51,9 +58,9 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
   ],
   template: `
     <div class="grid g3">
-      <app-kpi-card label="Corrections enregistrées" [value]="adjustments().length" />
-      <app-kpi-card label="Unités perdues" [value]="formatQuantity(lostUnits())" />
-      <app-kpi-card label="Pertes au prix d'achat" [value]="lostValue() | ariary" />
+      <app-kpi-card label="Corrections enregistrées" [value]="summary().count" />
+      <app-kpi-card label="Unités perdues" [value]="formatQuantity(summary().lostUnits)" />
+      <app-kpi-card label="Pertes au prix d'achat" [value]="summary().lostValue | ariary" />
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -239,7 +246,7 @@ export class StockAdjustmentsComponent {
   constructor() {
     // Taken back from the message: the lists show the movement cancelled.
     this.undo.undone$.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.adjustmentResource.reload();
+      this.reloadAdjustments();
       this.productResource.reload();
     });
   }
@@ -259,6 +266,16 @@ export class StockAdjustmentsComponent {
 
   protected readonly products = this.productResource.value;
   protected readonly adjustments = this.adjustmentResource.value;
+  /** Counted by the server over every correction: the list above holds only the latest. */
+  private readonly summaryResource = apiResource<AdjustmentSummary>({ count: 0, lostUnits: 0, lostValue: 0 }, () =>
+    this.api.adjustmentSummary(),
+  );
+  protected readonly summary = this.summaryResource.value;
+
+  private reloadAdjustments(): void {
+    this.adjustmentResource.reload();
+    this.summaryResource.reload();
+  }
 
   /** Falls back to the first product until one is picked, so the form is usable at once. */
   protected readonly selectedProductId = computed(
@@ -327,19 +344,6 @@ export class StockAdjustmentsComponent {
     };
   });
 
-  /** Losses only: what a count found in excess is not a loss paid back. */
-  protected readonly lostUnits = computed(() =>
-    roundQuantity(
-      this.adjustments().reduce((total, a) => total + (countsAsLoss(a) ? -a.quantity : 0), 0),
-    ),
-  );
-  protected readonly lostValue = computed(() =>
-    this.adjustments().reduce(
-      (total, a) => total + (countsAsLoss(a) && a.costValue !== null && a.costValue < 0 ? -a.costValue : 0),
-      0,
-    ),
-  );
-
   protected readonly formatQuantity = formatQuantity;
 
   protected reasonLabel(reason: AdjustmentReason): string {
@@ -365,7 +369,7 @@ export class StockAdjustmentsComponent {
       next: () => {
         this.busy.set(false);
         this.cancelling.set(null);
-        this.adjustmentResource.reload();
+        this.reloadAdjustments();
         this.productResource.reload();
         this.toasts.show(`Correction de « ${adjustment.product.name} » annulée ; le stock est corrigé.`);
       },
@@ -416,7 +420,7 @@ export class StockAdjustmentsComponent {
           this.quantity.set('');
           this.comment.set('');
           this.productResource.reload();
-          this.adjustmentResource.reload();
+          this.reloadAdjustments();
           this.undo.corrected(
             `Stock de ${adjustment.product.name} corrigé : ${this.signed(adjustment)} ` +
               `(${this.reasonLabel(adjustment.reason)}).`,

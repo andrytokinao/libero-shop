@@ -212,8 +212,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Factures chargées en entier.** Lues par période : sans dates, les 30 derniers jours
   et tout ce qui est encore ouvert ; sinon les dates choisies à l'écran.
   *Fait — voir `05-factures-par-periode.md`.*
-- [ ] **P3 — Approvisionnements, corrections et produits chargés en entier** (`StockService`,
+- [x] **P3 — Approvisionnements, corrections et produits chargés en entier** (`StockService`,
   `CatalogService`) : listes qui grossissent lentement.
+  *Fait — voir `69-listes-de-stock-bornees.html`.*
 - [x] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,
   listes chargées pour un simple `.size()`.
   *Fait — voir `60-totaux-par-la-base.html`.*

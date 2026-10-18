@@ -91,6 +91,15 @@ export interface StockAdjustment extends StockMovementBase {
 }
 
 /** Mirrors CreateStockAdjustmentRequest. */
+/** What every correction adds up to, counted by the server while the list holds the latest. */
+export interface AdjustmentSummary {
+  count: number;
+  /** Base units lost; undone losses and surpluses found by a count left out. */
+  lostUnits: number;
+  /** Those losses at the average purchase cost. */
+  lostValue: number;
+}
+
 export interface CreateStockAdjustmentRequest {
   productId: number;
   reason: AdjustmentReason;
