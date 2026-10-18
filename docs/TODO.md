@@ -165,7 +165,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P3 — Montants non bornés.** Une quantité ou un prix trop grand renvoie une erreur 500 ;
   l'import accepte un prix à 0.
   *Fait — voir `45-montants-bornes.html`.*
-- [ ] **P3 — Numéros de facture.** Uniques, mais avec des trous quand une vente échoue.
+- [x] **P3 — Numéros de facture.** Uniques, mais avec des trous quand une vente échoue.
+  *Fait — voir `63-numeros-de-facture-sans-trou.html`.*
 - [x] **P3 — Fuseau horaire.** « Aujourd'hui » dépend de l'horloge et du fuseau du PC serveur, et
   côté écran de celle du téléphone.
   *Fait — voir `62-fuseau-horaire-de-la-boutique.html`.*

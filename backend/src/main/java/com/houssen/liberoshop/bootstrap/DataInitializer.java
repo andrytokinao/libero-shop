@@ -68,12 +68,15 @@ public class DataInitializer implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final DemoDataProperties properties;
     private final BusinessCalendar calendar;
+    private final InvoiceNumbering invoiceNumbering;
 
     public DataInitializer(UserAppRepository users, CategoryRepository categories, ProductRepository products,
                            SupplierRepository suppliers, SaleRepository sales, InvoiceRepository invoices,
                            PaymentRepository payments, CashRemittanceRepository remittances,
                            StockMovementRepository movements, PasswordEncoder passwordEncoder,
-                           DemoDataProperties properties, BusinessCalendar calendar) {
+                           DemoDataProperties properties, BusinessCalendar calendar,
+                           InvoiceNumbering invoiceNumbering) {
+        this.invoiceNumbering = invoiceNumbering;
         this.users = users;
         this.categories = categories;
         this.products = products;
@@ -317,7 +320,7 @@ public class DataInitializer implements ApplicationRunner {
         Sale saved = sales.saveAndFlush(sale);
 
         Invoice invoice = invoices.save(Invoice.builder()
-                .invoiceNumber(InvoiceNumbering.forSale(saved.getId()))
+                .invoiceNumber(invoiceNumbering.next())
                 .invoiceDate(when)
                 .clientName(client)
                 .paymentStatus(paymentStatus)

@@ -62,11 +62,13 @@ public class SaleService {
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
     private final ShopSettingsService settings;
+    private final InvoiceNumbering invoiceNumbering;
 
     public SaleService(SaleRepository sales, InvoiceRepository invoices, ProductRepository products,
                        PaymentRepository payments, StockMovementRepository movements,
                        BusinessCalendar calendar, ApplicationEventPublisher events,
-                       ShopSettingsService settings) {
+                       ShopSettingsService settings, InvoiceNumbering invoiceNumbering) {
+        this.invoiceNumbering = invoiceNumbering;
         this.sales = sales;
         this.invoices = invoices;
         this.products = products;
@@ -142,7 +144,7 @@ public class SaleService {
         Sale savedSale = sales.saveAndFlush(sale);
 
         Invoice invoice = invoices.save(Invoice.builder()
-                .invoiceNumber(InvoiceNumbering.forSale(savedSale.getId()))
+                .invoiceNumber(invoiceNumbering.next())
                 .invoiceDate(now)
                 .clientName(clientNameOf(request))
                 .paymentStatus(status)
