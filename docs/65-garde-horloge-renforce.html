@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horloge reculée ou figée</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Horloge reculée ou figée : la licence vieillit quand même</h1>
+<p class="meta">18 octobre 2026 · branche <code>develop</code> · point « Garde anti-recul d'horloge fragile » de <code>docs/TODO.md</code> (§ licence, P2)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Pour qu'on ne puisse pas prolonger une licence en reculant la date de l'ordinateur, le logiciel retient la <strong>date la plus haute</strong> qu'il a vue. Cette date n'était gardée que dans <strong>un seul fichier</strong> : il suffisait de l'effacer.</li>
+    <li>Elle est maintenant gardée en <strong>trois endroits</strong> : le fichier, la <strong>base de données</strong> de la boutique et, sous Windows, le <strong>registre</strong>. La date la plus haute l'emporte, et les copies effacées ou retouchées sont refaites.</li>
+    <li>Déplacer le fichier par la configuration ne sert plus à rien : la base et le registre ne dépendent pas de ce chemin.</li>
+    <li>Une <strong>horloge figée</strong> est repérée tant que le serveur tourne : si 30 heures passent et que la date ne bouge pas, la licence compte quand même un jour de plus.</li>
+    <li>Si aucune copie ne peut être écrite, un avertissement le dit dans le journal du serveur, au lieu de se taire.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#limites">3. Ce qui reste possible</a></li>
+  <li><a href="#recap">4. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Une licence a une date de fin. Si quelqu'un recule la date de l'ordinateur, le logiciel pourrait croire que la
+  licence est encore valable. Pour l'éviter, il note la date la plus haute qu'il a vue et ne compte jamais en dessous.</p>
+<p>Mais cette date était écrite dans un seul fichier caché. Trois façons de s'en débarrasser :</p>
+<ul>
+  <li>effacer le fichier ;</li>
+  <li>changer, dans la configuration, l'endroit où il est écrit ;</li>
+  <li>rendre le dossier impossible à écrire : l'échec était silencieux.</li>
+</ul>
+<p>Il restait aussi l'horloge « figée » : remettre chaque matin la même date, avant la fin de la licence. La date haute
+  ne montait jamais, la licence n'expirait jamais.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 230" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trois copies de la date haute">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="ko" x="20" y="20" width="220" height="50" rx="8"/><text class="t" x="34" y="42">Fichier .license-state</text><text class="s" x="34" y="60">effacé</text>
+  <rect class="new" x="20" y="90" width="220" height="50" rx="8"/><text class="t" x="34" y="112">Base de la boutique</text><text class="s" x="34" y="130">10 juin 2026</text>
+  <rect class="new" x="20" y="160" width="220" height="50" rx="8"/><text class="t" x="34" y="182">Registre Windows</text><text class="s" x="34" y="200">10 juin 2026</text>
+  <rect class="box" x="320" y="80" width="230" height="70" rx="8"/><text class="t" x="334" y="105">La plus haute l'emporte</text><text class="s" x="334" y="125">horloge : 1er janvier → compte</text><text class="s" x="334" y="141">au 10 juin</text>
+  <rect class="new" x="620" y="80" width="220" height="70" rx="8"/><text class="t" x="634" y="105">Copies refaites</text><text class="s" x="634" y="125">le fichier revient,</text><text class="s" x="634" y="141">daté du 10 juin</text>
+  <path class="ln" d="M240,45 L318,100"/><path class="ln" d="M240,115 L318,115"/><path class="ln" d="M240,185 L318,130"/><path class="ln" d="M550,115 L618,115"/>
+</svg>
+<div class="caption">Figure 1 — Effacer une copie ne fait plus oublier la date : les autres la rendent.</div>
+</div>
+<p>Les trois copies portent la même date, signée pour ce poste : une copie retouchée à la main, ou venue d'un autre
+  ordinateur, est ignorée puis remplacée. La copie en base est une ligne de la petite table que la période d'essai
+  utilise déjà (<code>ls_install_marker</code>) ; la copie du registre est une valeur à côté de celle de l'essai.</p>
+
+<div class="figure">
+<svg viewBox="0 0 860 150" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Horloge figée">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+  </style>
+  <text class="t" x="20" y="22" style="font-weight:700">Horloge de l'ordinateur</text>
+  <rect class="ko" x="20" y="32" width="180" height="36" rx="8"/><text class="t" x="34" y="55">10 juin</text>
+  <rect class="ko" x="220" y="32" width="180" height="36" rx="8"/><text class="t" x="234" y="55">10 juin (30 h après)</text>
+  <rect class="ko" x="420" y="32" width="180" height="36" rx="8"/><text class="t" x="434" y="55">10 juin (4 jours après)</text>
+  <text class="t" x="20" y="98" style="font-weight:700">Date comptée pour la licence</text>
+  <rect class="new" x="20" y="108" width="180" height="36" rx="8"/><text class="t" x="34" y="131">10 juin</text>
+  <rect class="new" x="220" y="108" width="180" height="36" rx="8"/><text class="t" x="234" y="131">11 juin</text>
+  <rect class="new" x="420" y="108" width="180" height="36" rx="8"/><text class="t" x="434" y="131">14 juin</text>
+  <text class="s" x="630" y="55">le temps écoulé est mesuré</text>
+  <text class="s" x="630" y="72">par un compteur interne</text>
+  <text class="s" x="630" y="89">qu'on ne peut pas régler</text>
+</svg>
+<div class="caption">Figure 2 — Une date qui ne bouge pas alors que le temps passe ne retient plus la licence.</div>
+</div>
+<p>Le compteur interne avance avec le temps réel, quelle que soit la date affichée. La date gagnée est aussitôt
+  enregistrée dans les trois copies : un redémarrage ne la reprend pas.</p>
+
+<h2 id="limites">3. Ce qui reste possible</h2>
+<ul>
+  <li>Le compteur repart à zéro quand le serveur redémarre : une horloge figée <em>et</em> un serveur éteint chaque
+    soir perdent les heures de la journée en cours. Seule une vérification en ligne fermerait ce cas (voir le point
+    « Essai réinitialisable », qui demande une décision).</li>
+  <li>Effacer les trois copies <em>et</em> vider la base remet la date à zéro, mais vider la base efface aussi les
+    ventes et le stock. Les ventes enregistrées servent d'ailleurs déjà de témoin : la licence n'est jamais comptée
+    avant la dernière vente.</li>
+  <li>Le registre n'est utilisé que si l'installation est « à l'échelle du poste » (réglage
+    <code>liberoshop.license.trial.system-wide</code>, déjà verrouillé) ; les tests le désactivent pour ne pas
+    écrire dans le registre de la machine de développement.</li>
+</ul>
+
+<h2 id="recap">4. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/license/ClockGuard.java</code></td><td>date haute lue dans toutes les copies, la plus haute l'emporte, copies refaites ; plancher du temps écoulé ; avertissement si rien n'a pu être écrit</td></tr>
+<tr><td><code>backend/…/license/TrialRegistry.java</code></td><td>les emplacements (fichier, base, registre) acceptent un autre nom de ligne ou de valeur ; l'écriture dit si elle a réussi</td></tr>
+<tr><td><code>backend/…/license/LicenseService.java</code></td><td>le garde reçoit la base de données</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Fichier effacé : la base rend la date et le fichier est refait ; copie retouchée ou étrangère ignorée</td><td><code>ClockGuardTest</code></td></tr>
+<tr><td>Horloge figée : un jour compté par 24 h écoulées, gardé après redémarrage ; horloge juste : aucune avance</td><td><code>ClockGuardTest</code></td></tr>
+<tr><td>Aucune copie possible : protection tant que le serveur tourne</td><td><code>ClockGuardTest</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (669 tests).</p>
+</main>
+</body>
+</html>

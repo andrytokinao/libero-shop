@@ -76,7 +76,8 @@ public class LicenseService {
         this.clock = clock;
         this.fingerprint = fingerprint;
         this.clockGuard = new ClockGuard(properties.resolvedClockGuardPath(), verifier.trustAnchor(),
-                fingerprint, properties.clockGuard().enabled());
+                fingerprint, properties.clockGuard().enabled(), dataSource,
+                properties.trial().systemWide());
         this.witness = new BusinessDataWitness(dataSource);
         this.trialRegistry = new TrialRegistry(properties, verifier.trustAnchor(), fingerprint, dataSource, witness);
     }

@@ -496,8 +496,13 @@ class TrialRegistry {
         /** The stored record, or {@code null} when there is none. */
         String read();
 
-        /** Stores a record, creating whatever is needed. Silently gives up if it cannot. */
-        void write(String record);
+        /**
+         * Stores a record, creating whatever is needed. Never throws.
+         *
+         * @return whether the record was stored, so a caller that depends on it -- the clock
+         *         guard -- can say so when no copy at all could be kept
+         */
+        boolean write(String record);
 
         /**
          * Whether finding nothing here is worth reporting as tampering.
@@ -537,16 +542,18 @@ class TrialRegistry {
         }
 
         @Override
-        public void write(String record) {
+        public boolean write(String record) {
             try {
                 if (path.getParent() != null) {
                     Files.createDirectories(path.getParent());
                 }
                 Files.writeString(path, record, StandardCharsets.US_ASCII);
                 hide();
+                return true;
             } catch (IOException | RuntimeException e) {
                 // A read-only or protected directory (ProgramData often is): one copy fewer.
-                log.debug("Could not write the trial record at {}: {}", path, e.toString());
+                log.debug("Could not write the record at {}: {}", path, e.toString());
+                return false;
             }
         }
 
@@ -575,23 +582,35 @@ class TrialRegistry {
 
         /** Former product name, for the same reason as the file stores above. */
         private static final String KEY_PATH = "HKCU\\Software\\LibertyShop";
-        private static final String VALUE_NAME = "InstallMarker";
+        private static final String TRIAL_VALUE = "InstallMarker";
+
+        private final String valueName;
+
+        /** The trial's own value. */
+        WindowsRegistryStore() {
+            this(TRIAL_VALUE);
+        }
+
+        /** Another value under the same key, for the clock guard's copy. */
+        WindowsRegistryStore(String valueName) {
+            this.valueName = valueName;
+        }
 
         @Override
         public String describe() {
-            return KEY_PATH + '\\' + VALUE_NAME;
+            return KEY_PATH + '\\' + valueName;
         }
 
         @Override
         public String read() {
             String output = MachineFingerprint.runCommand(
-                    List.of("reg", "query", KEY_PATH, "/v", VALUE_NAME));
+                    List.of("reg", "query", KEY_PATH, "/v", valueName));
             if (output == null) {
                 return null;
             }
             for (String line : output.split("\\R")) {
                 int type = line.indexOf("REG_SZ");
-                if (line.contains(VALUE_NAME) && type >= 0) {
+                if (line.contains(valueName) && type >= 0) {
                     String value = line.substring(type + "REG_SZ".length()).trim();
                     return value.isEmpty() ? null : value;
                 }
@@ -600,9 +619,9 @@ class TrialRegistry {
         }
 
         @Override
-        public void write(String record) {
-            MachineFingerprint.runCommand(
-                    List.of("reg", "add", KEY_PATH, "/v", VALUE_NAME, "/t", "REG_SZ", "/d", record, "/f"));
+        public boolean write(String record) {
+            return MachineFingerprint.runCommand(
+                    List.of("reg", "add", KEY_PATH, "/v", valueName, "/t", "REG_SZ", "/d", record, "/f")) != null;
         }
     }
 
@@ -635,7 +654,7 @@ class TrialRegistry {
     static final class DatabaseTrialStore implements TrialStore {
 
         private static final String TABLE = "ls_install_marker";
-        private static final String MARKER_KEY = "trial.first-run";
+        private static final String TRIAL_KEY = "trial.first-run";
 
         private static final String CREATE = "CREATE TABLE IF NOT EXISTS " + TABLE + " ("
                 + "marker_key VARCHAR(64) NOT NULL PRIMARY KEY, "
@@ -645,14 +664,22 @@ class TrialRegistry {
         private static final String INSERT = "INSERT INTO " + TABLE + " (marker_key, marker_value) VALUES (?, ?)";
 
         private final Supplier<DataSource> dataSource;
+        private final String markerKey;
 
+        /** The trial's own row. */
         DatabaseTrialStore(Supplier<DataSource> dataSource) {
+            this(dataSource, TRIAL_KEY);
+        }
+
+        /** Another row of the same table, for the clock guard's copy. */
+        DatabaseTrialStore(Supplier<DataSource> dataSource, String markerKey) {
             this.dataSource = dataSource;
+            this.markerKey = markerKey;
         }
 
         @Override
         public String describe() {
-            return "database table " + TABLE;
+            return "database table " + TABLE + " (" + markerKey + ")";
         }
 
         /** Never suspicious: an empty database is the normal state of a fresh install. */
@@ -669,7 +696,7 @@ class TrialRegistry {
                 }
                 ensureTable(connection);
                 try (PreparedStatement statement = connection.prepareStatement(SELECT)) {
-                    statement.setString(1, MARKER_KEY);
+                    statement.setString(1, markerKey);
                     try (ResultSet rows = statement.executeQuery()) {
                         return rows.next() ? rows.getString(1) : null;
                     }
@@ -683,26 +710,28 @@ class TrialRegistry {
         }
 
         @Override
-        public void write(String record) {
+        public boolean write(String record) {
             try (Connection connection = open()) {
                 if (connection == null) {
-                    return;
+                    return false;
                 }
                 ensureTable(connection);
                 try (PreparedStatement update = connection.prepareStatement(UPDATE)) {
                     update.setString(1, record);
-                    update.setString(2, MARKER_KEY);
+                    update.setString(2, markerKey);
                     if (update.executeUpdate() > 0) {
-                        return;
+                        return true;
                     }
                 }
                 try (PreparedStatement insert = connection.prepareStatement(INSERT)) {
-                    insert.setString(1, MARKER_KEY);
+                    insert.setString(1, markerKey);
                     insert.setString(2, record);
                     insert.executeUpdate();
+                    return true;
                 }
             } catch (SQLException | RuntimeException e) {
-                log.debug("Could not write the trial record to the database: {}", e.toString());
+                log.debug("Could not write {} to the database: {}", markerKey, e.toString());
+                return false;
             }
         }
 

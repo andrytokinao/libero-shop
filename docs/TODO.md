@@ -132,9 +132,10 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 - [ ] **P2 — Essai réinitialisable.** Une base neuve, trois fichiers et une clé de registre
   supprimés redonnent 40 jours. Seule une activation en ligne le ferme.
-- [ ] **P2 — Garde anti-recul d'horloge fragile.** État dans un seul fichier, échecs d'écriture
+- [x] **P2 — Garde anti-recul d'horloge fragile.** État dans un seul fichier, échecs d'écriture
   silencieux, chemin non verrouillé : une horloge figée avant l'échéance n'expire jamais.
   *Piste :* dupliquer la date haute en base et dans le registre.
+  *Fait — voir `65-garde-horloge-renforce.html`.*
 - [ ] **P2 — Contournement possible du garde de propriétés (à vérifier).** Un dossier ajouté au
   classpath avec `liberoshop.license.enabled=false` pourrait être pris pour le fichier livré.
   *Piste :* compiler les interrupteurs dans le build de production.
