@@ -646,8 +646,8 @@ class TrialRegistry {
      * browses; plain JDBC against a table this class owns keeps it independent of whatever
      * the rest of the application does with its mappings.
      *
-     * <p>Every statement is portable across the three engines on the classpath (H2, MySQL,
-     * PostgreSQL): {@code CREATE TABLE IF NOT EXISTS} is understood by all of them, and the
+     * <p>Every statement is kept portable (H2 today; MySQL and PostgreSQL alike, should another
+     * engine ever be supported): {@code CREATE TABLE IF NOT EXISTS} is understood by all, and the
      * write is an {@code UPDATE} followed by an {@code INSERT} when nothing was updated,
      * rather than a dialect-specific upsert.
      */

@@ -230,8 +230,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P2 — Schéma en `ddl-auto=update`.** Les contraintes et colonnes existantes ne sont jamais
   mises à jour ; chaque évolution demande une migration écrite à la main (cinq à ce jour).
   *Piste :* Flyway.
-- [ ] **P2 — MySQL/PostgreSQL non testés.** Les migrations utilisent la syntaxe H2 et la
+- [x] **P2 — MySQL/PostgreSQL non testés.** Les migrations utilisent la syntaxe H2 et la
   sauvegarde ne fonctionne que sur H2. Retirer les deux pilotes ou les tester.
+  *Fait — voir `68-h2-seule-base.html`.*
 - [x] **P2 — Les tests n'utilisent pas la configuration de production (à vérifier).** H2 en
   mémoire, jamais le fichier ni `ddl-auto=update`.
   *Fait — voir `67-tests-avec-la-configuration-de-production.html`.*

@@ -92,16 +92,9 @@
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- H2 only. The MySQL and PostgreSQL drivers were removed: the startup migrations
+             use H2 syntax and the backup engine copies H2 files, so neither engine ever
+             worked end to end, and nothing tested them. Adding one back means porting both. -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
