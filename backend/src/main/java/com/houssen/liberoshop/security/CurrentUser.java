@@ -3,12 +3,15 @@ package com.houssen.liberoshop.security;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.UserAppRepository;
+import com.houssen.liberoshop.service.ActingUser;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /**
  * Resolves the authenticated {@link UserApp} for the services.
@@ -23,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * below is kept for the callers that do not come through it.
  */
 @Component
-public class CurrentUser {
+public class CurrentUser implements ActingUser {
 
     private final UserAppRepository users;
 
@@ -46,6 +49,17 @@ public class CurrentUser {
             throw new AuthenticationCredentialsNotFoundException("Ce compte a ete desactive.");
         }
         return user;
+    }
+
+    /** The account signed in for this request, if any: what the catalogue journal records. */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserApp> current() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt token)) {
+            return Optional.empty();
+        }
+        return users.findById(JwtService.userIdOf(token));
     }
 
     public boolean hasRole(RoleApp role) {

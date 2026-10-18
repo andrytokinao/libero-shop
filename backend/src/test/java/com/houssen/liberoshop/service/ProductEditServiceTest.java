@@ -61,6 +61,8 @@ class ProductEditServiceTest {
     private ApplicationEventPublisher events;
     @Mock
     private UnitModelRepository unitModels;
+    @Mock
+    private CatalogJournal journal;
 
     private ProductEditService service;
     private Product rice;
@@ -69,7 +71,8 @@ class ProductEditServiceTest {
     void setUp() {
         service = new ProductEditService(products, packagings, categories, movements,
                 new PackagingRules(products, packagings), new BusinessCalendar(Clock.systemDefaultZone()), events,
-                new UnitModelApplication(unitModels, packagings, new PackagingRules(products, packagings)));
+                new UnitModelApplication(unitModels, packagings, new PackagingRules(products, packagings)),
+                journal);
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 

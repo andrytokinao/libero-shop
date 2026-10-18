@@ -1,11 +1,12 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { CatalogApi } from '../../core/api/catalog.api';
 import { CostingApi } from '../../core/api/costing.api';
 import { StockApi } from '../../core/api/stock.api';
 import { actionRows, recentReceipts } from '../../core/catalog/product-overview';
 import { ProductMenuId, productMenu, requestFor } from '../../core/catalog/product-menu';
 import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
-import { Product, ProductCost, ProductMovement } from '../../core/models';
+import { CatalogChange, Product, ProductCost, ProductMovement } from '../../core/models';
 import { formatAmount, stockLabel } from '../../core/sale/sale-unit';
 import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 import { AriaryPipe } from '../pipes/ariary.pipe';
@@ -109,6 +110,23 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
             <p class="muted po-line">Aucune entrée de stock pour l'instant.</p>
           }
 
+          <!-- Who changed the price, a unit, the name: the trace asked for when a figure surprises. -->
+          @if (changes().length) {
+            <h3 class="po-h">Dernières modifications</h3>
+            <ul class="po-changes">
+              @for (change of changes().slice(0, 5); track change.id) {
+                <li>
+                  <span class="muted">{{ change.changedAt | date: 'dd/MM/yy HH:mm' }}</span>
+                  <span>
+                    {{ change.what }} :
+                    <span class="muted">{{ change.before ?? '—' }}</span> → <strong>{{ change.after ?? '—' }}</strong>
+                  </span>
+                  <span class="muted">{{ change.changedBy ?? 'au démarrage' }}</span>
+                </li>
+              }
+            </ul>
+          }
+
           @for (row of rows(); track row.group) {
             <div class="po-actions" role="group" [attr.aria-label]="row.group">
               <span class="po-group muted">{{ row.group }}</span>
@@ -174,6 +192,21 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
       }
     }
 
+    .po-changes {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+
+      li {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        padding: 4px 0;
+        border-top: 1px solid var(--line);
+      }
+    }
+
     .po-actions {
       display: flex;
       flex-wrap: wrap;
@@ -192,6 +225,7 @@ export class ProductOverviewDialogComponent implements OnInit {
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly costing = inject(CostingApi);
   private readonly stockApi = inject(StockApi);
+  private readonly catalog = inject(CatalogApi);
   private readonly rights = inject(ProductRights);
 
   readonly product = input.required<Product>();
@@ -201,6 +235,8 @@ export class ProductOverviewDialogComponent implements OnInit {
 
   protected readonly cost = signal<ProductCost | null>(null);
   private readonly history = signal<ProductMovement[] | null>(null);
+  /** Who changed the sheet: the journal's latest lines. */
+  protected readonly changes = signal<CatalogChange[]>([]);
 
   protected readonly stock = computed(() => formatAmount(this.product().stockQuantity, this.product().unit));
   protected readonly inBestUnit = computed(() => stockLabel(this.product()));
@@ -212,6 +248,7 @@ export class ProductOverviewDialogComponent implements OnInit {
     const id = this.product().id;
     this.costing.productCost(id).subscribe((cost) => this.cost.set(cost));
     this.stockApi.productMovements(id, 0).subscribe((page) => this.history.set(page.items));
+    this.catalog.productChanges(id).subscribe((changes) => this.changes.set(changes));
   }
 
   protected amount(quantity: number): string {

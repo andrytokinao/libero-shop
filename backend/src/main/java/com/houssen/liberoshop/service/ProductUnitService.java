@@ -33,9 +33,12 @@ public class ProductUnitService {
     private final ProductPackagingRepository packagings;
     private final PackagingRules rules;
     private final UnitModelApplication modelApplication;
+    private final CatalogJournal journal;
 
     public ProductUnitService(ProductRepository products, ProductPackagingRepository packagings,
-                              PackagingRules rules, UnitModelApplication modelApplication) {
+                              PackagingRules rules, UnitModelApplication modelApplication,
+                              CatalogJournal journal) {
+        this.journal = journal;
         this.products = products;
         this.packagings = packagings;
         this.rules = rules;
@@ -57,6 +60,7 @@ public class ProductUnitService {
         if (unit != null) {
             rules.refuseBaseUnitTaken(product, unit);
         }
+        journal.record(product, "Unité de base", product.getUnit(), unit);
         product.setUnit(unit);
         return responseFor(product);
     }
@@ -68,6 +72,7 @@ public class ProductUnitService {
         ProductPackaging packaging = ProductPackaging.builder().product(product).build();
         rules.applyTo(request, packaging);
         packagings.save(packaging);
+        journal.record(product, "Unité ajoutée", null, describe(packaging));
         return responseFor(product);
     }
 
@@ -87,7 +92,9 @@ public class ProductUnitService {
     @Transactional
     public ProductUnitsResponse update(Long productId, Long packagingId, PackagingRequest request) {
         ProductPackaging packaging = requirePackaging(productId, packagingId);
+        String before = describe(packaging);
         rules.applyTo(request, packaging);
+        journal.record(packaging.getProduct(), "Unité " + packaging.getLabel(), before, describe(packaging));
         return responseFor(packaging.getProduct());
     }
 
@@ -110,12 +117,21 @@ public class ProductUnitService {
             product.setPurchaseUnit(null);
             products.flush();
         }
+        journal.record(product, "Unité retirée", describe(packaging), null);
         packagings.delete(packaging);
         packagings.flush();
         return responseFor(product);
     }
 
     // ------------------------------------------------------------------- internals
+
+    /** "sac : 50 kapoka, 42000 Ar, code 6111…" -- a unit as the journal keeps it. */
+    private static String describe(ProductPackaging packaging) {
+        String base = packaging.getProduct().getUnit() == null ? "" : " " + packaging.getProduct().getUnit();
+        return packaging.getLabel() + " : " + packaging.getFactor().stripTrailingZeros().toPlainString() + base
+                + ", " + packaging.getPrice().stripTrailingZeros().toPlainString() + " Ar"
+                + (packaging.getBarcode() == null ? "" : ", code " + packaging.getBarcode());
+    }
 
     private ProductUnitsResponse responseFor(Product product) {
         return ProductUnitsResponse.of(product,

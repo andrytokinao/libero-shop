@@ -37,6 +37,17 @@ export interface Product {
   packagings?: Packaging[];
 }
 
+/** One change to a product's sheet — mirrors CatalogChangeResponse. */
+export interface CatalogChange {
+  id: number;
+  changedAt: string;
+  /** Who made it; null for a change no one signed in for (an import at start-up). */
+  changedBy: string | null;
+  what: string;
+  before: string | null;
+  after: string | null;
+}
+
 /** One page of a browse — mirrors ProductPageResponse. */
 export interface ProductPage {
   items: Product[];

@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { EXPECTED_STATUSES } from '../interceptors/error.interceptor';
 import { API_BASE_URL } from './api.config';
 import {
+  CatalogChange,
   CatalogExplore,
   CatalogPage,
   CategoryNode,
@@ -187,6 +188,11 @@ export class CatalogApi {
   /** One sale price typed in the "Prix et unités" table; null `packagingId` for the base unit. */
   changeSalePrice(productId: number, packagingId: number | null, price: number): Observable<ProductUnits> {
     return this.http.put<ProductUnits>(`${API_BASE_URL}/products/${productId}/sale-price`, { packagingId, price });
+  }
+
+  /** Who changed this product's sheet, what and when: the latest changes, newest first. */
+  productChanges(productId: number): Observable<CatalogChange[]> {
+    return this.http.get<CatalogChange[]>(`${API_BASE_URL}/products/${productId}/changes`);
   }
 
   /** The product's own alert threshold; null gives it back the shop's common one. */

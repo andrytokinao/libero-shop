@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -67,7 +68,7 @@ class ProductUnitServiceTest {
     void setUp() {
         PackagingRules rules = new PackagingRules(products, packagings);
         service = new ProductUnitService(products, packagings, rules,
-                new UnitModelApplication(unitModels, packagings, rules));
+                new UnitModelApplication(unitModels, packagings, rules), mock(CatalogJournal.class));
         rice = Product.builder().id(1L).name("Riz").price(new BigDecimal("900"))
                 .stockQuantity(qty(1750)).unit("kapoka").barcode("111").build();
 

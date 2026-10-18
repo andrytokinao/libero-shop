@@ -48,11 +48,14 @@ public class ProductEditService {
     private final BusinessCalendar calendar;
     private final ApplicationEventPublisher events;
     private final UnitModelApplication modelApplication;
+    private final CatalogJournal journal;
 
     public ProductEditService(ProductRepository products, ProductPackagingRepository packagings,
                               CategoryRepository categories, StockMovementRepository movements,
                               PackagingRules rules, BusinessCalendar calendar,
-                              ApplicationEventPublisher events, UnitModelApplication modelApplication) {
+                              ApplicationEventPublisher events, UnitModelApplication modelApplication,
+                              CatalogJournal journal) {
+        this.journal = journal;
         this.products = products;
         this.packagings = packagings;
         this.categories = categories;
@@ -139,11 +142,18 @@ public class ProductEditService {
         Category category = categoryOf(request.categoryId());
         ProductPackaging purchaseUnit = purchaseUnitOf(product, request.purchaseUnitId());
 
+        journal.record(product, "Nom", product.getName(), name);
+        journal.record(product, "Prix de vente", product.getPrice(), price);
+        journal.record(product, "Code-barres", product.getBarcode(), barcode);
+        journal.record(product, "Rayon", nameOf(product.getCategory()), nameOf(category));
+        BigDecimal costBefore = PurchaseCosting.costOfSale(product, factorOf(product.getPurchaseUnit()));
+        String purchaseUnitBefore = labelOf(product.getPurchaseUnit());
         product.setName(name);
         product.setPrice(price);
         product.setBarcode(barcode);
         product.setCategory(category);
         product.setPurchaseUnit(purchaseUnit);
+        journal.record(product, "Unité d'achat", purchaseUnitBefore, labelOf(purchaseUnit));
         if (request.purchaseCost() != null) {
             // The one place the average is set rather than computed: the operator knows what the
             // shelf cost when no receipt said it, or said it wrong. Typed per purchase unit -- a
@@ -151,6 +161,9 @@ public class ProductEditService {
             // like into any other.
             product.setAverageCost(PurchaseCosting.averageFrom(request.purchaseCost(),
                     purchaseUnit == null ? BigDecimal.ONE : purchaseUnit.getFactor()));
+            String unitName = labelOf(purchaseUnit) == null ? "unité" : labelOf(purchaseUnit);
+            journal.record(product, "Prix d'achat (" + unitName + ")",
+                    costBefore, PurchaseCosting.costOfSale(product, factorOf(purchaseUnit)));
         }
         // Not a stock movement, but the same message serves: it carries the products as they
         // now stand, which is how an open till learns the new price before the next sale.
@@ -171,12 +184,16 @@ public class ProductEditService {
         Product product = products.findByIdForUpdate(productId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
         if (packagingId == null) {
-            product.setPrice(requirePrice(price));
+            BigDecimal valid = requirePrice(price);
+            journal.record(product, "Prix de vente", product.getPrice(), valid);
+            product.setPrice(valid);
         } else {
             ProductPackaging packaging = packagings.findById(packagingId)
                     .filter(candidate -> candidate.getProduct().getId().equals(productId))
                     .orElseThrow(() -> ResourceNotFoundException.of("Unite", packagingId));
-            packaging.setPrice(PackagingRules.validPrice(price));
+            BigDecimal valid = PackagingRules.validPrice(price);
+            journal.record(product, "Prix de vente (" + packaging.getLabel() + ")", packaging.getPrice(), valid);
+            packaging.setPrice(valid);
         }
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
@@ -197,7 +214,9 @@ public class ProductEditService {
             throw new BusinessRuleException("ALERT_THRESHOLD_INVALID",
                     "Le seuil d'alerte ne peut pas etre negatif.");
         }
-        product.setLowStockThreshold(threshold == null ? null : Quantities.scaled(threshold));
+        BigDecimal scaled = threshold == null ? null : Quantities.scaled(threshold);
+        journal.record(product, "Seuil d'alerte", product.getLowStockThreshold(), scaled);
+        product.setLowStockThreshold(scaled);
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
     }
@@ -211,12 +230,25 @@ public class ProductEditService {
     public ProductUnitsResponse changeRetired(Long productId, boolean retired) {
         Product product = products.findByIdForUpdate(productId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", productId));
+        journal.record(product, "En vente", product.isRetired() ? "non" : "oui", retired ? "non" : "oui");
         product.setRetired(retired);
         events.publishEvent(new StockChangedEvent(List.of(product.getId())));
         return ProductUnitsResponse.of(product, packagings.findByProductIdOrderByFactorAsc(product.getId()));
     }
 
     // ------------------------------------------------------------------- internals
+
+    private static String nameOf(Category category) {
+        return category == null ? null : category.getName();
+    }
+
+    private static String labelOf(ProductPackaging packaging) {
+        return packaging == null ? null : packaging.getLabel();
+    }
+
+    private static BigDecimal factorOf(ProductPackaging packaging) {
+        return packaging == null ? BigDecimal.ONE : packaging.getFactor();
+    }
 
     private static String requireName(String typed) {
         String name = PackagingRules.squeeze(typed);
