@@ -280,8 +280,24 @@ describe('AppComponent', () => {
   });
 
   afterEach(() => {
+    // Signed in, the shell asks the shop's clock: answered with this device's own time, so the
+    // offset it sets stays nil for the specs that follow.
+    httpMock.match(`${API_BASE_URL}/server/time`).forEach((request) =>
+      request.flush({ now: localNow(), zone: 'UTC' }),
+    );
     httpMock.verify();
     // localStorage outlives the TestBed; a token left behind would decide the next test.
     TestBed.inject(TokenStorage).clear();
   });
 });
+
+/** This device's local date-time, as the server writes its own. */
+function localNow(): string {
+  const date = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
+}
+

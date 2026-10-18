@@ -166,8 +166,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   l'import accepte un prix à 0.
   *Fait — voir `45-montants-bornes.html`.*
 - [ ] **P3 — Numéros de facture.** Uniques, mais avec des trous quand une vente échoue.
-- [ ] **P3 — Fuseau horaire.** « Aujourd'hui » dépend de l'horloge et du fuseau du PC serveur, et
+- [x] **P3 — Fuseau horaire.** « Aujourd'hui » dépend de l'horloge et du fuseau du PC serveur, et
   côté écran de celle du téléphone.
+  *Fait — voir `62-fuseau-horaire-de-la-boutique.html`.*
 
 ## 4. Fonctions métier manquantes
 

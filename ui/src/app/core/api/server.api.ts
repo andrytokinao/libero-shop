@@ -14,6 +14,11 @@ export class ServerApi {
     return this.http.get<ServerConnection>(`${API_BASE_URL}/server/connection`);
   }
 
+  /** The shop's date and time, which "today" is counted by on every screen. */
+  time(): Observable<{ now: string; zone: string }> {
+    return this.http.get<{ now: string; zone: string }>(`${API_BASE_URL}/server/time`);
+  }
+
   /** Public: the mobile pages this server carries, for the app to update itself. */
   mobileUpdate(): Observable<MobileUpdateInfo> {
     return this.http.get<MobileUpdateInfo>(`${API_BASE_URL}/mobile/update`);

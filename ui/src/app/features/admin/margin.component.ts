@@ -8,7 +8,7 @@ import { CostingApi } from '../../core/api/costing.api';
 import { ProductDialogRequest, ProductRights } from '../../core/catalog/product-rights';
 import { MarginReport, Product, StockValuation } from '../../core/models';
 import { ProductStore } from '../../core/store/product.store';
-import { isoDate } from '../../core/utils/date.util';
+import { isoDate, shopNow } from '../../core/utils/date.util';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { ProductMenuComponent } from '../../shared/components/product-menu.component';
@@ -24,7 +24,7 @@ interface Period {
 }
 
 function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
-  const today = new Date();
+  const today = shopNow();
   switch (preset) {
     case 'today':
       return { from: isoDate(today), to: isoDate(today) };

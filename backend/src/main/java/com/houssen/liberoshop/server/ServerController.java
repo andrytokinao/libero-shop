@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.server;
 
+import com.houssen.liberoshop.service.BusinessCalendar;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
@@ -31,9 +32,11 @@ public class ServerController {
     private final ServerAddresses addresses;
     private final MobileProperties mobile;
     private final String version;
+    private final BusinessCalendar calendar;
 
     public ServerController(ServerAddresses addresses, MobileProperties mobile,
-                            ObjectProvider<BuildProperties> build) {
+                            ObjectProvider<BuildProperties> build, BusinessCalendar calendar) {
+        this.calendar = calendar;
         this.addresses = addresses;
         this.mobile = mobile;
         BuildProperties properties = build.getIfAvailable();
@@ -45,6 +48,12 @@ public class ServerController {
     @GetMapping("/info")
     public ServerInfoResponse info() {
         return new ServerInfoResponse(APPLICATION, "Libero Shop", version);
+    }
+
+    /** The shop's date and time, which the screens count "today" by. For signed-in screens. */
+    @GetMapping("/time")
+    public ServerTimeResponse time() {
+        return new ServerTimeResponse(calendar.now(), calendar.zone().getId());
     }
 
     /**

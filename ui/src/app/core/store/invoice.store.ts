@@ -9,7 +9,7 @@ import {
   PayInvoiceRequest,
 } from '../models';
 import { AuthService } from '../services/auth.service';
-import { isoDate } from '../utils/date.util';
+import { isoDate, shopNow } from '../utils/date.util';
 import { EntityStore } from './entity-store';
 import {
   HISTORY_DAYS,
@@ -87,11 +87,11 @@ export class InvoiceStore extends EntityStore<Invoice> {
   }
 
   private context(): QueryContext {
-    const historyStart = new Date();
+    const historyStart = shopNow();
     historyStart.setDate(historyStart.getDate() - HISTORY_DAYS);
     return {
       userId: this.auth.currentUser()?.id ?? null,
-      today: isoDate(new Date()),
+      today: isoDate(shopNow()),
       historyStart: isoDate(historyStart),
     };
   }

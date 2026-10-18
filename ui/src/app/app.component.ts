@@ -19,6 +19,8 @@ import { OrderEvents } from './core/realtime/order-events.service';
 import { StockEvents } from './core/realtime/stock-events.service';
 import { AuthService } from './core/services/auth.service';
 import { SessionKeeper } from './core/services/session-keeper.service';
+import { ServerApi } from './core/api/server.api';
+import { setShopClock } from './core/utils/date.util';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { ThemeService } from './core/services/theme.service';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
@@ -128,6 +130,17 @@ export class AppComponent {
     this.liveUpdate.start();
     // A session in use is prolonged before it ends; an idle one warns first.
     this.session.start(inject(DestroyRef));
+
+    // "Today" is the shop's: once signed in, the dates every screen asks for follow the
+    // server's clock, not a phone set to the wrong day or zone.
+    const serverApi = inject(ServerApi);
+    effect(() => {
+      if (this.auth.isAuthenticated()) {
+        untracked(() =>
+          serverApi.time().subscribe({ next: (time) => setShopClock(time.now), error: () => undefined }),
+        );
+      }
+    });
     effect(() => {
       if (this.server.serverUrl() !== null) {
         untracked(() => void this.liveUpdate.check());
