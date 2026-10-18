@@ -55,21 +55,30 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("""
             select p from Payment p
               join fetch p.invoice i
-            where p.collectedBy.id = :collectorId and p.paymentDate >= :from and p.paymentDate < :to
-            order by p.paymentDate desc
-            """)
-    List<Payment> findByCollectorAndPeriod(@Param("collectorId") Long collectorId,
-                                           @Param("from") LocalDateTime from,
-                                           @Param("to") LocalDateTime to);
-
-    @Query("""
-            select p from Payment p
-              join fetch p.invoice i
               join fetch i.sale
             where p.cashRemittance.id = :remittanceId
             order by p.paymentDate
             """)
     List<Payment> findByCashRemittanceId(@Param("remittanceId") Long remittanceId);
+
+    /** The orders of several slips at once: a list of slips reads them in one query, not one per slip. */
+    @Query("""
+            select p from Payment p
+              join fetch p.invoice i
+              join fetch i.sale
+            where p.cashRemittance.id in :remittanceIds
+            order by p.paymentDate
+            """)
+    List<Payment> findByCashRemittanceIdIn(@Param("remittanceIds") Collection<Long> remittanceIds);
+
+    /** What each account collected over a window, as {@code [collectorId, count, amount]}. */
+    @Query("""
+            select p.collectedBy.id, count(p), coalesce(sum(p.amount), 0)
+            from Payment p
+            where p.paymentDate >= :from and p.paymentDate < :to
+            group by p.collectedBy.id
+            """)
+    List<Object[]> sumCollectedByCollector(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     /**
      * The cash of these orders that is not in the till yet -- still in someone's hand, or on a

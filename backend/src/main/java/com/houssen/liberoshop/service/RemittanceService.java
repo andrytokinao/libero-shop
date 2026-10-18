@@ -22,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The depot cash trail: what an agent holds, what they hand over, what the desk confirms.
@@ -71,9 +73,17 @@ public class RemittanceService {
         return payments.findUnremittedDepotCash().size();
     }
 
+    /** The slips, with their orders read in one query for all of them rather than one per slip. */
     public List<CashRemittanceResponse> search(RemittanceStatus status, Long submittedById) {
-        return remittances.search(status, submittedById).stream()
-                .map(this::toResponse)
+        List<CashRemittance> found = remittances.search(status, submittedById);
+        if (found.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, List<Payment>> bySlip = payments
+                .findByCashRemittanceIdIn(found.stream().map(CashRemittance::getId).toList()).stream()
+                .collect(Collectors.groupingBy(payment -> payment.getCashRemittance().getId()));
+        return found.stream()
+                .map(slip -> CashRemittanceResponse.of(slip, bySlip.getOrDefault(slip.getId(), List.of())))
                 .toList();
     }
 

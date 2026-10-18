@@ -3,7 +3,6 @@ package com.houssen.liberoshop.service;
 import com.houssen.liberoshop.entity.DeliveryStatus;
 import com.houssen.liberoshop.entity.PaymentMethod;
 import com.houssen.liberoshop.entity.PaymentStatus;
-import com.houssen.liberoshop.entity.Sale;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.PaymentRepository;
 import com.houssen.liberoshop.repository.SaleRepository;
@@ -21,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -174,11 +172,9 @@ public class DashboardService {
                 .toList();
     }
 
-    /** Sales recorded today, whatever their payment status. Used by the user activity list. */
-    public List<Sale> salesToday() {
-        LocalDateTime from = calendar.startOfToday();
-        LocalDateTime to = calendar.startOfTomorrow();
-        return sales.findBySaleDateBetweenOrderBySaleDateDesc(from, to);
+    /** How many sales each seller recorded today, whatever their payment status: {@code [sellerId, count]}. */
+    public List<Object[]> salesTodayBySeller() {
+        return sales.countBySellerBetween(calendar.startOfToday(), calendar.startOfTomorrow());
     }
 
     private static BigDecimal totalOf(List<InvoiceResponse> list) {

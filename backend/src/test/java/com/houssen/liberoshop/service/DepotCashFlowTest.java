@@ -46,6 +46,8 @@ class DepotCashFlowTest {
     private UserAppRepository users;
     @Autowired
     private ProductRepository products;
+    @Autowired
+    private UserAccountService accounts;
 
     private UserApp account(RoleApp... roles) {
         String handle = "u" + UUID.randomUUID().toString().substring(0, 8);
@@ -156,5 +158,34 @@ class DepotCashFlowTest {
         assertThrows(BusinessRuleException.class, () -> saleService.checkout(new CreateSaleRequest("Client",
                 PaymentStatus.COLLECTED, PaymentMethod.CASH,
                 List.of(new CreateSaleRequest.Line(product.getId(), qty(1)))), cashier));
+    }
+
+    @Test
+    @DisplayName("slips and the users' day, read in grouped queries, still say who did what")
+    void listsReadInGroupedQueriesStayRight() {
+        UserApp cashier = account(RoleApp.CASHIER);
+        UserApp storekeeper = account(RoleApp.DEPOT_AGENT);
+        InvoiceResponse first = unpaidSale(cashier, "3000");
+        InvoiceResponse second = unpaidSale(cashier, "5000");
+        invoiceService.deliver(first.id(), storekeeper);
+        invoiceService.deliver(second.id(), storekeeper);
+        CashRemittanceResponse slip = remittanceService.submit(storekeeper, List.of(first.id()));
+        CashRemittanceResponse other = remittanceService.submit(storekeeper, List.of(second.id()));
+
+        List<CashRemittanceResponse> slips = remittanceService.search(null, storekeeper.getId());
+        assertEquals(2, slips.size());
+        assertEquals(first.invoiceNumber(), slips.stream().filter(r -> r.id().equals(slip.id()))
+                .findFirst().orElseThrow().invoices().getFirst().invoiceNumber());
+        assertEquals(second.invoiceNumber(), slips.stream().filter(r -> r.id().equals(other.id()))
+                .findFirst().orElseThrow().invoices().getFirst().invoiceNumber());
+
+        var day = accounts.findActivity().stream()
+                .filter(row -> row.user().id().equals(storekeeper.getId())).findFirst().orElseThrow();
+        assertEquals(2, day.deliveriesToday());
+        assertEquals(0, new BigDecimal("8000").compareTo(day.collectedToday()));
+        assertEquals(2, day.remittances());
+        var sold = accounts.findActivity().stream()
+                .filter(row -> row.user().id().equals(cashier.getId())).findFirst().orElseThrow();
+        assertEquals(2, sold.salesToday());
     }
 }

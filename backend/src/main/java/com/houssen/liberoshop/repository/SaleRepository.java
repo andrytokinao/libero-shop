@@ -12,7 +12,10 @@ import java.util.List;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
-    List<Sale> findBySaleDateBetweenOrderBySaleDateDesc(LocalDateTime from, LocalDateTime to);
+    /** How many sales each seller recorded over a window, as {@code [sellerId, count]}. */
+    @Query("select s.seller.id, count(s) from Sale s where s.saleDate >= :from and s.saleDate < :to"
+            + " group by s.seller.id")
+    List<Object[]> countBySellerBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     /** Total of the sales of one payment status over a window. */
     @Query("""

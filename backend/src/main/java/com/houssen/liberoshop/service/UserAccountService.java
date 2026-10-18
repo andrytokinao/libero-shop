@@ -1,6 +1,5 @@
 package com.houssen.liberoshop.service;
 
-import com.houssen.liberoshop.entity.Payment;
 import com.houssen.liberoshop.entity.RoleApp;
 import com.houssen.liberoshop.entity.UserApp;
 import com.houssen.liberoshop.repository.CashRemittanceRepository;
@@ -21,11 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * The accounts of the installation: who exists, what each of them may do, and what they did
@@ -90,26 +89,41 @@ public class UserAccountService {
         return users.findByRoleOrderByFullNameAsc(role).stream().map(UserResponse::of).toList();
     }
 
+    /**
+     * Each account's day, in four grouped queries whatever the number of accounts -- not two
+     * queries per account, as the list of users grows.
+     */
     public List<UserActivityResponse> findActivity() {
-        Map<Long, Long> salesPerSeller = dashboardService.salesToday().stream()
-                .collect(Collectors.groupingBy(sale -> sale.getSeller().getId(), Collectors.counting()));
+        Map<Long, Long> salesPerSeller = countsById(dashboardService.salesTodayBySeller());
+        Map<Long, Object[]> collectedPerUser = new HashMap<>();
+        for (Object[] row : payments.sumCollectedByCollector(calendar.startOfToday(), calendar.startOfTomorrow())) {
+            collectedPerUser.put((Long) row[0], row);
+        }
+        Map<Long, Long> slipsPerUser = countsById(remittances.countBySubmitter());
 
         return users.findAllByOrderByFullNameAsc().stream()
                 .map(user -> {
-                    List<Payment> collectedToday = payments.findByCollectorAndPeriod(
-                            user.getId(), calendar.startOfToday(), calendar.startOfTomorrow());
+                    Object[] collected = collectedPerUser.get(user.getId());
+                    long collectedCount = collected == null ? 0 : ((Number) collected[1]).longValue();
+                    BigDecimal collectedAmount = collected == null ? BigDecimal.ZERO : (BigDecimal) collected[2];
                     return new UserActivityResponse(
                             UserResponse.of(user),
                             salesPerSeller.getOrDefault(user.getId(), 0L),
-                            collectedToday.stream().map(Payment::getAmount)
-                                    .reduce(BigDecimal.ZERO, BigDecimal::add),
+                            collectedAmount,
                             // Cash taken at hand-over is what a depot agent's day amounts to.
                             // Counted for anyone who holds the role, including the owner of a
                             // small grocery who also sells at the desk.
-                            user.hasRole(RoleApp.DEPOT_AGENT) ? collectedToday.size() : 0,
-                            remittances.countBySubmittedById(user.getId()));
+                            user.hasRole(RoleApp.DEPOT_AGENT) ? collectedCount : 0,
+                            slipsPerUser.getOrDefault(user.getId(), 0L));
                 })
                 .toList();
+    }
+
+    /** {@code [id, count]} rows as a map. */
+    private static Map<Long, Long> countsById(List<Object[]> rows) {
+        Map<Long, Long> counts = new HashMap<>();
+        rows.forEach(row -> counts.put((Long) row[0], ((Number) row[1]).longValue()));
+        return counts;
     }
 
     // ----------------------------------------------------------------- write side

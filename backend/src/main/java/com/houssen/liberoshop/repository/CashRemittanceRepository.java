@@ -35,4 +35,8 @@ public interface CashRemittanceRepository extends JpaRepository<CashRemittance, 
                                     @Param("to") LocalDateTime to);
 
     long countBySubmittedById(Long submittedById);
+
+    /** How many slips each account has brought, as {@code [submittedById, count]}. */
+    @Query("select r.submittedBy.id, count(r) from CashRemittance r group by r.submittedBy.id")
+    List<Object[]> countBySubmitter();
 }
