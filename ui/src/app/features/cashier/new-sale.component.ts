@@ -19,6 +19,7 @@ import { followStock } from '../../core/sale/follow-stock';
 import { HeldSale, HeldSales } from '../../core/sale/held-sales';
 import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
+import { keepCartDraft } from '../../core/sale/cart-draft';
 import { SaleReference } from '../../core/sale/sale-reference';
 import { ShortcutMap } from '../../core/sale/shortcuts';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
@@ -608,6 +609,8 @@ export class NewSaleComponent {
   constructor() {
     // Another till selling the same article turns the line short here, before the sale is sent.
     followStock(this.cart);
+    // A reload, a click on the menu or an expired session gives the basket back.
+    keepCartDraft('caisse', this.cart, this.clientName);
     afterNextRender(() => this.focusProductField());
   }
 

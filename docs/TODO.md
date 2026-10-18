@@ -234,8 +234,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 ## 7. Interface et caisse
 
-- [ ] **P2 — Le panier en cours n'existe qu'en mémoire.** Un rechargement, un clic de menu ou une
+- [x] **P2 — Le panier en cours n'existe qu'en mémoire.** Un rechargement, un clic de menu ou une
   session expirée le perd (`new-sale.component.ts`).
+  *Fait — voir `58-panier-garde.html`.*
 - [x] **P2 — Une coupure réseau au démarrage déconnecte l'utilisateur.** Seul un refus du
   serveur (401/403) efface la session ; sans réponse, elle est gardée et la page de connexion
   réessaie toute seule. *Fait — voir `25-session-gardee-quand-le-serveur-ne-repond-pas.md`.*

@@ -19,6 +19,7 @@ import { ProductEntry } from '../../core/sale/product-entry';
 import { ProductFinder } from '../../core/sale/product-finder';
 import { SaleReference } from '../../core/sale/sale-reference';
 import { stockShortagesOf } from '../../core/sale/stock-shortage';
+import { keepCartDraft } from '../../core/sale/cart-draft';
 import { ToastService } from '../../core/services/toast.service';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
 import { CartLineQuantityComponent } from '../../shared/components/cart-line-quantity.component';
@@ -360,6 +361,8 @@ export class OrderTakingComponent {
   constructor() {
     // Another phone or till selling the same article turns the line short here, before sending.
     followStock(this.cart);
+    // A reload or an expired session gives the order back.
+    keepCartDraft('commande', this.cart, this.clientName);
   }
 
   /** @param paid the customer paid in cash on the spot */
