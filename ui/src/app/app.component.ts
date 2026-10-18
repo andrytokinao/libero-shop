@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   HostListener,
   computed,
   effect,
@@ -17,6 +18,7 @@ import { RoleApp } from './core/models';
 import { OrderEvents } from './core/realtime/order-events.service';
 import { StockEvents } from './core/realtime/stock-events.service';
 import { AuthService } from './core/services/auth.service';
+import { SessionKeeper } from './core/services/session-keeper.service';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
 import { ThemeService } from './core/services/theme.service';
 import { LicenseBannerComponent } from './shared/components/license-banner.component';
@@ -48,6 +50,7 @@ import { UserAvatarComponent } from './shared/components/user-avatar.component';
 })
 export class AppComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly session = inject(SessionKeeper);
   protected readonly server = inject(ServerConfig);
   protected readonly liveUpdate = inject(LiveUpdateService);
   private readonly router = inject(Router);
@@ -123,6 +126,8 @@ export class AppComponent {
     // On a phone: pages kept up to date from the server, checked again whenever the app comes
     // back to the foreground or is pointed at another server.
     this.liveUpdate.start();
+    // A session in use is prolonged before it ends; an idle one warns first.
+    this.session.start(inject(DestroyRef));
     effect(() => {
       if (this.server.serverUrl() !== null) {
         untracked(() => void this.liveUpdate.check());

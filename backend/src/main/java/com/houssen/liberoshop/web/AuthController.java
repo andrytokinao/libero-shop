@@ -7,6 +7,7 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.security.JwtService;
 import com.houssen.liberoshop.security.JwtService.IssuedToken;
 import com.houssen.liberoshop.security.LoginThrottle;
+import com.houssen.liberoshop.security.SessionRenewal;
 import com.houssen.liberoshop.security.SessionRevocation;
 import com.houssen.liberoshop.service.RolePolicy;
 import com.houssen.liberoshop.service.ShopSettingsService;
@@ -20,6 +21,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
@@ -55,11 +57,14 @@ public class AuthController {
     private final SessionRevocation sessionRevocation;
     private final UserAccountService accounts;
     private final ClientAddress clientAddress;
+    private final SessionRenewal renewal;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           CurrentUser currentUser, ShopSettingsService settingsService,
                           LoginThrottle loginThrottle, SessionRevocation sessionRevocation,
-                          UserAccountService accounts, ClientAddress clientAddress) {
+                          UserAccountService accounts, ClientAddress clientAddress,
+                          SessionRenewal renewal) {
+        this.renewal = renewal;
         this.clientAddress = clientAddress;
         this.accounts = accounts;
         this.loginThrottle = loginThrottle;
@@ -110,6 +115,23 @@ public class AuthController {
             return ResponseEntity.ok(SessionResponse.anonymous());
         }
         return ResponseEntity.ok(sessionOf(authentication));
+    }
+
+    /**
+     * Prolongs the session of the token presented, while it is still good: a new token, and the
+     * old one closed. Called by the screens of someone at work before the token runs out.
+     */
+    @PostMapping("/renew")
+    public LoginResponse renew() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt token)) {
+            throw new AuthenticationCredentialsNotFoundException("Session terminee : reconnectez-vous.");
+        }
+        IssuedToken renewed = renewal.renew(token);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(jwtService.authenticationOf(renewed.value()));
+        SecurityContextHolder.setContext(context);
+        return LoginResponse.of(renewed, sessionOf(context.getAuthentication()));
     }
 
     /**

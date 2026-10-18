@@ -240,8 +240,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [x] **P2 — Une coupure réseau au démarrage déconnecte l'utilisateur.** Seul un refus du
   serveur (401/403) efface la session ; sans réponse, elle est gardée et la page de connexion
   réessaie toute seule. *Fait — voir `25-session-gardee-quand-le-serveur-ne-repond-pas.md`.*
-- [ ] **P2 — Session qui expire sans prévenir** en plein service : ni jeton de rafraîchissement,
+- [x] **P2 — Session qui expire sans prévenir** en plein service : ni jeton de rafraîchissement,
   ni alerte.
+  *Fait — voir `59-session-prolongee.html`.*
 - [x] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on
   lit « Aucune facture… ».
   *Fait — voir `54-chargement-et-erreur-partout.html`.*

@@ -13,3 +13,18 @@
   text-align: center;
   text-decoration: none;
 }
+
+/* An idle session about to end: above the page, like the licence bar, with its one button. */
+.session-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--amber-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+}

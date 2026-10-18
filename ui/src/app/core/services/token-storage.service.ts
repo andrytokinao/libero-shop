@@ -28,21 +28,27 @@ const LEGACY_KEYS = ['libertyshop.access-token', 'libertyshop.access-token-expir
 @Injectable({ providedIn: 'root' })
 export class TokenStorage {
   private readonly current = signal<string | null>(restore());
+  private readonly expiry = signal<number | null>(this.current() ? Number(localStorage.getItem(EXPIRY_KEY)) : null);
 
   /** The token to send, or null when signed out. */
   readonly token = this.current.asReadonly();
+  /** When the token runs out, in epoch milliseconds — what the session keeper watches. */
+  readonly expiresAt = this.expiry.asReadonly();
 
   /** @param expiresIn seconds of validity, as returned by POST /api/auth/login */
   save(accessToken: string, expiresIn: number): void {
     localStorage.setItem(TOKEN_KEY, accessToken);
-    localStorage.setItem(EXPIRY_KEY, String(Date.now() + expiresIn * 1000));
+    const expiresAt = Date.now() + expiresIn * 1000;
+    localStorage.setItem(EXPIRY_KEY, String(expiresAt));
     this.current.set(accessToken);
+    this.expiry.set(expiresAt);
   }
 
   clear(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(EXPIRY_KEY);
     this.current.set(null);
+    this.expiry.set(null);
   }
 }
 

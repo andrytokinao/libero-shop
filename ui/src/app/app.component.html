@@ -120,6 +120,13 @@
       <!-- Above the title so an expiring licence is read before the day's figures are.
            Only appears from 15 days before expiry (see LicenseService.bannerVisible). -->
       <app-license-banner />
+      <!-- An idle session about to end says so, five minutes before: one tap keeps it. -->
+      @if (session.minutesLeft(); as minutes) {
+        <div class="session-bar" role="alert">
+          <span>Votre session se termine dans {{ minutes }} min.</span>
+          <button class="btn small" type="button" (click)="session.stay()">Rester connecté</button>
+        </div>
+      }
       <!-- The screen's name and nothing else: who is signed in and what is new are with the
            person in the sidebar, and the date is on the clock of every device. -->
       <div class="topbar">

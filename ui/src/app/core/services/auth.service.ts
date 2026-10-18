@@ -131,6 +131,20 @@ export class AuthService {
   }
 
   /**
+   * Prolongs the session while its token is still good: a new token takes its place, the old one
+   * is closed by the server. Silent on failure — the session simply ends at its time.
+   */
+  renew(): Observable<Session> {
+    return this.http
+      .post<LoginResponse>(`${API_BASE_URL}/auth/renew`, {}, { context: new HttpContext().set(SILENT_ERRORS, true) })
+      .pipe(
+        tap((response) => this.tokens.save(response.accessToken, response.expiresIn)),
+        map((response) => response.session),
+        tap((session) => this.session.set(session)),
+      );
+  }
+
+  /**
    * The signed-in person replaces their own password. The server closes every session of the
    * account, this one included, so the screen signs in again at once with the new password:
    * nothing is seen of it but the new session — which no longer asks for a change.

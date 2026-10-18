@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La session ne se coupe plus en plein service</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>La session ne se coupe plus en plein service</h1>
+<p class="meta">18 octobre 2026 · branche <code>develop</code> · point « Session qui expire sans prévenir » de <code>docs/TODO.md</code> (§ 7, P2)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Une connexion dure 12 heures. Au bout, la caisse renvoyait à la page de connexion, <strong>sans prévenir</strong>, parfois au milieu d'une vente.</li>
+    <li>Quand l'écran est utilisé, la session est maintenant <strong>prolongée d'elle-même</strong> dans sa dernière heure : le caissier au travail ne voit rien.</li>
+    <li>Quand l'écran est laissé sans usage, une barre prévient <strong>5 minutes avant la fin</strong> : « Votre session se termine dans 4 min. [Rester connecté] ».</li>
+    <li>Le serveur ne prolonge qu'une session encore valable, d'un compte encore actif, et ferme l'ancien jeton : il n'en reste jamais deux.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#fait">1. Ce qui a été fait</a></li>
+  <li><a href="#regle">2. La règle</a></li>
+  <li><a href="#recap">3. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="fait">1. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 180" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre de décision de la session">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .warn { fill:#fdf4e1; stroke:#9a6b00; stroke-width:1.5; }
+    .ln { stroke:#1f6f5c; stroke-width:1.5; fill:none; marker-end:url(#a); }
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6f5c"/></marker></defs>
+  <rect class="box" x="20" y="65" width="200" height="50" rx="8"/><text class="t" x="34" y="87">Toutes les 30 secondes</text><text class="s" x="34" y="104">reste-t-il moins d'une heure ?</text>
+  <rect class="new" x="300" y="15" width="260" height="50" rx="8"/><text class="t" x="314" y="37">Écran utilisé (15 dernières min)</text><text class="s" x="314" y="54">prolongée, sans un mot</text>
+  <rect class="warn" x="300" y="115" width="260" height="50" rx="8"/><text class="t" x="314" y="137">Écran sans usage, &lt; 5 min</text><text class="s" x="314" y="154">barre « Rester connecté »</text>
+  <rect class="box" x="640" y="115" width="200" height="50" rx="8"/><text class="t" x="654" y="137">Rien fait</text><text class="s" x="654" y="154">la session finit à son heure</text>
+  <path class="ln" d="M220,82 L298,42"/><path class="ln" d="M220,98 L298,138"/><path class="ln" d="M560,140 L638,140"/>
+</svg>
+<div class="caption">Figure 1 — Prolonger ce qui est utilisé, prévenir ce qui ne l'est pas.</div>
+</div>
+<p>Côté serveur, une nouvelle adresse <code>POST /api/auth/renew</code> remet un jeton neuf à qui présente un jeton
+  encore bon. Le compte est relu : désactivé ou au mot de passe changé, la demande est refusée comme toute autre. L'ancien
+  jeton est fermé aussitôt. Côté écran, un gardien de session (<code>SessionKeeper</code>) regarde l'heure de fin du jeton
+  et la dernière fois que l'écran a été touché.</p>
+<div class="note">Une session reste donc ouverte tant qu'on travaille. Elle se ferme toujours par « Se déconnecter »,
+  par un changement de mot de passe, par la désactivation du compte, ou après 12 heures sans usage.</div>
+
+<h2 id="regle">2. La règle</h2>
+<div class="table-wrap"><table>
+<tr><th>Situation</th><th>Ce qui se passe</th></tr>
+<tr><td>Plus d'une heure avant la fin</td><td>rien</td></tr>
+<tr><td>Dernière heure, écran touché dans les 15 dernières minutes</td><td>prolongée sans rien afficher</td></tr>
+<tr><td>5 dernières minutes, écran sans usage</td><td>barre « Votre session se termine dans … min. [Rester connecté] »</td></tr>
+<tr><td>Aucune réaction</td><td>fin de session, page de connexion (le panier en cours est gardé, compte rendu 58)</td></tr>
+</table></div>
+
+<h2 id="recap">3. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/…/security/SessionRenewal.java</code></td><td>nouveau : jeton neuf, ancien fermé, compte relu</td></tr>
+<tr><td><code>backend/…/web/AuthController.java</code></td><td><code>POST /api/auth/renew</code></td></tr>
+<tr><td><code>ui/…/core/services/session-keeper.service.ts</code></td><td>nouveau : prolonger ou prévenir</td></tr>
+<tr><td><code>ui/…/core/services/auth.service.ts</code>, <code>token-storage.service.ts</code></td><td><code>renew()</code> ; heure de fin du jeton</td></tr>
+<tr><td><code>ui/…/app.component.*</code></td><td>barre « Rester connecté »</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Session prolongée : nouveau jeton valable, l'ancien refusé</td><td rowspan="2"><code>SessionRenewalTest</code></td></tr>
+<tr><td>Sans jeton, ou compte désactivé : pas de prolongation</td></tr>
+<tr><td>Prolonger en usage, prévenir sans usage, ne rien faire loin de la fin</td><td><code>session-keeper.service.spec.ts</code></td></tr>
+</table></div>
+<p><strong>Tests :</strong> serveur au vert (653 tests), interface au vert (343 tests), construction complète sans erreur.
+  À essayer à l'écran : laisser une caisse ouverte sans la toucher pour voir la barre.</p>
+</main>
+</body>
+</html>
