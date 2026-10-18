@@ -136,9 +136,10 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   silencieux, chemin non verrouillé : une horloge figée avant l'échéance n'expire jamais.
   *Piste :* dupliquer la date haute en base et dans le registre.
   *Fait — voir `65-garde-horloge-renforce.html`.*
-- [ ] **P2 — Contournement possible du garde de propriétés (à vérifier).** Un dossier ajouté au
+- [x] **P2 — Contournement possible du garde de propriétés (à vérifier).** Un dossier ajouté au
   classpath avec `liberoshop.license.enabled=false` pourrait être pris pour le fichier livré.
   *Piste :* compiler les interrupteurs dans le build de production.
+  *Fait — voir `66-garde-proprietes-compile.html`.*
 - [x] **P3 — Documentation périmée.** `LICENSE-MODULE.md` cite un `tools/license-generator`
   supprimé, et des commentaires parlent encore de « 30 jours ».
   *Fait — voir `48-documentation-licence.html`.*

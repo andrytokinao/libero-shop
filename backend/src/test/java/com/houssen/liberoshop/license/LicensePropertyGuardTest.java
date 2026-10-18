@@ -5,11 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 
+import java.net.URI;
+import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The switches that disable enforcement must not be reachable with a command line flag.
@@ -121,6 +124,26 @@ class LicensePropertyGuardTest {
         LicensePropertyGuard.pin(environment);
 
         assertEquals("true", environment.getProperty(ENABLED));
+    }
+
+    @Test
+    @DisplayName("only the never-obfuscated classes of a build directory count as development")
+    void developmentOnlyFromUnobfuscatedBuildOutput() throws Exception {
+        String sourceName = "com.houssen.liberoshop.license.LicensePropertyGuard";
+        URL buildOutput = URI.create("file:/D:/shop/backend/target/classes/").toURL();
+
+        assertFalse(LicensePropertyGuard.isDelivered(sourceName, buildOutput));
+        assertTrue(LicensePropertyGuard.isDelivered("com.houssen.liberoshop.a.b", buildOutput),
+                "classes taken out of the delivered jar keep their renamed names, wherever they are put");
+        assertTrue(LicensePropertyGuard.isDelivered(sourceName,
+                URI.create("jar:file:/D:/shop/libero-shop.jar!/BOOT-INF/classes/").toURL()));
+        assertTrue(LicensePropertyGuard.isDelivered(sourceName, null));
+    }
+
+    @Test
+    @DisplayName("the tests themselves run as development")
+    void testsRunAsDevelopment() {
+        assertEquals("com.houssen.liberoshop.license.LicensePropertyGuard", LicensePropertyGuard.class.getName());
     }
 
     /**

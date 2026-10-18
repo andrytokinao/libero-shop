@@ -66,6 +66,13 @@ final class LicensePropertyGuard {
      */
     private static final String BUILD_OUTPUT = "/target/classes/";
 
+    /**
+     * This class's name as written in the sources. ProGuard renames the whole license
+     * package in the delivered jar and leaves string constants alone, so the name only
+     * matches in a build that was never obfuscated: the difference is compiled in.
+     */
+    private static final String SOURCE_NAME = "com.houssen.liberoshop.license.LicensePropertyGuard";
+
     /** Decided once: the classes do not move while the application runs. */
     private static final boolean DELIVERED = isDelivered();
 
@@ -84,13 +91,27 @@ final class LicensePropertyGuard {
     private static boolean isDelivered() {
         try {
             CodeSource source = LicensePropertyGuard.class.getProtectionDomain().getCodeSource();
-            URL location = source == null ? null : source.getLocation();
-            return location == null
-                    || !"file".equals(location.getProtocol())
-                    || !location.getPath().endsWith(BUILD_OUTPUT);
+            return isDelivered(LicensePropertyGuard.class.getName(), source == null ? null : source.getLocation());
         } catch (RuntimeException e) {
             return true;
         }
+    }
+
+    /**
+     * The location alone is not enough: the classes of the delivered jar can be extracted
+     * into a folder named {@code target/classes} and started from there, with an
+     * {@code application.properties} of one's own beside them. Those classes still carry
+     * their obfuscated names, though, and renaming them back means rebuilding the
+     * application -- which is the line this guard draws.
+     *
+     * @param className this class's name at run time
+     * @param location  where it was loaded from
+     */
+    static boolean isDelivered(String className, URL location) {
+        return !SOURCE_NAME.equals(className)
+                || location == null
+                || !"file".equals(location.getProtocol())
+                || !location.getPath().endsWith(BUILD_OUTPUT);
     }
 
     /**
