@@ -12,6 +12,7 @@ import com.houssen.liberoshop.web.dto.CashierDashboardResponse;
 import com.houssen.liberoshop.web.dto.DepotDashboardResponse;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import com.houssen.liberoshop.web.dto.PaymentMethodBreakdownResponse;
+import com.houssen.liberoshop.web.dto.PaymentResponse;
 import com.houssen.liberoshop.web.dto.RevenueBySellerResponse;
 import com.houssen.liberoshop.web.dto.RevenueReportResponse;
 import com.houssen.liberoshop.web.dto.StockDashboardResponse;
@@ -89,12 +90,14 @@ public class DashboardService {
                 invoiceService.search(null, null, DeliveryStatus.PENDING, false, null);
         List<InvoiceResponse> deliveredToday =
                 invoiceService.search(null, null, DeliveryStatus.DELIVERED, true, null);
+        // Read once: the amount and the count come from the same few rows.
+        List<PaymentResponse> cashInHand = remittanceService.cashInHand(agent);
 
         return new DepotDashboardResponse(
                 pending.size(),
                 pending.stream().filter(i -> i.paymentStatus() == PaymentStatus.UNPAID).count(),
-                remittanceService.cashInHandTotal(agent),
-                remittanceService.cashInHand(agent).size(),
+                cashInHand.stream().map(PaymentResponse::amount).reduce(BigDecimal.ZERO, BigDecimal::add),
+                cashInHand.size(),
                 invoiceService.countDelivered(),
                 deliveredToday.size(),
                 totalOf(deliveredToday),

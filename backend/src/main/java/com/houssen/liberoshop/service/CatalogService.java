@@ -132,14 +132,18 @@ public class CatalogService {
                 .toList();
     }
 
+    /** Summed by the database: a dashboard opened does not load the whole catalogue. */
     public BigDecimal totalStockValue() {
-        return products.findAll().stream()
-                .map(CatalogService::valueOf)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return toMoney(products.sumStock().getFirst()[0]);
     }
 
     public BigDecimal totalUnitsInStock() {
-        return products.findAll().stream().map(Product::getStockQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return Quantities.scaled(Quantities.orZero(products.sumStock().getFirst()[1]));
+    }
+
+    private static BigDecimal toMoney(Object sum) {
+        return (sum instanceof BigDecimal decimal ? decimal : new BigDecimal(String.valueOf(sum)))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public long countProducts() {
@@ -147,7 +151,7 @@ public class CatalogService {
     }
 
     public long countLowStock() {
-        return products.findLowStock(StockPolicy.LOW_STOCK_THRESHOLD).size();
+        return products.countLowStock(StockPolicy.LOW_STOCK_THRESHOLD);
     }
 
     static BigDecimal valueOf(Product product) {

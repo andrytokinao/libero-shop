@@ -42,6 +42,19 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("select p from Product p left join fetch p.category order by p.name")
     List<Product> findAllWithCategory();
 
+    /**
+     * The whole stock at its sale price and in base units, summed by the database -- what the
+     * dashboards show at the top -- as {@code [value, units]}. Each product's value is rounded to
+     * the cent before adding, as the lists show it, so the total matches their sum.
+     */
+    @Query("select coalesce(sum(round(p.price * p.stockQuantity, 2)), 0), coalesce(sum(p.stockQuantity), 0)"
+            + " from Product p")
+    List<Object[]> sumStock();
+
+    /** How many are in alert: counted by the database, not by loading them. */
+    @Query("select count(p) from Product p where p.stockQuantity < coalesce(p.lowStockThreshold, :threshold)")
+    long countLowStock(@Param("threshold") BigDecimal threshold);
+
     /** Below its own threshold, or below {@code threshold} for a product that has none. */
     @Query("select p from Product p left join fetch p.category"
             + " where p.stockQuantity < coalesce(p.lowStockThreshold, :threshold) order by p.stockQuantity")

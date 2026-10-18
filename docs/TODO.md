@@ -209,8 +209,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   *Fait — voir `05-factures-par-periode.md`.*
 - [ ] **P3 — Approvisionnements, corrections et produits chargés en entier** (`StockService`,
   `CatalogService`) : listes qui grossissent lentement.
-- [ ] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,
+- [x] **P2 — Statistiques calculées en mémoire.** `findAll()` deux fois par tableau de bord,
   listes chargées pour un simple `.size()`.
+  *Fait — voir `60-totaux-par-la-base.html`.*
 - [ ] **P2 — Requêtes en cascade (N+1)** sur les remises et l'activité des utilisateurs.
 - [x] **P3 — Index manquants** sur les colonnes de date (`sale_date`, `invoice_date`,
   `payment_date`, `movement_date`).
