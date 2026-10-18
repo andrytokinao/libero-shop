@@ -285,15 +285,20 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 ## 10. Dépôt git
 
-- [ ] **P3 — `backend/libero-shop.png`** : marqué « ajouté » dans git mais supprimé du disque.
+- [x] **P3 — `backend/libero-shop.png`** : marqué « ajouté » dans git mais supprimé du disque.
   À retirer de l'index ou à restaurer.
-- [ ] **P3 — Installation accidentelle à la racine** : `package.json`, `package-lock.json` et
+  *Fait — voir `56-depot-git-range.html`.*
+- [x] **P3 — Installation accidentelle à la racine** : `package.json`, `package-lock.json` et
   `node_modules/claude`.
-- [ ] **P3 — Restes** : `front.html` (ancienne maquette), captures de `scratch/screens`,
+  *Fait — voir `56-depot-git-range.html`.*
+- [x] **P3 — Restes** : `front.html` (ancienne maquette), captures de `scratch/screens`,
   `ui/src/app/release/`.
-- [ ] **P3 — Pas de README à la racine** ; celui de `ui` est le modèle Angular.
-- [ ] **P3 — `backend/.gitignore` ignore `/.mvn/`** alors que `mvnw` en a besoin (à vérifier sur
+  *Fait — voir `56-depot-git-range.html`.*
+- [x] **P3 — Pas de README à la racine** ; celui de `ui` est le modèle Angular.
+  *Fait — voir `56-depot-git-range.html`.*
+- [x] **P3 — `backend/.gitignore` ignore `/.mvn/`** alors que `mvnw` en a besoin (à vérifier sur
   un clone neuf).
+  *Fait — voir `56-depot-git-range.html`.*
 
 ---
 

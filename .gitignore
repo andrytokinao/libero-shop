@@ -13,6 +13,11 @@
 /ui/node/
 *.stackdump
 
+# An npm install run by mistake at the root: the UI has its own, under ui/
+/node_modules/
+/package.json
+/package-lock.json
+
 # Local experiments and verification artefacts
 /scratch/
 /backend/${project.build.directory}/

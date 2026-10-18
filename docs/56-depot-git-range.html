@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dépôt git rangé, et un README à la racine</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Dépôt git rangé, et un README à la racine</h1>
+<p class="meta">18 octobre 2026 · branche <code>develop</code> · section 10 « Dépôt git » de <code>docs/TODO.md</code> (cinq points P3)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Un <strong>clone neuf</strong> pouvait ne pas démarrer le serveur : le réglage de <code>mvnw</code> (<code>backend/.mvn/wrapper</code>) était ignoré par git. Il est maintenant dans le dépôt.</li>
+    <li>Une installation npm faite par erreur à la racine (<code>package.json</code>, <code>node_modules/claude</code>) est retirée, et ne peut plus y revenir.</li>
+    <li>Restes retirés du dépôt : l'ancienne maquette <code>front.html</code> et les 24 captures de <code>scratch/screens</code> (gardées sur le disque, <code>scratch/</code> étant déjà ignoré).</li>
+    <li>Un <strong>README</strong> à la racine dit ce que contient le dépôt et comment le lancer et le tester.</li>
+    <li><code>backend/libero-shop.png</code> : vérifié, il n'est plus ni dans git ni sur le disque ; rien à faire.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#fait">1. Ce qui a été fait</a></li>
+  <li><a href="#garde">2. Ce qui a été laissé</a></li>
+  <li><a href="#recap">3. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="fait">1. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 170" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Entrées et sorties du dépôt">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+  </style>
+  <text class="t" x="20" y="22" style="font-weight:700">Entre dans le dépôt</text>
+  <rect class="new" x="20" y="35" width="380" height="40" rx="8"/><text class="t" x="34" y="60">backend/.mvn/wrapper/maven-wrapper.properties</text>
+  <rect class="new" x="20" y="85" width="380" height="40" rx="8"/><text class="t" x="34" y="110">README.md (racine)</text>
+  <text class="t" x="460" y="22" style="font-weight:700">Sort du dépôt (gardé dans l'historique)</text>
+  <rect class="ko" x="460" y="35" width="380" height="40" rx="8"/><text class="t" x="474" y="60">package.json, package-lock.json, node_modules/claude</text>
+  <rect class="ko" x="460" y="85" width="380" height="40" rx="8"/><text class="t" x="474" y="110">front.html, scratch/screens (24 captures)</text>
+  <text class="s" x="20" y="155">Rien n'est perdu : un fichier retiré se retrouve dans l'historique de git.</text>
+</svg>
+<div class="caption">Figure 1 — Ce qui entre et ce qui sort du dépôt.</div>
+</div>
+<p>Les règles d'exclusion empêchent le retour des fichiers retirés : <code>/node_modules/</code>, <code>/package.json</code> et
+  <code>/package-lock.json</code> sont ignorés à la racine (l'interface garde les siens dans <code>ui/</code>). La ligne
+  <code>/.mvn/</code> de <code>backend/.gitignore</code>, qui cachait le réglage de <code>mvnw</code>, est retirée ; le
+  binaire <code>maven-wrapper.jar</code> reste ignoré, <code>mvnw</code> sait s'en passer.</p>
+
+<h2 id="garde">2. Ce qui a été laissé</h2>
+<p><code>ui/src/app/release/</code> contient un APK de 28 Mo construit le 10 octobre. Il n'est pas dans le dépôt (les
+  <code>.apk</code> sont ignorés) ; c'est peut-être la version distribuée aux téléphones. Il est laissé sur le disque :
+  à déplacer hors du code source (par exemple dans <code>downloads/</code>) quand vous le jugerez bon.</p>
+
+<h2 id="recap">3. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/.gitignore</code>, <code>backend/.mvn/wrapper/maven-wrapper.properties</code></td><td>réglage de <code>mvnw</code> suivi par git</td></tr>
+<tr><td><code>.gitignore</code></td><td>installation npm de la racine ignorée</td></tr>
+<tr><td><code>package.json</code>, <code>package-lock.json</code>, <code>node_modules/claude</code>, <code>front.html</code>, <code>scratch/screens/*</code></td><td>retirés du dépôt</td></tr>
+<tr><td><code>README.md</code></td><td>nouveau</td></tr>
+</table></div>
+<p><strong>Tests :</strong> aucun code ne change ; le serveur et l'interface restent au vert (dernières suites : 651 et 336 tests).</p>
+</main>
+</body>
+</html>

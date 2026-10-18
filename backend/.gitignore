@@ -31,7 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-/.mvn/
 
 ### License module ###
 # Installed license files and the clock-guard state are per-machine runtime data,
