@@ -87,6 +87,13 @@
             <version>5.4.1</version>
         </dependency>
 
+        <!-- Writes the invoice as a PDF, to print or to send to the customer. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.7</version>
+        </dependency>
+
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>

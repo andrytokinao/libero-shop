@@ -98,7 +98,13 @@ export class InvoiceApi {
     return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/cancel`, request);
   }
 
+  /** Marks the invoice printed. */
   print(invoiceId: number): Observable<Invoice> {
     return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${invoiceId}/print`, {});
+  }
+
+  /** The invoice as a PDF, laid out by the server. */
+  pdf(invoiceId: number): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
   }
 }

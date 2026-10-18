@@ -202,8 +202,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P3 — Fiche client et suivi des crédits (idée).** Solde dû par client, historique,
   plafond de crédit.
 - [ ] **P3 — Exports (idée).** Ventes, stock et caisse en Excel ou PDF pour le comptable.
-- [ ] **P3 — Génération du PDF de facture.** `Invoice.generatePdf()` existe mais n'est pas
+- [x] **P3 — Génération du PDF de facture.** `Invoice.generatePdf()` existe mais n'est pas
   implémentée.
+  *Fait — voir `70-facture-en-pdf.html`.*
 
 ## 5. Performance
 

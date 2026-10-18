@@ -82,6 +82,11 @@ export class InvoiceStore extends EntityStore<Invoice> {
     return this.api.print(invoiceId).pipe(this.thenRefresh(() => invoiceId));
   }
 
+  /** The invoice as a PDF; reading it changes nothing, so no list is refreshed. */
+  pdf(invoiceId: number): Observable<Blob> {
+    return this.api.pdf(invoiceId);
+  }
+
   private thenRefresh<R>(idOf: (result: R) => number): MonoTypeOperatorFunction<R> {
     return tap((result) => this.refresh([idOf(result)]));
   }

@@ -197,12 +197,7 @@ public class Invoice {
         cancelledAt = at;
     }
 
-    /** To be implemented: build a PDF representation of this invoice. */
-    public byte[] generatePdf() {
-        throw new UnsupportedOperationException("PDF generation not implemented yet");
-    }
-
-    /** To be implemented: send this invoice to a physical/network printer. */
+    /** Marks it printed; the PDF itself is laid out by {@code InvoicePdfService}. */
     public void print() {
         this.printed = true;
     }

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, throwError } from 'rxjs';
+import { Observable, map, switchMap, tap, throwError } from 'rxjs';
+import { showPdf } from '../utils/pdf.util';
 import { InvoiceStore } from '../store/invoice.store';
 import { describeSlip } from './remittance';
 import { RemittanceStore } from '../store/remittance.store';
@@ -75,10 +76,13 @@ export class InvoiceActionRunner {
       .pipe(map((slip) => `Versement V-${slip.id} confirmé — ${amount(slip.amount)} en caisse.`));
   }
 
+  /** Opens the invoice as a PDF to print or share, and marks it printed once it is shown. */
   print(invoice: Invoice): Observable<string> {
-    return this.invoices
-      .print(invoice.id)
-      .pipe(map((printed) => `Facture ${printed.invoiceNumber} envoyée à l'impression.`));
+    return this.invoices.pdf(invoice.id).pipe(
+      tap((pdf) => showPdf(pdf, `${invoice.invoiceNumber}.pdf`)),
+      switchMap(() => this.invoices.print(invoice.id)),
+      map((printed) => `Facture ${printed.invoiceNumber} ouverte en PDF, prête à imprimer.`),
+    );
   }
 
   cancel(invoice: Invoice, request: CancelInvoiceRequest): Observable<string> {
