@@ -239,8 +239,11 @@ export class UserAvatarComponent implements OnDestroy {
       .toUpperCase(),
   );
 
-  /** A hue of their own, from their id: the same person has the same colour on every screen. */
-  protected readonly colour = computed(() => `hsl(${(this.user().id * 47) % 360} 42% 38%)`);
+  /**
+   * A hue of their own, from their id: the same person has the same colour on every screen.
+   * Dark enough (32%) for the white initials to read on every hue, yellows included (4.9:1).
+   */
+  protected readonly colour = computed(() => `hsl(${(this.user().id * 47) % 360} 42% 32%)`);
 
   private readonly photo = computed(() => {
     const { id, photoVersion } = this.user();

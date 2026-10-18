@@ -22,6 +22,8 @@
   --muted-bg: #eeeae7;
   /* The logo's red-orange, toned down to a terracotta that can carry a whole screen. */
   --brand: #a4472a;
+  /* The brand as a text colour (links, active items): readable on every surface of the theme. */
+  --brand-ink: #a4472a;
   /* A dark terracotta for text and accents on light surfaces — never a background: see --chrome-bg. */
   --brand-dark: #6e2817;
   --brand-soft: #f7e9e3;
@@ -30,7 +32,7 @@
   /* "Done, paid, online": a state, not the brand — it stays green whatever the brand is. */
   --green: #22684a;
   --green-soft: #e4f0e8;
-  --amber: #a8730c;
+  --amber: #8a5e06;
   --amber-soft: #fbeed7;
   /* A cold crimson, so an error never reads as the warm brand. */
   --red: #b4233c;
@@ -60,6 +62,8 @@
   --muted-bg: #2e2623;
   /* Lighter than in the light theme, so a brand button still reads on a dark page. */
   --brand: #b85535;
+  /* --brand is dark enough for white text on it, too dark for text on a dark page. */
+  --brand-ink: #e0835f;
   --brand-dark: #f0a988;
   --brand-soft: #3a211a;
   --green: #8fd6ac;
@@ -293,7 +297,7 @@ nav.menu.menu-modules,
     height: 46px;
     border-radius: 12px;
     background: var(--brand-soft);
-    color: var(--brand);
+    color: var(--brand-ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -528,7 +532,7 @@ main {
 
     .label::after {
       content: ' ›';
-      color: var(--brand);
+      color: var(--brand-ink);
     }
   }
 
@@ -640,7 +644,7 @@ tr:last-child td {
 .lnk-detail {
   border: none;
   background: none;
-  color: var(--brand);
+  color: var(--brand-ink);
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
@@ -848,7 +852,7 @@ tr:last-child td {
 
   &.ghost {
     background: var(--panel);
-    color: var(--brand);
+    color: var(--brand-ink);
   }
 
   &.small {

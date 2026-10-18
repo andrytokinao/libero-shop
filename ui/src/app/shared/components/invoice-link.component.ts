@@ -33,7 +33,7 @@ import { InvoiceDetailDialogComponent } from './invoice-detail-dialog.component'
       border: 0;
       padding: 0;
       background: none;
-      color: var(--brand);
+      color: var(--brand-ink);
       font: inherit;
       text-decoration: underline;
       text-underline-offset: 2px;

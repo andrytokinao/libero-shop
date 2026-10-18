@@ -122,7 +122,7 @@ import { ToastService } from '../../core/services/toast.service';
       color: var(--brand-dark);
 
       span {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
     }
 
@@ -162,7 +162,7 @@ import { ToastService } from '../../core/services/toast.service';
     .linkish {
       border: none;
       background: none;
-      color: var(--brand);
+      color: var(--brand-ink);
       cursor: pointer;
       padding: 0;
       font: inherit;

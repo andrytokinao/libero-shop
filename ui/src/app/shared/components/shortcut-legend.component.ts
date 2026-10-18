@@ -59,7 +59,7 @@ import { Shortcut, isEnabled } from '../../core/sale/shortcuts';
 
       &:hover,
       &[aria-expanded='true'] {
-        color: var(--brand);
+        color: var(--brand-ink);
         border-color: var(--brand);
       }
     }

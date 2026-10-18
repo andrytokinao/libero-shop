@@ -325,7 +325,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
       }
 
       .mark span {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
 
       .sub {

@@ -229,7 +229,7 @@ interface FeatureRow {
       .effect {
         display: block;
         font-size: 12.5px;
-        color: var(--brand);
+        color: var(--brand-ink);
         margin-top: 2px;
       }
     }

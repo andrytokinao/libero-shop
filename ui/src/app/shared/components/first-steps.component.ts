@@ -94,7 +94,7 @@ const HIDDEN_STORAGE_KEY = 'liberoshop.firstSteps.hidden';
       }
 
       a {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
 
       li.done {
@@ -115,7 +115,7 @@ const HIDDEN_STORAGE_KEY = 'liberoshop.firstSteps.hidden';
         background: none;
         padding: 0;
         font: inherit;
-        color: var(--brand);
+        color: var(--brand-ink);
         text-decoration: underline;
         cursor: pointer;
       }

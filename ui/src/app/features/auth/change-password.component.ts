@@ -132,7 +132,7 @@ import { ToastService } from '../../core/services/toast.service';
       }
 
       .mark span {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
 
       .sub {

@@ -116,7 +116,7 @@ const GROUP_HEIGHT = 24;
       &[aria-expanded='true'] {
         border-color: var(--line);
         background: var(--bg);
-        color: var(--brand);
+        color: var(--brand-ink);
       }
     }
 

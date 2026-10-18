@@ -267,7 +267,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
 
       &:hover,
       &:focus-visible {
-        color: var(--brand);
+        color: var(--brand-ink);
         border-bottom-color: var(--brand);
       }
     }

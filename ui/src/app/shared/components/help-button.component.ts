@@ -46,7 +46,7 @@ import { HELP_TEXTS, HelpTopic } from '../../core/help/help-texts';
 
       &:hover,
       &[aria-expanded='true'] {
-        color: var(--brand);
+        color: var(--brand-ink);
         border-color: var(--brand);
       }
     }

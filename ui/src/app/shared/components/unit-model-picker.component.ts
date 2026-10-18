@@ -196,7 +196,7 @@ import { ApplyUnitModelRequest, UnitModel } from '../../core/models';
       border: none;
       background: none;
       padding: 0;
-      color: var(--brand);
+      color: var(--brand-ink);
       cursor: pointer;
       font-size: 12.5px;
       text-decoration: underline;

@@ -267,7 +267,8 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   (nom, prix, code-barres) et l'écran des corrections ont été compilés, pas essayés à l'écran.
 - [ ] **P3 — Gros fichiers à découper** : `product-import-dialog` (873 lignes), `backups`
   (822), `new-sale` (726), `supply` (656), `styles.scss` (2029), `ProductImportService` (868).
-- [ ] **P3 — Contraste des couleurs (à vérifier).**
+- [x] **P3 — Contraste des couleurs (à vérifier).**
+  *Fait — voir `71-contraste-des-couleurs.html`.*
 
 ## 8. Application Android
 

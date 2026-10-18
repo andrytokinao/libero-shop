@@ -193,7 +193,7 @@ type Network = 'local' | 'internet';
       color: var(--brand-dark);
 
       span {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
     }
 

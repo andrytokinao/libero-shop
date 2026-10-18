@@ -180,7 +180,7 @@ const MIN_PASSWORD_LENGTH = 8;
       }
 
       .mark span {
-        color: var(--brand);
+        color: var(--brand-ink);
       }
 
       .sub {

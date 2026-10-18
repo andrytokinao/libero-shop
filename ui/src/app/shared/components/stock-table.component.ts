@@ -102,7 +102,7 @@ import { LongPressMenuDirective } from '../directives/long-press-menu.directive'
 
       &:hover,
       &:focus-visible {
-        color: var(--brand);
+        color: var(--brand-ink);
         text-decoration: underline;
       }
     }
