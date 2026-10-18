@@ -1,5 +1,5 @@
 import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { EMPTY, Observable, tap } from 'rxjs';
 import { LicenseApi } from '../api/license.api';
 import {
   LICENSE_BANNER_DAYS,
@@ -160,6 +160,11 @@ export class LicenseService {
    * machine, or a licence that does not expire later than the one already installed.
    */
   install(licenseFileContent: string): Observable<LicenseStatus> {
+    // A second click while the first is on its way: the first answers. Sent twice, the same
+    // file would be refused the second time ("pas plus récente") right after being installed.
+    if (this.inFlight()) {
+      return EMPTY;
+    }
     this.inFlight.set(true);
     return this.api.install(licenseFileContent).pipe(
       tap({
@@ -171,6 +176,9 @@ export class LicenseService {
 
   /** Triggers an immediate online renewal attempt. */
   renew(): Observable<LicenseStatus> {
+    if (this.inFlight()) {
+      return EMPTY;
+    }
     this.inFlight.set(true);
     return this.api.renew().pipe(
       tap({

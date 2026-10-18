@@ -129,7 +129,7 @@ import { PublisherContactComponent } from '../../shared/components/publisher-con
             [disabled]="license.busy() || !content().trim()"
             (click)="install()"
           >
-            Installer la licence
+            {{ license.busy() ? 'Installation…' : 'Installer la licence' }}
           </button>
           <label class="btn ghost small file-btn">
             Choisir un fichier .lic
@@ -155,7 +155,7 @@ import { PublisherContactComponent } from '../../shared/components/publisher-con
         </p>
         <div class="form-row" style="margin:0;">
           <button class="btn ghost" type="button" [disabled]="license.busy()" (click)="renew()">
-            Vérifier maintenant
+            {{ license.busy() ? 'Vérification…' : 'Vérifier maintenant' }}
           </button>
           <button class="btn ghost" type="button" [disabled]="license.busy()" (click)="license.refresh()">
             Rafraîchir l'état

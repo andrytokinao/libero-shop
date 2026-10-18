@@ -243,8 +243,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 - [ ] **P2 — Pas d'état de chargement ni d'erreur** sur la plupart des écrans : après un échec on
   lit « Aucune facture… ».
 - [ ] **P2 — Aucun mode hors ligne** à la caisse.
-- [ ] **P3 — Écran de licence** : installation et renouvellement sans protection contre le double
+- [x] **P3 — Écran de licence** : installation et renouvellement sans protection contre le double
   clic.
+  *Fait — voir `53-licence-double-clic.html`.*
 - [ ] **P3 — Textes en français codés en dur**, souvent sans accents côté serveur ; « Ar » codé
   en dur.
 - [ ] **P3 — Fenêtre « Produit et unités » à vérifier dans un navigateur** : les nouveaux champs
