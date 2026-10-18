@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tests et configuration de production</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Les tests tournent avec les réglages de la boutique</h1>
+<p class="meta">18 octobre 2026 · branche <code>develop</code> · point « Les tests n'utilisent pas la configuration de production » de <code>docs/TODO.md</code> (§ 6, P2)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>Vérification faite, c'était vrai, et plus large que prévu : le fichier de réglages des tests <strong>remplaçait</strong> celui de la boutique au lieu de s'y ajouter. Aucun réglage de production n'était lu pendant les tests.</li>
+    <li>Exemple concret : la boutique interdit de lire la base pendant l'écriture d'une réponse (<code>open-in-view=false</code>), les tests l'autorisaient. Une erreur de ce type ne se serait vue qu'à la boutique.</li>
+    <li>Les réglages des tests s'ajoutent maintenant <strong>par-dessus</strong> ceux de la boutique : seuls la base (en mémoire), quelques fichiers et la licence diffèrent. Les 672 tests passent dans ces conditions.</li>
+    <li>Un nouveau test démarre la vraie application <strong>deux fois</strong> sur une base en fichier avec <code>ddl-auto=update</code>, comme une boutique chaque matin : les données restent, les migrations se rejouent sans erreur, le compteur de factures reprend sans doublon.</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#probleme">1. Le problème</a></li>
+  <li><a href="#fait">2. Ce qui a été fait</a></li>
+  <li><a href="#recap">3. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="probleme">1. Le problème</h2>
+<p>Le logiciel lit ses réglages dans <code>application.properties</code>. Les tests avaient un fichier du même nom,
+  et celui des tests passait devant : celui de la boutique n'était jamais lu. Les tests tournaient donc avec les
+  réglages par défaut de Spring, pas ceux de la boutique.</p>
+
+<h2 id="fait">2. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 200" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Réglages avant et après">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+  </style>
+  <text class="t" x="20" y="22" style="font-weight:700">Avant</text>
+  <rect class="ko" x="20" y="35" width="360" height="50" rx="8"/><text class="t" x="34" y="57">Réglages des tests</text><text class="s" x="34" y="75">à la place de ceux de la boutique</text>
+  <rect class="box" x="20" y="100" width="360" height="50" rx="8" style="stroke-dasharray:5 4"/><text class="s" x="34" y="130">réglages de la boutique : jamais lus</text>
+  <text class="t" x="460" y="22" style="font-weight:700">Après</text>
+  <rect class="new" x="460" y="35" width="380" height="50" rx="8"/><text class="t" x="474" y="57">Réglages des tests (config/)</text><text class="s" x="474" y="75">base en mémoire, fichiers, licence : seulement ça</text>
+  <rect class="new" x="460" y="100" width="380" height="50" rx="8"/><text class="t" x="474" y="122">Réglages de la boutique</text><text class="s" x="474" y="140">lus, tout le reste vient d'ici</text>
+  <text class="s" x="460" y="180">la couche du haut ne change que ce qu'elle nomme</text>
+</svg>
+<div class="caption">Figure 1 — Les réglages des tests ne remplacent plus ceux de la boutique, ils s'y superposent.</div>
+</div>
+<p>Le fichier des tests a été déplacé dans <code>config/</code> : Spring lit alors les deux, et celui de
+  <code>config/</code> l'emporte seulement sur les lignes qu'il contient. Il précise maintenant la base en mémoire
+  (sans quoi les tests écriraient dans la base de la boutique du développeur) et range ses fichiers dans
+  <code>target/</code>.</p>
+<p>Le nouveau test <code>ProductionConfigurationTest</code> va plus loin : il démarre l'application complète sur un
+  vrai fichier de base, l'arrête, puis la redémarre sur le même fichier.</p>
+
+<h2 id="recap">3. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>backend/src/test/resources/config/application.properties</code></td><td>déplacé depuis la racine des ressources de test ; base en mémoire et fichiers de test précisés</td></tr>
+<tr><td><code>backend/src/test/java/…/ProductionConfigurationTest.java</code></td><td>nouveau : deux démarrages sur une base en fichier</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Règle</th><th>Test</th></tr>
+<tr><td>Redémarrage sur la base de la boutique : données gardées, migrations rejouées, factures sans doublon</td><td><code>ProductionConfigurationTest</code></td></tr>
+<tr><td>Tous les tests avec les réglages de production (dont <code>open-in-view=false</code>)</td><td>toute la suite</td></tr>
+</table></div>
+<p><strong>À savoir :</strong> après avoir récupéré ce changement, supprimer <code>backend/target/test-classes/application.properties</code>
+  (ou lancer <code>mvnw clean</code>) : Maven ne retire pas l'ancien fichier compilé, qui masquerait encore les réglages.</p>
+<p><strong>Tests :</strong> serveur au vert (672 tests).</p>
+</main>
+</body>
+</html>

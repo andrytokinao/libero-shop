@@ -232,8 +232,9 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
   *Piste :* Flyway.
 - [ ] **P2 — MySQL/PostgreSQL non testés.** Les migrations utilisent la syntaxe H2 et la
   sauvegarde ne fonctionne que sur H2. Retirer les deux pilotes ou les tester.
-- [ ] **P2 — Les tests n'utilisent pas la configuration de production (à vérifier).** H2 en
+- [x] **P2 — Les tests n'utilisent pas la configuration de production (à vérifier).** H2 en
   mémoire, jamais le fichier ni `ddl-auto=update`.
+  *Fait — voir `67-tests-avec-la-configuration-de-production.html`.*
 - [x] **P3 — Version `0.0.1-SNAPSHOT`** et métadonnées vides dans `pom.xml`.
   *Fait — voir `57-version-1-0-0.html`.*
 - [ ] **P3 — Sauvegarde hors du poste (idée).** Copie automatique sur clé USB ou stockage
