@@ -259,13 +259,15 @@ dans un fichier par partie : [`REALISATION-partie-3-argent.md`](REALISATION-part
 
 - [ ] **P2 — Mises à jour téléchargées en HTTP sans signature** : un appareil du réseau local
   peut pousser du JavaScript sur tous les téléphones.
-- [ ] **P2 — `allowBackup="true"`** : le jeton part dans les sauvegardes du téléphone.
+- [x] **P2 — `allowBackup="true"`** : le jeton part dans les sauvegardes du téléphone.
+  *Fait — voir `55-android-sans-sauvegarde-du-jeton.html`.*
 - [ ] **P3 — `minifyEnabled false`** et `versionCode` incrémenté à la main.
 - [ ] **P3 — Sauvegarde du keystore (à vérifier).** Le perdre oblige à réinstaller l'application
   sur tous les téléphones.
 - [ ] **P3 — Scanner dépendant de Google Play Services (à vérifier)** sur les téléphones sans
   Play Services ou sans Internet.
-- [ ] **P3 — Paquets de test du modèle Capacitor** (`com.getcapacitor.myapp`) à supprimer.
+- [x] **P3 — Paquets de test du modèle Capacitor** (`com.getcapacitor.myapp`) à supprimer.
+  *Fait — voir `55-android-sans-sauvegarde-du-jeton.html`.*
 
 ## 9. Tests et outillage
 

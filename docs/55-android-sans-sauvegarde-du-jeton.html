@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Android : le jeton ne part plus dans les sauvegardes du téléphone</title>
+<style>
+:root { --brand:#1f6f5c; --brand-soft:#e8f3ef; --ink:#1d2329; --muted:#5d6873; --line:#dde3e8; --code:#f4f6f8;
+        --ok:#1f6f5c; --ok-soft:#e8f3ef; --ko:#b23b3b; --ko-soft:#fbeaea; --warn:#9a6b00; --warn-soft:#fdf4e1; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:#fafbfc; }
+main { max-width:980px; margin:0 auto; padding:40px 32px 80px; background:#fff; min-height:100vh;
+       box-shadow:0 0 0 1px var(--line); }
+h1 { font-size:28px; margin:0 0 6px; color:var(--brand); }
+h2 { font-size:21px; margin:44px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--brand-soft); color:var(--brand); }
+h3 { font-size:17px; margin:28px 0 8px; }
+p { margin:10px 0; }
+a { color:var(--brand); }
+code { font:13px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:#1e252b; color:#e6edf3; padding:14px 16px; border-radius:8px; overflow:auto; margin:8px 0; }
+pre code { background:none; padding:0; color:inherit; font-size:13px; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--brand-soft); font-weight:600; }
+tbody tr:nth-child(even) { background:#fafcfb; }
+ul, ol { padding-left:24px; margin:8px 0; }
+li { margin:3px 0; }
+.toc { background:var(--brand-soft); border-radius:8px; padding:14px 20px; margin:24px 0; }
+.toc-title { font-weight:700; margin-bottom:6px; }
+.toc ul { list-style:none; padding:0; margin:0; columns:2; column-gap:32px; }
+.toc a { text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+.summary { border:2px solid var(--brand); border-radius:10px; padding:16px 22px; margin:20px 0; }
+.summary-title { font-weight:700; color:var(--brand); font-size:17px; margin-bottom:6px; }
+.figure { margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.figure svg { max-width:100%; height:auto; }
+.caption { font-size:13px; color:var(--muted); margin-top:8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; margin:14px 0; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff; }
+.card h4 { margin:0 0 6px; font-size:15px; }
+.letter { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:50%;
+          background:var(--brand); color:#fff; font-weight:700; margin-right:8px; }
+.compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+.bad, .good { border-radius:10px; padding:10px 14px; }
+.bad { background:var(--ko-soft); border-left:4px solid var(--ko); }
+.good { background:var(--ok-soft); border-left:4px solid var(--ok); }
+.bad-title { color:var(--ko); font-weight:700; }
+.good-title { color:var(--ok); font-weight:700; }
+.note { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; padding:10px 14px; margin:14px 0; }
+@media (max-width:700px) { main { padding:20px 16px; } .toc ul { columns:1; } .compare { grid-template-columns:1fr; } }
+@media print { body { background:#fff; } main { box-shadow:none; max-width:none; padding:0; }
+  pre { white-space:pre-wrap; } h2 { break-after:avoid; } table, pre, .figure, .card { break-inside:avoid; } }
+
+.shot { margin:18px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fcfdfd; text-align:center; }
+.shot img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:6px; }
+.who { display:inline-block; font-size:12px; font-weight:600; border-radius:10px; padding:1px 9px; margin-right:6px;
+       background:var(--warn-soft); color:var(--warn); }
+.id { display:inline-block; font:700 12px/1 Consolas, monospace; color:#fff; background:var(--brand);
+      border-radius:4px; padding:3px 6px; margin-right:6px; vertical-align:2px; }
+.meta { color:var(--muted); font-size:14px; margin:0 0 4px; }
+.ok { color:var(--ok); font-weight:600; }
+.back { font-size:13px; }
+@media print { .shot { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Android : le jeton ne part plus dans les sauvegardes du téléphone</h1>
+<p class="meta">18 octobre 2026 · branche <code>develop</code> · points « allowBackup » et « Paquets de test du modèle Capacitor » de <code>docs/TODO.md</code> (§ 8, P2 et P3)</p>
+
+<div class="summary">
+  <div class="summary-title">Résumé</div>
+  <ol>
+    <li>L'application Android autorisait la sauvegarde de ses données : le <strong>jeton de connexion</strong> partait avec les sauvegardes Google du téléphone et se retrouvait sur un nouvel appareil.</li>
+    <li>Sauvegarde dans le nuage et transfert vers un nouveau téléphone sont maintenant <strong>refusés</strong> pour toutes les données de l'application. Un nouveau téléphone se reconnecte.</li>
+    <li>Les deux tests d'exemple laissés par le modèle Capacitor (<code>com.getcapacitor.myapp</code>), qui ne testaient rien de l'application, sont supprimés.</li>
+    <li>Le manifeste a été vérifié par Gradle (fusion sans erreur).</li>
+  </ol>
+</div>
+
+<nav class="toc"><div class="toc-title">Sommaire</div><ul>
+  <li><a href="#fait">1. Ce qui a été fait</a></li>
+  <li><a href="#recap">2. Tableau récapitulatif</a></li>
+</ul></nav>
+
+<h2 id="fait">1. Ce qui a été fait</h2>
+<div class="figure">
+<svg viewBox="0 0 860 160" width="860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ce qui quitte le téléphone">
+  <style>
+    .t { font: 13px "Segoe UI", sans-serif; fill:#1d2329; }
+    .s { font: 11.5px "Segoe UI", sans-serif; fill:#5d6873; }
+    .box { fill:#fff; stroke:#dde3e8; stroke-width:1.5; }
+    .new { fill:#e8f3ef; stroke:#1f6f5c; stroke-width:1.5; }
+    .ko { fill:#fbeaea; stroke:#b23b3b; stroke-width:1.5; }
+  </style>
+  <rect class="box" x="20" y="55" width="200" height="50" rx="8"/><text class="t" x="34" y="78">Téléphone de la caisse</text><text class="s" x="34" y="95">jeton de connexion</text>
+  <rect class="ko" x="300" y="15" width="250" height="50" rx="8"/><text class="t" x="314" y="38">Avant : sauvegarde Google</text><text class="s" x="314" y="55">le jeton part avec</text>
+  <rect class="new" x="300" y="95" width="250" height="50" rx="8"/><text class="t" x="314" y="118">Après : rien ne part</text><text class="s" x="314" y="135">nouveau téléphone = nouvelle connexion</text>
+  <line x1="220" y1="72" x2="298" y2="40" stroke="#b23b3b" stroke-width="1.5"/><line x1="220" y1="88" x2="298" y2="118" stroke="#1f6f5c" stroke-width="1.5"/>
+</svg>
+<div class="caption">Figure 1 — Les données de l'application restent sur le téléphone.</div>
+</div>
+<p>Trois réglages se complètent : <code>allowBackup="false"</code> (sauvegarde classique),
+  <code>fullBackupContent="false"</code> (anciens Android) et des règles d'extraction qui excluent tout, pour la
+  sauvegarde dans le nuage comme pour le transfert d'appareil à appareil (Android 12 et plus).</p>
+
+<h2 id="recap">2. Tableau récapitulatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Fichier</th><th>Changement</th></tr>
+<tr><td><code>ui/android/app/src/main/AndroidManifest.xml</code></td><td>sauvegarde et transfert refusés</td></tr>
+<tr><td><code>ui/android/app/src/main/res/xml/data_extraction_rules.xml</code></td><td>nouveau : tout exclu, nuage et transfert</td></tr>
+<tr><td><code>ui/android/app/src/test/…/myapp</code>, <code>androidTest/…/myapp</code></td><td>tests d'exemple du modèle supprimés</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Vérification</th><th>Résultat</th></tr>
+<tr><td>Fusion du manifeste (<code>gradlew :app:processDebugMainManifest</code>)</td><td>sans erreur</td></tr>
+</table></div>
+<p>À essayer sur un téléphone lors de la prochaine version de l'application : installer, se connecter, vérifier
+  qu'une restauration sur un autre téléphone demande de se reconnecter.</p>
+</main>
+</body>
+</html>
