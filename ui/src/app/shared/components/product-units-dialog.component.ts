@@ -150,9 +150,9 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
             <app-filter-tabs class="cfg-tabs" label="Parties de la configuration" [tabs]="tabs" [wrap]="true" [(value)]="tab" />
 
             <!-- ------------------------------------------------- the sheet -->
-            <!-- A past ticket keeps the name and price it was sold at: correcting them here only
-                 changes what the next sale reads. -->
-            <!-- Nothing of the sheet is in the units and codes tabs; its "Enregistrer" still is, if a change waits. -->
+              <!-- A past ticket keeps the name and price it was sold at: correcting them here only
+                   changes what the next sale reads. -->
+              <!-- Nothing of the sheet is in the units and codes tabs; its "Enregistrer" still is, if a change waits. -->
             <form class="un-sheet" [class.un-off]="(tab() === 'unites' || tab() === 'codes') && !sheetChanged()" (ngSubmit)="saveSheet()">
               <div class="fld un-sheet-name" [class.un-off]="tab() !== 'fiche'">
                 <label for="un-name">Nom du produit</label>
@@ -242,7 +242,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
                   {{ hint }}
                 } @else if (u.packagings.length === 0) {
                   Acheté dans une autre unité (tonne, sac…) ? Ajoutez-la ci-dessous, puis
-                  choisissez-la ici.
+                    choisissez-la ici.
                 }
               </div>
               @if (sheetChanged()) {
@@ -324,40 +324,40 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
             </div>
 
             <!-- ---------------------------------------------------- every unit -->
-            <!-- Each unit priced both ways: what it sells for, what it cost at the average, and
-                 what is left. Worked out by the server, so a tonne reads back to the ariary.
-                 A table on a wide screen; on a narrow one each row becomes a card (data-label),
-                 so the dialog never scrolls sideways. -->
+              <!-- Each unit priced both ways: what it sells for, what it cost at the average, and
+                   what is left. Worked out by the server, so a tonne reads back to the ariary.
+                   A table on a wide screen; on a narrow one each row becomes a card (data-label),
+                   so the dialog never scrolls sideways. -->
             <app-barcodes-editor [class.un-off]="tab() !== 'codes'" [units]="u" (changed)="onCodes($event)" />
 
             <table class="un-table" [class.un-off]="tab() === 'fiche' || tab() === 'codes'">
               <thead>
-                <tr>
-                  <th>Unité</th>
-                  <th>Contient</th>
-                  <th class="num">Prix de vente</th>
-                  <th class="num">Prix d'entrée</th>
-                  <th class="num">Bénéfice</th>
-                  <th>Code-barres</th>
-                  <th></th>
-                </tr>
+              <tr>
+                <th>Unité</th>
+                <th>Contient</th>
+                <th class="num">Prix de vente</th>
+                <th class="num">Prix d'entrée</th>
+                <th class="num">Bénéfice</th>
+                <th>Code-barres</th>
+                <th></th>
+              </tr>
               </thead>
               <tbody>
-                <tr class="un-base-row">
-                  <td class="un-unit">
-                    {{ baseName() }} <span class="muted">(base)</span>
-                    @if (u.purchaseUnitId === null) {
-                      <span class="badge grey">achat</span>
-                    }
-                  </td>
-                  <td class="muted" data-label="Contient">1 {{ baseName() }}</td>
-                  <td class="num" data-label="Prix de vente">{{ u.basePrice | ariary }}</td>
-                  <ng-container
-                    *ngTemplateOutlet="costCells; context: { $implicit: costOf(null) }"
-                  />
-                  <td class="muted un-code" data-label="Code-barres">{{ u.baseBarcode ?? '—' }}</td>
-                  <td class="un-actions"></td>
-                </tr>
+              <tr class="un-base-row">
+                <td class="un-unit">
+                  {{ baseName() }} <span class="muted">(base)</span>
+                  @if (u.purchaseUnitId === null) {
+                    <span class="badge grey">achat</span>
+                  }
+                </td>
+                <td class="muted" data-label="Contient">1 {{ baseName() }}</td>
+                <td class="num" data-label="Prix de vente">{{ u.basePrice | ariary }}</td>
+                <ng-container
+                  *ngTemplateOutlet="costCells; context: { $implicit: costOf(null) }"
+                />
+                <td class="muted un-code" data-label="Code-barres">{{ u.baseBarcode ?? '—' }}</td>
+                <td class="un-actions"></td>
+              </tr>
                 @for (p of u.packagings; track p.id) {
                   <tr [class.on]="editingId() === p.id">
                     <td class="un-unit">
@@ -423,7 +423,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
             </ng-template>
 
             <!-- --------------------------------------------- units from a model -->
-            <!-- g, kg, tonne… ticked rather than typed again for every product. -->
+              <!-- g, kg, tonne… ticked rather than typed again for every product. -->
             <details class="un-model" [class.un-off]="tab() !== 'unites'" [open]="modelOpen()" (toggle)="onModelToggle($event)">
               <summary>Ajouter des unités depuis un modèle (g, kg, tonne…)</summary>
               @if (modelOpen()) {
@@ -514,14 +514,15 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
                 </div>
                 <div class="fld">
                   <label for="un-price">Prix (Ar)</label>
+                  <!-- The suggestion is the field's value until something is typed. -->
                   <input
                     id="un-price"
                     name="price"
                     type="text"
                     inputmode="decimal"
                     autocomplete="off"
-                    [placeholder]="suggestedPrice() ?? '3000'"
-                    [ngModel]="draft().price"
+                    placeholder="3000"
+                    [ngModel]="priceValue()"
                     (ngModelChange)="patch({ price: $event })"
                   />
                 </div>
@@ -1158,7 +1159,7 @@ export class ProductUnitsDialogComponent implements OnInit {
   protected readonly request = computed<PackagingRequest | null>(() => {
     const draft = this.draft();
     const factor = parseDecimal(draft.factor);
-    const price = parseDecimal(draft.price);
+    const price = parseDecimal(this.priceValue());
     if (!draft.label.trim() || factor === null || factor <= 0 || price === null || price <= 0) {
       return null;
     }
@@ -1205,14 +1206,21 @@ export class ProductUnitsDialogComponent implements OnInit {
   });
 
   /**
-   * The base price times the factor, offered as the price field's placeholder — a starting point
-   * the operator rounds, never a value filled in for them: a sack's price is a wholesale decision.
+   * The base price times the factor: a starting point the operator rounds. It is the price
+   * field's value until something is typed (see priceValue) — a sack's price is a wholesale
+   * decision, so it stays editable.
    */
   protected readonly suggestedPrice = computed(() => {
     const factor = this.baseFactor();
     const base = this.units()?.basePrice;
     return factor && base ? String(Math.round(factor * base)) : null;
   });
+
+  /**
+   * The price shown in the field, and the one sent: what was typed, or the suggestion while
+   * nothing is typed. A field emptied by the operator falls back to the suggestion again.
+   */
+  protected readonly priceValue = computed(() => this.draft().price || this.suggestedPrice() || '');
 
   /**
    * The form read back as a sentence: "1 kg = 3,5 kapoka · 857 Ar le kapoka", or for a unit
@@ -1227,7 +1235,7 @@ export class ProductUnitsDialogComponent implements OnInit {
     }
     const written = draft.reference ? ` = ${this.formatFactor(quantity)} ${draft.reference}` : '';
     const sentence = `1 ${draft.label.trim()}${written} = ${this.formatFactor(factor)} ${this.baseName()}`;
-    const price = parseDecimal(draft.price);
+    const price = parseDecimal(this.priceValue());
     if (!price || price <= 0) {
       return sentence;
     }
@@ -1410,10 +1418,10 @@ export class ProductUnitsDialogComponent implements OnInit {
     const call =
       keep.modelId === null
         ? this.modelApi.create({
-            name: keep.name.trim() || this.defaultModelName(),
-            baseLabel: reference,
-            units: [{ ...unit, reference: null }],
-          })
+          name: keep.name.trim() || this.defaultModelName(),
+          baseLabel: reference,
+          units: [{ ...unit, reference: null }],
+        })
         : this.modelApi.addUnit(keep.modelId, unit);
     call.subscribe((model) => {
       this.toasts.show(`« ${request.label} » ajoutée au modèle « ${model.name} ».`);
