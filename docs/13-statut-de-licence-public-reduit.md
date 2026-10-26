@@ -1,4 +1,4 @@
-# Libero Shop — statut de licence public réduit
+# Moussa Shop — statut de licence public réduit
 
 Réalisée le 10 octobre 2026.
 

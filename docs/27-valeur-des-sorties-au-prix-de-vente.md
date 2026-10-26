@@ -1,4 +1,4 @@
-# Libero Shop — valeur des sorties de stock au prix de vente
+# Moussa Shop — valeur des sorties de stock au prix de vente
 
 Réalisée le 16 octobre 2026.
 

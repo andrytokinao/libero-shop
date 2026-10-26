@@ -68,7 +68,7 @@ public final class ServerTray {
 
     private static final Logger log = LoggerFactory.getLogger(ServerTray.class);
 
-    private static final String NAME = "Libero Shop";
+    private static final String NAME = "Moussa Shop";
     /** Optional. Drop the shop logo here (a square PNG, transparent background) to have it in the tray. */
     private static final String LOGO = "/desktop/logo.png";
     private static final Color GREEN = new Color(0x2E9E4F);

@@ -87,7 +87,7 @@ class LicenseVerifierTest {
         }
 
         @Test
-        @DisplayName("rejects a file that is not a Libero Shop license")
+        @DisplayName("rejects a file that is not a Moussa Shop license")
         void rejectsForeignFormat() {
             byte[] envelope = TestLicenses.license(publisherKeys).format("some-other-product").build();
 

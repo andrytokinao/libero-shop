@@ -14,8 +14,8 @@
          check compares it with the published one, so both must say the same number. Plain digits:
          jpackage refuses a suffix such as -SNAPSHOT. -->
     <version>1.0.0</version>
-    <name>Libero Shop</name>
-    <description>Serveur de caisse et de gestion de stock Libero Shop</description>
+    <name>Moussa Shop</name>
+    <description>Serveur de caisse et de gestion de stock Moussa Shop</description>
     <organization>
         <name>Kinga Digital</name>
     </organization>
@@ -438,7 +438,7 @@
                 <jpackage.config>${project.basedir}/src/main/jpackage</jpackage.config>
                 <!-- Application name. Used both for the jpackage name flag and to locate
                      the produced app-image folder (target/jpackage/dist/<name>/). -->
-                <installer.name>Libero Shop</installer.name>
+                <installer.name>Moussa Shop</installer.name>
                 <!-- Disguise of the obfuscated fat jar (see the "hide-payload-in-runtime"
                      antrun step below). On Windows the jar is moved OUT of app/ INTO
                      runtime/lib/ under this neutral name and extension, so nothing in the
@@ -556,7 +556,7 @@
                                         <argument>--vendor</argument>
                                         <argument>Kinga Digital</argument>
                                         <argument>--description</argument>
-                                        <argument>Libero Shop - point de vente</argument>
+                                        <argument>Moussa Shop - point de vente</argument>
                                         <argument>--input</argument>
                                         <argument>${jpackage.input}</argument>
                                         <argument>--main-jar</argument>
