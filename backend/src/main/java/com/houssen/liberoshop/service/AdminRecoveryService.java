@@ -98,7 +98,7 @@ public class AdminRecoveryService {
         try {
             Files.createDirectories(target.getParent());
             Files.writeString(target, """
-                    Libero Shop - code de secours
+                    Moussa Shop - code de secours
                     =============================
 
                     Code : %s
@@ -115,7 +115,7 @@ public class AdminRecoveryService {
             log.error("Code de secours impossible a ecrire dans {} ({}).", target, e.toString());
             throw new BusinessRuleException("RECOVERY_UNAVAILABLE",
                     "Le fichier du code de secours n'a pas pu etre ecrit sur cet ordinateur. "
-                            + "Appelez le support de Libero Shop.");
+                            + "Appelez le support de Moussa Shop.");
         }
         code = drawn;
         expiresAt = calendar.now().plus(VALIDITY);
