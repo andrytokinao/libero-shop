@@ -1,4 +1,4 @@
-# Libero Shop — mot de passe administrateur perdu
+# Moussa Shop — mot de passe administrateur perdu
 
 Réalisée le 10 octobre 2026.
 
@@ -21,7 +21,7 @@ pouvait ouvrir de compte, installer une licence ou restaurer une sauvegarde. Auc
 prévue : il fallait intervenir à la main dans la base.
 
 **Après.** La page de connexion propose un lien **« Mot de passe administrateur oublié ? »**.
-La procédure tient en deux étapes et **ne fonctionne que sur l'ordinateur où Libero Shop est
+La procédure tient en deux étapes et **ne fonctionne que sur l'ordinateur où Moussa Shop est
 installé** :
 
 1. On clique sur « Commencer ». Le serveur écrit un **code à 8 chiffres dans un fichier de cet

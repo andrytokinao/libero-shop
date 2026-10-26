@@ -1,4 +1,4 @@
-# Libero Shop — sauvegardes hors du dossier public
+# Moussa Shop — sauvegardes hors du dossier public
 
 Réalisée le 10 octobre 2026.
 
@@ -71,6 +71,6 @@ Fichiers : `server/DownloadsConfiguration.java`, `backup/BackupService.java` ; t
 
 - **Les autres dossiers sensibles ne sont pas interdits** : rien n'empêche de choisir le dossier
   de la base elle-même ou un dossier partagé par Windows sur le réseau. Seul ce que le serveur
-  Libero Shop publie lui-même est couvert.
+  Moussa Shop publie lui-même est couvert.
 - **Les messages d'erreur de sauvegarde contiennent le chemin complet** du dossier : c'est le
   point « Messages d'erreur avec chemins absolus » de la section 1 (super-admin seulement).

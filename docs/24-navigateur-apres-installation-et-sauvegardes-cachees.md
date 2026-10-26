@@ -1,4 +1,4 @@
-# Libero Shop — navigateur ouvert après l'installation, page des sauvegardes cachée
+# Moussa Shop — navigateur ouvert après l'installation, page des sauvegardes cachée
 
 Réalisée le 16 octobre 2026.
 
@@ -16,7 +16,7 @@ Demande directe, hors `TODO.md` :
 **Navigateur après l'installation.**
 
 - **Avant.** À la fin de l'installation, le serveur démarrait et l'icône apparaissait dans la zone
-  de notification ; il fallait ensuite cliquer sur « Ouvrir Libero Shop » ou double-cliquer
+  de notification ; il fallait ensuite cliquer sur « Ouvrir Moussa Shop » ou double-cliquer
   l'icône pour voir la boutique.
 - **Après.** À la fin de l'installation, dès que le serveur est prêt (icône verte), la boutique
   s'ouvre d'elle-même dans le navigateur par défaut, sur la page de connexion.

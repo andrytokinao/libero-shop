@@ -1,4 +1,4 @@
-# Libero Shop — mise à jour de l'application sans réinstaller
+# Moussa Shop — mise à jour de l'application sans réinstaller
 
 Réalisée le 15 octobre 2026.
 
@@ -79,7 +79,7 @@ un petit **script externe** qui survit au processus :
 
 - `InstallLayout` retrouve, depuis la JVM, l'emplacement installé : le payload (unique entrée du
   classpath — sur l'installation Windows, `runtime\lib\resources.bin`) et le lanceur
-  (`Libero Shop.exe`, déduit du `.cfg`). Hors installation livrée (développement) ou hors Windows,
+  (`Moussa Shop.exe`, déduit du `.cfg`). Hors installation livrée (développement) ou hors Windows,
   rien n'est trouvé et la mise à jour en place est **refusée proprement**.
 - `UpdateInstaller` dépose le nouveau `.jar` à côté (`.new`), écrit un script `.cmd`, puis ferme le
   contexte (la base H2 avec) et quitte. Le script **attend que le verrou du fichier se libère**

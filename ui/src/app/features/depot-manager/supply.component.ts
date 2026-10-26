@@ -694,7 +694,7 @@ export class SupplyComponent {
     if (action === 'history') {
       this.historyOf.set(supply.product);
     } else if (action === 'print') {
-      printPage(receiptHtml(supply, 'Libero Shop'));
+      printPage(receiptHtml(supply, 'Moussa Shop'));
     } else {
       this.cancelling.set(supply);
     }
