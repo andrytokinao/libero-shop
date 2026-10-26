@@ -1,4 +1,4 @@
-# Libero Shop — jar de production sans outils de développement
+# Moussa Shop — jar de production sans outils de développement
 
 Réalisée le 10 octobre 2026.
 

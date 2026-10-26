@@ -225,7 +225,7 @@ export class ChangePasswordComponent {
         const body = failure.error as ApiError | null;
         this.error.set(
           failure.status === 0
-            ? 'Serveur injoignable. Vérifiez que Libero Shop est démarré.'
+            ? 'Serveur injoignable. Vérifiez que Moussa Shop est démarré.'
             : [body?.message, ...(body?.details ?? [])].filter(Boolean).join(' ') ||
                 'Le mot de passe n’a pas pu être changé.',
         );

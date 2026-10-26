@@ -316,7 +316,7 @@ public class LicenseService {
 
     /**
      * Where the file actually is: the configured name, or the one the product used to be
-     * called before it was renamed to Libero Shop.
+     * called before it was renamed to Moussa Shop.
      *
      * <p>A shop that was sold {@code liberty-shop.lic} keeps a working licence through the
      * upgrade -- a rename of the product must not turn a paid installation read-only, and the

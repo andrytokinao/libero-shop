@@ -1,4 +1,4 @@
-# Libero Shop — réalisation, partie 3 : argent
+# Moussa Shop — réalisation, partie 3 : argent
 
 Doubles paiements, bordereaux en double et vente en double. Réalisée le 10 octobre 2026.
 

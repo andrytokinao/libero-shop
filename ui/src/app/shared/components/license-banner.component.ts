@@ -45,7 +45,7 @@ import { PublisherContactComponent } from './publisher-contact.component';
           @if (license.status(); as status) {
             <div class="modal-head">
               <div>
-                <h2 id="lic-title">Licence Libero Shop</h2>
+                <h2 id="lic-title">Licence Moussa Shop</h2>
                 <span class="badge" [class]="badgeClass()">{{ license.stateLabel() }}</span>
               </div>
               <button class="x" type="button" aria-label="Fermer" (click)="license.closeDialog()">
