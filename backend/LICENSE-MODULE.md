@@ -1,4 +1,4 @@
-# Module de licence — Libero Shop
+# Module de licence — Moussa Shop
 
 Protection de l'application installée chez le client, sans SaaS et sans dépendance à
 Internet. La seule source de vérité est un fichier signé sur le poste du client ; rien
@@ -565,7 +565,7 @@ caractère faux, d'un code tronqué, d'une date hors de portée du format, et lo
 
 ## 9 bis. Héritage du nom « Liberty Shop »
 
-Le produit s'appelait Liberty Shop. Le renommage en Libero Shop est **volontairement
+Le produit s'appelait Liberty Shop. Le renommage en Moussa Shop est **volontairement
 incomplet** : trois choses gardent l'ancien nom, et les changer casserait des installations
 déjà payées ou rendrait des protections inopérantes.
 

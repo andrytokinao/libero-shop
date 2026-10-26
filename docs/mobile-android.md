@@ -284,8 +284,8 @@ bandeau « Nouvelle version de l'application disponible », qui ouvre la page de
 
 | Symptôme | Cause probable / remède |
 |---|---|
-| « Aucune réponse de http://… » à l'écran *Serveur* | Téléphone sur un autre Wi-Fi ; ou **pare-feu Windows** du serveur. Ouvrir le port : `netsh advfirewall firewall add rule name="Libero Shop" dir=in action=allow protocol=TCP localport=8080` |
-| « répond, mais ce n'est pas un serveur Libero Shop » | Mauvaise adresse : c'est la box, une imprimante… Vérifier sur *Admin › Application mobile*. |
+| « Aucune réponse de http://… » à l'écran *Serveur* | Téléphone sur un autre Wi-Fi ; ou **pare-feu Windows** du serveur. Ouvrir le port : `netsh advfirewall firewall add rule name="Moussa Shop" dir=in action=allow protocol=TCP localport=8080` |
+| « répond, mais ce n'est pas un serveur Moussa Shop » | Mauvaise adresse : c'est la box, une imprimante… Vérifier sur *Admin › Application mobile*. |
 | Connexion refusée (403) depuis l'app | L'origine de l'app manque dans `liberoshop.security.mobile-origins` (doit contenir `http://localhost`). |
 | Notifications temps réel absentes (pastille grise) | Même cause que ci-dessus : le WebSocket utilise les mêmes origines. |
 | « module de scan Google en cours d'installation » | Premier scan : Play Services télécharge le scanner. Réessayer après quelques secondes (réseau Internet nécessaire la première fois). |

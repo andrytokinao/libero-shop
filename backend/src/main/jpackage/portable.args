@@ -1,7 +1,7 @@
 # Portable app-image: a self-contained folder (launcher .exe + embedded
 # runtime + obfuscated jar), NO installer. Needs no WiX, no .NET 3.5, no admin.
 # Build with: mvn -Pinstaller -Dinstaller.os=portable verify
-# Output: target/jpackage/dist/Libero Shop/   (zip it to distribute, or feed
+# Output: target/jpackage/dist/Moussa Shop/   (zip it to distribute, or feed
 # it to the Inno Setup script to get a real Setup.exe).
 --type
 app-image
