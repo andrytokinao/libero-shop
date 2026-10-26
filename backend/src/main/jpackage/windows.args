@@ -13,7 +13,7 @@ src/main/jpackage/libero-shop.ico
 src/main/jpackage/windows
 --win-menu
 --win-menu-group
-"Libero Shop"
+"Moussa Shop"
 --win-shortcut
 --win-dir-chooser
 --win-per-user-install

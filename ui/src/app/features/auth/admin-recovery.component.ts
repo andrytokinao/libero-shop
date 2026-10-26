@@ -38,17 +38,17 @@ const MIN_PASSWORD_LENGTH = 8;
 
         @if (elsewhere()) {
           <p class="setup-lead">
-            Le mot de passe de l'administrateur se retrouve sur l'ordinateur où Libero Shop est
+            Le mot de passe de l'administrateur se retrouve sur l'ordinateur où Moussa Shop est
             installé, pas depuis un téléphone ni un autre poste.
           </p>
-          <p class="setup-lead">Ouvrez Libero Shop sur cet ordinateur et revenez sur cette page.</p>
+          <p class="setup-lead">Ouvrez Moussa Shop sur cet ordinateur et revenez sur cette page.</p>
         } @else if (started()) {
           <p class="setup-lead">
             Un code à 8 chiffres vient d'être écrit dans un fichier de cet ordinateur, avec les
             identifiants des administrateurs.
           </p>
           <p class="setup-lead">
-            <strong>Appelez le support de Libero Shop</strong> : il vous indiquera où lire ce code.
+            <strong>Appelez le support de Moussa Shop</strong> : il vous indiquera où lire ce code.
           </p>
           <p class="setup-support">
             Support — WhatsApp :
@@ -121,10 +121,10 @@ const MIN_PASSWORD_LENGTH = 8;
         } @else {
           <p class="setup-lead">
             Cette procédure remplace le mot de passe d'un compte administrateur. Elle ne fonctionne
-            que sur l'ordinateur où Libero Shop est installé.
+            que sur l'ordinateur où Moussa Shop est installé.
           </p>
           <p class="setup-lead">
-            Elle se fait avec le support de Libero Shop, qui vous guidera au téléphone :
+            Elle se fait avec le support de Moussa Shop, qui vous guidera au téléphone :
             <a [href]="support.whatsappLink" target="_blank" rel="noopener">{{ support.phone }}</a>
             (WhatsApp).
           </p>
@@ -321,7 +321,7 @@ export class AdminRecoveryComponent {
     }
     this.error.set(
       failure.status === 0
-        ? 'Serveur injoignable. Vérifiez que Libero Shop est démarré.'
+        ? 'Serveur injoignable. Vérifiez que Moussa Shop est démarré.'
         : [body?.message, ...(body?.details ?? [])].filter(Boolean).join(' ') || fallback,
     );
   }

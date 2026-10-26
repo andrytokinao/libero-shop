@@ -74,7 +74,7 @@ public record LicenseFile(byte[] payloadBytes, byte[] signature, String algorith
         }
         String format = text(root, "format");
         if (!FORMAT.equals(format) && !LEGACY_FORMAT.equals(format)) {
-            throw new LicenseInvalidException("Ce fichier n'est pas une licence Libero Shop.");
+            throw new LicenseInvalidException("Ce fichier n'est pas une licence Moussa Shop.");
         }
         int version = root.path("version").asInt(0);
         if (version > SUPPORTED_VERSION) {
