@@ -1,4 +1,4 @@
-# Libero Shop — accès par Internet : le support est indiqué
+# Moussa Shop — accès par Internet : le support est indiqué
 
 Réalisée le 11 octobre 2026.
 
@@ -17,7 +17,7 @@ accessible depuis Internet. Un administrateur connecté voyait en plus une consi
 (redirection de port, reverse proxy, réglage `liberoshop.mobile.public-url`), inutilisable pour un
 commerçant.
 
-**Après.** La page indique à tout le monde **qui appeler** : le support de Libero Shop, avec son
+**Après.** La page indique à tout le monde **qui appeler** : le support de Moussa Shop, avec son
 numéro WhatsApp, qui se charge de rendre le serveur accessible depuis Internet. La consigne
 technique a été retirée de l'écran ; elle reste dans `mobile-android.md` pour celui qui fait
 l'installation.

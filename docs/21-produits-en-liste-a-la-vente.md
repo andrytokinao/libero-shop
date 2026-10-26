@@ -1,4 +1,4 @@
-# Libero Shop — les produits en liste à la vente, au choix avec les tuiles
+# Moussa Shop — les produits en liste à la vente, au choix avec les tuiles
 
 Réalisée le 13 octobre 2026.
 

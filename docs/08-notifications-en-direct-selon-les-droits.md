@@ -1,4 +1,4 @@
-# Libero Shop — notifications en direct selon les droits
+# Moussa Shop — notifications en direct selon les droits
 
 Réalisée le 10 octobre 2026.
 

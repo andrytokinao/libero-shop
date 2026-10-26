@@ -1,4 +1,4 @@
-# Libero Shop — conception des prix et des unités
+# Moussa Shop — conception des prix et des unités
 
 État au 16 octobre 2026, branche `develop`.
 

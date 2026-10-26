@@ -1,4 +1,4 @@
-# Libero Shop — journal de réalisation
+# Moussa Shop — journal de réalisation
 
 Ce document détaille, partie par partie, ce qui a été réalisé à partir de
 [`TODO.md`](TODO.md) : ce qui change pour l'utilisateur, les fichiers touchés, les choix faits,

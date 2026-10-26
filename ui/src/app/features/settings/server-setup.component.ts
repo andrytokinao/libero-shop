@@ -15,7 +15,7 @@ import { ToastService } from '../../core/services/toast.service';
  * the settings once signed in. Signed out it fills the viewport like the login page; signed in
  * it sits in the shell like any other page.
  *
- * <p>Nothing is saved unless the server has answered and said it is Libero Shop: a typo, or the
+ * <p>Nothing is saved unless the server has answered and said it is Moussa Shop: a typo, or the
  * address of the Wi-Fi box, is refused on the spot rather than discovered at the first sign-in.
  * Moving an account to another server signs it out — its token was issued by the old one.
  */
