@@ -33,7 +33,7 @@ class UpdateInstallerTest {
         Path payload = libDir.resolve("resources.bin");
         Files.writeString(payload, "ancien jar");
         InstallLayout layout = new InstallLayout(
-                dir.resolve("install"), payload, dir.resolve("install/Libero Shop.exe"));
+                dir.resolve("install"), payload, dir.resolve("install/Moussa Shop.exe"));
 
         Path script = installer.prepare(pkg, layout);
 

@@ -1,4 +1,4 @@
-# Libero Shop — factures lues par période
+# Moussa Shop — factures lues par période
 
 Deuxième tranche de la partie 6 (pagination). Réalisée le 10 octobre 2026.
 
