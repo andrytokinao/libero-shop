@@ -1,4 +1,4 @@
-# Libero Shop — la caisse est prévenue des commandes à encaisser
+# Moussa Shop — la caisse est prévenue des commandes à encaisser
 
 Réalisée le 13 octobre 2026.
 
