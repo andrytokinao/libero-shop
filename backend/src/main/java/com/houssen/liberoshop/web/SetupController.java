@@ -73,7 +73,7 @@ public class SetupController {
     private static void requireServerItselfForRecovery(HttpServletRequest request) {
         if (!isServerItself(request)) {
             throw new BusinessRuleException("RECOVERY_ONLY_ON_SERVER",
-                    "Le mot de passe administrateur se retrouve sur l'ordinateur ou Libero Shop est installe.");
+                    "Le mot de passe administrateur se retrouve sur l'ordinateur ou Moussa Shop est installe.");
         }
     }
 

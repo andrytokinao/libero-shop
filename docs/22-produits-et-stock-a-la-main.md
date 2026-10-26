@@ -1,4 +1,4 @@
-# Libero Shop — produits et stock à la main, depuis le menu du produit
+# Moussa Shop — produits et stock à la main, depuis le menu du produit
 
 Réalisée le 13 octobre 2026.
 

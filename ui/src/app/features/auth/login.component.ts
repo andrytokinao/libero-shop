@@ -106,7 +106,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
             } @else {
               <div class="text">
                 L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
-                l'ordinateur où Libero Shop est installé.
+                l'ordinateur où Moussa Shop est installé.
               </div>
             }
           </div>
