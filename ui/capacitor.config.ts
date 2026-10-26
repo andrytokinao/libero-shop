@@ -9,7 +9,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'com.houssen.liberoshop',
-  appName: 'Libero Shop',
+  appName: 'Moussa Shop',
   // The output of `ng build --configuration mobile`.
   webDir: 'dist/ui-mobile/browser',
   server: {
