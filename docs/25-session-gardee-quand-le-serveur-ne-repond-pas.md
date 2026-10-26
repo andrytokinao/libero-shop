@@ -1,4 +1,4 @@
-# Libero Shop — session gardée quand le serveur ne répond pas
+# Moussa Shop — session gardée quand le serveur ne répond pas
 
 Réalisée le 16 octobre 2026.
 

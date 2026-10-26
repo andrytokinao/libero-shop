@@ -92,7 +92,7 @@ final class ServerMonitor implements ApplicationListener<ApplicationEvent> {
         }
         if (root instanceof BindException) {
             // By far the usual cause: the shortcut was double-clicked while the server was up.
-            return "le port est déjà utilisé. Libero Shop est peut-être déjà lancé.";
+            return "le port est déjà utilisé. Moussa Shop est peut-être déjà lancé.";
         }
         String message = root.getMessage();
         return message == null || message.isBlank() ? root.getClass().getSimpleName() : message;

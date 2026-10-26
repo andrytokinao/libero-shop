@@ -75,7 +75,7 @@ public final class UpdatePackage {
                 throw new UpdateInvalidException("Le fichier de mise a jour n'est pas un fichier valide.");
             }
             if (!FORMAT.equals(text(root, "format"))) {
-                throw new UpdateInvalidException("Ce fichier n'est pas une mise a jour Libero Shop.");
+                throw new UpdateInvalidException("Ce fichier n'est pas une mise a jour Moussa Shop.");
             }
             int version = root.path("version").asInt(0);
             if (version > SUPPORTED_VERSION) {
