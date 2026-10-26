@@ -1,4 +1,4 @@
-# Libero Shop — mot de passe de départ de l'administrateur
+# Moussa Shop — mot de passe de départ de l'administrateur
 
 Réalisée le 12 octobre 2026.
 
@@ -18,7 +18,7 @@ passe pour l'administrateur.
 1. **L'installation crée elle-même le compte administrateur**, identifiant `admin`, avec un
    **mot de passe de départ tiré au hasard** (10 caractères, différent sur chaque installation).
 2. **La page de connexion affiche cet identifiant et ce mot de passe**, dans un encadré
-   « Première connexion », sur l'ordinateur où Libero Shop est installé. L'identifiant est déjà
+   « Première connexion », sur l'ordinateur où Moussa Shop est installé. L'identifiant est déjà
    rempli ; il reste à recopier le mot de passe.
 3. **Après la connexion, rien d'autre ne s'ouvre tant que ce mot de passe n'a pas été remplacé** :
    on arrive sur la page « Mon mot de passe » (le mécanisme existant pour un mot de passe donné

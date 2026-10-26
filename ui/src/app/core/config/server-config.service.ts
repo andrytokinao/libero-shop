@@ -66,7 +66,7 @@ export class ServerConfig {
   }
 
   /**
-   * Asks a candidate address who it is. Resolves with its identity when it is a Libero Shop
+   * Asks a candidate address who it is. Resolves with its identity when it is a Moussa Shop
    * server, fails with a message ready to show otherwise.
    */
   probe(url: string): Observable<ServerInfo> {
@@ -77,7 +77,7 @@ export class ServerConfig {
       ),
       map((info) => {
         if (info?.application !== APPLICATION) {
-          throw new Error(`${url} répond, mais ce n'est pas un serveur Libero Shop.`);
+          throw new Error(`${url} répond, mais ce n'est pas un serveur Moussa Shop.`);
         }
         return info;
       }),
@@ -157,6 +157,6 @@ export class ServerConfig {
     } else if (/^https?:\/\//i.test(scanned)) {
       return ServerConfig.normalise(scanned);
     }
-    throw new Error("Ce QR code n'est pas un code de connexion Libero Shop.");
+    throw new Error("Ce QR code n'est pas un code de connexion Moussa Shop.");
   }
 }

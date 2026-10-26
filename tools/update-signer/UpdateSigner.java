@@ -147,7 +147,7 @@ public final class UpdateSigner {
 
     private static void usage() {
         System.out.println("""
-                UpdateSigner — sign a Libero Shop application update.
+                UpdateSigner — sign a Moussa Shop application update.
 
                   java UpdateSigner.java keygen [private-key-out]
                   java UpdateSigner.java sign --key <private.key> --jar <fat.jar> \\

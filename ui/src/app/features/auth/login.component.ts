@@ -109,11 +109,31 @@ const HIGHLIGHTS: readonly Highlight[] = [
               } @else {
                 <div class="text">
                   L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
-                  l'ordinateur où Libero Shop est installé.
+                  l'ordinateur où Moussa Shop est installé.
                 </div>
               }
             </div>
           }
+        <!-- A new installation: the server opened the administrator account itself. Its
+             password is told at the server's computer only, and until it has been replaced. -->
+        @if (first(); as f) {
+          <div class="login-first" role="status">
+            <div class="title">Première connexion</div>
+            @if (f.password) {
+              <div>Identifiant : <strong class="value">{{ f.username }}</strong></div>
+              <div>Mot de passe : <strong class="value">{{ f.password }}</strong></div>
+              <div class="text">
+                Après la connexion, il vous sera demandé de le remplacer par le vôtre. Ce message
+                disparaît ensuite.
+              </div>
+            } @else {
+              <div class="text">
+                L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
+                l'ordinateur où Moussa Shop est installé.
+              </div>
+            }
+          </div>
+        }
 
           <div class="form-row" style="flex-direction:column; align-items:stretch;">
             <div class="fld">
