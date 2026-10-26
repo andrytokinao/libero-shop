@@ -34,7 +34,7 @@ describe('movement actions', () => {
   });
 
   it('prints the receipt with its figures, the product name escaped', () => {
-    const html = receiptHtml(supply, 'Libero Shop');
+    const html = receiptHtml(supply, 'Moussa Shop');
     expect(html).toContain('Lait &lt;400g&gt;');
     expect(html).toContain('Distri Lait SARL');
     expect(html).toContain('carton');

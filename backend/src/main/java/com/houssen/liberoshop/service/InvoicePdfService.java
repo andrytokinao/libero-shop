@@ -1,9 +1,6 @@
 package com.houssen.liberoshop.service;
 
 import com.houssen.liberoshop.entity.UserApp;
-import com.houssen.liberoshop.printer.pdf.HtmlPdfRenderer;
-import com.houssen.liberoshop.printer.pdf.InvoiceDocument;
-import com.houssen.liberoshop.printer.service.ShopInfoService;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-# Libero Shop — le menu suit un changement de rôle
+# Moussa Shop — le menu suit un changement de rôle
 
 Réalisée le 10 octobre 2026.
 

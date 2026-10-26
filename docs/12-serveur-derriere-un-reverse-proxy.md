@@ -1,4 +1,4 @@
-# Libero Shop — serveur derrière un reverse proxy
+# Moussa Shop — serveur derrière un reverse proxy
 
 Réalisée le 10 octobre 2026.
 
