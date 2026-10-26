@@ -1,4 +1,4 @@
-# Libero Shop — facilité d'utilisation (liste de travail)
+# Moussa Shop — facilité d'utilisation (liste de travail)
 
 Liste à traiter point par point, comme `TODO.md`. Le détail, les maquettes et les schémas sont
 dans [`todo-ui.html`](todo-ui.html) : chaque repère `UI-xx` y a sa section.

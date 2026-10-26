@@ -21,7 +21,7 @@ public class InvoicePdfService {
      * @param shopName printed at the top of every invoice
      */
     public InvoicePdfService(InvoiceService invoices,
-                             @Value("${liberoshop.shop-name:Libero Shop}") String shopName) {
+                             @Value("${liberoshop.shop-name:Moussa Shop}") String shopName) {
         this.invoices = invoices;
         this.shopName = shopName;
     }
