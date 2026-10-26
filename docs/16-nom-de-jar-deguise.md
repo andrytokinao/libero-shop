@@ -1,4 +1,4 @@
-# Libero Shop — cacher que l'application est écrite en Java (payload déguisé dans le runtime)
+# Moussa Shop — cacher que l'application est écrite en Java (payload déguisé dans le runtime)
 
 Réalisée le 13 octobre 2026.
 
@@ -17,7 +17,7 @@ attaquer.
 **Après (build Windows).** Après la construction de l'image, le jar est :
 
 1. **déplacé hors de `app\`**, dans `runtime\lib\` — le dossier des fichiers de la JVM ;
-2. **renommé** `resources.bin` : extension neutre, nom qui n'évoque ni Libero Shop ni Java ;
+2. **renommé** `resources.bin` : extension neutre, nom qui n'évoque ni Moussa Shop ni Java ;
 3. le fichier `.cfg` du lanceur est réécrit pour l'y chercher
    (`app.classpath=$APPDIR\..\runtime\lib\resources.bin`).
 
@@ -51,7 +51,7 @@ premier coup d'œil ; il ne remplace pas l'obfuscation.
 ## Détail
 
 - `backend/pom.xml` (profil `installer`) :
-  - propriétés `installer.name` (= `Libero Shop`, sert aussi à localiser le dossier de l'image) et
+  - propriétés `installer.name` (= `Moussa Shop`, sert aussi à localiser le dossier de l'image) et
     `jpackage.payload` (= `resources.bin`) ;
   - nouvelle étape `maven-antrun-plugin` (`hide-payload-in-runtime`, phase `verify`), **déclarée
     après** l'exécution jpackage pour passer une fois l'image construite. Elle :
@@ -84,7 +84,7 @@ avant.
 
 - **Image portable reconstruite proprement** avec un JDK 21 :
   `mvnw -Pinstaller -Dinstaller.os=portable -DskipTests clean verify` → succès.
-  - `app\` ne contient **aucun `.jar`** : seulement `.jpackage.xml`, `Libero Shop.cfg`,
+  - `app\` ne contient **aucun `.jar`** : seulement `.jpackage.xml`, `Moussa Shop.cfg`,
     `libero-shop.apk` ;
   - `runtime\lib\resources.bin` (87 Mo) présent, à côté de `modules`, `tzdb.dat`, `jvm.cfg` ;
   - `.cfg` : `app.classpath=$APPDIR\..\runtime\lib\resources.bin` (antislashs préservés).

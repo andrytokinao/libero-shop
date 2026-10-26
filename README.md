@@ -1,4 +1,4 @@
-# Libero Shop
+# Moussa Shop
 
 Logiciel de caisse et de gestion de stock pour une boutique : vente au comptoir, commandes,
 dépôt, réceptions de marchandise, corrections et inventaires, prix et bénéfices, sauvegardes.

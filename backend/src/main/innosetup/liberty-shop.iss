@@ -1,4 +1,4 @@
-; Inno Setup script for Libero Shop.
+; Inno Setup script for Moussa Shop.
 ;
 ; Wraps the jpackage app-image (launcher + embedded Java runtime + obfuscated
 ; jar) into a real Setup.exe -- WITHOUT WiX, .NET 3.5 or admin rights.
@@ -10,15 +10,15 @@
 ;
 ; Paths can be overridden:  iscc /DAppVersion=1.2.0 /DSourceDir=... liberty-shop.iss
 
-#define AppName "Libero Shop"
+#define AppName "Moussa Shop"
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
 #define Publisher "Kinga Digital"
-#define ExeName "Libero Shop.exe"
+#define ExeName "Moussa Shop.exe"
 ; app-image folder produced by jpackage (relative to this .iss file).
 #ifndef SourceDir
-  #define SourceDir "..\..\..\target\jpackage\dist\Libero Shop"
+  #define SourceDir "..\..\..\target\jpackage\dist\Moussa Shop"
 #endif
 #ifndef OutDir
   #define OutDir "..\..\..\target\jpackage\dist"

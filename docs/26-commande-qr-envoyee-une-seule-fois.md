@@ -1,4 +1,4 @@
-# Libero Shop — commande par QR code enregistrée une seule fois
+# Moussa Shop — commande par QR code enregistrée une seule fois
 
 Réalisée le 16 octobre 2026.
 
