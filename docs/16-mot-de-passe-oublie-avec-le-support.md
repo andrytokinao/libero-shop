@@ -1,4 +1,4 @@
-# Libero Shop — mot de passe administrateur oublié : avec le support
+# Moussa Shop — mot de passe administrateur oublié : avec le support
 
 Réalisée le 11 octobre 2026.
 
@@ -18,7 +18,7 @@ l'administrateur.
 **Après.**
 
 1. **La page ne dit plus où est le fichier du code.** Elle indique seulement qu'un code vient
-   d'être écrit sur cet ordinateur et qu'il faut **appeler le support de Libero Shop**, avec son
+   d'être écrit sur cet ordinateur et qu'il faut **appeler le support de Moussa Shop**, avec son
    numéro (WhatsApp).
 2. **Le support indique où lire le code**, après s'être assuré de parler à la bonne personne.
 3. Le serveur ne renvoie plus cet emplacement du tout : on ne le retrouve pas non plus en
@@ -29,7 +29,7 @@ Le reste de la procédure est inchangé : uniquement sur l'ordinateur du serveur
 
 ## Pour le support : où est le code
 
-Sur l'ordinateur où Libero Shop est installé, dans le dossier de l'utilisateur Windows :
+Sur l'ordinateur où Moussa Shop est installé, dans le dossier de l'utilisateur Windows :
 
 ```
 C:\Users\<nom de la session>\.libertyshop\security\recovery-code.txt

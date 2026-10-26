@@ -1,4 +1,4 @@
-# Libero Shop — mots de passe personnels
+# Moussa Shop — mots de passe personnels
 
 Réalisée le 10 octobre 2026.
 

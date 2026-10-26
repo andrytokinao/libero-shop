@@ -1,4 +1,4 @@
-# Libero Shop — sorties de stock lues par pages
+# Moussa Shop — sorties de stock lues par pages
 
 Première tranche de la partie 6 (pagination). Réalisée le 10 octobre 2026.
 

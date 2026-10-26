@@ -1,4 +1,4 @@
-# Libero Shop — points à améliorer
+# Moussa Shop — points à améliorer
 
 État au 10 octobre 2026, branche `develop` (commit `cb95375`).
 

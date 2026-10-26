@@ -47,7 +47,7 @@ public class ServerController {
     /** Public: asked before anyone has signed in, to test an address typed or scanned. */
     @GetMapping("/info")
     public ServerInfoResponse info() {
-        return new ServerInfoResponse(APPLICATION, "Libero Shop", version);
+        return new ServerInfoResponse(APPLICATION, "Moussa Shop", version);
     }
 
     /** The shop's date and time, which the screens count "today" by. For signed-in screens. */
