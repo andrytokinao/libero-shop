@@ -1,0 +1,92 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches:
+      - "release-*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (laisser vide pour la déduire du nom de la branche)"
+        required: false
+        default: ""
+      create_release:
+        description: "Publier dans une GitHub Release ?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout (branche courante)
+        uses: actions/checkout@v4
+
+      - name: Déterminer la version
+        id: ver
+        shell: pwsh
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:MANUAL_VERSION) {
+            $v = $env:MANUAL_VERSION
+          } else {
+            $v = $env:BRANCH_NAME -replace '^release[-/]', ''
+          }
+
+          if ($v -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Version invalide '$v' (branche '$($env:BRANCH_NAME)'). Format attendu : 1.0.23"
+            exit 1
+          }
+
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Branche : $($env:BRANCH_NAME) -> Version : $v"
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install WiX Toolset 3 (si absent)
+        shell: pwsh
+        run: choco install wixtoolset -y --no-progress
+        continue-on-error: true
+
+      - name: Build installer (profil installer)
+        shell: pwsh
+        run: mvn -B -P installer "-Drevision=${{ steps.ver.outputs.version }}" "-Dapp.version=${{ steps.ver.outputs.version }}" clean verify
+
+      - name: Lister les fichiers générés
+        shell: pwsh
+        run: Get-ChildItem -Recurse -Include *.exe,*.msi target | Select-Object FullName
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Installer-Windows-${{ steps.ver.outputs.version }}
+          path: |
+            backend/target/**/*.exe
+            backend/target/**/*.msi
+          if-no-files-found: error
+
+      - name: Publier dans une Release
+        if: ${{ github.event_name == 'push' || inputs.create_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Version ${{ steps.ver.outputs.version }}
+          files: |
+            backend/target/**/*.exe
+            backend/target/**/*.msi
