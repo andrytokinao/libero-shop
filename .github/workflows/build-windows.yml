@@ -10,6 +10,10 @@ on:
         description: "Version (laisser vide pour la déduire du nom de la branche)"
         required: false
         default: ""
+      variant:
+        description: "Variante, ex. moussa (laisser vide pour la déduire du nom de la branche)"
+        required: false
+        default: ""
       publish_to_site:
         description: "Envoyer le zip sur le site web ?"
         type: boolean
@@ -19,7 +23,7 @@ permissions:
   contents: read
 
 env:
-  APP_NAME: libero-shop                                        # nom de l'application (minuscules, tirets)
+  APP_NAME: libero-shop                                        # nom de base de l'application (minuscules, tirets)
   VIDEO_PATH: assets/video/demo.mp4                            # vidéo optionnelle, ignorée si absente
   UPLOAD_URL: https://www.kinga-digital.com/api/upload-release # URL de l'API d'upload (sans le nom de l'app)
   SITE_URL: https://www.kinga-digital.com                      # utilisé pour afficher les liens publics
@@ -30,6 +34,8 @@ jobs:
 
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      variant: ${{ steps.ver.outputs.variant }}
+      app: ${{ steps.ver.outputs.app }}
 
     defaults:
       run:
@@ -41,26 +47,45 @@ jobs:
         with:
           lfs: true
 
-      - name: Déterminer la version
+      - name: Déterminer la version et la variante
         id: ver
         shell: pwsh
         env:
           BRANCH_NAME: ${{ github.ref_name }}
           MANUAL_VERSION: ${{ inputs.version }}
+          MANUAL_VARIANT: ${{ inputs.variant }}
         run: |
-          if ($env:MANUAL_VERSION) {
-            $v = $env:MANUAL_VERSION
-          } else {
-            $v = $env:BRANCH_NAME -replace '^release[-/]', ''
+          # Formats acceptés : release-1.0.23  ou  release-moussa-1.0.5
+          $rest = $env:BRANCH_NAME -replace '^release[-/]', ''
+          $variant = ""
+          $v = ""
+
+          if ($rest -match '^(?:(?<variant>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*?)-)?(?<version>\d+\.\d+\.\d+)$') {
+            $v = [string]$Matches['version']
+            $variant = [string]$Matches['variant']
           }
 
+          # Valeurs saisies à la main : prioritaires
+          if ($env:MANUAL_VERSION) { $v = $env:MANUAL_VERSION }
+          if ($env:MANUAL_VARIANT) { $variant = $env:MANUAL_VARIANT }
+          $variant = $variant.ToLower()
+
           if ($v -notmatch '^\d+\.\d+\.\d+$') {
-            Write-Error "Version invalide '$v' (branche '$($env:BRANCH_NAME)'). Format attendu : 1.0.23"
+            Write-Error "Version introuvable dans la branche '$($env:BRANCH_NAME)'. Formats attendus : release-1.0.23 ou release-moussa-1.0.5"
+            exit 1
+          }
+          if ($variant -and $variant -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$') {
+            Write-Error "Variante invalide '$variant' (minuscules, chiffres et tirets uniquement)"
             exit 1
           }
 
+          $app = $env:APP_NAME
+          if ($variant) { $app = "$app-$variant" }
+
           "version=$v" >> $env:GITHUB_OUTPUT
-          Write-Host "Branche : $($env:BRANCH_NAME) -> Version : $v"
+          "variant=$variant" >> $env:GITHUB_OUTPUT
+          "app=$app" >> $env:GITHUB_OUTPUT
+          Write-Host "Branche : $($env:BRANCH_NAME) -> Application : $app, Version : $v"
 
       - name: Setup JDK 21
         uses: actions/setup-java@v4
@@ -109,7 +134,7 @@ jobs:
       - name: Upload artifact (contenu à la racine)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ steps.ver.outputs.version }}
+          name: ${{ steps.ver.outputs.app }}-${{ steps.ver.outputs.version }}
           path: staging/*
           if-no-files-found: error
           retention-days: 30
@@ -120,6 +145,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      APP: ${{ needs.build-windows.outputs.app }}
       VERSION: ${{ needs.build-windows.outputs.version }}
       KINGA_UPLOAD_TOKEN: ${{ secrets.KINGA_UPLOAD_TOKEN }}   # seul secret nécessaire
 
@@ -127,28 +153,28 @@ jobs:
       - name: Télécharger l'artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ needs.build-windows.outputs.version }}
+          name: ${{ needs.build-windows.outputs.app }}-${{ needs.build-windows.outputs.version }}
           path: dist
 
       - name: Créer le zip
         run: |
           cd dist
-          zip -r "../${APP_NAME}-${VERSION}.zip" .
+          zip -r "../${APP}-${VERSION}.zip" .
           cd ..
-          ls -lh "${APP_NAME}-${VERSION}.zip"
+          ls -lh "${APP}-${VERSION}.zip"
 
       - name: Envoyer le zip par POST
         run: |
-          ZIP="${APP_NAME}-${VERSION}.zip"
-          echo "Envoi vers ${UPLOAD_URL%/}/${APP_NAME}"
+          ZIP="${APP}-${VERSION}.zip"
+          echo "Envoi vers ${UPLOAD_URL%/}/${APP}"
           curl --fail-with-body -sS \
             --retry 3 --retry-all-errors --retry-delay 5 \
-            -X POST "${UPLOAD_URL%/}/${APP_NAME}" \
+            -X POST "${UPLOAD_URL%/}/${APP}" \
             -H "Authorization: Bearer KINGA_UPLOAD_TOKEN" \
             -F "version=${VERSION}" \
             -F "file=@${ZIP};type=application/zip"
 
       - name: Afficher les liens publics
         run: |
-          echo "Version  : ${SITE_URL}/downloads/${APP_NAME}/${APP_NAME}-${VERSION}.zip"
-          echo "Dernière : ${SITE_URL}/downloads/${APP_NAME}/${APP_NAME}-latest.zip"
+          echo "Version  : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.zip"
+          echo "Dernière : ${SITE_URL}/downloads/${APP}/${APP}-latest.zip"
