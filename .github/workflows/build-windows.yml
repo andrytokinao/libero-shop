@@ -121,7 +121,7 @@ jobs:
 
     env:
       VERSION: ${{ needs.build-windows.outputs.version }}
-      UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}   # seul secret nécessaire
+      KINGA_UPLOAD_TOKEN: ${{ secrets.KINGA_UPLOAD_TOKEN }}   # seul secret nécessaire
 
     steps:
       - name: Télécharger l'artifact
@@ -144,7 +144,7 @@ jobs:
           curl --fail-with-body -sS \
             --retry 3 --retry-all-errors --retry-delay 5 \
             -X POST "${UPLOAD_URL%/}/${APP_NAME}" \
-            -H "Authorization: Bearer KINGA_UPLOAD_TOKEN \
+            -H "Authorization: Bearer KINGA_UPLOAD_TOKEN" \
             -F "version=${VERSION}" \
             -F "file=@${ZIP};type=application/zip"
 
