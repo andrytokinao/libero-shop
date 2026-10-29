@@ -13,6 +13,13 @@ import { QrCodeComponent } from '../../shared/components/qr-code.component';
 type Network = 'local' | 'internet';
 
 /**
+ * Virtual tunnel interfaces (WireGuard, OpenVPN, Tailscale, ZeroTier...): an address on one of
+ * them is reached only by phones that are on that VPN, so it is never the default for the shop's
+ * Wi-Fi. Matched on the interface name the server reports (wg0, tun0, utun3, "WireGuard Tunnel").
+ */
+const TUNNEL_INTERFACE = /^(wg|tun|tap|utun|wireguard|tailscale|zt)/i;
+
+/**
  * Getting the Android app, for anyone: two scans, one to install it, one to connect it.
  *
  * <p>Public, like the APK behind it — a new employee equips their phone before they have an
@@ -22,7 +29,8 @@ type Network = 'local' | 'internet';
  * <p>The first question is asked in plain words: is the phone on the shop's Wi-Fi, or elsewhere?
  * The two give different addresses, and a code for the wrong one is a phone that "does not work".
  * On the Wi-Fi the server cannot know which of its network cards the phones reach, so it lists
- * them all, the likeliest first, and the choice sits behind a selector most people never open.
+ * them all, the likeliest first (VPN tunnels last), and the choice sits behind a selector most
+ * people never open.
  */
 @Component({
   selector: 'app-mobile-download',
@@ -74,7 +82,7 @@ type Network = 'local' | 'internet';
               </button>
             </div>
 
-            @if (network() === 'local' && c.addresses.length > 1) {
+            @if (network() === 'local' && addresses().length > 1) {
               <details class="advanced">
                 <summary>Le téléphone ne trouve pas le serveur ? Changer d'adresse</summary>
                 <select
@@ -83,15 +91,17 @@ type Network = 'local' | 'internet';
                   [ngModel]="chosen()?.url"
                   (ngModelChange)="pickedUrl.set($event)"
                 >
-                  @for (address of c.addresses; track address.url) {
+                  @for (address of addresses(); track address.url) {
                     <option [ngValue]="address.url">
                       {{ address.url }} — {{ address.label
+                      }}{{ isTunnel(address) ? ' (VPN)' : ''
                       }}{{ address.likelyVirtual ? ' (virtuelle)' : '' }}
                     </option>
                   }
                 </select>
                 <div class="muted small">
-                  Choisissez l'adresse de la carte réseau reliée au Wi-Fi de la boutique.
+                  Choisissez l'adresse de la carte réseau reliée au Wi-Fi de la boutique. Une
+                  adresse VPN (WireGuard) ne fonctionne que pour les téléphones connectés à ce VPN.
                 </div>
               </details>
             }
@@ -143,22 +153,22 @@ type Network = 'local' | 'internet';
             <div class="card empty">
               @if (network() === 'internet') {
                 Le serveur n'est pas accessible depuis Internet : l'application ne fonctionne que
-                dans la boutique, sur son Wi-Fi.
-                <!-- Opening a server to the Internet is a box, a name and a certificate: not
-                     something a shop does alone, so it is told who does it for them. -->
+                  dans la boutique, sur son Wi-Fi.
+                  <!-- Opening a server to the Internet is a box, a name and a certificate: not
+                       something a shop does alone, so it is told who does it for them. -->
                 <div class="support">
                   Pour utiliser l'application partout, contactez le support de Moussa Shop : il
                   rend votre serveur accessible depuis Internet.
                   <div>
                     Support — WhatsApp :
                     <a [href]="support.whatsappLink" target="_blank" rel="noopener">{{
-                      support.phone
-                    }}</a>
+                        support.phone
+                      }}</a>
                   </div>
                 </div>
               } @else {
                 Les adresses du Wi-Fi de la boutique ne s'affichent que sur un appareil connecté à ce
-                Wi-Fi. Ouvrez cette page depuis un ordinateur ou un téléphone de la boutique.
+                  Wi-Fi. Ouvrez cette page depuis un ordinateur ou un téléphone de la boutique.
               }
             </div>
           }
@@ -311,6 +321,16 @@ export class MobileDownloadComponent {
     return !c?.addresses.length && c?.internet ? 'internet' : 'local';
   });
 
+  /**
+   * The server's local addresses, VPN tunnels last: the sort is stable, so within each group the
+   * server's own order (likeliest first) is kept. With only tunnels available, one of them still
+   * comes first rather than nothing.
+   */
+  protected readonly addresses = computed<ServerAddress[]>(() => {
+    const list = this.connection()?.addresses ?? [];
+    return [...list].sort((a, b) => Number(this.isTunnel(a)) - Number(this.isTunnel(b)));
+  });
+
   protected readonly chosen = computed<ServerAddress | undefined>(() => {
     const c = this.connection();
     if (!c) {
@@ -319,9 +339,15 @@ export class MobileDownloadComponent {
     if (this.network() === 'internet') {
       return c.internet ?? undefined;
     }
-    return c.addresses.find((address) => address.url === this.pickedUrl()) ?? c.addresses[0];
+    const list = this.addresses();
+    return list.find((address) => address.url === this.pickedUrl()) ?? list[0];
   });
 
   /** Only an administrator can act on "not published" or "not on the Internet": they get the how. */
   protected readonly isAdmin = computed(() => this.auth.roles().includes(RoleApp.SUPER_ADMIN));
+
+  /** True for an address on a VPN tunnel interface (wg0, tun0...), not on the shop's Wi-Fi. */
+  protected isTunnel(address: ServerAddress): boolean {
+    return TUNNEL_INTERFACE.test(address.label);
+  }
 }
