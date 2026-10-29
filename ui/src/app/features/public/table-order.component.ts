@@ -57,7 +57,7 @@ const STATUS_LABELS: Record<PublicOrderStatus, string> = {
   imports: [FormsModule, AriaryPipe],
   template: `
     <header class="public-bar">
-      <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+      <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
       @if (menu(); as m) {
         <div class="table-name">{{ m.tableName }}</div>
       }
