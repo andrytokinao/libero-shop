@@ -31,7 +31,7 @@ const MIN_PASSWORD_LENGTH = 8;
         <div class="setup-brand">
           <img src="logo.png" alt="" />
           <div>
-            <div class="mark">Libero <span>Shop</span></div>
+            <div class="mark">Moussa <span>Shop</span></div>
             <div class="sub">Mot de passe administrateur oublié</div>
           </div>
         </div>
