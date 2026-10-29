@@ -60,6 +60,12 @@ const HIGHLIGHTS: readonly Highlight[] = [
             Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
             au même endroit, sur votre propre réseau.
           </p>
+        <img class="about-logo" src="logo.png" alt="" />
+        <h1>Moussa <span>Shop</span></h1>
+        <p class="lead">
+          Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
+          au même endroit, sur votre propre réseau.
+        </p>
 
           <ul class="highlights">
             @for (item of highlights; track item.title) {
@@ -93,6 +99,11 @@ const HIGHLIGHTS: readonly Highlight[] = [
             <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
             <div class="sub">Gestion supermarche</div>
           </div>
+      <form class="card login-card" (ngSubmit)="submit()">
+        <div class="login-brand">
+          <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
+          <div class="sub">Gestion supermarche</div>
+        </div>
 
           <!-- A new installation: the server opened the administrator account itself. Its
                password is told at the server's computer only, and until it has been replaced. -->
