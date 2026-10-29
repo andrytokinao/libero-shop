@@ -13,7 +13,7 @@
     <!-- The version the running server reports (build-info) and the installer carries: the update
          check compares it with the published one, so both must say the same number. Plain digits:
          jpackage refuses a suffix such as -SNAPSHOT. -->
-    <version>1.0.0</version>
+    <version>moussa-1.0.8</version>
     <name>Moussa Shop</name>
     <description>Serveur de caisse et de gestion de stock Moussa Shop</description>
     <organization>
