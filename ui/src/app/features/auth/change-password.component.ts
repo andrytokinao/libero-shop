@@ -24,7 +24,7 @@ import { ToastService } from '../../core/services/toast.service';
         <div class="setup-brand">
           <img src="logo.png" alt="" />
           <div>
-            <div class="mark">Libero <span>Shop</span></div>
+            <div class="mark">Moussa <span>Shop</span></div>
             <div class="sub">Mon mot de passe</div>
           </div>
         </div>
