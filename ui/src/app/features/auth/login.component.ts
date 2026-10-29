@@ -54,7 +54,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
       <!-- Something to read beside the form: what the software is, and who to call. -->
       <aside class="login-about">
         <img class="about-logo" src="logo.png" alt="" />
-        <h1>Libero <span>Shop</span></h1>
+        <h1>Moussa <span>Shop</span></h1>
         <p class="lead">
           Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
           au même endroit, sur votre propre réseau.
@@ -87,7 +87,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
 
       <form class="card login-card" (ngSubmit)="submit()">
         <div class="login-brand">
-          <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+          <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
           <div class="sub">Gestion supermarche</div>
         </div>
 
