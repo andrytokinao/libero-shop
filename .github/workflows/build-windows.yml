@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       publish_to_site:
-        description: "Envoyer le zip sur le site web ?"
+        description: "Envoyer le zip et la mise à jour sur le site web ?"
         type: boolean
         default: false
+      notes:
+        description: "Notes de version affichées dans la mise à jour (facultatif)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -26,6 +30,7 @@ jobs:
 
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      pom_version: ${{ steps.ver.outputs.pom_version }}
       variant: ${{ steps.ver.outputs.variant }}
       app: ${{ steps.ver.outputs.app }}
 
@@ -67,6 +72,7 @@ jobs:
           }
 
           "version=$v" >> $env:GITHUB_OUTPUT
+          "pom_version=$($pomVersion.ToLower())" >> $env:GITHUB_OUTPUT
           "variant=$variant" >> $env:GITHUB_OUTPUT
           "app=$app" >> $env:GITHUB_OUTPUT
           Write-Host "Pom : $pomVersion -> Application : $app, Version Windows : $v"
@@ -125,6 +131,33 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Le payload de la mise à jour : le jar obfusqué que jpackage a embarqué dans l'installateur
+      # (copié par stage-jpackage-input dans target/jpackage/input), identique octet pour octet.
+      - name: Préparer le payload de la mise à jour
+        shell: pwsh
+        run: |
+          $jars = Get-ChildItem -Path target/jpackage/input -Filter *.jar -File
+          if (-not $jars) {
+            Write-Error "Aucun jar trouvé dans backend/target/jpackage/input"
+            exit 1
+          }
+          if ($jars.Count -gt 1) {
+            Write-Error "Plusieurs jars dans target/jpackage/input : $($jars.Name -join ', ')"
+            exit 1
+          }
+          $dir = Join-Path $env:GITHUB_WORKSPACE "update-payload"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Copy-Item $jars[0].FullName -Destination (Join-Path $dir "payload.bin")
+          Write-Host "Payload : $($jars[0].Name) ($([math]::Round($jars[0].Length / 1MB, 1)) Mo)"
+
+      - name: Upload payload (pour le job de publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-${{ steps.ver.outputs.app }}-${{ steps.ver.outputs.version }}
+          path: update-payload/payload.bin
+          if-no-files-found: error
+          retention-days: 1
+
   publish-site:
     needs: build-windows
     if: ${{ github.event_name == 'push' || inputs.publish_to_site }}
@@ -133,10 +166,13 @@ jobs:
     env:
       APP: ${{ needs.build-windows.outputs.app }}
       VERSION: ${{ needs.build-windows.outputs.version }}
-      KINGA_UPLOAD_TOKEN: ${{ secrets.KINGA_UPLOAD_TOKEN }}   # seul secret nécessaire
+      POM_VERSION: ${{ needs.build-windows.outputs.pom_version }}
+      RELEASE_NOTES: ${{ inputs.notes }}
+      KINGA_UPLOAD_TOKEN: ${{ secrets.KINGA_UPLOAD_TOKEN }}   # seul secret d'envoi
+      UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}   # clé privée Ed25519 de signature des mises à jour
 
     steps:
-      - name: Télécharger l'artifact
+      - name: Télécharger l'artifact (installateur)
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build-windows.outputs.app }}-${{ needs.build-windows.outputs.version }}
@@ -160,7 +196,93 @@ jobs:
             -F "version=${VERSION}" \
             -F "file=@${ZIP};type=application/zip"
 
+      - name: Télécharger le payload de la mise à jour
+        uses: actions/download-artifact@v4
+        with:
+          name: payload-${{ needs.build-windows.outputs.app }}-${{ needs.build-windows.outputs.version }}
+          path: payload
+
+      - name: Fabriquer, signer et envoyer la mise à jour (.lsu)
+        run: |
+          set -euo pipefail
+
+          if [ -z "${UPDATE_SIGNING_KEY:-}" ]; then
+            echo "::warning::Secret UPDATE_SIGNING_KEY absent : la mise à jour (.lsu) n'est pas créée. L'installateur, lui, est publié."
+            exit 0
+          fi
+
+          umask 077
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+
+          # --- Clé privée : PEM complet, ou PKCS8 en Base64 sans en-tête ---
+          printf '%s' "$UPDATE_SIGNING_KEY" > "$WORK/key.raw"
+          if grep -q 'BEGIN' "$WORK/key.raw"; then
+            cp "$WORK/key.raw" "$WORK/key.pem"
+          else
+            {
+              echo "-----BEGIN PRIVATE KEY-----"
+              tr -d ' \r\n' < "$WORK/key.raw" | fold -w 64
+              echo
+              echo "-----END PRIVATE KEY-----"
+            } > "$WORK/key.pem"
+          fi
+          openssl pkey -in "$WORK/key.pem" -pubout -out "$WORK/pub.pem"
+          echo "Clé publique (à comparer avec EmbeddedUpdateKey) :"
+          openssl pkey -in "$WORK/key.pem" -pubout -outform DER | base64 -w0
+          echo
+
+          # --- Payload et manifeste ---
+          cp payload/payload.bin "$WORK/payload.bin"
+          SHA256="$(sha256sum "$WORK/payload.bin" | cut -d' ' -f1)"
+          RELEASED_ON="$(date -u +%F)"
+          NOTES="${RELEASE_NOTES:-Version ${POM_VERSION}}"
+
+          jq -nc \
+            --arg appVersion "$POM_VERSION" \
+            --arg payloadSha256 "$SHA256" \
+            --arg releasedOn "$RELEASED_ON" \
+            --arg notes "$NOTES" \
+            '{appVersion:$appVersion, payloadSha256:$payloadSha256, releasedOn:$releasedOn, notes:$notes}' \
+            | tr -d '\n' > "$WORK/manifest.json"
+          echo "Manifeste : $(cat "$WORK/manifest.json")"
+
+          # --- Signature Ed25519 des octets exacts du manifeste ---
+          openssl pkeyutl -sign -rawin -inkey "$WORK/key.pem" -in "$WORK/manifest.json" -out "$WORK/signature.bin"
+          openssl pkeyutl -verify -rawin -pubin -inkey "$WORK/pub.pem" -in "$WORK/manifest.json" -sigfile "$WORK/signature.bin"
+
+          MANIFEST_B64URL="$(base64 -w0 "$WORK/manifest.json" | tr '+/' '-_' | tr -d '=')"
+          SIGNATURE_B64="$(base64 -w0 "$WORK/signature.bin")"
+
+          jq -nc \
+            --arg manifest "$MANIFEST_B64URL" \
+            --arg signature "$SIGNATURE_B64" \
+            '{format:"libero-shop-update", version:1, algorithm:"Ed25519", manifest:$manifest, signature:$signature}' \
+            > "$WORK/envelope.json"
+
+          # --- Archive .lsu : envelope.json et payload.bin à la racine ---
+          LSU="${GITHUB_WORKSPACE}/${APP}-${VERSION}.lsu"
+          (cd "$WORK" && zip -X -q "$LSU" envelope.json payload.bin)
+          unzip -l "$LSU"
+          ls -lh "$LSU"
+
+          # --- Envoi : le site publie ${APP}-${VERSION}.lsu, ${APP}-latest.lsu et latest.json ---
+          echo "Envoi de la mise à jour vers ${UPLOAD_URL%/}/${APP}"
+          curl --fail-with-body -sS \
+            --retry 3 --retry-all-errors --retry-delay 5 \
+            -X POST "${UPLOAD_URL%/}/${APP}" \
+            -H "Authorization: Bearer KINGA_UPLOAD_TOKEN" \
+            --form-string "kind=lsu" \
+            --form-string "version=${VERSION}" \
+            --form-string "app_version=${POM_VERSION}" \
+            --form-string "released_on=${RELEASED_ON}" \
+            --form-string "notes=${NOTES}" \
+            -F "file=@${LSU};type=application/octet-stream"
+
       - name: Afficher les liens publics
         run: |
-          echo "Version  : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.zip"
-          echo "Dernière : ${SITE_URL}/downloads/${APP}/${APP}-latest.zip"
+          echo "Installateur : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.zip"
+          echo "Dernier installateur : ${SITE_URL}/downloads/${APP}/${APP}-latest.zip"
+          echo "Mise à jour : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.lsu"
+          echo "Dernière mise à jour : ${SITE_URL}/downloads/${APP}/${APP}-latest.lsu"
+          echo "Manifeste en ligne : ${SITE_URL}/downloads/${APP}/latest.json"
