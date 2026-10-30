@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Properties;
@@ -58,13 +60,10 @@ public final class EmbeddedUpdateKey {
 
     private static PublicKey decode(String base64) {
         try {
-            byte[] der = Base64.getDecoder().decode(base64);
+            byte[] der = Base64.getDecoder().decode(base64.replaceAll("\\s", ""));
             return KeyFactory.getInstance(ALGORITHM).generatePublic(new X509EncodedKeySpec(der));
-        } catch (IllegalArgumentException | GeneralSecurityException e) {
-            // A broken key is a build mistake, not a runtime condition: fail loudly at
-            // class-load time rather than silently accepting every update.
-            throw new IllegalStateException(
-                    "The embedded update public key is not a valid Ed25519 key.", e);
+        } catch (IllegalArgumentException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new IllegalStateException("Invalid embedded Ed25519 update key: " + e, e);
         }
     }
 }
