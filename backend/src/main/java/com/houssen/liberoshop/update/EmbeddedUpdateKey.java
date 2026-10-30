@@ -4,23 +4,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Properties;
 
 /**
- * The publisher's Ed25519 public key for <em>application updates</em>, compiled into the app.
+ * The publisher's Ed25519 public key for application updates, compiled into the jar.
  *
- * <p>The value is injected at build time (GitHub variable UPDATE_PUBLIC_KEY -> Maven property
- * update.public.key -> filtered resource inside the jar). It is not a runtime configuration
- * property: no setting on an installation can point the check at a different key.
- *
- * <p>A separate key from the licence one on purpose: signing an update means shipping code that
- * runs as the server. The matching private key lives only in the GitHub secret
- * UPDATE_SIGNING_KEY, never in the repo.
+ * <p>The value lives in the {@code update-key.properties} resource, packaged inside the jar:
+ * it is not a runtime configuration property, so nothing on an installation can point the check
+ * at another key. The release workflow writes that file from the UPDATE_PUBLIC_KEY GitHub
+ * variable before building; the matching private key exists only as the UPDATE_SIGNING_KEY secret.
  */
 public final class EmbeddedUpdateKey {
 
@@ -29,7 +24,7 @@ public final class EmbeddedUpdateKey {
 
     private static final String RESOURCE = "/update-key.properties";
 
-    private static final PublicKey PUBLIC_KEY = decode(loadBase64());
+    private static final PublicKey PUBLIC_KEY = load();
 
     private EmbeddedUpdateKey() {
     }
@@ -39,31 +34,28 @@ public final class EmbeddedUpdateKey {
         return PUBLIC_KEY;
     }
 
-    private static String loadBase64() {
+    private static PublicKey load() {
+        String base64;
         try (InputStream in = EmbeddedUpdateKey.class.getResourceAsStream(RESOURCE)) {
             if (in == null) {
-                throw new IllegalStateException("Missing " + RESOURCE + " in the application jar.");
+                throw new IllegalStateException("Missing resource " + RESOURCE + " in the application.");
             }
             Properties props = new Properties();
             props.load(in);
-            String value = props.getProperty("public.key");
-            if (value == null || value.isBlank() || value.startsWith("@")) {
-                throw new IllegalStateException(
-                        "The update public key was not injected at build time. Build with "
-                                + "-Dupdate.public.key=<Base64 X.509 Ed25519 public key>.");
-            }
-            return value.trim();
+            base64 = props.getProperty("public.key");
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot read " + RESOURCE, e);
+            throw new IllegalStateException("Cannot read " + RESOURCE + ": " + e, e);
         }
-    }
-
-    private static PublicKey decode(String base64) {
+        if (base64 == null || base64.isBlank()) {
+            throw new IllegalStateException("No 'public.key' value in " + RESOURCE + ".");
+        }
         try {
             byte[] der = Base64.getDecoder().decode(base64.replaceAll("\\s", ""));
             return KeyFactory.getInstance(ALGORITHM).generatePublic(new X509EncodedKeySpec(der));
-        } catch (IllegalArgumentException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-            throw new IllegalStateException("Invalid embedded Ed25519 update key: " + e, e);
+        } catch (IllegalArgumentException | GeneralSecurityException e) {
+            // A broken key is a build mistake: fail loudly rather than accept every update.
+            // The cause is in the message so it shows in logs that only print getMessage().
+            throw new IllegalStateException("Invalid Ed25519 update public key in " + RESOURCE + ": " + e, e);
         }
     }
 }
