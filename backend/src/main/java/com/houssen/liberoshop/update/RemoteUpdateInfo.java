@@ -41,6 +41,9 @@ public record RemoteUpdateInfo(String latestVersion, String releasedOn, String n
         }
         String latest = node.path("latestVersion").asString("").trim();
         String downloadUrl = node.path("downloadUrl").asString("").trim();
+        if (downloadUrl.isEmpty()) {
+            downloadUrl = node.path("url").asString("").trim();
+        }
         if (latest.isEmpty() || downloadUrl.isEmpty()) {
             throw new UpdateInvalidException("La reponse du serveur de mise a jour est incomplete.");
         }
