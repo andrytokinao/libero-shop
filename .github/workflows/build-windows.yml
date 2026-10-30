@@ -172,6 +172,61 @@ jobs:
       UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}   # clé privée Ed25519 de signature des mises à jour
 
     steps:
+      # Tout est vérifié AVANT de publier quoi que ce soit : si un contrôle échoue, rien n'est envoyé.
+      - name: Vérifier la clé de signature et le site
+        run: |
+          set -euo pipefail
+
+          # 1. Clé de signature présente, lisible et de type Ed25519
+          if [ -z "${UPDATE_SIGNING_KEY:-}" ]; then
+            echo "::error::Secret UPDATE_SIGNING_KEY absent ou vide. Créez-le dans Settings > Secrets and variables > Actions (Repository secrets). Rien n'a été publié."
+            exit 1
+          fi
+
+          umask 077
+          KEY="${RUNNER_TEMP}/update-key.pem"
+          printf '%s' "$UPDATE_SIGNING_KEY" > "${KEY}.raw"
+          if grep -q 'BEGIN' "${KEY}.raw"; then
+            cp "${KEY}.raw" "$KEY"
+          else
+            {
+              echo "-----BEGIN PRIVATE KEY-----"
+              tr -d ' \r\n' < "${KEY}.raw" | fold -w 64
+              echo
+              echo "-----END PRIVATE KEY-----"
+            } > "$KEY"
+          fi
+          rm -f "${KEY}.raw"
+
+          if ! openssl pkey -in "$KEY" -noout 2>/dev/null; then
+            echo "::error::UPDATE_SIGNING_KEY n'est pas une clé privée lisible (PEM PKCS8 non chiffré attendu). Rien n'a été publié."
+            exit 1
+          fi
+          if ! openssl pkey -in "$KEY" -noout -text | grep -qi 'ED25519'; then
+            echo "::error::UPDATE_SIGNING_KEY n'est pas une clé Ed25519. Rien n'a été publié."
+            exit 1
+          fi
+          echo "Clé publique (à comparer avec EmbeddedUpdateKey) :"
+          openssl pkey -in "$KEY" -pubout -outform DER | base64 -w0
+          echo
+
+          # 2. Le site a bien la route d'upload qui accepte les mises à jour (.lsu).
+          # Cette requête est refusée avant toute écriture : elle ne crée aucun fichier.
+          RESPONSE="$(curl -sS -X POST "${UPLOAD_URL%/}/${APP}" \
+            -H "Authorization: Bearer KINGA_UPLOAD_TOKEN" \
+            --form-string "kind=probe" \
+            --form-string "version=0.0.0" || true)"
+          echo "Réponse du site : ${RESPONSE}"
+          case "$RESPONSE" in
+            *"Type de fichier invalide"*)
+              echo "Le site accepte les mises à jour (.lsu)."
+              ;;
+            *)
+              echo "::error::Le site n'a pas la route d'upload à jour (réponse inattendue ci-dessus). Causes possibles : site non redéployé, token incorrect (401), application absente de ALLOWED_APPS (403). Rien n'a été publié."
+              exit 1
+              ;;
+          esac
+
       - name: Télécharger l'artifact (installateur)
         uses: actions/download-artifact@v4
         with:
@@ -206,31 +261,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${UPDATE_SIGNING_KEY:-}" ]; then
-            echo "::warning::Secret UPDATE_SIGNING_KEY absent : la mise à jour (.lsu) n'est pas créée. L'installateur, lui, est publié."
-            exit 0
-          fi
-
           umask 077
+          KEY="${RUNNER_TEMP}/update-key.pem"
           WORK="$(mktemp -d)"
           trap 'rm -rf "$WORK"' EXIT
 
-          # --- Clé privée : PEM complet, ou PKCS8 en Base64 sans en-tête ---
-          printf '%s' "$UPDATE_SIGNING_KEY" > "$WORK/key.raw"
-          if grep -q 'BEGIN' "$WORK/key.raw"; then
-            cp "$WORK/key.raw" "$WORK/key.pem"
-          else
-            {
-              echo "-----BEGIN PRIVATE KEY-----"
-              tr -d ' \r\n' < "$WORK/key.raw" | fold -w 64
-              echo
-              echo "-----END PRIVATE KEY-----"
-            } > "$WORK/key.pem"
-          fi
-          openssl pkey -in "$WORK/key.pem" -pubout -out "$WORK/pub.pem"
-          echo "Clé publique (à comparer avec EmbeddedUpdateKey) :"
-          openssl pkey -in "$WORK/key.pem" -pubout -outform DER | base64 -w0
-          echo
+          openssl pkey -in "$KEY" -pubout -out "$WORK/pub.pem"
 
           # --- Payload et manifeste ---
           cp payload/payload.bin "$WORK/payload.bin"
@@ -248,7 +284,7 @@ jobs:
           echo "Manifeste : $(cat "$WORK/manifest.json")"
 
           # --- Signature Ed25519 des octets exacts du manifeste ---
-          openssl pkeyutl -sign -rawin -inkey "$WORK/key.pem" -in "$WORK/manifest.json" -out "$WORK/signature.bin"
+          openssl pkeyutl -sign -rawin -inkey "$KEY" -in "$WORK/manifest.json" -out "$WORK/signature.bin"
           openssl pkeyutl -verify -rawin -pubin -inkey "$WORK/pub.pem" -in "$WORK/manifest.json" -sigfile "$WORK/signature.bin"
 
           MANIFEST_B64URL="$(base64 -w0 "$WORK/manifest.json" | tr '+/' '-_' | tr -d '=')"
@@ -278,6 +314,10 @@ jobs:
             --form-string "released_on=${RELEASED_ON}" \
             --form-string "notes=${NOTES}" \
             -F "file=@${LSU};type=application/octet-stream"
+
+      - name: Supprimer la clé de signature du runner
+        if: always()
+        run: shred -u "${RUNNER_TEMP}/update-key.pem" 2>/dev/null || rm -f "${RUNNER_TEMP}/update-key.pem"
 
       - name: Afficher les liens publics
         run: |
