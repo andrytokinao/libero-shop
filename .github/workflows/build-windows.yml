@@ -330,7 +330,7 @@ jobs:
           retention-days: 1
 
   # ---------------------------------------------------------------------------
-  # 4. Publication sur le site (inchangé)
+  # 4. Publication sur le site (zip + mise à jour + APK)
   # ---------------------------------------------------------------------------
   publish-site:
     needs: build-windows
@@ -508,6 +508,34 @@ jobs:
             --form-string "notes=${NOTES}" \
             -F "file=@${LSU};type=application/octet-stream"
 
+      # ---- NOUVEAU : APK envoyée sur le site, avec la version ----
+      - name: Télécharger l'APK de cette version
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-windows.outputs.app }}-${{ needs.build-windows.outputs.version }}-apk
+          path: apk
+
+      - name: Envoyer l'APK sur le site
+        # Le zip et la mise à jour sont déjà publiés à ce stade : un refus du site pour
+        # kind=apk ne doit pas faire échouer toute la publication.
+        # Retirer continue-on-error une fois la route du site mise à jour.
+        continue-on-error: true
+        env:
+          KINGA_UPLOAD_TOKEN: ${{ secrets.KINGA_UPLOAD_TOKEN }}
+        run: |
+          set -euo pipefail
+          APK="${APP}-${VERSION}.apk"
+          mv apk/libero-shop.apk "$APK"
+          ls -lh "$APK"
+          echo "Envoi de l'APK vers ${UPLOAD_URL%/}/${APP}"
+          curl --fail-with-body -sS \
+            --retry 3 --retry-all-errors --retry-delay 5 \
+            -X POST "${UPLOAD_URL%/}/${APP}" \
+            -H "Authorization: Bearer ${KINGA_UPLOAD_TOKEN}" \
+            --form-string "kind=apk" \
+            --form-string "version=${VERSION}" \
+            -F "file=@${APK};type=application/vnd.android.package-archive"
+
       - name: Supprimer la clé de signature du runner
         if: always()
         run: shred -u "${RUNNER_TEMP}/update-key.pem" 2>/dev/null || rm -f "${RUNNER_TEMP}/update-key.pem"
@@ -519,3 +547,5 @@ jobs:
           echo "Mise à jour : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.lsu"
           echo "Dernière mise à jour : ${SITE_URL}/downloads/${APP}/${APP}-latest.lsu"
           echo "Manifeste en ligne : ${SITE_URL}/downloads/${APP}/latest.json"
+          echo "APK : ${SITE_URL}/downloads/${APP}/${APP}-${VERSION}.apk"
+          echo "Dernière APK : ${SITE_URL}/downloads/${APP}/${APP}-latest.apk"
