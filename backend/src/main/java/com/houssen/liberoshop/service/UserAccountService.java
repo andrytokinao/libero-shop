@@ -14,6 +14,7 @@ import com.houssen.liberoshop.web.dto.UpdateUserRequest;
 import com.houssen.liberoshop.web.dto.UserActivityResponse;
 import com.houssen.liberoshop.web.dto.UserResponse;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +31,17 @@ import java.util.Set;
  * The accounts of the installation: who exists, what each of them may do, and what they did
  * today.
  *
- * <p>An account is created, renamed, given or taken roles, switched off, switched back on
- * and given a new password -- it is never deleted. Every sale, payment and hand-over is
- * signed by an account, and a shop that cannot say who sold what has lost the point of
- * keeping the trail. Disabling is the way out instead: the account is re-read on every
- * request and a disabled one is refused, so a leaving employee stops acting in the shop's
- * name -- and reading its figures -- even while the token in their browser is still
- * cryptographically valid.
+ * <p>An account is created, renamed, given or taken roles, switched off, switched back on,
+ * given a new password -- and, as a last resort, deleted. Every sale, payment and hand-over
+ * is signed by an account, and a shop that cannot say who sold what has lost the point of
+ * keeping the trail. So deletion is only possible for an account that signed nothing yet
+ * (typically one opened by mistake): the database refuses it as soon as any record still
+ * points at the account, and the answer is then {@code USER_HAS_HISTORY}.
+ *
+ * <p>Disabling remains the normal way out: the account is re-read on every request and a
+ * disabled one is refused, so a leaving employee stops acting in the shop's name -- and
+ * reading its figures -- even while the token in their browser is still cryptographically
+ * valid.
  *
  * <p>The login handle is fixed once created. The history refers to an account by its id, so
  * renaming the handle would technically break nothing -- but it is how colleagues name each
@@ -189,8 +194,8 @@ public class UserAccountService {
     /**
      * Revokes an account, or gives it back.
      *
-     * <p>Disabling is what replaces deletion: the account stops being able to sign in or to
-     * act, and everything it signed stays readable under its name.
+     * <p>Disabling is the everyday replacement for deletion: the account stops being able to
+     * sign in or to act, and everything it signed stays readable under its name.
      *
      * @param actor the signed-in super-admin, so the two ways of locking the shop out of its
      *              own administration -- switching yourself off, switching the last
@@ -213,6 +218,47 @@ public class UserAccountService {
             events.publishEvent(new AccountAccessChangedEvent(user.getId()));
         }
         return UserResponse.of(user);
+    }
+
+    /**
+     * Deletes an account for good.
+     *
+     * <p>Meant for an account that never signed anything: one opened by mistake, or for
+     * someone who never started. The same two lockout rules as for disabling apply (not
+     * yourself, not the last super-admin able to sign in). Then the row is removed and the
+     * delete is flushed at once, so that a foreign key from a sale, a payment or a hand-over
+     * still pointing at the account makes the database refuse it here, inside this method,
+     * where it can be turned into a message the person at the screen understands -- instead
+     * of surfacing at commit as a bare 500.
+     *
+     * <p>Whatever the account had open is closed, as for a disabled one.
+     *
+     * @param actor the signed-in super-admin doing the deletion, taken from the session
+     * @throws BusinessRuleException {@code SELF_DELETION}, {@code LAST_ADMIN_DELETED}, or
+     *                               {@code USER_HAS_HISTORY} when records still name the account
+     */
+    @Transactional
+    public void deleteUser(Long id, UserApp actor) {
+        UserApp user = require(id);
+        if (isSelf(user, actor)) {
+            throw new BusinessRuleException("SELF_DELETION",
+                    "Vous ne pouvez pas supprimer votre propre compte.");
+        }
+        refuseIfLastAdmin(user, "LAST_ADMIN_DELETED",
+                "Ce compte est le dernier super admin actif : le supprimer fermerait "
+                        + "l'administration a tout le monde.");
+
+        Long userId = user.getId();
+        try {
+            users.delete(user);
+            users.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleException("USER_HAS_HISTORY",
+                    "Ce compte a deja signe des ventes, des paiements ou des versements : "
+                            + "il ne peut pas etre supprime sans effacer l'historique. "
+                            + "Desactivez-le a la place.");
+        }
+        events.publishEvent(new AccountAccessChangedEvent(userId));
     }
 
     /**
@@ -293,7 +339,7 @@ public class UserAccountService {
      * super-admin -- the endpoint asks for the role, and {@code CurrentUser} refuses a
      * disabled account -- so as soon as the target is someone else, two of them exist and
      * the count cannot be one. Emptying the last one means emptying your own account, which
-     * the two self rules above refuse first, with a message that actually helps.
+     * the self rules above refuse first, with a message that actually helps.
      *
      * <p>It is kept all the same, because it states the invariant itself instead of deriving
      * it from who the caller happens to be. An installation with no usable super-admin can

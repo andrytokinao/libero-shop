@@ -31,16 +31,18 @@ import { LongPressMenuDirective } from '../../shared/directives/long-press-menu.
  * morning is not one to revoke before the hand-over — so the day's activity is read on the
  * same line as the button.
  *
- * <p>No row can be deleted, because every sale, payment and hand-over is signed by an
- * account and the trail has to keep naming someone. A departure is a disabled account, and
- * it is reversible in one click, which is why the button asks for no confirmation.
+ * <p>A departure is normally a disabled account: every sale, payment and hand-over is signed
+ * by an account and the trail has to keep naming someone. Disabling is reversible in one
+ * click, which is why that button asks for no confirmation beyond the dialog. Deletion is
+ * also available, but it is permanent and asks for a confirmation; the server may refuse it
+ * for an account that already signed records.
  *
- * <p>Two refusals are mirrored here as disabled buttons rather than waited for: switching
- * your own account off, and switching off the last super-admin who can still sign in. The
- * server refuses both anyway; showing why up front beats a toast after the click.
+ * <p>Two refusals are mirrored here as missing menu entries rather than waited for: switching
+ * off or deleting your own account. The server refuses both anyway (as it does for the last
+ * super-admin who can still sign in); hiding the entry beats a toast after the click.
  */
 /** What can be done to one account from its "⋮". */
-type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
+type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable' | 'delete';
 
 @Component({
   selector: 'app-users',
@@ -70,17 +72,17 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
         <div class="table-scroll">
           <table>
             <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Identifiant</th>
-                <th>Rôle</th>
-                <th>Compte</th>
-                <th class="num">Ventes du jour</th>
-                <th class="num">Encaissé</th>
-                <th class="num">Remises</th>
-                <th class="num">Versements</th>
-                <th class="col-actions">Actions</th>
-              </tr>
+            <tr>
+              <th>Nom</th>
+              <th>Identifiant</th>
+              <th>Rôle</th>
+              <th>Compte</th>
+              <th class="num">Ventes du jour</th>
+              <th class="num">Encaissé</th>
+              <th class="num">Remises</th>
+              <th class="num">Versements</th>
+              <th class="col-actions">Actions</th>
+            </tr>
             </thead>
             <tbody>
               @for (row of activity(); track row.user.id) {
@@ -129,11 +131,11 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
       <div class="table-scroll">
         <table>
           <thead>
-            <tr>
-              <th>Rôle</th>
-              <th class="num">Comptes actifs</th>
-              <th>Utilisateurs</th>
-            </tr>
+          <tr>
+            <th>Rôle</th>
+            <th class="num">Comptes actifs</th>
+            <th>Utilisateurs</th>
+          </tr>
           </thead>
           <tbody>
             @for (role of roles; track role) {
@@ -174,6 +176,18 @@ type UserAction = 'edit' | 'roles' | 'password' | 'disable' | 'enable';
         [busy]="busyId() === target.id"
         (confirmed)="setEnabled(target, false)"
         (closed)="disabling.set(null)"
+      />
+    }
+
+    @if (deleting(); as target) {
+      <app-confirm-dialog
+        title="Supprimer ce compte ?"
+        [message]="'Le compte de ' + target.fullName + ' (' + target.username + ') sera supprimé définitivement. Cette action est irréversible. Pour conserver l\\'historique des ventes et des versements, préférez Désactiver.'"
+        [confirmLabel]="'Supprimer ' + target.fullName"
+        [danger]="true"
+        [busy]="busyId() === target.id"
+        (confirmed)="remove(target)"
+        (closed)="deleting.set(null)"
       />
     }
 
@@ -243,6 +257,8 @@ export class UsersComponent {
   protected readonly passwordFor = signal<UserApp | null>(null);
   /** The account about to be cut off, while the confirmation is on screen. */
   protected readonly disabling = signal<UserApp | null>(null);
+  /** The account about to be deleted for good, while the confirmation is on screen. */
+  protected readonly deleting = signal<UserApp | null>(null);
 
   private readonly users = computed<UserApp[]>(() => this.activity().map((row) => row.user));
 
@@ -266,24 +282,34 @@ export class UsersComponent {
   }
 
   /**
-   * Why this account cannot be switched off, or null when it can.
+   * Why this account cannot be switched off or deleted, or null when it can.
    *
    * <p>Only your own account, which is the one refusal this screen can actually run into.
-   * The server also refuses switching off the last super-admin able to sign in — but whoever
+   * The server also refuses removing the last super-admin able to sign in — but whoever
    * is reading this page is one, so any *other* admin row means there are two, and that
    * refusal cannot be reached from here.
    */
-  /** Your own account cannot be disabled from here: no entry rather than one that refuses. */
+  protected blockedReason(user: UserApp): string | null {
+    return user.id === this.auth.currentUser()?.id
+      ? 'Vous ne pouvez pas désactiver ni supprimer votre propre compte.'
+      : null;
+  }
+
+  /** Your own account cannot be disabled or deleted from here: no entry rather than one that refuses. */
   protected actionsFor(user: UserApp): MenuAction<UserAction>[] {
+    const blocked = this.blockedReason(user) !== null;
     return [
       { id: 'edit', label: 'Modifier', hint: 'nom, identifiant' },
       { id: 'roles', label: 'Rôles', hint: this.describe(user.roles) },
       { id: 'password', label: 'Changer le mot de passe' },
       ...(user.enabled
-        ? this.blockedReason(user)
+        ? blocked
           ? []
           : [{ id: 'disable' as const, label: 'Désactiver', danger: true }]
         : [{ id: 'enable' as const, label: 'Réactiver' }]),
+      ...(blocked
+        ? []
+        : [{ id: 'delete' as const, label: 'Supprimer', hint: 'définitif', danger: true }]),
     ];
   }
 
@@ -302,13 +328,10 @@ export class UsersComponent {
       case 'enable':
         this.setEnabled(user, true);
         break;
+      case 'delete':
+        this.deleting.set(user);
+        break;
     }
-  }
-
-  protected blockedReason(user: UserApp): string | null {
-    return user.id === this.auth.currentUser()?.id
-      ? 'Vous ne pouvez pas désactiver votre propre compte.'
-      : null;
   }
 
   protected openCreate(): void {
@@ -361,7 +384,7 @@ export class UsersComponent {
         this.done(
           rolesChanged
             ? `${user.fullName} : ${describeRoles(user.roles)}. Le changement prendra effet ` +
-              'à sa prochaine connexion.'
+            'à sa prochaine connexion.'
             : `${user.fullName} renommé.`,
         );
         this.closeForm();
@@ -395,11 +418,25 @@ export class UsersComponent {
           enabled
             ? `${updated.fullName} peut se reconnecter.`
             : `${updated.fullName} ne peut plus se connecter ni rien enregistrer. Son ` +
-              'historique est conservé et le compte peut être réactivé à tout moment.',
+            'historique est conservé et le compte peut être réactivé à tout moment.',
         );
       },
       error: () => this.busyId.set(null),
     });
+  }
+
+  protected remove(user: UserApp): void {
+    this.busyId.set(user.id);
+    this.api.delete(user.id).subscribe({
+      next: () => {
+        this.busyId.set(null);
+        this.deleting.set(null);
+        this.resource.reload();
+        this.toasts.show(`Le compte de ${user.fullName} (${user.username}) a été supprimé.`);
+      },
+      error: () => this.busyId.set(null),
+    });
+
   }
 
   /**

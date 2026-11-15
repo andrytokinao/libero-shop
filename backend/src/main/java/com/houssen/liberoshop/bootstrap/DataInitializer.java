@@ -98,7 +98,8 @@ public class DataInitializer implements ApplicationRunner {
             log.debug("Base deja initialisee, aucun jeu de donnees insere.");
             return;
         }
-
+        if (true)
+            return;
         log.info("Base vide : insertion du jeu de donnees initial.");
         Accounts accounts = seedAccounts();
         Catalog catalog = seedCatalog();

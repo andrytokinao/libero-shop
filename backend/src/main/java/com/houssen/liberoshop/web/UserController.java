@@ -10,6 +10,7 @@ import com.houssen.liberoshop.web.dto.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,14 +24,17 @@ import java.util.List;
 
 /**
  * Account administration: the whole of it belongs to the super-admin, hence the one
- * annotation on the class rather than six on the methods.
+ * annotation on the class rather than one on each method.
  *
- * <p>No endpoint deletes an account, because the sales and hand-overs it signed must keep
- * naming someone -- {@code /disable} is what a departure looks like here.
+ * <p>{@code /disable} is what a departure normally looks like here, because the sales and
+ * hand-overs an account signed must keep naming someone. {@code DELETE /{id}} exists for the
+ * account that signed nothing yet (opened by mistake): the service refuses it with
+ * {@code USER_HAS_HISTORY} as soon as any record still names the account.
  *
  * <p>No endpoint takes an actor either. The super-admin doing the edit is read from the
- * session and passed to the service, which is what lets it refuse the two self-inflicted
- * lockouts: switching off your own account, or taking away your own super-admin role.
+ * session and passed to the service, which is what lets it refuse the self-inflicted
+ * lockouts: switching off or deleting your own account, or taking away your own super-admin
+ * role.
  */
 @RestController
 @RequestMapping("/api/users")
@@ -75,6 +79,17 @@ public class UserController {
     @PostMapping("/{id}/disable")
     public UserResponse disable(@PathVariable Long id) {
         return userAccountService.setEnabled(id, false, currentUser.require());
+    }
+
+    /**
+     * Permanent removal, answered with 204: there is no account left to put back in the row.
+     * Refused (never silently) for yourself, for the last active super-admin, and for any
+     * account that already signed sales, payments or hand-overs.
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        userAccountService.deleteUser(id, currentUser.require());
     }
 
     /**

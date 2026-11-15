@@ -11,14 +11,15 @@ import {
 } from '../models';
 
 /**
- * The accounts, and the four things a super-admin does to them.
+ * The accounts, and the things a super-admin does to them.
  *
- * <p>No `delete`, because the server has no such endpoint: a departure is a disabled
- * account, so the sales and hand-overs it signed keep naming someone.
+ * <p>A departure is normally a disabled account, so the sales and hand-overs it signed keep
+ * naming someone. `delete` is for the account that signed nothing yet (opened by mistake):
+ * the server refuses it as soon as any record still names the account.
  *
- * <p>Every write answers with the account as it now stands, so a screen can put the row back
- * without re-fetching the list — though the users screen reloads anyway, since the activity
- * figures beside each row come from the same call.
+ * <p>Every write but `delete` answers with the account as it now stands, so a screen can put
+ * the row back without re-fetching the list — though the users screen reloads anyway, since
+ * the activity figures beside each row come from the same call.
  */
 @Injectable({ providedIn: 'root' })
 export class UserApi {
@@ -49,5 +50,10 @@ export class UserApi {
 
   setPassword(id: number, request: SetPasswordRequest): Observable<UserApp> {
     return this.http.put<UserApp>(`${API_BASE_URL}/users/${id}/password`, request);
+  }
+
+  /** Permanent removal; answers 204 with no body. Refused when the account has history. */
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/users/${id}`);
   }
 }
