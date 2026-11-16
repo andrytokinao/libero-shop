@@ -66,7 +66,7 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
             } else if (status.isTrial()) {
                 // Printed, not logged: an unlicensed installation is exactly the situation
                 // where the shop owner has to read the fingerprint off the screen.
-                printBanner(System.out, "LIBERO SHOP - PERIODE D'ESSAI", status.userMessage(),
+                printBanner(System.out, "Moussa Shop - PERIODE D'ESSAI", status.userMessage(),
                         properties, fingerprint);
             } else {
                 log.warn("{}", status.userMessage());
@@ -74,7 +74,7 @@ public class LicenseStartupListener implements ApplicationListener<ApplicationEn
         } catch (LicenseException e) {
             // Printed rather than only logged: at this point the logging system may still
             // be starting, and this message is what the shop owner needs to read.
-            printBanner(System.err, "LIBERO SHOP - DEMARRAGE IMPOSSIBLE (" + e.code() + ")",
+            printBanner(System.err, "Moussa Shop - DEMARRAGE IMPOSSIBLE (" + e.code() + ")",
                     e.getMessage(), properties, fingerprint);
             throw e;
         }
