@@ -2,6 +2,7 @@ package com.houssen.liberoshop.web;
 
 import com.houssen.liberoshop.entity.DeliveryStatus;
 import com.houssen.liberoshop.entity.PaymentStatus;
+import com.houssen.liberoshop.printer.service.InvoicePrintService;
 import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.InvoiceService;
 import com.houssen.liberoshop.web.dto.CancelInvoiceRequest;
@@ -9,6 +10,7 @@ import com.houssen.liberoshop.web.dto.DeliveryResponse;
 import jakarta.validation.Valid;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
 import com.houssen.liberoshop.web.dto.PayInvoiceRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,15 +27,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/invoices")
+@RequiredArgsConstructor
 public class InvoiceController {
-
+    private final InvoicePrintService invoicePrintService ;
     private final InvoiceService invoiceService;
     private final CurrentUser currentUser;
+    private final InvoicePdfController pdfController;
 
-    public InvoiceController(InvoiceService invoiceService, CurrentUser currentUser) {
-        this.invoiceService = invoiceService;
-        this.currentUser = currentUser;
-    }
+
 
     /**
      * The orders the caller may read -- all of them for whoever runs the shop or the stock, the
@@ -118,7 +119,7 @@ public class InvoiceController {
     @PostMapping("/{id}/print")
     @PreAuthorize("hasAnyRole('CASHIER', 'SUPER_ADMIN')")
     public InvoiceResponse print(@PathVariable Long id) {
-        return invoiceService.markPrinted(id);
+        return   invoicePrintService.print(id,currentUser.require());
     }
 
     private static String messageOf(InvoiceService.DeliveryResult result) {

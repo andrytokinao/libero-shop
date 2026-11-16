@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.lang.ScopedValue;
 import java.util.Optional;
 
 public interface InvoiceCounterRepository extends JpaRepository<InvoiceCounter, Long> {
@@ -15,4 +16,6 @@ public interface InvoiceCounterRepository extends JpaRepository<InvoiceCounter, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from InvoiceCounter c where c.id = :id")
     Optional<InvoiceCounter> findForUpdate(@Param("id") Long id);
+
+    <T> ScopedValue<T> findWithLinesById(Long id);
 }

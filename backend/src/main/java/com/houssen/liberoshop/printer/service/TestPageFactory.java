@@ -1,10 +1,11 @@
 package com.houssen.liberoshop.printer.service;
 
+import com.houssen.liberoshop.entity.CodePage;
 import com.houssen.liberoshop.entity.PrintJob;
 import com.houssen.liberoshop.entity.PrinterConfig;
 import com.houssen.liberoshop.entity.PrinterType;
-
 import com.houssen.liberoshop.printer.escpos.EscPosBuilder;
+import com.houssen.liberoshop.printer.escpos.EscPosBuilder.Align;
 import com.houssen.liberoshop.printer.exception.PrintException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -18,10 +19,11 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/** Génère la page de test adaptée au type d'imprimante (ticket ESC/POS ou page A4 PDF). */
+/** Génère les pages de test adaptées au type d'imprimante (ticket ESC/POS ou page A4 PDF). */
 final class TestPageFactory {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final String ACCENTS = "é è à ç ù ô ê ï ñ";
 
     private TestPageFactory() {
     }
@@ -31,21 +33,41 @@ final class TestPageFactory {
     }
 
     private static PrintJob escpos(PrinterConfig cfg) {
-        byte[] data = new EscPosBuilder(cfg.getWidthChars())
+        byte[] data = EscPosBuilder.forPrinter(cfg)
                 .init()
-                .align(EscPosBuilder.Align.CENTER).bold(true).size(2, 2).line("TEST").size(1, 1).bold(false)
+                .align(Align.CENTER).bold(true).size(2, 2).line("TEST").size(1, 1).bold(false)
                 .line(cfg.getName())
                 .separator()
-                .align(EscPosBuilder.Align.LEFT)
-                .row("Type", cfg.getType().name())
+                .align(Align.LEFT)
+                .row("Profil", cfg.getProfile().name())
                 .row("Largeur", cfg.getWidthChars() + " car.")
+                .row("Table", "ESC t " + cfg.effectiveCodePage().table())
                 .row("Date", LocalDateTime.now().format(DATE))
                 .separator()
-                .align(EscPosBuilder.Align.CENTER)
-                .line("Accents : é à è ç ù")
+                .align(Align.CENTER)
+                .line(ACCENTS)
                 .cut()
                 .build();
         return PrintJob.escpos("Test - " + cfg.getName(), data);
+    }
+
+    /**
+     * Imprime les mêmes accents dans chaque table de caractères supportée.
+     * La ligne lisible donne la valeur de {@code codePage} à enregistrer pour cette imprimante.
+     */
+    static PrintJob codePages(PrinterConfig cfg) {
+        EscPosBuilder b = EscPosBuilder.forPrinter(cfg).init()
+                .align(Align.CENTER).bold(true).line("TABLES DE CARACTERES").bold(false)
+                .align(Align.LEFT)
+                .line("Retenez le numero de la ligne")
+                .line("dont les accents sont corrects.")
+                .separator();
+        for (CodePage cp : CodePage.values()) {
+            b.useCodePage(cp).line("[" + cp.table() + "] " + cp.name());
+            b.line("  " + ACCENTS);
+        }
+        byte[] data = b.separator().cut().build();
+        return PrintJob.escpos("Tables - " + cfg.getName(), data);
     }
 
     private static PrintJob pdf(PrinterConfig cfg) {

@@ -1,10 +1,6 @@
 package com.houssen.liberoshop.printer.service;
 
-
-import com.houssen.liberoshop.entity.PrinterAssignment;
-import com.houssen.liberoshop.entity.PrinterConfig;
-import com.houssen.liberoshop.entity.PrinterType;
-import com.houssen.liberoshop.entity.PrinterUsage;
+import com.houssen.liberoshop.entity.*;
 import com.houssen.liberoshop.printer.driver.PrinterDriver;
 import com.houssen.liberoshop.printer.driver.PrinterRegistry;
 import com.houssen.liberoshop.printer.dto.PrinterView;
@@ -27,7 +23,6 @@ import java.util.stream.Collectors;
 public class PrinterManagementService {
 
     private static final int DEFAULT_PORT = 9100;
-    private static final int DEFAULT_WIDTH = 42;
 
     private final PrinterConfigRepository printers;
     private final PrinterAssignmentRepository assignments;
@@ -89,6 +84,12 @@ public class PrinterManagementService {
         }
         if (request.widthChars() != null) {
             cfg.setWidthChars(request.widthChars());
+        }
+        if (request.profile() != null) {
+            cfg.setProfile(request.profile());
+        }
+        if (request.codePage() != null) {
+            cfg.setCodePage(CodePage.fromTable(request.codePage()).table());
         }
         if (request.enabled() != null) {
             cfg.setEnabled(request.enabled());
@@ -157,7 +158,12 @@ public class PrinterManagementService {
         cfg.setType(r.type());
         cfg.setAddress(r.address().trim());
         cfg.setPort(r.type() == PrinterType.ESCPOS_NET ? (r.port() != null ? r.port() : DEFAULT_PORT) : null);
-        cfg.setWidthChars(r.widthChars() != null ? r.widthChars() : DEFAULT_WIDTH);
+        EscPosProfile profile = r.profile() != null ? r.profile() : EscPosProfile.GENERIC;
+        cfg.setProfile(profile);
+        cfg.setWidthChars(r.widthChars() != null ? r.widthChars() : profile.defaultWidth());
+        if (r.codePage() != null) {
+            cfg.setCodePage(CodePage.fromTable(r.codePage()).table());
+        }
         return cfg;
     }
 

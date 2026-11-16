@@ -1,31 +1,64 @@
 package com.houssen.liberoshop.printer.escpos;
 
+import com.houssen.liberoshop.entity.CodePage;
+import com.houssen.liberoshop.entity.EscPosProfile;
+import com.houssen.liberoshop.entity.PrinterConfig;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 
-/** Construit les octets ESC/POS d'un ticket (compatible Epson TM, Xprinter, Star en mode ESC/POS…). */
+/**
+ * Construit les octets ESC/POS d'un ticket (XPrinter, Epson TM, Star en mode ESC/POS…).
+ * Le builder ne connaît ni le transport (réseau, USB) ni le driver : il produit seulement des octets.
+ */
 public class EscPosBuilder {
 
     public enum Align { LEFT, CENTER, RIGHT }
 
     private final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    private final Charset charset;
-    private final int codePage;
     private final int width;
+    private final boolean cutter;
+    private final boolean cancelChineseMode;
+    private CodePage codePage;
+    private Charset charset;
 
-    public EscPosBuilder(int widthChars) {
-        this(widthChars, Charset.forName("windows-1252"), 16);
+    /** Réglages issus de l'imprimante choisie (profil, largeur, table de caractères). */
+    public static EscPosBuilder forPrinter(PrinterConfig cfg) {
+        EscPosProfile profile = cfg.getProfile();
+        return new EscPosBuilder(cfg.getWidthChars(), cfg.effectiveCodePage(),
+                profile.hasCutter(), profile.cancelChineseMode());
     }
 
-    /** @param codePage numéro de table de caractères de l'imprimante (16 = WPC1252 sur la plupart des modèles) */
-    public EscPosBuilder(int widthChars, Charset charset, int codePage) {
+    /** Imprimante 80 mm générique (table Windows-1252, avec coupeur). */
+    public EscPosBuilder(int widthChars) {
+        this(widthChars, CodePage.WPC1252, true, false);
+    }
+
+    public EscPosBuilder(int widthChars, CodePage codePage, boolean cutter, boolean cancelChineseMode) {
         this.width = widthChars;
-        this.charset = charset;
-        this.codePage = codePage;
+        this.cutter = cutter;
+        this.cancelChineseMode = cancelChineseMode;
+        select(codePage);
+    }
+
+    /** Repli sur Windows-1252 si la JVM n'a pas le charset demandé (runtime minimal sans jdk.charsets). */
+    private void select(CodePage requested) {
+        this.codePage = requested.isAvailable() ? requested : CodePage.WPC1252;
+        this.charset = this.codePage.charset();
     }
 
     public EscPosBuilder init() {
-        return raw(0x1B, 0x40).raw(0x1B, 0x74, codePage);
+        raw(0x1B, 0x40);                       // ESC @ : réinitialise l'imprimante
+        if (cancelChineseMode) {
+            raw(0x1C, 0x2E);                   // FS . : quitte le mode caractères chinois
+        }
+        return raw(0x1B, 0x74, codePage.table()); // ESC t n : table de caractères
+    }
+
+    /** Change de table de caractères en cours de ticket (utilisé par la page de calibration). */
+    public EscPosBuilder useCodePage(CodePage cp) {
+        select(cp);
+        return raw(0x1B, 0x74, codePage.table());
     }
 
     public EscPosBuilder align(Align align) {
@@ -67,9 +100,9 @@ public class EscPosBuilder {
         return raw(0x1B, 0x64, lines);
     }
 
-    /** Avance le papier puis coupe (coupe partielle). */
+    /** Coupe le papier ; sans coupeur, avance simplement le papier pour pouvoir le déchirer. */
     public EscPosBuilder cut() {
-        return feed(3).raw(0x1D, 0x56, 0x42, 0x00);
+        return cutter ? feed(3).raw(0x1D, 0x56, 0x42, 0x00) : feed(5);
     }
 
     /** Ouvre le tiroir-caisse relié à l'imprimante. */

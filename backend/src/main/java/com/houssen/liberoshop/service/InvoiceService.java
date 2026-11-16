@@ -1,22 +1,15 @@
 package com.houssen.liberoshop.service;
 
-import com.houssen.liberoshop.entity.CancelReason;
-import com.houssen.liberoshop.entity.DeliveryStatus;
-import com.houssen.liberoshop.entity.DeliveryTransition;
-import com.houssen.liberoshop.entity.Invoice;
-import com.houssen.liberoshop.entity.Payment;
-import com.houssen.liberoshop.entity.PaymentMethod;
-import com.houssen.liberoshop.entity.PaymentStatus;
-import com.houssen.liberoshop.entity.PaymentTransition;
-import com.houssen.liberoshop.entity.RoleApp;
-import com.houssen.liberoshop.entity.UserApp;
+import com.houssen.liberoshop.entity.*;
 import com.houssen.liberoshop.license.RequiresActiveLicense;
+import com.houssen.liberoshop.printer.service.PrintService;
 import com.houssen.liberoshop.repository.InvoiceRepository;
 import com.houssen.liberoshop.repository.PaymentRepository;
 import com.houssen.liberoshop.repository.UserAppRepository;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.web.dto.InvoiceResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -45,6 +38,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class InvoiceService {
 
     /**
@@ -62,19 +56,7 @@ public class InvoiceService {
     private final UserAppRepository users;
     private final MovementCancellationService cancellations;
 
-    public InvoiceService(InvoiceRepository invoices, PaymentRepository payments, BusinessCalendar calendar,
-                          ApplicationEventPublisher events, ShopSettingsService settings,
-                          InvoiceAccess access, UserAppRepository users,
-                          MovementCancellationService cancellations) {
-        this.cancellations = cancellations;
-        this.users = users;
-        this.access = access;
-        this.invoices = invoices;
-        this.payments = payments;
-        this.calendar = calendar;
-        this.events = events;
-        this.settings = settings;
-    }
+
 
     /**
      * Every invoice answering the filters, whoever asks: for the figures the server computes

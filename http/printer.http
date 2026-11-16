@@ -1,0 +1,95 @@
+###
+# curl 'http://localhost:4200/api/invoices/16/print'
+#  -X POST
+#  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0'
+#  -H 'Accept: application/json, text/plain, */*'
+#  -H 'Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7'
+#  -H 'Accept-Encoding: gzip, deflate, br, zstd'
+#  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYXRpbWEiLCJ1aWQiOjEsInZlciI6MCwiaXNzIjoibGliZXJvLXNob3AiLCJleHAiOjE3OTQ4MzE3NTYsImlhdCI6MTc5NDc4ODU1NiwianRpIjoiYjg3MmYyNjEtMmNiZi00YzVkLTgxZjYtMWQ0MDFhYTU5MTk1In0.5ziZihRyql3G2NZSZI53I-ysV_r1K0JCTKBwppPoKto'
+#  -H 'Content-Type: application/json'
+#  -H 'Origin: http://localhost:4200'
+#  -H 'Connection: keep-alive'
+#  -H 'Referer: http://localhost:4200/caisse/factures'
+#  -H 'Cookie: techshop_client_id=873f5e18-5bb7-4962-b27f-4bf2fc51d91e; JSESSIONID=C4D232ECF34B3E86A8F21FF920EE85E5'
+#  -H 'Sec-Fetch-Dest: empty'
+#  -H 'Sec-Fetch-Mode: cors'
+#  -H 'Sec-Fetch-Site: same-origin'
+#  -H 'Priority: u=0'
+#  --data-raw '{}'
+POST http://localhost:4200/api/invoices/16/print
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0
+Accept: application/json, text/plain, */*
+Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYXRpbWEiLCJ1aWQiOjEsInZlciI6MCwiaXNzIjoibGliZXJvLXNob3AiLCJleHAiOjE3OTQ4MzE3NTYsImlhdCI6MTc5NDc4ODU1NiwianRpIjoiYjg3MmYyNjEtMmNiZi00YzVkLTgxZjYtMWQ0MDFhYTU5MTk1In0.5ziZihRyql3G2NZSZI53I-ysV_r1K0JCTKBwppPoKto
+Origin: http://localhost:4200
+Connection: keep-alive
+Referer: http://localhost:4200/caisse/factures
+Cookie: techshop_client_id=873f5e18-5bb7-4962-b27f-4bf2fc51d91e; JSESSIONID=C4D232ECF34B3E86A8F21FF920EE85E5
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/json
+
+{}
+###
+
+GET http://localhost:4200/api/printers/discover
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0
+Accept: application/json, text/plain, */*
+Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYXRpbWEiLCJ1aWQiOjEsInZlciI6MCwiaXNzIjoibGliZXJvLXNob3AiLCJleHAiOjE3OTQ4MzE3NTYsImlhdCI6MTc5NDc4ODU1NiwianRpIjoiYjg3MmYyNjEtMmNiZi00YzVkLTgxZjYtMWQ0MDFhYTU5MTk1In0.5ziZihRyql3G2NZSZI53I-ysV_r1K0JCTKBwppPoKto
+Origin: http://localhost:4200
+Connection: keep-alive
+Referer: http://localhost:4200/caisse/factures
+Cookie: techshop_client_id=873f5e18-5bb7-4962-b27f-4bf2fc51d91e; JSESSIONID=C4D232ECF34B3E86A8F21FF920EE85E5
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/json
+
+
+
+###
+###
+
+GET http://localhost:4200/api/printers
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0
+Accept: application/json, text/plain, */*
+Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYXRpbWEiLCJ1aWQiOjEsInZlciI6MCwiaXNzIjoibGliZXJvLXNob3AiLCJleHAiOjE3OTQ4MzE3NTYsImlhdCI6MTc5NDc4ODU1NiwianRpIjoiYjg3MmYyNjEtMmNiZi00YzVkLTgxZjYtMWQ0MDFhYTU5MTk1In0.5ziZihRyql3G2NZSZI53I-ysV_r1K0JCTKBwppPoKto
+Origin: http://localhost:4200
+Connection: keep-alive
+Referer: http://localhost:4200/caisse/factures
+Cookie: techshop_client_id=873f5e18-5bb7-4962-b27f-4bf2fc51d91e; JSESSIONID=C4D232ECF34B3E86A8F21FF920EE85E5
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/json
+
+
+
+###
+POST http://localhost:4200/api/printers/sync
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0
+Accept: application/json, text/plain, */*
+Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYXRpbWEiLCJ1aWQiOjEsInZlciI6MCwiaXNzIjoibGliZXJvLXNob3AiLCJleHAiOjE3OTQ4MzE3NTYsImlhdCI6MTc5NDc4ODU1NiwianRpIjoiYjg3MmYyNjEtMmNiZi00YzVkLTgxZjYtMWQ0MDFhYTU5MTk1In0.5ziZihRyql3G2NZSZI53I-ysV_r1K0JCTKBwppPoKto
+Origin: http://localhost:4200
+Connection: keep-alive
+Referer: http://localhost:4200/caisse/factures
+Cookie: techshop_client_id=873f5e18-5bb7-4962-b27f-4bf2fc51d91e; JSESSIONID=C4D232ECF34B3E86A8F21FF920EE85E5
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/json
+
+{}
+###

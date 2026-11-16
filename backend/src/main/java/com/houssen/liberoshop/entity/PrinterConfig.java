@@ -26,12 +26,20 @@ public class PrinterConfig {
 
     private Integer port;
 
-    /** Largeur en caractères pour les tickets (58 mm ≈ 32, 80 mm ≈ 42 ou 48). */
+    /** Largeur en caractères pour les tickets (58 mm = 32, 80 mm = 48). */
     @Column(nullable = false)
     private int widthChars = 42;
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    /** Nullable : les lignes créées avant l'ajout des profils restent valides (traitées comme GENERIC). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private EscPosProfile profile;
+
+    /** Numéro de table de caractères ESC/POS ; null = valeur du profil. */
+    private Integer codePage;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -47,4 +55,14 @@ public class PrinterConfig {
     public void setWidthChars(int widthChars) { this.widthChars = widthChars; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public EscPosProfile getProfile() { return profile != null ? profile : EscPosProfile.GENERIC; }
+    public void setProfile(EscPosProfile profile) { this.profile = profile; }
+    public Integer getCodePage() { return codePage; }
+    public void setCodePage(Integer codePage) { this.codePage = codePage; }
+
+    /** Table de caractères réellement utilisée : celle de l'imprimante, sinon celle du profil. */
+    public CodePage effectiveCodePage() {
+        return codePage != null ? CodePage.fromTable(codePage) : getProfile().codePage();
+    }
 }

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -127,4 +128,38 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
               and p.invoice.paymentStatus = com.houssen.liberoshop.entity.PaymentStatus.COLLECTED
             """)
     BigDecimal sumUnremittedDepotCash();
+    // À AJOUTER dans PaymentRepository (imports : Optional, BigDecimal, Query, Param)
+
+
+    /**
+     * Ce qui a été réglé sur la commande jusqu'à ce paiement inclus : l'identifiant ordonne
+     * les paiements, donc un ancien reçu garde le reste à payer de son jour.
+
+    // A AJOUTER dans PaymentRepository (imports : Optional, BigDecimal, Query, Param)
+
+    /** Le paiement avec tout ce que le reçu affiche, en une seule requête. */
+    @Query("""
+            select p from Payment p
+              join fetch p.invoice i
+              join fetch i.sale s
+              join fetch p.collectedBy
+              left join fetch p.cashRemittance
+             where p.id = :id
+            """)
+    Optional<Payment> findDetailedById(@Param("id") Long id);
+
+    /**
+     * Ce qui a été réglé sur la commande jusqu'à ce paiement inclus : l'identifiant ordonne
+     * les paiements, donc un ancien reçu garde le reste à payer de son jour.
+     */
+    @Query("""
+            select coalesce(sum(p.amount), 0) from Payment p
+             where p.invoice.id = :invoiceId and p.id <= :paymentId
+            """)
+    BigDecimal sumUpTo(@Param("invoiceId") Long invoiceId, @Param("paymentId") Long paymentId);
+
+    /** L'identifiant du dernier paiement de la commande, ou null si rien n'a été payé. */
+    @Query("select max(p.id) from Payment p where p.invoice.id = :invoiceId")
+    Long findLastIdByInvoiceId(@Param("invoiceId") Long invoiceId);
+
 }

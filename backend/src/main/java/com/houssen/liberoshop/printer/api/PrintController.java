@@ -1,4 +1,4 @@
-package com.houssen.liberoshop.web;
+package com.houssen.liberoshop.printer.api;
 
 import com.houssen.liberoshop.entity.PrintJob;
 import com.houssen.liberoshop.entity.PrinterUsage;

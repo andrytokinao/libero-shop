@@ -1,7 +1,5 @@
 package com.houssen.liberoshop.printer.driver;
 
-
-
 import com.houssen.liberoshop.entity.PayloadKind;
 import com.houssen.liberoshop.entity.PrintJob;
 import com.houssen.liberoshop.entity.PrinterConfig;

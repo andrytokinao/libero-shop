@@ -1,6 +1,6 @@
 package com.houssen.liberoshop.printer.service;
 
-
+import com.houssen.liberoshop.entity.EscPosProfile;
 import com.houssen.liberoshop.entity.PrinterConfig;
 import com.houssen.liberoshop.entity.PrinterType;
 import com.houssen.liberoshop.printer.driver.SystemPrinters;
@@ -26,7 +26,7 @@ public class PrinterDiscoveryService {
     private static final int SCAN_TIMEOUT_MS = 400;
     private static final Pattern SUBNET = Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
     private static final Pattern THERMAL = Pattern.compile(
-            "(?i)(\\bpos\\b|receipt|ticket|thermal|\\btm-|\\bxp-|\\bstar\\b|bixolon|rongta|gprinter|"
+            "(?i)(\\bpos\\b|receipt|ticket|thermal|\\btm-|xprinter|\\bxp-?\\d|\\bstar\\b|bixolon|rongta|gprinter|"
                     + "\\b58\\s?mm|\\b80\\s?mm|esc/?pos)");
 
     private final PrinterConfigRepository repository;
@@ -45,8 +45,9 @@ public class PrinterDiscoveryService {
                             ? PrinterType.ESCPOS_RAW_SYSTEM : PrinterType.SYSTEM;
                     boolean registered = known.contains(key(PrinterType.SYSTEM, ps.getName()))
                             || known.contains(key(PrinterType.ESCPOS_RAW_SYSTEM, ps.getName()));
+                    EscPosProfile profile = suggested == PrinterType.SYSTEM ? null : suggestProfile(ps.getName());
                     return new DiscoveredPrinter(ps.getName(), DiscoverySource.SYSTEM, ps.getName(), null,
-                            suggested, ps.getName().equals(osDefault), registered);
+                            suggested, profile, ps.getName().equals(osDefault), registered);
                 })
                 .sorted(Comparator.comparing(DiscoveredPrinter::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
@@ -69,7 +70,7 @@ public class PrinterDiscoveryService {
                     executor.submit(() -> {
                         if (isOpen(ip)) {
                             found.add(new DiscoveredPrinter("Imprimante réseau " + ip, DiscoverySource.NETWORK, ip,
-                                    RAW_PORT, PrinterType.ESCPOS_NET, false,
+                                    RAW_PORT, PrinterType.ESCPOS_NET, EscPosProfile.GENERIC, false,
                                     known.contains(key(PrinterType.ESCPOS_NET, ip))));
                         }
                     });
@@ -77,6 +78,14 @@ public class PrinterDiscoveryService {
             }
         }
         return found.stream().sorted(Comparator.comparingLong(d -> ipToLong(d.address()))).toList();
+    }
+
+    private static EscPosProfile suggestProfile(String name) {
+        String n = name.toLowerCase(Locale.ROOT);
+        if (n.contains("xprinter") || n.matches(".*\\bxp-?\\d.*")) {
+            return n.contains("58") ? EscPosProfile.XPRINTER_58 : EscPosProfile.XPRINTER_80;
+        }
+        return EscPosProfile.GENERIC;
     }
 
     private Set<String> registeredKeys() {
