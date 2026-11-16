@@ -23,6 +23,7 @@ env:
   VIDEO_PATH: assets/video/demo.mp4                            # vidéo optionnelle, ignorée si absente
   UPLOAD_URL: https://www.kinga-digital.com/api/upload-release # URL de l'API d'upload (sans le nom de l'app)
   SITE_URL: https://www.kinga-digital.com                      # utilisé pour afficher les liens publics
+  SKIP_TESTS: "true"                                           # "true" = tests unitaires désactivés (mvn -DskipTests) ; "false" pour les réactiver
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -196,7 +197,7 @@ jobs:
           Write-Host "APK prête : $([math]::Round((Get-Item $apk).Length / 1MB, 1)) Mo"
 
       # La clé publique de vérification des mises à jour vient de la variable UPDATE_PUBLIC_KEY.
-      # Elle est écrite dans la ressource lue par EmbeddedUpdateKey AVANT le build (tests inclus),
+      # Elle est écrite dans la ressource lue par EmbeddedUpdateKey AVANT le build,
       # donc elle est compilée dans le jar. Pas de filtrage Maven, pas de placeholder.
       - name: Injecter la clé publique de mise à jour
         shell: pwsh
@@ -229,11 +230,19 @@ jobs:
         run: choco install wixtoolset -y --no-progress
         continue-on-error: true
 
+      # Tests unitaires désactivés tant que SKIP_TESTS vaut "true" (variable env en tête de fichier) :
+      # -DskipTests compile les tests mais ne les exécute pas.
       - name: Build installer (profil installer)
         shell: pwsh
         run: |
           Write-Host "Version envoyée à jpackage (installer.version) : ${{ needs.version.outputs.version }}"
-          mvn -B -P installer "-Dinstaller.version=${{ needs.version.outputs.version }}" -DtrimStackTrace=false clean verify
+          $mvnArgs = @('-B', '-P', 'installer', "-Dinstaller.version=${{ needs.version.outputs.version }}", '-DtrimStackTrace=false')
+          if ($env:SKIP_TESTS -eq 'true') {
+            $mvnArgs += '-DskipTests'
+            Write-Host "Tests unitaires désactivés (SKIP_TESTS=true)."
+          }
+          $mvnArgs += @('clean', 'verify')
+          mvn @mvnArgs
 
       # Contrôle final : la clé qui est réellement dans le jar livré est bien celle de la variable.
       - name: Vérifier la clé embarquée dans le jar
