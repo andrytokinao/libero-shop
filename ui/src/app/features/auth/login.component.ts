@@ -55,17 +55,11 @@ const HIGHLIGHTS: readonly Highlight[] = [
       <aside class="login-about">
         <div class="about-inner">
           <img class="about-logo" src="logo.png" alt="" />
-          <h1>Libero <span>Shop</span></h1>
+          <h1>Moussa <span>Shop</span></h1>
           <p class="lead">
             Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
             au même endroit, sur votre propre réseau.
           </p>
-        <img class="about-logo" src="logo.png" alt="" />
-        <h1>Moussa <span>Shop</span></h1>
-        <p class="lead">
-          Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
-          au même endroit, sur votre propre réseau.
-        </p>
 
           <ul class="highlights">
             @for (item of highlights; track item.title) {
@@ -96,14 +90,9 @@ const HIGHLIGHTS: readonly Highlight[] = [
       <main class="login-main">
         <form class="card login-card" (ngSubmit)="submit()">
           <div class="login-brand">
-            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
             <div class="sub">Gestion supermarche</div>
           </div>
-      <form class="card login-card" (ngSubmit)="submit()">
-        <div class="login-brand">
-          <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
-          <div class="sub">Gestion supermarche</div>
-        </div>
 
           <!-- A new installation: the server opened the administrator account itself. Its
                password is told at the server's computer only, and until it has been replaced. -->
@@ -125,26 +114,6 @@ const HIGHLIGHTS: readonly Highlight[] = [
               }
             </div>
           }
-        <!-- A new installation: the server opened the administrator account itself. Its
-             password is told at the server's computer only, and until it has been replaced. -->
-        @if (first(); as f) {
-          <div class="login-first" role="status">
-            <div class="title">Première connexion</div>
-            @if (f.password) {
-              <div>Identifiant : <strong class="value">{{ f.username }}</strong></div>
-              <div>Mot de passe : <strong class="value">{{ f.password }}</strong></div>
-              <div class="text">
-                Après la connexion, il vous sera demandé de le remplacer par le vôtre. Ce message
-                disparaît ensuite.
-              </div>
-            } @else {
-              <div class="text">
-                L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
-                l'ordinateur où Moussa Shop est installé.
-              </div>
-            }
-          </div>
-        }
 
           <div class="form-row" style="flex-direction:column; align-items:stretch;">
             <div class="fld">
