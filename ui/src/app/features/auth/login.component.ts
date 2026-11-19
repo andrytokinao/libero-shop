@@ -53,140 +53,150 @@ const HIGHLIGHTS: readonly Highlight[] = [
     <div class="login-page">
       <!-- Something to read beside the form: what the software is, and who to call. -->
       <aside class="login-about">
-        <img class="about-logo" src="logo.png" alt="" />
-        <h1>Libero <span>Shop</span></h1>
-        <p class="lead">
-          Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
-          au même endroit, sur votre propre réseau.
-        </p>
+        <div class="about-inner">
+          <img class="about-logo" src="logo.png" alt="" />
+          <h1>Libero <span>Shop</span></h1>
+          <p class="lead">
+            Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
+            au même endroit, sur votre propre réseau.
+          </p>
 
-        <ul class="highlights">
-          @for (item of highlights; track item.title) {
-            <li>
-              <span class="ic"><app-icon [name]="item.icon" [size]="18" /></span>
-              <div>
-                <div class="title">{{ item.title }}</div>
-                <div class="text">{{ item.text }}</div>
-              </div>
-            </li>
-          }
-        </ul>
+          <ul class="highlights">
+            @for (item of highlights; track item.title) {
+              <li>
+                <span class="ic"><app-icon [name]="item.icon" [size]="18" /></span>
+                <div>
+                  <div class="title">{{ item.title }}</div>
+                  <div class="text">{{ item.text }}</div>
+                </div>
+              </li>
+            }
+          </ul>
 
-        <div class="support">
-          <div class="label">Équipe support — WhatsApp</div>
-          <a [href]="supportLink" target="_blank" rel="noopener">{{ supportPhone }}</a>
-          <div class="text">Une question, un blocage ? Écrivez-nous, nous vous répondons.</div>
-        </div>
+          <div class="support">
+            <div class="label">Équipe support — WhatsApp</div>
+            <a [href]="supportLink" target="_blank" rel="noopener">{{ supportPhone }}</a>
+            <div class="text">Une question, un blocage ? Écrivez-nous, nous vous répondons.</div>
+          </div>
 
-        <div class="publisher text">
-          Développé par {{ publisher.name }} ·
-          <a [href]="publisher.websiteLink" target="_blank" rel="noopener">{{ publisher.website }}</a>
-          · <a [href]="publisher.emailLink">{{ publisher.email }}</a>
+          <div class="publisher text">
+            Développé par {{ publisher.name }} ·
+            <a [href]="publisher.websiteLink" target="_blank" rel="noopener">{{ publisher.website }}</a>
+            · <a [href]="publisher.emailLink">{{ publisher.email }}</a>
+          </div>
         </div>
       </aside>
 
-      <form class="card login-card" (ngSubmit)="submit()">
-        <div class="login-brand">
-          <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
-          <div class="sub">Gestion supermarche</div>
-        </div>
-
-        <!-- A new installation: the server opened the administrator account itself. Its
-             password is told at the server's computer only, and until it has been replaced. -->
-        @if (first(); as f) {
-          <div class="login-first" role="status">
-            <div class="title">Première connexion</div>
-            @if (f.password) {
-              <div>Identifiant : <strong class="value">{{ f.username }}</strong></div>
-              <div>Mot de passe : <strong class="value">{{ f.password }}</strong></div>
-              <div class="text">
-                Après la connexion, il vous sera demandé de le remplacer par le vôtre. Ce message
-                disparaît ensuite.
-              </div>
-            } @else {
-              <div class="text">
-                L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
-                l'ordinateur où Libero Shop est installé.
-              </div>
-            }
+      <main class="login-main">
+        <form class="card login-card" (ngSubmit)="submit()">
+          <div class="login-brand">
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+            <div class="sub">Gestion supermarche</div>
           </div>
-        }
 
-        <div class="form-row" style="flex-direction:column; align-items:stretch;">
-          <div class="fld">
-            <label for="username">Identifiant</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              autocomplete="username"
-              autofocus
-              [ngModel]="username()"
-              (ngModelChange)="username.set($event)"
-            />
-          </div>
-          <div class="fld">
-            <label for="password">Mot de passe</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              [ngModel]="password()"
-              (ngModelChange)="password.set($event)"
-            />
-          </div>
-        </div>
-
-        <!-- The session could not be read because the server did not answer: it is kept, and
-             tried again every few seconds, so the screen comes back by itself. -->
-        @if (auth.unreachable()) {
-          <div class="login-first" role="status">
-            <div class="title">Serveur injoignable</div>
-            <div class="text">
-              Votre session est conservée : elle reprendra dès que le serveur répondra.
+          <!-- A new installation: the server opened the administrator account itself. Its
+               password is told at the server's computer only, and until it has been replaced. -->
+          @if (first(); as f) {
+            <div class="login-first" role="status">
+              <div class="title">Première connexion</div>
+              @if (f.password) {
+                <div>Identifiant : <strong class="value">{{ f.username }}</strong></div>
+                <div>Mot de passe : <strong class="value">{{ f.password }}</strong></div>
+                <div class="text">
+                  Après la connexion, il vous sera demandé de le remplacer par le vôtre. Ce message
+                  disparaît ensuite.
+                </div>
+              } @else {
+                <div class="text">
+                  L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
+                  l'ordinateur où Libero Shop est installé.
+                </div>
+              }
             </div>
-            <button class="btn small ghost" type="button" [disabled]="retrying()" (click)="retry()">
-              {{ retrying() ? 'Nouvel essai...' : 'Réessayer maintenant' }}
-            </button>
-          </div>
-        }
+          }
 
-        @if (error(); as message) {
-          <div class="login-error">{{ message }}</div>
-        }
-
-        <button class="btn block" type="submit" [disabled]="!canSubmit()">
-          {{ submitting() ? 'Connexion...' : 'Se connecter' }}
-        </button>
-
-        <!-- On a phone the server is a setting, and the login page is where a moved server
-             shows up first: the way to fix it sits right here. -->
-        @if (server.isMobile || server.serverUrl()) {
-          <div class="login-server muted">
-            Serveur : {{ server.host() ?? 'non configuré' }} ·
-            <a routerLink="/serveur">Modifier</a>
+          <div class="form-row" style="flex-direction:column; align-items:stretch;">
+            <div class="fld">
+              <label for="username">Identifiant</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                autofocus
+                [ngModel]="username()"
+                (ngModelChange)="username.set($event)"
+              />
+            </div>
+            <div class="fld">
+              <label for="password">Mot de passe</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                [ngModel]="password()"
+                (ngModelChange)="password.set($event)"
+              />
+            </div>
           </div>
-        }
-        @if (!server.isMobile) {
-          <!-- No link to /secours on purpose: the lost administrator password page is still
-               there, but it is the support team that gives its address, on the phone. -->
-          <div class="login-server muted">
-            <a routerLink="/application-mobile">Télécharger l'application mobile Android</a>
-          </div>
-        }
-      </form>
+
+          <!-- The session could not be read because the server did not answer: it is kept, and
+               tried again every few seconds, so the screen comes back by itself. -->
+          @if (auth.unreachable()) {
+            <div class="login-first" role="status">
+              <div class="title">Serveur injoignable</div>
+              <div class="text">
+                Votre session est conservée : elle reprendra dès que le serveur répondra.
+              </div>
+              <button class="btn small ghost" type="button" [disabled]="retrying()" (click)="retry()">
+                {{ retrying() ? 'Nouvel essai...' : 'Réessayer maintenant' }}
+              </button>
+            </div>
+          }
+
+          @if (error(); as message) {
+            <div class="login-error">{{ message }}</div>
+          }
+
+          <button class="btn block" type="submit" [disabled]="!canSubmit()">
+            {{ submitting() ? 'Connexion...' : 'Se connecter' }}
+          </button>
+
+          <!-- On a phone the server is a setting, and the login page is where a moved server
+               shows up first: the way to fix it sits right here. -->
+          @if (server.isMobile || server.serverUrl()) {
+            <div class="login-server muted">
+              Serveur : {{ server.host() ?? 'non configuré' }} ·
+              <a routerLink="/serveur">Modifier</a>
+            </div>
+          }
+          @if (!server.isMobile) {
+            <!-- No link to /secours on purpose: the lost administrator password page is still
+                 there, but it is the support team that gives its address, on the phone. -->
+            <div class="login-server muted">
+              <a routerLink="/application-mobile">Télécharger l'application mobile Android</a>
+            </div>
+          }
+        </form>
+      </main>
     </div>
   `,
   styles: `
+    /* Two full-height panels: the left one has a single uniform background from top to
+       bottom, the right one holds the form. */
     .login-page {
       min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .login-main {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 56px;
-      background: var(--chrome-bg);
       padding: 24px;
+      background: var(--bg, #f4f6fa);
     }
 
     .login-card {
@@ -196,8 +206,17 @@ const HIGHLIGHTS: readonly Highlight[] = [
     }
 
     .login-about {
-      max-width: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      background: var(--chrome-bg);
       color: var(--chrome-ink);
+
+      .about-inner {
+        width: 100%;
+        max-width: 420px;
+      }
 
       .about-logo {
         display: block;
@@ -296,17 +315,28 @@ const HIGHLIGHTS: readonly Highlight[] = [
       }
     }
 
-    /* No room for two columns: the form first, the reading under it. */
+    /* No room for two columns: the form first, the reading under it, on the same
+       uniform background down to the bottom of the screen. */
     @media (max-width: 900px) {
       .login-page {
-        flex-direction: column-reverse;
-        justify-content: flex-end;
-        gap: 28px;
-        padding-top: 40px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+      }
+
+      .login-main {
+        order: 1;
+        padding: 40px 24px 28px;
       }
 
       .login-about {
-        max-width: 360px;
+        order: 2;
+        align-items: flex-start;
+        padding: 32px 24px 40px;
+
+        .about-inner {
+          margin: 0 auto;
+          max-width: 360px;
+        }
 
         h1,
         .about-logo {
