@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fiche d’entrée de stock et bénéfice prévu</title>
+<style>
+:root{--bg:#eef3f1;--card:#fff;--ink:#14302a;--mute:#5d7770;--line:#d5e0dc;--main:#0f6b57;--mainfg:#fff;--soft:#e2f1ec;--warn:#b9650a;--warnbg:#fdf0dc;--bad:#b3261e;--good:#0f6b57;--field:#f7faf9;--amber:#d98a1d;--grey:#8aa19a;--ov:rgba(10,30,25,.55);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1a17;--card:#14262a;--ink:#e6f2ee;--mute:#93b0a8;--line:#27413b;--main:#3ec2a0;--mainfg:#07201a;--soft:#17382f;--warn:#f0b35a;--warnbg:#3a2c12;--bad:#ff8a80;--good:#5fd9b8;--field:#0f201c;--amber:#f0b35a;--grey:#6f8a83}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.open{background:var(--main);color:var(--mainfg);border:0;border-radius:12px;padding:14px 22px;font-size:17px;font-weight:700;cursor:pointer}
+.ov{position:fixed;inset:0;background:var(--ov);display:flex;align-items:center;justify-content:center;padding:12px;z-index:5}
+.ov[hidden]{display:none}
+.modal{background:var(--card);width:100%;max-width:700px;max-height:100%;border-radius:18px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 6px}
+.head h1{font-size:19px;margin:0}
+.x{background:none;border:0;font-size:26px;line-height:1;color:var(--mute);cursor:pointer;padding:4px 8px}
+.tabs{display:flex;gap:2px;padding:0 10px;border-bottom:2px solid var(--line)}
+.tab{flex:1;background:none;border:0;padding:12px 4px;font-size:14px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:4px solid transparent;margin-bottom:-2px}
+.tab[aria-selected=true]{color:var(--main);border-bottom-color:var(--main)}
+.body{padding:16px 18px;overflow:auto;flex:1}
+.pane[hidden]{display:none}
+.help{background:var(--soft);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:14px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+input,select{width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink)}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--main);outline-offset:1px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.full{grid-column:1/-1}
+h2{font-size:16px;margin:20px 0 8px}
+.row{display:grid;grid-template-columns:1.6fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.del{background:none;border:0;color:var(--bad);font-size:22px;cursor:pointer;padding:6px 8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px;align-items:center}
+.chip{background:var(--field);border:1.5px solid var(--main);color:var(--main);border-radius:20px;padding:7px 13px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+select.cp{flex:1;min-width:190px;width:auto;padding:7px 10px;font-size:14px}
+.sw{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;margin:4px 0 12px;cursor:pointer}
+.sw input,.sw2 input{width:24px;height:24px;accent-color:var(--main);flex:none}
+.sw2{display:flex;align-items:center;gap:10px;font-weight:600;margin:0 0 8px;cursor:pointer}
+.note{font-size:14px;color:var(--mute);margin:6px 0}
+small{color:var(--mute);font-weight:400}
+.alert{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:9px 12px;font-size:14px;margin:8px 0;font-weight:600}
+.alert[hidden]{display:none}
+.card{border:1.5px solid var(--line);border-left:7px solid var(--grey);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--field)}
+.card.P{border-left-color:var(--main)}.card.C{border-left-color:var(--amber)}
+.card .ch{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px}
+.card .ch b{font-size:17px}
+.tag{background:var(--soft);color:var(--main);border-radius:12px;padding:3px 10px;font-size:13px;font-weight:700}
+.ex{border-top:1px dashed var(--line);padding-top:10px;margin-top:6px}
+.ctot{margin-top:12px;padding-top:10px;border-top:2px solid var(--line);display:flex;justify-content:space-between;font-weight:800}
+.pkb{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.ul{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.ul span:last-child{display:flex;align-items:center;gap:4px}
+.fm{border:2px solid var(--main);border-radius:12px;padding:12px;margin-top:10px;background:var(--card)}
+.sum{border-top:2px solid var(--line);padding:12px 18px 14px;background:var(--soft)}
+.sum .l{display:flex;justify-content:space-between;font-size:14px}
+.sum .big{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;font-weight:800;font-size:19px}
+.pos{color:var(--good)}.neg{color:var(--bad)}
+.us2{display:flex;gap:6px;align-items:center}.us2 input{flex:1.3;min-width:0}.us2 select{flex:1;min-width:0}
+.nav{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;border-radius:10px;padding:12px;font-size:16px;font-weight:700;cursor:pointer;border:2px solid var(--main);background:var(--card);color:var(--main)}
+.btn.p{background:var(--main);color:var(--mainfg)}
+@media(max-width:520px){.ov{padding:0}.modal{height:100%;border-radius:0}.row{grid-template-columns:1fr 1fr auto}.row .w{grid-column:1/-1}.tab{font-size:12.5px}}
+@media(prefers-reduced-motion:no-preference){.pane{animation:f .18s ease-out}@keyframes f{from{opacity:.4}to{opacity:1}}}
+</style>
+</head>
+<body>
+<button class="open" id="open">Ouvrir la fiche d’entrée de stock</button>
+
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-labelledby="ttl">
+<div class="modal">
+  <div class="head"><h1 id="ttl">Nouvelle entrée de stock</h1><button class="x" id="close" aria-label="Fermer">×</button></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-t="0" aria-selected="true">Achat</button>
+    <button class="tab" role="tab" data-t="1" aria-selected="false">Charges</button>
+    <button class="tab" role="tab" data-t="2" aria-selected="false">Pertes et transformation</button>
+    <button class="tab" role="tab" data-t="3" aria-selected="false">Vente</button>
+  </div>
+  <div class="body">
+    <section class="pane" id="p0">
+      <p class="help">Saisissez ce que vous avez acheté et son prix d’achat.</p>
+      <div class="g2">
+        <div class="full"><label for="name">Nom du produit</label><input id="name" data-k="name" placeholder="Ex. : Riz paddy"></div>
+        <div><label for="qty">Quantité achetée</label><input id="qty" data-k="qty" type="number" min="0" inputmode="decimal"></div>
+        <div><label for="bu">Unité d’achat</label><select id="bu" class="us" data-own="" data-k="bu"></select></div>
+        <div class="full"><label for="price" id="lprice">Prix d’achat par unité (Ar)</label><input id="price" data-k="price" type="number" min="0" inputmode="decimal"></div>
+      </div>
+      <div id="pkS"></div>
+      <div class="nav"><button class="btn p" data-go="1">Suivant : charges</button></div>
+    </section>
+
+    <section class="pane" id="p1" hidden>
+      <p class="help">Frais payés pour faire arriver la marchandise achetée (avant toute transformation). Le transport des produits finis se saisit à l’étape Vente.</p>
+      <div class="chips" id="chch"></div>
+      <div id="chl"></div>
+      <div class="note" id="chtot"></div>
+      <div class="nav"><button class="btn" data-go="0">Retour</button><button class="btn p" data-go="2">Suivant : pertes</button></div>
+    </section>
+
+    <section class="pane" id="p2" hidden>
+      <p class="help">Notez ce qui est perdu, puis indiquez si vous fabriquez de nouveaux produits. Chaque produit obtenu a sa carte et ses propres unités.</p>
+      <h2 style="margin-top:0">Pertes</h2>
+      <div class="chips" id="chlo"></div>
+      <div id="lol"></div>
+      <div class="note"><b>Normale</b> : attendue, son coût est réparti sur le reste du stock. <b>Anormale</b> : accident ou vol, elle est comptée à part comme une perte sèche.</div>
+      <div id="lal"></div>
+      <h2>Transformation</h2>
+      <label class="sw"><input type="checkbox" id="trans"> Je transforme ce produit avant de le vendre</label>
+      <div id="tbox" hidden>
+        <div class="chips" id="chpr"></div>
+        <label>Coûts de production (Ar)</label>
+        <div id="prl"></div>
+        <h2>Produits obtenus</h2>
+        <div id="oul"></div>
+        <button class="chip" id="addout">+ Ajouter un produit obtenu</button>
+        <div id="tal"></div>
+      </div>
+      <div class="nav"><button class="btn" data-go="1">Retour</button><button class="btn p" data-go="3">Suivant : vente</button></div>
+    </section>
+
+    <section class="pane" id="p3" hidden>
+      <p class="help">Une carte par produit : choisissez l’unité principale et son prix. Vous pouvez vendre aussi dans d’autres unités : cochez-les, les prix sont proposés automatiquement.</p>
+      <div id="mbox" hidden style="margin-bottom:14px"><label for="method">Comment partager le coût de fabrication entre les produits ?</label>
+        <select id="method" data-k="method"><option value="V">Selon la valeur de vente de chacun (recommandé)</option><option value="C">Tout sur le produit principal, les autres comptent comme gain</option></select></div>
+      <div id="vl"></div>
+      <h2>Frais de vente</h2>
+      <p class="note">Transport des produits finis, commission, emballage… Ils s’ajoutent au coût de revient pour fixer le bon prix.</p>
+      <div class="chips" id="chsc"></div>
+      <div id="scl"></div>
+      <div id="val"></div>
+      <div class="nav"><button class="btn" data-go="2">Retour</button><button class="btn" id="reset">Tout effacer</button></div>
+    </section>
+  </div>
+  <div class="sum" aria-live="polite">
+    <div class="l"><span>Coût total engagé</span><b id="s1"></b></div>
+    <div class="l"><span>Ventes prévues si tout est vendu</span><b id="s2"></b></div>
+    <div class="big"><span>Bénéfice prévu</span><span id="s3"></span></div>
+  </div>
+</div>
+</div>
+
+<script>
+var TAG={P:'Produit principal',C:'Produit secondaire',S:'Sous-produit'};
+/* Catalogue d’unités existantes : of = unité contenue, f = combien. Sans "of" = unité de référence. */
+var CAT=[{id:'u1',n:'kg',of:null,f:1},{id:'u2',n:'Sac 50 kg',of:'u1',f:50},{id:'u3',n:'Palette',of:'u2',f:14},{id:'u4',n:'Sac 25 kg',of:'u1',f:25},
+ {id:'u5',n:'pièce',of:null,f:1},{id:'u6',n:'Carton',of:'u5',f:12},{id:'u7',n:'litre',of:null,f:1},{id:'u8',n:'Bidon 20 L',of:'u7',f:20}],NID=9,FORM=null,S;
+function demo(){return {name:'Riz paddy',ref:'u1',us:['u2','u3'],bu:'u2',qty:20,price:50000,su:'u1',p:0,ex:{},
+ charges:[{l:'Transport',a:40000,m:'T'},{l:'Embarquement',a:10000,m:'T'}],
+ losses:[{l:'Perte de voyage',q:20,t:'N',u:'u1'}],trans:true,method:'V',
+ prod:[{l:'Salaires',a:100000},{l:'Énergie',a:50000}],
+ outs:[{n:'Riz blanc',t:'P',q:600,u:'u1',ref:'u1',us:['u2'],su:'u2',p:125000,ex:{u1:{on:true,q:50,p:''}}},
+  {n:'Brisures',t:'C',q:100,u:'u1',ref:'u1',us:['u4'],su:'u1',p:800,ex:{}},
+  {n:'Son',t:'S',q:150,u:'u1',ref:'u1',us:[],su:'u1',p:400,ex:{}}],
+ sc:[{l:'Transport des produits finis',a:30000,m:'T'}]};}
+function blank(){return {name:'',ref:'u1',us:[],bu:'u1',qty:0,price:0,su:'u1',p:0,ex:{},charges:[],losses:[],trans:false,method:'V',prod:[],outs:[],sc:[]};}
+S=demo();
+var $=function(i){return document.getElementById(i)};
+var N=function(v){return parseFloat(v)||0};
+var F=function(n){return (Math.round(n*100)/100).toLocaleString('fr-FR')+' Ar'};
+var Q=function(n){return (Math.round(n*1000)/1000).toLocaleString('fr-FR')};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function sel(opts,v){return opts.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>'}).join('')}
+function own(a){return (a===undefined||a==='')?S:S.outs[+a]}
+function UC(id){for(var i=0;i<CAT.length;i++)if(CAT[i].id===id)return CAT[i]}
+function rf(id,d){var u=UC(id);d=d||0;if(!u||d>20)return 1;return u.of?(N(u.f)||1)*rf(u.of,d+1):1}
+function root(id,d){var u=UC(id);d=d||0;if(!u||d>20)return id;return u.of?root(u.of,d+1):id}
+function dep(id,x,d){d=d||0;if(x===id)return true;var u=UC(x);if(!u||!u.of||d>20)return false;return dep(id,u.of,d+1)}
+function units(o){var r=[{id:o.ref,n:(UC(o.ref)||{n:'unité'}).n,f:1}];(o.us||[]).forEach(function(id){var u=UC(id);if(u&&id!==o.ref&&root(id)===o.ref)r.push({id:id,n:u.n,f:rf(id)})});return r}
+function UF(o,id){var u=units(o);for(var i=0;i<u.length;i++)if(u[i].id===id)return u[i].f;return 1}
+function UN(o,id){var u=units(o);for(var i=0;i<u.length;i++)if(u[i].id===id)return u[i].n;return u[0].n}
+function RN(o){return units(o)[0].n}
+function PU(o){return units(o).some(function(u){return u.id===o.su})?o.su:o.ref}
+function unitOpts(o,v){return units(o).map(function(u){return '<option value="'+u.id+'"'+(u.id===v?' selected':'')+'>'+esc(u.n)+'</option>'}).join('')}
+function fixUnits(){
+  var V=function(o,v){return units(o).some(function(u){return u.id===v})?v:o.ref};
+  [S].concat(S.outs).forEach(function(o){
+    if(!UC(o.ref)||UC(o.ref).of)o.ref=CAT.filter(function(u){return !u.of})[0].id;
+    o.us=(o.us||[]).filter(function(id,i,a){return UC(id)&&id!==o.ref&&root(id)===o.ref&&a.indexOf(id)===i});
+    o.su=V(o,o.su);o.ex=o.ex||{};
+    Object.keys(o.ex).forEach(function(k){if(!units(o).some(function(u){return u.id===k}))delete o.ex[k]});
+  });
+  S.bu=V(S,S.bu);S.losses.forEach(function(c){c.u=V(S,c.u)});S.outs.forEach(function(o){o.u=V(o,o.u)});
+}
+function at(L,i,ow){return (L?' data-l="'+L+'" data-i="'+i+'"':'')+(ow!==undefined?' data-own="'+ow+'"':'')}
+function I(L,i,k,v,n,ow){return '<input'+(n?' type="number" min="0" inputmode="decimal"':'')+at(L,i,ow)+' data-k="'+k+'" value="'+esc(v)+'">'}
+function US(ow,L,i,k,v){return '<select class="us"'+at(L,i,ow)+' data-k="'+k+'">'+unitOpts(own(ow),v)+'</select>'}
+function DEL(L,i){return '<button class="del"'+at(L,i)+' data-del="'+L+'" aria-label="Supprimer">×</button>'}
+function crow(L,c,i,modes){return '<div class="row"><div class="w"><label>Type de frais</label>'+I(L,i,'l',c.l)+'</div><div><label>Montant (Ar)</label>'+I(L,i,'a',c.a,1)+'</div><div><label>Calculé</label><select'+at(L,i)+' data-k="m">'+sel(modes,c.m)+'</select></div>'+DEL(L,i)+'</div>'}
+function T(a,k,h){var e=document.querySelector('['+a+'="'+k+'"]');if(e)e.innerHTML=h}
+
+/* Un seul formulaire : nouvelle unité ou modification d’une unité existante */
+function formHTML(ow){
+  var f=FORM;if(!f||f.own!==ow)return '';
+  var o=own(ow),edit=!!f.id,eu=edit?UC(f.id):null,fam=root(edit?f.id:o.ref);
+  var opts=CAT.filter(function(u){return root(u.id)===fam&&(!edit||!dep(f.id,u.id))}).map(function(u){return '<option value="'+u.id+'"'+(u.id===f.of?' selected':'')+'>'+esc(u.n)+'</option>'}).join('');
+  var h='<div class="fm"><b>'+(edit?'Modifier « '+esc(eu.n)+' »':'Nouvelle unité')+'</b>';
+  if(!edit)h+='<label style="margin-top:8px">Type</label><select data-fm="type">'+sel([['C','Conditionnement (sac, carton, palette…)'],['R','Nouvelle unité de référence (kg, litre, pièce…)']],f.type)+'</select>';
+  h+='<label style="margin-top:8px">Nom</label><input data-fm="n" value="'+esc(f.n)+'" placeholder="Ex. : Sac 10 kg">';
+  if(f.type==='C')h+='<div class="g2" style="margin-top:8px"><div><label>Contient</label><input type="number" min="0" step="any" inputmode="decimal" data-fm="f" value="'+esc(f.f)+'"></div><div><label>de (toute unité existante)</label><select data-fm="of">'+opts+'</select></div></div>';
+  h+='<div class="note">'+(edit?'La modification s’applique à tous les produits qui utilisent cette unité.':f.type==='R'?'Elle deviendra l’unité de référence de ce produit et ses conditionnements actuels seront retirés.':'Après confirmation, elle est ajoutée à la liste des unités de ce produit.')+'</div>';
+  if(f.err)h+='<div class="alert">'+f.err+'</div>';
+  return h+'<div class="nav" style="margin-top:10px"><button class="btn" id="fmx">Annuler</button><button class="btn p" id="fmok">Confirmer</button></div></div>';
+}
+function fmOK(){
+  var f=FORM,o=own(f.own),n=(f.n||'').trim(),err='';
+  if(!n)err='Donnez un nom à l’unité.';
+  else if(f.type==='C'&&(!(N(f.f)>0)||!f.of))err='Indiquez combien elle contient et de quelle unité.';
+  if(err){f.err=err;render();return}
+  if(f.id){var u=UC(f.id);u.n=n;if(u.of){u.of=f.of;u.f=N(f.f)}}
+  else{var id='u'+(NID++);
+    if(f.type==='R'){CAT.push({id:id,n:n,of:null,f:1});o.ref=id;o.us=[]}
+    else{CAT.push({id:id,n:n,of:f.of,f:N(f.f)});o.us=(o.us||[]).concat(id)}}
+  FORM=null;render();
+}
+function pkBlock(ow){
+  var o=own(ow),us=units(o),roots=CAT.filter(function(u){return !u.of}),
+  av=CAT.filter(function(u){return root(u.id)===o.ref&&!us.some(function(x){return x.id===u.id})});
+  var h='<div class="pkb"><label>Unité de référence</label><div class="us2"><select'+at('',0,ow)+' data-k="ref">'+roots.map(function(u){return '<option value="'+u.id+'"'+(u.id===o.ref?' selected':'')+'>'+esc(u.n)+'</option>'}).join('')+'</select><button class="chip fmedit" data-own="'+ow+'" data-id="'+o.ref+'">Modifier</button></div>';
+  h+='<label style="margin-top:12px">Unités et conditionnements de ce produit</label>';
+  if(us.length<2)h+='<div class="note">Ce produit se compte seulement en '+esc(us[0].n)+'. Ajoutez un conditionnement ci-dessous.</div>';
+  us.slice(1).forEach(function(u){h+='<div class="ul"><span>'+esc(u.n)+' <small>= '+Q(u.f)+' '+esc(us[0].n)+'</small></span><span><button class="chip fmedit" data-own="'+ow+'" data-id="'+u.id+'">Modifier</button><button class="del" data-rm="'+u.id+'" data-own="'+ow+'" aria-label="Retirer">×</button></span></div>'});
+  h+='<div class="chips">'+(av.length?'<select class="cp" data-own="'+ow+'" aria-label="Ajouter une unité existante"><option value="">Ajouter une unité existante…</option>'+av.map(function(u){return '<option value="'+u.id+'">'+esc(u.n)+' (= '+Q(rf(u.id))+' '+esc(us[0].n)+')</option>'}).join('')+'</select>':'')+'<button class="chip fmnew" data-own="'+ow+'">+ Nouvelle unité</button></div>';
+  return h+formHTML(ow)+'</div>';
+}
+
+function updateUnits(){
+  document.querySelectorAll('select.us').forEach(function(s){var v=s.dataset.l?S[s.dataset.l][+s.dataset.i][s.dataset.k]:own(s.dataset.own)[s.dataset.k];s.innerHTML=unitOpts(own(s.dataset.own),v)});
+  $('lprice').textContent='Prix d’achat par '+UN(S,S.bu)+' (Ar)';
+}
+function chips(id,items,list){$(id).innerHTML=items.map(function(x){return '<button class="chip" data-add="'+list+'" data-v="'+esc(JSON.stringify(x))+'">+ '+x.l+'</button>'}).join('')}
+chips('chch',[{l:'Transport',a:0,m:'T'},{l:'Embarquement',a:0,m:'T'},{l:'Débarquement',a:0,m:'T'},{l:'Autre frais',a:0,m:'T'}],'charges');
+chips('chpr',[{l:'Salaires',a:0},{l:'Énergie',a:0},{l:'Emballage',a:0},{l:'Autre coût',a:0}],'prod');
+chips('chsc',[{l:'Transport des produits finis',a:0,m:'T'},{l:'Commission',a:0,m:'T'},{l:'Emballage de vente',a:0,m:'U'},{l:'Autre frais',a:0,m:'T'}],'sc');
+
+function vcard(r){
+  var o=r.o,pi=r.pi,L=pi===''?'':'outs',ii=pi===''?0:+pi,us=units(o),pu=PU(o);
+  var h='<div class="card '+r.t+'"><div class="ch"><b style="flex:1">'+esc(r.n)+'</b>'+(r.t?'<span class="tag">'+TAG[r.t]+'</span>':'')+'</div><div class="note" style="margin-top:0">À vendre : <b data-stk="'+pi+'"></b></div><div class="alert" data-al="'+pi+'" hidden></div>'+
+  '<div class="g2"><div><label>Unité principale</label>'+US(pi,L,ii,'su',pu)+'</div><div><label>Prix par unité principale (Ar)</label>'+I(L,ii,'p',o.p,1,pi)+'</div></div><div class="note" style="margin-top:-6px" data-mn="'+pi+':'+pu+'"></div>';
+  if(us.length<2)h+='<div class="note">Ce produit n’a qu’une unité. Ajoutez des conditionnements pour vendre aussi en sac, carton…</div>';
+  us.forEach(function(u){
+    if(u.id===pu)return;var e=(o.ex||{})[u.id]||{};
+    h+='<div class="ex"><label class="sw2"><input type="checkbox" data-pi="'+pi+'" data-ui="'+u.id+'" data-k="on"'+(e.on?' checked':'')+'> Vendre aussi en '+esc(u.n)+' <small>(= '+Q(u.f)+' '+esc(us[0].n)+')</small></label>'+
+    (e.on?'<div class="g2"><div><label>Quantité (en '+esc(u.n)+')</label><input type="number" min="0" inputmode="decimal" data-pi="'+pi+'" data-ui="'+u.id+'" data-k="q" value="'+esc(e.q)+'"></div><div><label>Prix par '+esc(u.n)+' (Ar)</label><input type="number" min="0" inputmode="decimal" data-pi="'+pi+'" data-ui="'+u.id+'" data-k="p" data-ph="'+pi+':'+u.id+'" value="'+esc(e.p)+'"></div></div>':'')+
+    '<div class="note" style="margin-top:0" data-mn="'+pi+':'+u.id+'"></div></div>'});
+  return h+'<button class="chip" data-go="'+(pi===''?0:2)+'" style="margin-top:10px">Modifier les unités de ce produit</button><div class="ctot"><span>Bénéfice de ce produit</span><span data-tot="'+pi+'"></span></div></div>';
+}
+
+function render(){
+  fixUnits();
+  var MC=[['T','Pour tout le lot'],['U','Par unité d’achat']],MS=[['T','Pour tout le lot vendu'],['U','Par unité vendue']];
+  $('chl').innerHTML=S.charges.map(function(c,i){return crow('charges',c,i,MC)}).join('')||'<div class="note">Aucun frais ajouté. Touchez un bouton ci-dessus.</div>';
+  $('scl').innerHTML=S.sc.map(function(c,i){return crow('sc',c,i,MS)}).join('')||'<div class="note">Aucun frais de vente.</div>';
+  chips('chlo',[{l:'Perte de voyage',q:0,t:'N',u:S.ref},{l:'Produit périmé ou abîmé',q:0,t:'A',u:S.ref},{l:'Vol ou accident',q:0,t:'A',u:S.ref}],'losses');
+  $('lol').innerHTML=S.losses.map(function(c,i){return '<div class="row"><div class="w"><label>Motif</label>'+I('losses',i,'l',c.l)+'</div><div><label>Quantité perdue</label><div class="us2">'+I('losses',i,'q',c.q,1)+US('','losses',i,'u',c.u)+'</div></div><div><label>Type</label><select'+at('losses',i)+' data-k="t">'+sel([['N','Normale'],['A','Anormale']],c.t)+'</select></div>'+DEL('losses',i)+'</div>'}).join('')||'<div class="note">Aucune perte notée.</div>';
+  $('prl').innerHTML=S.prod.map(function(c,i){return '<div class="row" style="grid-template-columns:1.6fr 1fr auto"><div>'+I('prod',i,'l',c.l)+'</div><div>'+I('prod',i,'a',c.a,1)+'</div>'+DEL('prod',i)+'</div>'}).join('');
+  $('oul').innerHTML=S.outs.map(function(c,i){var s=String(i);return '<div class="card '+c.t+'"><div class="ch"><div style="flex:1.2"><label>Nom du produit obtenu</label>'+I('outs',i,'n',c.n)+'</div><div style="flex:1"><label>Rôle</label><select'+at('outs',i)+' data-k="t">'+sel([['P','Produit principal'],['C','Produit secondaire'],['S','Sous-produit']],c.t)+'</select></div>'+DEL('outs',i)+'</div><label>Quantité obtenue</label><div class="us2">'+I('outs',i,'q',c.q,1)+US(s,'outs',i,'u',c.u)+'</div>'+pkBlock(s)+'</div>'}).join('');
+  $('pkS').innerHTML=pkBlock('');
+  var vr=S.trans?S.outs.map(function(o,i){return {o:o,pi:String(i),n:o.n||'Produit obtenu',t:o.t}}):[{o:S,pi:'',n:S.name||'Produit',t:''}];
+  $('vl').innerHTML=vr.map(vcard).join('')||'<div class="note">Ajoutez d’abord un produit obtenu à l’étape Transformation.</div>';
+  $('mbox').hidden=!S.trans;
+  ['name','qty','price','method'].forEach(function(k){$(k).value=S[k]});
+  $('trans').checked=S.trans;$('tbox').hidden=!S.trans;
+  calc();
+}
+
+function calc(){
+  updateUnits();
+  var rn=RN(S),qb=N(S.qty),q=qb*UF(S,S.bu),buy=qb*N(S.price),ch=0,ln=0,la=0,pc=0;
+  S.charges.forEach(function(c){ch+=c.m==='T'?N(c.a):N(c.a)*qb});
+  S.losses.forEach(function(c){var x=N(c.q)*UF(S,c.u);if(c.t==='N')ln+=x;else la+=x});
+  S.prod.forEach(function(c){pc+=N(c.a)});
+  var cost=buy+ch,net=q-ln,U=net>0?cost/net:0,sellable=q-ln-la,al='';
+  $('chtot').textContent='Total des frais : '+F(ch);
+  if(la>0)al+='<div class="alert">Perte anormale : '+Q(la)+' '+esc(rn)+' soit '+F(la*U)+', déjà déduite du bénéfice.</div>';
+  if(sellable<0)al+='<div class="alert">Les pertes dépassent la quantité achetée. Vérifiez les chiffres.</div>';
+  $('lal').innerHTML=al;
+  var tot=Math.max(sellable,0)*U+(S.trans?pc:0),P=[];
+  if(S.trans)S.outs.forEach(function(o,i){P.push({n:o.n||'Produit',t:o.t,o:o,pi:String(i),qr:N(o.q)*UF(o,o.u)})});
+  else P.push({n:S.name||'Produit',t:'P',o:S,pi:'',qr:Math.max(sellable,0)});
+  var rev=0,sumQ=0,sec=0,pq=0;
+  P.forEach(function(x){
+    var o=x.o,pu=PU(o),fs=UF(o,pu),exq=0,exr=0,nu=0;x.pu=pu;x.fs=fs;x.lines={};
+    units(o).forEach(function(u){if(u.id===pu)return;var e=(o.ex||{})[u.id];
+      if(e&&e.on){var qq=N(e.q),pp=(e.p!==''&&e.p!=null)?N(e.p):N(o.p)/fs*u.f;exq+=qq*u.f;exr+=qq*pp;nu+=qq;x.lines[u.id]=pp}});
+    x.over=x.qr-exq<-1e-9;x.sq=Math.max(x.qr-exq,0)/fs;x.r=x.sq*N(o.p)+exr;x.nu=x.sq+nu;
+    rev+=x.r;sumQ+=x.qr;if(x.t==='P')pq+=x.qr;else sec+=x.r});
+  var t2='';
+  if(S.trans&&S.outs.every(function(o){return o.ref===S.ref})){var lost=sellable-sumQ;
+    if(lost<-0.0001)t2='<div class="alert">Vous avez obtenu '+Q(-lost)+' '+esc(rn)+' de plus que la quantité mise en production. Vérifiez les quantités.</div>';
+    else if(lost>0.0001)t2='<div class="alert">Perte pendant la transformation : '+Q(lost)+' '+esc(rn)+' (calculée automatiquement, son coût est réparti sur les produits obtenus).</div>';}
+  $('tal').innerHTML=t2;
+  var sc=0,gain=0;
+  P.forEach(function(x){
+    var o=x.o,rs=rev>0?x.r/rev:(sumQ>0?x.qr/sumQ:0);
+    if(!S.trans)x.c=tot;else if(S.method==='V')x.c=tot*rs;else x.c=x.t==='P'?(tot-sec)*(pq>0?x.qr/pq:0):0;
+    x.s=0;S.sc.forEach(function(c){x.s+=c.m==='T'?N(c.a)*rs:N(c.a)*x.nu});
+    x.pf=x.r-x.c-x.s;sc+=x.s;gain+=x.pf;
+    var cr=x.qr>0?(x.c+x.s)/x.qr:0;
+    T('data-stk',x.pi,Q(x.qr)+' '+esc(RN(o))+(x.fs!==1?' soit '+Q(x.qr/x.fs)+' '+esc(UN(o,x.pu)):''));
+    var ea=document.querySelector('[data-al="'+x.pi+'"]');if(ea){ea.hidden=!x.over;ea.textContent='Les quantités des autres unités dépassent le stock disponible.'}
+    units(o).forEach(function(u){
+      var mn=cr*u.f,price=u.id===x.pu?N(o.p):x.lines[u.id];
+      T('data-mn',x.pi+':'+u.id,(u.id===x.pu?'Reste vendu : '+Q(x.sq)+' '+esc(u.n)+' · ':'')+'Prix minimum : <b>'+F(mn)+'</b>'+(price>0?' · bénéfice par '+esc(u.n)+' : <b class="'+(price-mn>=0?'pos':'neg')+'">'+F(price-mn)+'</b>':''));
+      var pe=document.querySelector('[data-ph="'+x.pi+':'+u.id+'"]');if(pe)pe.placeholder=N(o.p)>0?'Proposé : '+Q(N(o.p)/x.fs*u.f):'';
+    });
+    T('data-tot',x.pi,'<span class="'+(x.pf>=0?'pos':'neg')+'">'+F(x.pf)+'</span>');
+  });
+  var profit=gain-la*U;
+  $('val').innerHTML=sc>0?'<div class="alert">Les frais de vente de '+F(sc)+' sont inclus dans les prix minimum.</div>':'';
+  $('s1').textContent=F(cost+(S.trans?pc:0)+sc);$('s2').textContent=F(rev);
+  $('s3').innerHTML='<span class="'+(profit>=0?'pos':'neg')+'">'+F(profit)+'</span>';
+}
+
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.dataset.fm){FORM[t.dataset.fm]=t.value;FORM.err='';if(t.dataset.fm==='type'){FORM.of=FORM.type==='C'?own(FORM.own).ref:'';render()}return}
+  var k=t.dataset.k;if(!k)return;
+  if(t.dataset.ui!==undefined){
+    var po=t.dataset.pi===''?S:S.outs[+t.dataset.pi];po.ex=po.ex||{};
+    var ee=po.ex[t.dataset.ui]=po.ex[t.dataset.ui]||{on:false,q:'',p:''};
+    ee[k]=k==='on'?t.checked:t.value;
+    if(k==='on')render();else calc();
+    return}
+  var ow=t.dataset.own,base=(ow!==undefined&&ow!=='')?S.outs[+ow]:S;
+  if(t.dataset.l)S[t.dataset.l][+t.dataset.i][k]=t.value;else base[k]=t.value;
+  if(k==='su'||k==='ref')render();else calc();
+});
+document.addEventListener('change',function(e){
+  var t=e.target;if(!t.classList.contains('cp')||t.value==='')return;
+  var o=own(t.dataset.own);o.us=(o.us||[]).concat(t.value);render();
+});
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button');if(!t)return;var d=t.dataset;
+  if(d.add){S[d.add].push(JSON.parse(d.v));render();}
+  else if(d.rm){var o=own(d.own);o.us=o.us.filter(function(id){return id!==d.rm});render();}
+  else if(d.del){S[d.del].splice(+d.i,1);render();}
+  else if(t.id==='addout'){S.outs.push({n:'',t:'C',q:0,u:S.ref,ref:S.ref,us:[],su:S.ref,p:0,ex:{}});render();}
+  else if(t.classList.contains('fmnew')){FORM={own:d.own,id:null,type:'C',n:'',of:own(d.own).ref,f:'',err:''};render();}
+  else if(t.classList.contains('fmedit')){var u=UC(d.id);FORM={own:d.own,id:u.id,type:u.of?'C':'R',n:u.n,of:u.of||'',f:u.of?u.f:'',err:''};render();}
+  else if(t.id==='fmx'){FORM=null;render();}
+  else if(t.id==='fmok'){fmOK();}
+  else if(t.id==='reset'){S=blank();FORM=null;render();}
+  else if(t.id==='close'){$('ov').hidden=true;}
+  else if(t.id==='open'){$('ov').hidden=false;}
+  else if(d.go!==undefined){go(+d.go);}
+  else if(d.t!==undefined){go(+d.t);}
+});
+$('trans').addEventListener('change',function(e){S.trans=e.target.checked;if(S.trans&&!S.outs.length)S.outs.push({n:S.name,t:'P',q:0,u:S.ref,ref:S.ref,us:[],su:S.ref,p:0,ex:{}});render();});
+function go(n){
+  render();
+  document.querySelectorAll('.tab').forEach(function(b,i){b.setAttribute('aria-selected',i===n)});
+  for(var i=0;i<4;i++)$('p'+i).hidden=i!==n;
+  document.querySelector('.body').scrollTop=0;
+}
+render();
+</script>
+</body>
+</html>
