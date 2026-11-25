@@ -48,7 +48,7 @@ import {StockEntryComponent} from '../../features/depot-manager/stock-entry/stoc
             [focusThreshold]="asked.focus === 'threshold'"
             [initialTab]="asked.tab"
             (changed)="changed.emit()"
-            (addStock)="shown.set({ action: 'addStock', product: $event })"
+
           />
         }
         @case ('addStock') {

@@ -607,11 +607,6 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
         <div class="modal-foot">
           <!-- The stock manager books goods in from here too: the receipt opens in the unit the
                product is bought in, at the last price paid. -->
-          @if (rights.canAddStock() && units(); as u) {
-            <button class="btn ghost" type="button" (click)="addStock.emit(asProduct(u))">
-              ＋ Ajouter du stock
-            </button>
-          }
           <button class="btn ghost" type="button" (click)="this.toClose()">Fermer</button>
         </div>
       </div>
@@ -1025,7 +1020,6 @@ export class ProductUnitsDialogComponent implements OnInit {
   /** After any successful write: the stock list may show the base unit's new name. */
   @Output() readonly changed = new EventEmitter<void>();
   /** "Ajouter du stock" from the sheet: the product as it now stands, units included. */
-  @Output() readonly addStock = new EventEmitter<Product>();
 
   protected readonly units = signal<ProductUnits | null>(null);
   protected readonly busy = signal(false);
