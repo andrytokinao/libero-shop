@@ -14,7 +14,8 @@ export type ProductMenuId =
   | 'barcodes'
   | 'threshold'
   | 'duplicate'
-  | 'retire';
+  | 'retire'
+  |'stockEntry';
 
 export interface ProductMenuEntry {
   readonly id: ProductMenuId;
@@ -44,6 +45,7 @@ export function productMenu(product: Product, rights: ProductMenuRights): Produc
     rights.canAddStock && { id: 'addStock', label: 'Ajouter du stock', group: 'Stock', hint: 'réception' },
     rights.canAdjustStock && { id: 'adjust', label: 'Corriger le stock', group: 'Stock', hint: 'casse, perte…' },
     rights.canAdjustStock && { id: 'count', label: 'Compter ce produit', group: 'Stock', hint: 'inventaire' },
+    rights.canAddStock && { id: 'stockEntry', label: 'Entré du produit', group: 'Stock',hint: 'réception' },
     rights.canSeeHistory && { id: 'history', label: 'Historique du stock', group: 'Stock' },
     rights.canEdit && { id: 'sheet', label: 'Nom et rayon', group: 'Configuration' },
     rights.canEdit && { id: 'prices', label: "Prix de vente et d'entrée", group: 'Configuration' },
@@ -84,8 +86,10 @@ export function requestFor(id: ProductMenuId, product: Product): ProductDialogRe
     case 'threshold':
       return { action: 'edit', product, tab: 'fiche', focus: 'threshold' };
     case 'duplicate':
-      return { action: 'create', copyOf: product };
+      return { action: 'create', product: product };
     case 'retire':
       return { action: 'retire', product };
+    case 'stockEntry':
+      return { action: 'stockEntry', product };
   }
 }

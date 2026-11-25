@@ -10,6 +10,8 @@ import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
 import { UnitModelsDialogComponent } from './unit-models-dialog.component';
 import { HelpButtonComponent } from './help-button.component';
+import {ProductDialogRequest} from '../../core/catalog/product-rights';
+import {Dialog, DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
 
 /** The form as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -57,7 +59,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             </div>
           </div>
           <app-help topic="product-create" />
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -104,65 +106,65 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
           <!-- Name, price and unit are all a product needs; the rest waits, folded, for whoever has it. -->
           <details class="pn-more" [open]="moreOpen">
             <summary>Plus de détails <span class="muted">— catégorie, code-barres, prix d'achat, stock de départ</span></summary>
-          <div class="pn-row">
-            <div class="fld">
-              <label for="pn-category">Catégorie</label>
-              <app-category-picker
-                fieldId="pn-category"
-                noneLabel="Sans catégorie"
-                [categories]="categories()"
-                [value]="draft().categoryId"
-                (valueChange)="patch({ categoryId: $event })"
-              />
-            </div>
-            <div class="fld">
-              <label for="pn-barcode">Code-barres</label>
-              <!-- Typed, read by a USB scanner, or by the phone camera. A scanner presses Entrée
-                   after the code: it must not create the product half filled in. -->
-              <div class="pn-scan">
-                <input
-                  id="pn-barcode"
-                  name="barcode"
-                  type="text"
-                  autocomplete="off"
-                  maxlength="64"
-                  placeholder="scanner ou saisir"
-                  [ngModel]="draft().barcode"
-                  (ngModelChange)="patch({ barcode: $event })"
-                  (keydown.enter)="$event.preventDefault()"
+            <div class="pn-row">
+              <div class="fld">
+                <label for="pn-category">Catégorie</label>
+                <app-category-picker
+                  fieldId="pn-category"
+                  noneLabel="Sans catégorie"
+                  [categories]="categories()"
+                  [value]="draft().categoryId"
+                  (valueChange)="patch({ categoryId: $event })"
                 />
-                <app-camera-scan-button (scanned)="patch({ barcode: $event })" />
+              </div>
+              <div class="fld">
+                <label for="pn-barcode">Code-barres</label>
+                <!-- Typed, read by a USB scanner, or by the phone camera. A scanner presses Entrée
+                     after the code: it must not create the product half filled in. -->
+                <div class="pn-scan">
+                  <input
+                    id="pn-barcode"
+                    name="barcode"
+                    type="text"
+                    autocomplete="off"
+                    maxlength="64"
+                    placeholder="scanner ou saisir"
+                    [ngModel]="draft().barcode"
+                    (ngModelChange)="patch({ barcode: $event })"
+                    (keydown.enter)="$event.preventDefault()"
+                  />
+                  <app-camera-scan-button (scanned)="patch({ barcode: $event })" />
+                </div>
               </div>
             </div>
-          </div>
-          <div class="pn-row">
-            <div class="fld">
-              <label for="pn-cost">Prix d'achat (Ar) par {{ unitName() }}</label>
-              <input
-                id="pn-cost"
-                name="cost"
-                type="text"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="facultatif"
-                [ngModel]="draft().cost"
-                (ngModelChange)="patch({ cost: $event })"
-              />
+            <div class="pn-row">
+              <div class="fld">
+                <label for="pn-cost">Prix d'achat (Ar) par {{ unitName() }}</label>
+                <input
+                  id="pn-cost"
+                  name="cost"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="facultatif"
+                  [ngModel]="draft().cost"
+                  (ngModelChange)="patch({ cost: $event })"
+                />
+              </div>
+              <div class="fld">
+                <label for="pn-stock">Stock de départ ({{ unitName() }})</label>
+                <input
+                  id="pn-stock"
+                  name="stock"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="0"
+                  [ngModel]="draft().stock"
+                  (ngModelChange)="patch({ stock: $event })"
+                />
+              </div>
             </div>
-            <div class="fld">
-              <label for="pn-stock">Stock de départ ({{ unitName() }})</label>
-              <input
-                id="pn-stock"
-                name="stock"
-                type="text"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="0"
-                [ngModel]="draft().stock"
-                (ngModelChange)="patch({ stock: $event })"
-              />
-            </div>
-          </div>
           </details>
           @if (warning(); as line) {
             <div class="muted pn-warning">{{ line }}</div>
@@ -185,7 +187,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
             <!-- A grey button says nothing on its own: what it waits for is written beside it. -->
             <span class="pn-missing muted">Il manque : {{ what }}</span>
           }
-          <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
+          <button class="btn ghost" type="button" (click)="close()">Annuler</button>
           <button class="btn" type="submit" [disabled]="busy() || !request()">
             {{ busy() ? 'Enregistrement...' : 'Créer le produit' }}
           </button>
@@ -259,6 +261,7 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
     /* A phone: the whole screen, nothing sideways. */
     @media (max-width: 560px) {
       .modal.pn {
+
         width: 100%;
         max-height: 100%;
       }
@@ -271,6 +274,10 @@ const EMPTY: Draft = { name: '', price: '', unit: '', barcode: '', categoryId: n
   `,
 })
 export class ProductCreateDialogComponent implements OnInit {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  close(){
+    this.dialogRef.close({saved:false});
+  }
   private readonly api = inject(CatalogApi);
   private readonly toasts = inject(ToastService);
 
@@ -282,7 +289,6 @@ export class ProductCreateDialogComponent implements OnInit {
   readonly announce = input(true);
   /** The product as the server created it. */
   readonly created = output<Product>();
-  readonly closed = output<void>();
 
   protected readonly draft = signal<Draft>(EMPTY);
   protected readonly busy = signal(false);
@@ -370,6 +376,7 @@ export class ProductCreateDialogComponent implements OnInit {
   }
 
   protected create(): void {
+    this.dialogRef.close({saved:true});
     const request = this.request();
     if (!request || this.busy()) {
       return;
@@ -385,7 +392,7 @@ export class ProductCreateDialogComponent implements OnInit {
           );
         }
         this.created.emit(product);
-        this.closed.emit();
+        this.close();
       },
       // A refusal keeps the form as typed — the error toast says what to fix.
       error: () => this.busy.set(false),
@@ -397,13 +404,13 @@ export class ProductCreateDialogComponent implements OnInit {
     if (this.modelsOpen()) {
       this.modelsOpen.set(false);
     } else {
-      this.closed.emit();
+      this.close();
     }
   }
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.close();
     }
   }
 }

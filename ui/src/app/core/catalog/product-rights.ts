@@ -4,19 +4,14 @@ import { AuthService } from '../services/auth.service';
 
 /** What can be done to one product from its menu. */
 /** `overview` is the quick sheet read by touching the product's name. */
-export type ProductAction = 'addStock' | 'edit' | 'adjust' | 'history' | 'retire' | 'overview';
+export type ProductAction = 'create'|'addStock'|'stockEntry' | 'edit' | 'adjust' | 'history' | 'retire' | 'overview';
 
 /** The parts of a product's configuration, one tab each. */
 export type ConfigTab = 'fiche' | 'prix' | 'unites' | 'codes';
 
 /** A product's menu entry picked, or the "Nouveau produit" button. */
 export type ProductDialogRequest =
-  | {
-      readonly action: 'create';
-      /** "Dupliquer le produit": the new one starts from this one's sheet. */
-      readonly copyOf?: Product;
-    }
-  | {
+   {
       readonly action: ProductAction;
       readonly product: Product;
       /** Where the dialog puts the cursor: the purchase price, to fill in a missing one. */

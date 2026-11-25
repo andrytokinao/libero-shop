@@ -6,6 +6,8 @@ import { formatAmount } from '../../core/sale/sale-unit';
 import { InvoiceLinkComponent } from './invoice-link.component';
 import { AriaryPipe } from '../pipes/ariary.pipe';
 import { isTopmostDialog } from '../../core/ui/topmost-dialog';
+import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
+import {ProductDialogRequest} from '../../core/catalog/product-rights';
 
 /**
  * Everything that moved one product's stock — receipts, sales, corrections — newest first.
@@ -32,7 +34,7 @@ import { isTopmostDialog } from '../../core/ui/topmost-dialog';
               }
             </div>
           </div>
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -94,7 +96,7 @@ import { isTopmostDialog } from '../../core/ui/topmost-dialog';
         </div>
 
         <div class="modal-foot">
-          <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
+          <button class="btn ghost" type="button" (click)="close()">Fermer</button>
         </div>
       </div>
     </div>
@@ -106,12 +108,16 @@ import { isTopmostDialog } from '../../core/ui/topmost-dialog';
   `,
 })
 export class StockHistoryDialogComponent implements OnInit {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  close(){
+    this.dialogRef.close({saved:true});
+  }
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+  readonly product = signal(this.data.product);
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly api = inject(StockApi);
 
-  readonly product = input.required<Product>();
-  readonly closed = output<void>();
 
   protected readonly movements = signal<ProductMovement[]>([]);
   protected readonly total = signal<number | null>(null);
@@ -161,13 +167,13 @@ export class StockHistoryDialogComponent implements OnInit {
   /** Only the dialog on top closes: an invoice opened over a history leaves the history open. */
   protected onEscape(): void {
     if (isTopmostDialog(this.hostElement.nativeElement)) {
-      this.closed.emit();
+      this.close();
     }
   }
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.close();
     }
   }
 }

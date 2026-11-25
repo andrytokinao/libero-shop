@@ -398,7 +398,7 @@ const NEW_SUPPLIER = -1;
     </div>
 
     @if (historyOf(); as product) {
-      <app-stock-history-dialog [product]="product" (closed)="historyOf.set(null)" />
+      <app-stock-history-dialog />
     }
 
     @if (cancelling(); as supply) {

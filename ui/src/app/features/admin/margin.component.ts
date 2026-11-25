@@ -183,7 +183,7 @@ function presetPeriod(preset: Exclude<Preset, 'custom'>): Period {
                     <td class="num">{{ percent(row.marginRate) }}</td>
                     <td class="num">
                       @if (productOf(row.productId); as product) {
-                        <app-product-menu [product]="product" (action)="asked.set($event)" />
+                        <app-product-menu [product]="product"  />
                       }
                     </td>
                   </tr>

@@ -15,6 +15,8 @@ import {
 } from '../../core/sale/sale-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { HelpButtonComponent } from './help-button.component';
+import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
+import {ProductDialogRequest} from '../../core/catalog/product-rights';
 
 /**
  * Adds stock to one product, from its menu: how many, in which unit, at what price, from whom.
@@ -27,7 +29,7 @@ import { HelpButtonComponent } from './help-button.component';
   selector: 'app-stock-entry-dialog',
   standalone: true,
   imports: [HelpButtonComponent, FormsModule],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  host: { '(document:keydown.escape)': 'close()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <form class="modal" role="dialog" aria-modal="true" aria-labelledby="se-title" (ngSubmit)="register()">
@@ -40,7 +42,7 @@ import { HelpButtonComponent } from './help-button.component';
             </div>
           </div>
           <app-help topic="stock-entry" />
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -115,7 +117,7 @@ import { HelpButtonComponent } from './help-button.component';
         </div>
 
         <div class="modal-foot">
-          <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
+          <button class="btn ghost" type="button" (click)="close()">Annuler</button>
           <button class="btn" type="submit" [disabled]="!canSubmit()">
             {{ busy() ? 'Enregistrement...' : 'Ajouter au stock' }}
           </button>
@@ -140,16 +142,20 @@ import { HelpButtonComponent } from './help-button.component';
   `,
 })
 export class StockEntryDialogComponent implements OnInit {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  close(){
+    this.dialogRef.close({saved:false});
+  }
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+  readonly product = signal(this.data.product);
   private readonly stock = inject(StockApi);
   protected readonly unitChoiceLabel = unitChoiceLabel;
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
   private readonly undo = inject(StockUndo);
 
-  readonly product = input.required<Product>();
   /** After the entry is booked: the lists showing this product's stock are out of date. */
   readonly changed = output<void>();
-  readonly closed = output<void>();
 
   /** As typed: strings, because an empty field is not zero. */
   protected readonly quantity = signal('');
@@ -249,7 +255,7 @@ export class StockEntryDialogComponent implements OnInit {
             [supply],
           );
           this.changed.emit();
-          this.closed.emit();
+          this.close();
         },
         error: () => this.busy.set(false),
       });
@@ -257,7 +263,7 @@ export class StockEntryDialogComponent implements OnInit {
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.close();
     }
   }
 }

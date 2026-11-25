@@ -11,6 +11,7 @@ import { ProductUnitsDialogComponent } from './product-units-dialog.component';
 import { StockAdjustDialogComponent } from './stock-adjust-dialog.component';
 import { StockEntryDialogComponent } from './stock-entry-dialog.component';
 import { StockHistoryDialogComponent } from './stock-history-dialog.component';
+import {StockEntryComponent} from '../../features/depot-manager/stock-entry/stock-entry.component';
 
 /**
  * The dialog behind each entry of a product's menu, and behind "Nouveau produit" — one of them
@@ -34,54 +35,45 @@ import { StockHistoryDialogComponent } from './stock-history-dialog.component';
     StockEntryDialogComponent,
     StockHistoryDialogComponent,
     ConfirmDialogComponent,
+    StockEntryComponent,
   ],
   template: `
     @if (shown(); as asked) {
       @switch (asked.action) {
-        @case ('create') {
-          <app-product-create-dialog
-            [copyOf]="asked.copyOf ?? null"
-            [announce]="false"
-            (created)="onCreated($event)"
-            (closed)="closed.emit()"
-          />
-        }
+
         @case ('edit') {
           <app-product-units-dialog
-            [productId]="asked.product.id"
-            [productName]="asked.product.name"
+
             [focusCost]="asked.focus === 'cost'"
             [focusThreshold]="asked.focus === 'threshold'"
             [initialTab]="asked.tab"
             (changed)="changed.emit()"
             (addStock)="shown.set({ action: 'addStock', product: $event })"
-            (closed)="closed.emit()"
           />
         }
         @case ('addStock') {
           <app-stock-entry-dialog
-            [product]="asked.product"
             (changed)="changed.emit()"
-            (closed)="closed.emit()"
+          />
+        }
+        @case ('stockEntry') {
+          <app-stock-entry
+
           />
         }
         @case ('adjust') {
           <app-stock-adjust-dialog
-            [product]="asked.product"
             [initialReason]="asked.count ? 'INVENTORY_COUNT' : 'BREAKAGE'"
             (changed)="changed.emit()"
-            (closed)="closed.emit()"
           />
         }
         @case ('overview') {
           <app-product-overview-dialog
-            [product]="asked.product"
             (picked)="shown.set($event)"
-            (closed)="closed.emit()"
           />
         }
         @case ('history') {
-          <app-stock-history-dialog [product]="asked.product" (closed)="closed.emit()" />
+          <app-stock-history-dialog />
         }
         @case ('retire') {
           @if (asked.product.retired) {

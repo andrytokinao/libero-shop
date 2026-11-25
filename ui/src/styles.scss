@@ -10,6 +10,8 @@
    values. Chosen by ThemeService, which sets data-theme on <html> (and the
    script in index.html, before Angular starts, so no white flash).
    -------------------------------------------------------------------------- */
+@import '@angular/cdk/overlay-prebuilt.css';
+
 :root {
   color-scheme: light;
 
@@ -79,6 +81,16 @@
   --chrome-field: #090605;
 }
 
+.app-modal-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.app-modal-panel {
+  background: var(--bs-body-bg, #fff);
+  border-radius: var(--bs-border-radius-lg, 0.5rem);
+  max-height: 90vh;
+  overflow: auto;
+}
 /* Paper is white: an invoice prints in the light theme whatever the screen shows. */
 @media print {
   :root[data-theme='dark'] {

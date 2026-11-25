@@ -34,7 +34,7 @@ import { LongPressMenuDirective } from '../directives/long-press-menu.directive'
           <div class="pc-cat">{{ product().category?.name ?? 'Sans catégorie' }}</div>
         </div>
         @if (manage()) {
-          <app-product-menu [product]="product()" [openNow]="openMenu()" (action)="action.emit($event)" />
+          <app-product-menu [product]="product()" [openNow]="openMenu()"  />
         }
       </header>
       <div class="pc-price">

@@ -187,7 +187,7 @@ type PriceFilter = 'all' | 'uncosted' | 'loss';
                         <app-product-menu
                           [product]="product"
                           [openNow]="product.id === scanned()?.id"
-                          (action)="asked.set($event)"
+
                         />
                       }
                     </td>

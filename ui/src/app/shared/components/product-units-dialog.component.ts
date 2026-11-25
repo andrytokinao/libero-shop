@@ -19,7 +19,7 @@ import { CostingApi } from '../../core/api/costing.api';
 import { UnitModelApi } from '../../core/api/unit-model.api';
 import { parseDecimal } from '../../core/catalog/decimal-text';
 import { fold } from '../../core/catalog/unit-model-plan';
-import { ConfigTab, ProductRights } from '../../core/catalog/product-rights';
+import {ConfigTab, ProductDialogRequest, ProductRights} from '../../core/catalog/product-rights';
 import {
   CategoryNode,
   Packaging,
@@ -41,6 +41,7 @@ import { CategoryPickerComponent } from './category-picker.component';
 import { UnitModelPickerComponent } from './unit-model-picker.component';
 import { UnitModelsDialogComponent } from './unit-models-dialog.component';
 import { HelpButtonComponent } from './help-button.component';
+import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
 
 /** The add/edit form, as typed. Strings because an empty field is not zero. */
 interface Draft {
@@ -140,7 +141,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
             </details>
           </div>
           <app-help topic="product-config" />
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="toClose()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -611,7 +612,7 @@ const UNIT_CHIPS: readonly string[] = ['carton', 'sac', 'paquet', 'douzaine', 'k
               ＋ Ajouter du stock
             </button>
           }
-          <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
+          <button class="btn ghost" type="button" (click)="this.toClose()">Fermer</button>
         </div>
       </div>
     </div>
@@ -996,10 +997,13 @@ export class ProductUnitsDialogComponent implements OnInit {
   private readonly toasts = inject(ToastService);
   protected readonly rights = inject(ProductRights);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+  productInjected = this.data.product;
+  productId =this.productInjected.id;
+  productName = signal(this.productInjected.name);
 
-  @Input({ required: true }) productId!: number;
   /** Shown while the units load, so the title never flashes empty. */
-  @Input() productName = '';
   /** Opened to give a purchase price ("partiel" on the profit page): the cursor waits in it. */
   @Input() focusCost = false;
   /** Opened from "Seuil d'alerte" in the menu: the cursor waits in the threshold. */
@@ -1020,7 +1024,6 @@ export class ProductUnitsDialogComponent implements OnInit {
   ];
   /** After any successful write: the stock list may show the base unit's new name. */
   @Output() readonly changed = new EventEmitter<void>();
-  @Output() readonly closed = new EventEmitter<void>();
   /** "Ajouter du stock" from the sheet: the product as it now stands, units included. */
   @Output() readonly addStock = new EventEmitter<Product>();
 
@@ -1465,7 +1468,7 @@ export class ProductUnitsDialogComponent implements OnInit {
     if (this.modelsOpen()) {
       this.modelsOpen.set(false);
     } else {
-      this.closed.emit();
+      this.toClose();
     }
   }
 
@@ -1480,7 +1483,7 @@ export class ProductUnitsDialogComponent implements OnInit {
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.dialogRef.close({saved:false});
     }
   }
 
@@ -1516,5 +1519,9 @@ export class ProductUnitsDialogComponent implements OnInit {
       },
       error: () => this.busy.set(false),
     });
+  }
+
+  protected toClose() {
+    this.dialogRef.close({saved:false});
   }
 }

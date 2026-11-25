@@ -76,7 +76,6 @@ import { LongPressMenuDirective } from '../directives/long-press-menu.directive'
                     <app-product-menu
                       [product]="product"
                       [openNow]="product.id === openMenuOf"
-                      (action)="action.emit($event)"
                     />
                   </td>
                 }

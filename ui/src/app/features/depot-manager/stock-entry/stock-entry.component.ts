@@ -6,7 +6,8 @@ import {
   StockEntry, StockUnit,
 } from './stock-entry.model';
 import { StockEntryService } from './stock-entry.service';
-
+import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import {ProductDialogRequest} from '../../../core/catalog/product-rights';
 /** État du petit formulaire « Nouvelle unité » : purement visuel, donc local au composant. */
 interface UnitForm {
   sheet: ProductSheet;
@@ -34,6 +35,11 @@ interface UnitForm {
   styleUrl: './stock-entry.component.scss',
 })
 export class StockEntryComponent implements DoCheck {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+
+
+
   private readonly svc = inject(StockEntryService);
 
   /** Mettre à false si la modale hôte affiche déjà son propre titre. */
@@ -80,7 +86,10 @@ export class StockEntryComponent implements DoCheck {
     this.unitForm = null;
   }
 
-  save(): void { this.saved.emit(this.svc.save()); }
+  save(): void { this.saved.emit(this.svc.save());
+    this.dialogRef.close({ saved: true });
+
+  }
 
   /* ------------------------------------------------------------- relais */
 

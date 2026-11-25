@@ -10,6 +10,8 @@ import { CatalogChange, Product, ProductCost, ProductMovement } from '../../core
 import { formatAmount, stockLabel } from '../../core/sale/sale-unit';
 import { isTopmostDialog } from '../../core/ui/topmost-dialog';
 import { AriaryPipe } from '../pipes/ariary.pipe';
+import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
+import {ProductDialogResult} from '../services/product-dialogs.service';
 
 /**
  * A product at a glance, opened by touching its name: stock, prices and profit per unit, its last
@@ -34,7 +36,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
               }
             </div>
           </div>
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -145,7 +147,7 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
         </div>
 
         <div class="modal-foot">
-          <button class="btn ghost" type="button" (click)="closed.emit()">Fermer</button>
+          <button class="btn ghost" type="button" (click)="close()">Fermer</button>
         </div>
       </div>
     </div>
@@ -222,16 +224,21 @@ import { AriaryPipe } from '../pipes/ariary.pipe';
   `,
 })
 export class ProductOverviewDialogComponent implements OnInit {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+  productInjected = this.data.product;
+  close(){
+    this.dialogRef.close({saved:false});
+  }
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly costing = inject(CostingApi);
   private readonly stockApi = inject(StockApi);
   private readonly catalog = inject(CatalogApi);
   private readonly rights = inject(ProductRights);
 
-  readonly product = input.required<Product>();
+  readonly product = signal(this.productInjected);
   /** A button picked: the dialog it opens, in place of this one. */
   readonly picked = output<ProductDialogRequest>();
-  readonly closed = output<void>();
 
   protected readonly cost = signal<ProductCost | null>(null);
   private readonly history = signal<ProductMovement[] | null>(null);
@@ -261,13 +268,13 @@ export class ProductOverviewDialogComponent implements OnInit {
 
   protected onEscape(): void {
     if (isTopmostDialog(this.hostElement.nativeElement)) {
-      this.closed.emit();
+      this.close();
     }
   }
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.close();
     }
   }
 }

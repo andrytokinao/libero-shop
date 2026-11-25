@@ -6,6 +6,8 @@ import { formatAmount, formatQuantity, roundQuantity, unitChoiceLabel, unitsOf }
 import { conversionLine, inBaseUnits } from '../../core/stock/adjustment-unit';
 import { StockUndo } from '../../core/stock/stock-undo';
 import { HelpButtonComponent } from './help-button.component';
+import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
+import {ProductDialogRequest} from '../../core/catalog/product-rights';
 
 /**
  * Corrects one product's stock, from its menu: breakage, loss, or the shelf counted.
@@ -18,7 +20,7 @@ import { HelpButtonComponent } from './help-button.component';
   selector: 'app-stock-adjust-dialog',
   standalone: true,
   imports: [HelpButtonComponent, FormsModule],
-  host: { '(document:keydown.escape)': 'closed.emit()' },
+  host: { '(document:keydown.escape)': 'close()' },
   template: `
     <div class="modal-backdrop" (click)="onBackdrop($event)">
       <form class="modal" role="dialog" aria-modal="true" aria-labelledby="sa-title" (ngSubmit)="register()">
@@ -31,7 +33,7 @@ import { HelpButtonComponent } from './help-button.component';
             </div>
           </div>
           <app-help topic="stock-adjust" />
-          <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -106,7 +108,7 @@ import { HelpButtonComponent } from './help-button.component';
         </div>
 
         <div class="modal-foot">
-          <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
+          <button class="btn ghost" type="button" (click)="close()">Annuler</button>
           <button class="btn" type="submit" [disabled]="!canSubmit()">
             {{ busy() ? 'Enregistrement...' : 'Corriger le stock' }}
           </button>
@@ -135,14 +137,18 @@ import { HelpButtonComponent } from './help-button.component';
   `,
 })
 export class StockAdjustDialogComponent implements OnInit {
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  close(){
+    this.dialogRef.close({saved:false});
+  }
+  data = inject<ProductDialogRequest>(DIALOG_DATA);
+  readonly product = signal(this.data.product);
   private readonly api = inject(StockApi);
   private readonly undo = inject(StockUndo);
 
-  readonly product = input.required<Product>();
   /** "Compter ce produit" opens on the count, "Corriger le stock" on a loss. */
   readonly initialReason = input<AdjustmentReason>('INVENTORY_COUNT');
   readonly changed = output<void>();
-  readonly closed = output<void>();
 
   protected readonly reasons = ADJUSTMENT_REASONS;
 
@@ -248,7 +254,7 @@ export class StockAdjustDialogComponent implements OnInit {
             adjustment,
           );
           this.changed.emit();
-          this.closed.emit();
+          this.close();
         },
         error: () => this.busy.set(false),
       });
@@ -256,7 +262,7 @@ export class StockAdjustDialogComponent implements OnInit {
 
   protected onBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closed.emit();
+      this.close();
     }
   }
 }
