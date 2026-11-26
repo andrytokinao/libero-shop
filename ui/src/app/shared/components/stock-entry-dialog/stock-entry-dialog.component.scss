@@ -1,0 +1,600 @@
+/* ==========================================================================
+   Fiche d'entrée de stock — page ou contenu de modale.
+
+   Aucune couleur écrite ici : tout vient des variables du design system
+   (--panel, --line, --brand, --green, --red…), donc le thème sombre suit tout seul.
+   Les classes globales (.fld, .btn, .chip, .badge, .dialog-problem, .hint-line,
+   .muted, .empty) ne sont pas redéclarées.
+
+   MISE EN PAGE
+   - Étroit (≤ 560px)  : une colonne, résumé + boutons collés en bas.
+   - Moyen             : une colonne, contenu centré (720px max), résumé en bas.
+   - Large (≥ 960px)   : contenu à gauche, résumé + boutons dans une colonne à droite.
+   Les seuils dépendent de la largeur du conteneur (@container), pas de l'écran :
+   la même fiche s'adapte à une page entière comme à une modale.
+
+   DÉFILEMENT
+   Seule la zone `.se-scroll` défile ; en-tête, onglets, résumé et boutons restent
+   visibles. Pour cela la fiche doit avoir une hauteur bornée :
+   - son parent a une hauteur définie (page, modale plein écran) → rien à faire ;
+   - sinon elle est limitée à la hauteur de l'écran (100dvh). Dans une modale qui
+     a un titre ou des marges, ajustez : --se-max-height: calc(100dvh - 120px);
+   ========================================================================== */
+
+:host {
+  --se-content-w: 720px; /* largeur maximale du contenu */
+  --se-gutter: 24px;     /* marge minimale de chaque côté */
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: var(--se-max-height, 100dvh);
+  container: stock-entry / inline-size;
+}
+
+.stock-entry {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.se-head {
+  flex: none;
+  padding: 18px var(--se-gutter) 0;
+
+  h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.se-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.se-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ onglets
+   Les quatre étapes forment une suite (Achat → Vente) : la numérotation est utile. */
+
+.se-tabs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 10px max(var(--se-gutter), calc((100% - var(--se-content-w)) / 2)) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.se-tab {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 6px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &[aria-selected='true'] {
+    color: var(--brand-ink);
+    border-bottom-color: var(--brand);
+
+    .se-tab-n {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: var(--panel);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.se-tab-n {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.se-tab-t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------- zone qui défile */
+
+.se-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px max(var(--se-gutter), calc((100% - var(--se-content-w)) / 2)) 32px;
+}
+
+/* ------------------------------------------------------------ mise en page */
+
+.se-help {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--brand);
+  border-radius: 4px 10px 10px 4px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Champs : jamais plus larges que 520px, même sur grand écran. */
+.fld {
+  min-width: 0;
+}
+
+.se-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 520px;
+  margin-bottom: 12px;
+}
+
+.se-full {
+  grid-column: 1 / -1;
+}
+
+.se-inner > .fld {
+  max-width: 520px;
+}
+
+.se-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.se-gap {
+  margin-top: 8px;
+}
+
+.se-h {
+  margin: 24px 0 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.se-label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.se-total {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+
+  b {
+    color: var(--ink);
+  }
+}
+
+.se-nav {
+  display: flex;
+  gap: 10px;
+  max-width: 520px;
+  margin-top: 20px;
+
+  .btn {
+    flex: 1;
+  }
+}
+
+.pos {
+  color: var(--green);
+}
+
+.neg {
+  color: var(--red);
+}
+
+/* ------------------------------------------------------------------ lignes */
+
+.se-row {
+  display: grid;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.se-row-fee {
+  grid-template-columns: 1.6fr 1fr 1fr auto;
+}
+
+.se-row-loss {
+  grid-template-columns: 1.4fr 1.6fr 1fr auto;
+}
+
+.se-row-cost {
+  grid-template-columns: 1.6fr 1fr auto;
+  align-items: center;
+}
+
+.se-pair {
+  display: flex;
+  gap: 6px;
+
+  input {
+    flex: 1.3;
+    min-width: 0;
+  }
+
+  select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.se-del {
+  border: none;
+  background: none;
+  color: var(--red);
+  font-size: 15px;
+  line-height: 1;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--red-soft);
+  }
+}
+
+.se-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  input {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    accent-color: var(--brand);
+  }
+
+  &.se-check-sm {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.se-sub {
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------------------------- cartes
+   Une carte par produit. Le trait de gauche dit son rôle :
+   principal = marque, secondaire = ambre, sous-produit = gris. */
+
+.se-card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--muted-bg);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 7%, transparent);
+
+  &[data-role='P'] {
+    border-left-color: var(--brand);
+  }
+
+  &[data-role='C'] {
+    border-left-color: var(--amber);
+  }
+}
+
+.se-card-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.se-card-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.se-extra {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+/* ------------------------------------------------------------------- unités */
+
+.se-units {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+
+  > .fld {
+    max-width: 280px;
+  }
+}
+
+.se-unit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 420px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 13px;
+}
+
+.se-add {
+  flex: 1;
+  min-width: 190px;
+  max-width: 320px;
+  width: auto;
+}
+
+.se-unit-form {
+  max-width: 520px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 2px solid var(--brand);
+  border-radius: 12px;
+  background: var(--panel);
+
+  .fld {
+    margin-top: 8px;
+  }
+
+  .se-grid {
+    margin-bottom: 4px;
+  }
+}
+
+/* ---------------------------------------------------- résumé + boutons
+   Petit écran : barre fixe en bas. Grand écran : colonne à droite (voir plus bas). */
+
+.se-side {
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 -6px 16px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.se-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px var(--se-gutter);
+  background: var(--brand-soft);
+}
+
+.se-sum-big {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 700;
+
+  b {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.se-sum-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+
+  b {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.se-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px var(--se-gutter) calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Écran peu haut (téléphone en paysage) : on garde l'essentiel visible. */
+@media (max-height: 600px) {
+  .se-head {
+    padding-top: 10px;
+  }
+
+  .se-tab {
+    padding: 8px 6px;
+  }
+
+  .se-sum-line {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------- conteneur étroit (≤ 560px) */
+
+@container stock-entry (max-width: 560px) {
+  .stock-entry {
+    --se-gutter: 14px;
+  }
+
+  .se-tab {
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 2px;
+    font-size: 12px;
+  }
+
+  .se-scroll {
+    padding-top: 14px;
+  }
+
+  .se-actions .btn {
+    flex: 1;
+  }
+
+  .se-row-fee,
+  .se-row-loss {
+    grid-template-columns: 1fr 1fr auto;
+
+    > .fld:first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .se-card {
+    padding: 14px 12px;
+  }
+
+  .se-card-head {
+    flex-wrap: wrap;
+  }
+}
+
+/* ------------------------------------------------ conteneur large (≥ 960px) :
+   le résumé devient une colonne fixe à droite, toujours visible. */
+
+@container stock-entry (min-width: 960px) {
+  .se-layout {
+    flex-direction: row;
+  }
+
+  .se-side {
+    display: flex;
+    flex: 0 0 320px;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 20px;
+    overflow-y: auto;
+    border-top: none;
+    border-left: 1px solid var(--line);
+    box-shadow: none;
+  }
+
+  .se-sum {
+    gap: 8px;
+    padding: 20px;
+    border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+    border-radius: 14px;
+  }
+
+  .se-sum-big {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid color-mix(in srgb, var(--brand) 20%, transparent);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+
+    b {
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .se-sum-line {
+    display: flex;
+    font-size: 13px;
+  }
+
+  .se-actions {
+    flex-direction: column-reverse;
+    padding: 0;
+
+    .btn {
+      width: 100%;
+    }
+  }
+}
+
+
+.se-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.se-preview {
+  font-size: 12.5px;
+}

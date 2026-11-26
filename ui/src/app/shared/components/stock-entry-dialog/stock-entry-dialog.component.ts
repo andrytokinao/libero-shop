@@ -1,10 +1,10 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { apiResource } from '../../core/api/api-resource';
-import { CatalogApi } from '../../core/api/catalog.api';
-import { CostingApi } from '../../core/api/costing.api';
-import { StockApi } from '../../core/api/stock.api';
-import { Product, ProductCost, Supplier } from '../../core/models';
+import { apiResource } from '../../../core/api/api-resource';
+import { CatalogApi } from '../../../core/api/catalog.api';
+import { CostingApi } from '../../../core/api/costing.api';
+import { StockApi } from '../../../core/api/stock.api';
+import { Product, ProductCost, Supplier } from '../../../core/models';
 import {
   SaleUnit,
   formatAmount,
@@ -12,11 +12,11 @@ import {
   roundQuantity,
   unitChoiceLabel,
   unitsOf,
-} from '../../core/sale/sale-unit';
-import { StockUndo } from '../../core/stock/stock-undo';
-import { HelpButtonComponent } from './help-button.component';
+} from '../../../core/sale/sale-unit';
+import { StockUndo } from '../../../core/stock/stock-undo';
+import { HelpButtonComponent } from '../help-button.component';
 import {DIALOG_DATA, DialogRef} from '@angular/cdk/dialog';
-import {ProductDialogRequest} from '../../core/catalog/product-rights';
+import {ProductDialogRequest} from '../../../core/catalog/product-rights';
 
 /**
  * Adds stock to one product, from its menu: how many, in which unit, at what price, from whom.
@@ -30,116 +30,8 @@ import {ProductDialogRequest} from '../../core/catalog/product-rights';
   standalone: true,
   imports: [HelpButtonComponent, FormsModule],
   host: { '(document:keydown.escape)': 'close()' },
-  template: `
-    <div class="modal-backdrop" (click)="onBackdrop($event)">
-      <form class="modal" role="dialog" aria-modal="true" aria-labelledby="se-title" (ngSubmit)="register()">
-        <div class="modal-head">
-          <div>
-            <h2 id="se-title">Ajouter du stock — {{ product().name }}</h2>
-            <div class="sub muted">
-              En stock : {{ formatAmount(product().stockQuantity, product().unit) }}. L'entrée est
-              gardée dans l'historique du produit, à votre nom.
-            </div>
-          </div>
-          <app-help topic="stock-entry" />
-          <button class="x" type="button" aria-label="Fermer" (click)="close()">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <div class="se-row">
-            <div class="fld">
-              <label for="se-qty">Quantité reçue</label>
-              <input
-                id="se-qty"
-                name="quantity"
-                type="text"
-                inputmode="decimal"
-                autocomplete="off"
-                [ngModel]="quantity()"
-                (ngModelChange)="quantity.set($event)"
-              />
-            </div>
-            <div class="fld">
-              <label for="se-unit">Reçu en</label>
-              <!-- The unit the goods came in: ten sacks are typed as 10, not as 1 750. -->
-              <select
-                id="se-unit"
-                name="unit"
-                class="field"
-                [ngModel]="selectedUnit().packagingId"
-                (ngModelChange)="pickUnit($event)"
-              >
-                @for (unit of units(); track unit.packagingId) {
-                  <option [ngValue]="unit.packagingId">
-                    {{ unitChoiceLabel(unit) }}
-                    @if (unit.packagingId !== null) {
-                      (× {{ formatAmount(unit.factor, product().unit) }})
-                    }
-                  </option>
-                }
-              </select>
-            </div>
-          </div>
-          <div class="se-row">
-            <div class="fld">
-              <label for="se-cost">Prix d'achat (Ar) par {{ selectedUnit().label ?? 'unité' }}</label>
-              <input
-                id="se-cost"
-                name="cost"
-                type="text"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="facultatif"
-                [ngModel]="cost()"
-                (ngModelChange)="typedCost.set($event)"
-              />
-            </div>
-            <div class="fld">
-              <label for="se-supplier">Fournisseur</label>
-              <select
-                id="se-supplier"
-                name="supplier"
-                class="field"
-                [ngModel]="supplierId()"
-                (ngModelChange)="supplierId.set($event)"
-              >
-                <option [ngValue]="null">Sans fournisseur</option>
-                @for (supplier of suppliers(); track supplier.id) {
-                  <option [ngValue]="supplier.id">{{ supplier.name }}</option>
-                }
-              </select>
-            </div>
-          </div>
-          <!-- Said before it is done, in base units: what the stock becomes. -->
-          @if (preview(); as line) {
-            <div class="muted se-preview">{{ line }}</div>
-          }
-        </div>
-
-        <div class="modal-foot">
-          <button class="btn ghost" type="button" (click)="close()">Annuler</button>
-          <button class="btn" type="submit" [disabled]="!canSubmit()">
-            {{ busy() ? 'Enregistrement...' : 'Ajouter au stock' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  `,
-  styles: `
-    .se-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-
-      @media (max-width: 480px) {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .se-preview {
-      font-size: 12.5px;
-    }
-  `,
+  templateUrl:'stock-entry-dialog.component.html',
+  styleUrl:'stock-entry-dialog.component.scss',
 })
 export class StockEntryDialogComponent implements OnInit {
   dialogRef = inject(DialogRef<{ saved: boolean }>);
@@ -222,6 +114,11 @@ export class StockEntryDialogComponent implements OnInit {
       }
     });
   }
+
+  //entré de protui ( uto tompletiondes protuis existant ) 30
+  // Entré des charge 30
+  // definition de prix de vente 30
+  // Auto calcule de benefice 30
 
   protected pickUnit(packagingId: number | null): void {
     this.unitId.set(packagingId);
