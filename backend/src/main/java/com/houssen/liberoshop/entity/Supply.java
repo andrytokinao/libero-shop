@@ -75,6 +75,11 @@ public class Supply extends StockMovement {
     @Column(precision = 12, scale = ProductPackaging.FACTOR_SCALE)
     private BigDecimal unitFactor;
 
+    /** The delivery note this receipt was booked with, or null for a receipt booked alone. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_note_id")
+    private DeliveryNote deliveryNote;
+
     /** The share of each charge (transport, loading...) carried by this receipt. */
     @OneToMany(mappedBy = "supply")
     private List<SupplyUseCharge> charges;

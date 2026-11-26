@@ -37,6 +37,11 @@ public class SupplyCharge {
     @Column(length = 10)
     private String basis;
 
+    /** The delivery note this charge was paid for. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_note_id")
+    private DeliveryNote deliveryNote;
+
     @OneToMany(mappedBy = "charge", cascade = CascadeType.ALL)
     private List<SupplyUseCharge> supplys = new ArrayList<>();
 }

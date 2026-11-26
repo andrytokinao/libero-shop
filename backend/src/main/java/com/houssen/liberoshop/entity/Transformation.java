@@ -33,6 +33,11 @@ public class Transformation {
 
     private String note;
 
+    /** The delivery note whose goods were transformed, or null for a transformation done alone. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_note_id")
+    private DeliveryNote deliveryNote;
+
     /** What the materials used were worth, at their cost when used. */
     @Column(precision = 14, scale = 2)
     private BigDecimal inputCost;
