@@ -7,6 +7,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
  * Goods coming in: the stock rose, and this says by how much, when and at whose hand.
@@ -17,6 +18,8 @@ import java.math.RoundingMode;
  * that buys at the market has no supplier list to pick from. The distinction is in the data
  * rather than in a second movement class: "stock counted in" and "stock received from a
  * wholesaler" are the same event to the shelf, and differ only in whether a supplier is named.
+ *
+ * <p>Goods made by a transformation are not supplies: they are {@link Production}.
  *
  * <p>Two consequences worth knowing before querying this. The supplier has to be joined with a
  * LEFT join, or import entries silently vanish from the supplies list; and any aggregation by
@@ -72,6 +75,19 @@ public class Supply extends StockMovement {
     @Column(precision = 12, scale = ProductPackaging.FACTOR_SCALE)
     private BigDecimal unitFactor;
 
+    /** The share of each charge (transport, loading...) carried by this receipt. */
+    @OneToMany(mappedBy = "supply")
+    private List<SupplyUseCharge> charges;
+
+    /** What was lost on the way (transport losses), in base units. */
+    @OneToMany(mappedBy = "supply")
+    private List<StockLoss> losses;
+
+    @Override
+    public int direction() {
+        return 1;
+    }
+
     /** True when no supplier is named: counted in, or received without saying from whom. */
     public boolean isWithoutSupplier() {
         return supplier == null;
@@ -113,5 +129,44 @@ public class Supply extends StockMovement {
     public BigDecimal totalCost() {
         return unitCost == null ? null
                 : unitCost.multiply(receivedQuantity()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** The charges carried by this receipt, all together. Zero when there are none. */
+    public BigDecimal chargesTotal() {
+        if (charges == null) {
+            return BigDecimal.ZERO;
+        }
+        return charges.stream()
+                .map(SupplyUseCharge::getShare)
+                .filter(share -> share != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** What was lost on the way, in base units: cancelled losses do not count. */
+    public BigDecimal lostQuantity() {
+        if (losses == null) {
+            return BigDecimal.ZERO;
+        }
+        return losses.stream()
+                .filter(loss -> !loss.isCancelled())
+                .map(StockLoss::getQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * What one usable base unit really cost: the purchase plus its share of the charges, over
+     * what is left after the losses on the way. The loss has no price of its own, the units that
+     * made it cost more. Null when no cost was given or nothing usable is left.
+     */
+    public BigDecimal landedBaseUnitCost() {
+        BigDecimal purchase = totalCost();
+        if (purchase == null) {
+            return null;
+        }
+        BigDecimal usable = getQuantity().subtract(lostQuantity());
+        if (usable.signum() <= 0) {
+            return null;
+        }
+        return purchase.add(chargesTotal()).divide(usable, EXACT_COST_SCALE, RoundingMode.HALF_UP);
     }
 }

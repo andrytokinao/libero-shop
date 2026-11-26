@@ -11,13 +11,14 @@ import { ProductStore } from '../../core/store/product.store';
 import { debouncedAction } from '../../core/utils/debounced-action';
 import { CategoryPickerComponent } from '../../shared/components/category-picker.component';
 import { CameraScanButtonComponent } from '../../shared/components/camera-scan-button.component';
-import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog.component';
+import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog/delivery-dialog.component';
 import { KpiCardComponent } from '../../shared/components/kpi-card.component';
 import { ProductCardComponent } from '../../shared/components/product-card.component';
 import { ProductDialogsComponent } from '../../shared/components/product-dialogs.component';
 import { StockTableComponent } from '../../shared/components/stock-table.component';
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { ProductImportComponent } from './product-import.component';
+import {ProductDialogs} from '../../shared/services/product-dialogs.service';
 
 /** A table, which says the most per line, or cards, which a thumb reads better. */
 type StockView = 'list' | 'cards';
@@ -41,9 +42,9 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
   ],
   template: `
     <div class="grid g3">
-      <app-kpi-card label="Valeur du stock affiché" [value]="visibleValue() | ariary" />
-      <app-kpi-card label="Références affichées" [value]="products().length" />
-      <app-kpi-card label="Unités en stock" [value]="visibleUnits()" />
+      <app-kpi-card label="Valeur du stock affiché" [value]="visibleValue() | ariary"/>
+      <app-kpi-card label="Références affichées" [value]="products().length"/>
+      <app-kpi-card label="Unités en stock" [value]="visibleUnits()"/>
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -56,11 +57,11 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
           }
           <!-- One product at a time, by hand: no file needed. -->
           @if (rights.canEdit()) {
-            <button class="btn small" type="button" (click)="asked.set({ action: 'create' })">
+            <button class="btn small" type="button" (click)="createProduct()">
               ＋ Nouveau produit
             </button>
           }
-          <app-product-import (imported)="onChanged()" />
+          <app-product-import (imported)="onChanged()"/>
         </div>
       </div>
       <div class="form-row">
@@ -69,16 +70,16 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
           <!-- A scanner types the code and presses Entrée; the camera reads it on a phone. Either way
                the product found opens with its menu, ready for what is to be done with it. -->
           <div class="st-search">
-          <input
-            id="stock-search"
-            type="text"
-            placeholder="Nom, catégorie ou code-barres"
-            [ngModel]="search()"
-            (ngModelChange)="onSearch($event)"
-            (focus)="$any($event.target).select()"
-            (keydown.enter)="scan(search())"
-          />
-          <app-camera-scan-button (scanned)="scan($event)" />
+            <input
+              id="stock-search"
+              type="text"
+              placeholder="Nom, catégorie ou code-barres"
+              [ngModel]="search()"
+              (ngModelChange)="onSearch($event)"
+              (focus)="$any($event.target).select()"
+              (keydown.enter)="scan(search())"
+            />
+            <app-camera-scan-button (scanned)="scan($event)"/>
           </div>
         </div>
         <div class="fld">
@@ -139,11 +140,11 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
             Aucun produit pour l'instant.
             <div class="empty-actions">
               @if (rights.canEdit()) {
-                <button class="btn small" type="button" (click)="asked.set({ action: 'create' })">
+                <button class="btn small" type="button" (click)="createProduct()">
                   ＋ Nouveau produit
                 </button>
               }
-              <app-product-import (imported)="onChanged()" />
+              <app-product-import (imported)="onChanged()"/>
             </div>
           }
         </div>
@@ -172,10 +173,10 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
       }
     </div>
 
-    <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)" />
+    <app-product-dialogs [request]="asked()" (changed)="onChanged()" (closed)="asked.set(null)"/>
 
     @if (receiving()) {
-      <app-delivery-dialog (changed)="onChanged()" (closed)="receiving.set(false)" />
+      <app-delivery-dialog (changed)="onChanged()" (closed)="receiving.set(false)"/>
     }
   `,
   styles: `
@@ -238,6 +239,7 @@ export class StockComponent {
     categoryId: this.categoryId(),
     lowStockOnly: this.onlyLowStock(),
   }));
+  prodactDialog = inject(ProductDialogs);
   private readonly categoryResource = apiResource<CategoryNode[]>([], () => this.api.categories());
 
   protected readonly products = this.resource.value;
@@ -328,7 +330,16 @@ export class StockComponent {
     this.resource.reload();
     this.categoryResource.reload();
   }
+
+  protected createProduct() {
+    this.prodactDialog.createProduct().subscribe( product => {
+      this.resource.reload();
+      this.categoryResource.reload();
+
+    });
+  }
 }
+
 
 function storedView(): StockView {
   try {

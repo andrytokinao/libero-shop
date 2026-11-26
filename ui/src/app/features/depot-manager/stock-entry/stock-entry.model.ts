@@ -1,3 +1,5 @@
+import {Product} from '../../../core/models';
+
 /** P = produit principal, C = produit secondaire, S = sous-produit. */
 export type Role = 'P' | 'C' | 'S';
 /** T = montant pour tout le lot, U = montant par unité. */
@@ -30,17 +32,7 @@ export interface ExtraSale {
 }
 
 /** Un produit (acheté ou obtenu) avec ses unités et son prix de vente. */
-export interface ProductSheet {
-  name: string;
-  role: Role;
-  refUnit: string;
-  packUnits: string[];
-  qty: number | null;
-  qtyUnit: string;
-  saleUnit: string;
-  price: number | null;
-  extras: Record<string, ExtraSale>;
-}
+
 
 export interface Charge {
   label: string;
@@ -61,14 +53,14 @@ export interface CostLine {
 }
 
 export interface StockEntry {
-  product: ProductSheet;
+  product: Product;
   buyPrice: number | null;
   charges: Charge[];
   losses: Loss[];
   transform: boolean;
   method: SplitMethod;
   productionCosts: CostLine[];
-  outputs: ProductSheet[];
+  outputs: Product[];
   saleCosts: Charge[];
 }
 
@@ -84,7 +76,7 @@ export interface LineResult {
 }
 
 export interface ProductResult {
-  sheet: ProductSheet;
+  sheet: Product;
   name: string;
   role: Role;
   stockLabel: string;

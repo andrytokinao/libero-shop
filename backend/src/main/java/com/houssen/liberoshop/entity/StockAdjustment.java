@@ -6,6 +6,8 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+
 /**
  * The stock corrected by hand: goods broken, missing or spoiled, or a shelf counted and found
  * different from what the application believed.
@@ -35,4 +37,16 @@ public class StockAdjustment extends StockMovement {
     /** What the operator had to say about it; required for {@link AdjustmentReason#OTHER}. */
     @Column(name = "adjustment_comment")
     private String comment;
+
+    /** Here the direction is the sign of the quantity: positive raises the stock, negative lowers it. */
+    @Override
+    public int direction() {
+        return getQuantity().signum() >= 0 ? 1 : -1;
+    }
+
+    /** The quantity is already signed: it is the difference to add to the stock, as it is. */
+    @Override
+    public BigDecimal signedQuantity() {
+        return getQuantity();
+    }
 }

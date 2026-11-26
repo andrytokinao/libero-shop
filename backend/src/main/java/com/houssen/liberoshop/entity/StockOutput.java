@@ -32,4 +32,9 @@ public class StockOutput extends StockMovement {
         return saleValue != null ? saleValue
                 : getProduct().getPrice().multiply(getQuantity()).setScale(2, RoundingMode.HALF_UP);
     }
+
+    @Override
+    public int direction() {
+        return -1;
+    }
 }

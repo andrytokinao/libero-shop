@@ -1,0 +1,21 @@
+
+  <div class="se-card" >
+    <div class="se-card-head">
+      <div class="fld se-grow">
+        <label>Nom du produit obtenu</label>
+        <input type="text" [(ngModel)]="product?.name">
+      </div>
+
+    </div>
+
+    <div class="fld">
+      <label>Quantité</label>
+      <div class="se-pair">
+        <input type="number" min="0" inputmode="decimal" [(ngModel)]="product?.stockValue">
+        <select class="field" [(ngModel)]=".qtyUnit">
+          @for (u of unitsOf(o); track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+        </select>
+      </div>
+    </div>
+
+  </div>

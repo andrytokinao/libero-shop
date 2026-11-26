@@ -8,6 +8,7 @@ import { Product } from '../../core/models';
 import { ToastAction, ToastService } from '../../core/services/toast.service';
 import { formatAmount } from '../../core/sale/sale-unit';
 import {ConfirmDialogComponent} from '../components/confirm-dialog.component';
+import {ProductCreateDialogComponent} from '../components/product-create-dialog.component';
 
 type Action = ProductDialogRequest['action'];
 
@@ -30,12 +31,12 @@ type Loader = () => Promise<ComponentType<unknown>>;
 const LOADERS: Record<Exclude<Action, 'retire'>, Loader> = {
   create: () => import('../../shared/components/product-create-dialog.component').then((m) => m.ProductCreateDialogComponent),
   edit: () => import('../../shared/components/product-units-dialog.component').then((m) => m.ProductUnitsDialogComponent),
-  addStock: () => import('../../shared/components/stock-entry-dialog.component').then((m) => m.StockEntryDialogComponent),
+  addStock: () => import('../components/stock-entry-dialog/stock-entry-dialog.component').then((m) => m.StockEntryDialogComponent),
   adjust: () => import('../../shared/components/stock-adjust-dialog.component').then((m) => m.StockAdjustDialogComponent),
   overview: () => import('../../shared/components/product-overview-dialog.component').then((m) => m.ProductOverviewDialogComponent),
   history: () => import('../../shared/components/stock-history-dialog.component').then((m) => m.StockHistoryDialogComponent),
+  stockEntry: () => import('../../shared/components/stock-entry-charge-dialog/stock-entry-dialog-charge.component').then((m) => m.StockEntryDialogChargeComponent),
   // À compléter : ce composant doit suivre le même contrat (DIALOG_DATA / DialogRef), ou être ouvert par une route.
-  stockEntry: () => import('../../features/depot-manager/stock-entry/stock-entry.component').then((m) => m.StockEntryComponent),
 };
 
 const WIDTHS: Partial<Record<Action, string>> = {
@@ -127,5 +128,13 @@ export class ProductDialogs {
     next.push({ label: 'Codes-barres', run: () => void this.open({ action: 'edit', product, tab: 'codes' }) });
     const stock = product.stockQuantity > 0 ? `, avec ${formatAmount(product.stockQuantity, product.unit)} en stock` : '';
     this.toasts.show(`Produit « ${product.name} » créé${stock}.`, next);
+  }
+  createProduct() {
+    return  this.dialog.open<Product>(ProductCreateDialogComponent, {
+      width:  '660px',
+      maxWidth: '95vw',
+      panelClass: 'app-modal-panel',
+      backdropClass: 'app-modal-backdrop',
+    }).closed;
   }
 }

@@ -27,7 +27,7 @@ const EMPTY: StockDashboard = {
   imports: [FirstStepsComponent, KpiCardComponent, ProductDialogsComponent, StockTableComponent, AriaryPipe],
   template: `
     <!-- A new shop: what is left to set up, each box ticking itself. -->
-    <app-first-steps #steps role="manager" (createProduct)="asked.set({ action: 'create' })" />
+    <app-first-steps #steps role="manager" (createProduct)="createProduit()" />
 
     <div class="grid g4">
       <app-kpi-card
@@ -79,5 +79,9 @@ export class ManagerDashboardComponent {
   constructor() {
     // Sold, received, cancelled: the alerts and the value follow every stock movement.
     reloadOnStockChange(this.resource);
+  }
+
+  protected createProduit() {
+
   }
 }

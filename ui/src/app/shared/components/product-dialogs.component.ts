@@ -9,9 +9,8 @@ import { ProductCreateDialogComponent } from './product-create-dialog.component'
 import { ProductOverviewDialogComponent } from './product-overview-dialog.component';
 import { ProductUnitsDialogComponent } from './product-units-dialog.component';
 import { StockAdjustDialogComponent } from './stock-adjust-dialog.component';
-import { StockEntryDialogComponent } from './stock-entry-dialog.component';
 import { StockHistoryDialogComponent } from './stock-history-dialog.component';
-import {StockEntryComponent} from '../../features/depot-manager/stock-entry/stock-entry.component';
+import {StockEntryDialogComponent} from './stock-entry-dialog/stock-entry-dialog.component';
 
 /**
  * The dialog behind each entry of a product's menu, and behind "Nouveau produit" — one of them
@@ -35,7 +34,6 @@ import {StockEntryComponent} from '../../features/depot-manager/stock-entry/stoc
     StockEntryDialogComponent,
     StockHistoryDialogComponent,
     ConfirmDialogComponent,
-    StockEntryComponent,
   ],
   template: `
     @if (shown(); as asked) {
@@ -57,9 +55,7 @@ import {StockEntryComponent} from '../../features/depot-manager/stock-entry/stoc
           />
         }
         @case ('stockEntry') {
-          <app-stock-entry
 
-          />
         }
         @case ('adjust') {
           <app-stock-adjust-dialog

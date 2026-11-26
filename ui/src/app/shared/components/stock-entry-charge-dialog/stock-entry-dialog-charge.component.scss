@@ -583,3 +583,114 @@
     }
   }
 }
+
+
+.se-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.se-preview {
+  font-size: 12.5px;
+}
+.dn-top {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(240px, 2fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dn-supplier {
+  display: flex;
+  gap: 6px;
+
+  select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.dn-line {
+  display: grid;
+  grid-template-columns: minmax(140px, 2fr) minmax(90px, 1fr) 90px 120px 110px 30px;
+  align-items: end;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+
+  .fld {
+    margin-bottom: 0;
+    min-width: 0;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.dn-name {
+  font-weight: 600;
+  align-self: center;
+}
+
+.dn-total {
+  text-align: right;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.dn-remove {
+  align-self: center;
+}
+
+.dn-sum {
+  margin-right: auto;
+}
+
+/* A line becomes a small card: no sideways scroll on a phone. */
+@media (max-width: 700px) {
+  .dn-top {
+    grid-template-columns: 1fr;
+  }
+
+  .dn-line {
+    grid-template-columns: 1fr 1fr 30px;
+    grid-template-areas:
+          'name name remove'
+          'unit qty qty'
+          'cost total total';
+
+    .dn-name {
+      grid-area: name;
+    }
+
+    .dn-remove {
+      grid-area: remove;
+    }
+
+    .dn-unit {
+      grid-area: unit;
+    }
+
+    .dn-qty {
+      grid-area: qty;
+    }
+
+    .dn-cost {
+      grid-area: cost;
+    }
+
+    .dn-total {
+      grid-area: total;
+      align-self: end;
+      padding-bottom: 8px;
+    }
+  }
+}

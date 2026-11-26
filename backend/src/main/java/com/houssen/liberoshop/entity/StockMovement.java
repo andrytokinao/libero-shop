@@ -43,4 +43,16 @@ public abstract class StockMovement {
      * deleted, so the history still reads what happened. Null while it stands.
      */
     private LocalDateTime cancelledAt;
+
+    /** +1 when the movement raises the stock, -1 when it lowers it. */
+    public abstract int direction();
+
+    /** The quantity with its sign, to be summed to get the stock of a product. */
+    public BigDecimal signedQuantity() {
+        return direction() >= 0 ? quantity : quantity.negate();
+    }
+
+    public boolean isCancelled() {
+        return cancelledAt != null;
+    }
 }

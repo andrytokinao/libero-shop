@@ -5,7 +5,7 @@ import { ProductRights } from '../../core/catalog/product-rights';
 import { SUPPLIER_IMPORT, Supplier } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
 import { ActionMenuComponent, MenuAction } from '../../shared/components/action-menu.component';
-import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog.component';
+import { DeliveryDialogComponent } from '../../shared/components/delivery-dialog/delivery-dialog.component';
 import { SimpleImportComponent } from '../../shared/components/simple-import.component';
 import { SupplierCreateDialogComponent } from '../../shared/components/supplier-create-dialog.component';
 import { SupplierPurchasesDialogComponent } from '../../shared/components/supplier-purchases-dialog.component';

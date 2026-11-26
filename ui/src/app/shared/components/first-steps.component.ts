@@ -5,6 +5,7 @@ import { DashboardApi } from '../../core/api/dashboard.api';
 import { FirstSteps } from '../../core/models';
 import { SetupRole, firstStepsOf, readiness } from '../../core/setup/first-steps';
 import { reloadOnStockChange } from '../../core/realtime/reload-on';
+import {ProductDialogs} from '../services/product-dialogs.service';
 
 const HIDDEN_STORAGE_KEY = 'liberoshop.firstSteps.hidden';
 
@@ -37,7 +38,7 @@ const HIDDEN_STORAGE_KEY = 'liberoshop.firstSteps.hidden';
               @if (step.done) {
                 <span>{{ step.label }}</span>
               } @else if (step.createsProduct) {
-                <button class="lnk" type="button" (click)="createProduct.emit()">{{ step.label }}</button>
+                <button class="lnk" type="button" (click)="createProduct()">{{ step.label }}</button>
               } @else if (step.link) {
                 <a [routerLink]="step.link">{{ step.label }}</a>
               } @else {
@@ -131,10 +132,15 @@ const HIDDEN_STORAGE_KEY = 'liberoshop.firstSteps.hidden';
   `,
 })
 export class FirstStepsComponent {
+  productDialog = inject(ProductDialogs);
   /** Decides where each step leads: an administrator creates accounts, a depot manager does not. */
   readonly role = input.required<SetupRole>();
   /** "Créer un premier produit": the dashboard opens its own "Nouveau produit". */
-  readonly createProduct = output<void>();
+  createProduct(){
+    this.productDialog.createProduct().subscribe(p => {
+      this.refresh();
+    })
+  }
 
   private readonly api = inject(DashboardApi);
   private readonly resource = apiResource<FirstSteps | null>(null, () => this.api.firstSteps());

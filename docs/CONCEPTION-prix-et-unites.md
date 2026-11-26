@@ -380,7 +380,7 @@ Service : `B/service/CostingService.java`.
 | Choix de l'unité | `U/shared/components/unit-picker.component.ts`, `cart-line-quantity.component.ts` | Un bouton par unité avec son prix ; grisé si le stock ne couvre pas une unité entière. |
 | Fiche produit | `U/shared/components/product-units-dialog.component.ts` (« Modifier le produit — … ») | Nom, prix par unité de base, code-barres, catégorie, prix d'achat par unité de base ; renommage de l'unité de base ; tableau des unités (« contient 50 kg (175 kapoka) ») ; ajout/modification avec choix de la référence (boucles exclues), prix suggéré en indication, phrase d'aperçu. |
 | Création | `U/shared/components/product-create-dialog.component.ts` | Prix, unité de base, catégorie, code-barres, prix d'achat, stock initial ; alerte si coût ≥ prix. |
-| Réception | `stock-entry-dialog.component.ts`, `U/features/depot-manager/supply.component.ts` | « Reçu en » (toutes les unités), prix d'achat par unité reçue pré-rempli, aperçu en unités de base, marge unitaire, création d'un conditionnement à la volée. |
+| Réception | `stock-entry-dialog-charge.component.ts`, `U/features/depot-manager/supply.component.ts` | « Reçu en » (toutes les unités), prix d'achat par unité reçue pré-rempli, aperçu en unités de base, marge unitaire, création d'un conditionnement à la volée. |
 | Correction | `stock-adjust-dialog.component.ts` | En unité de base. |
 | Import | `U/features/depot-manager/product-import-dialog.component.ts` | Aperçu ligne à ligne ; prix affiché en lecture seule pour une fusion. |
 

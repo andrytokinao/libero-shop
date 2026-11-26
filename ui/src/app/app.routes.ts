@@ -275,12 +275,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/depot-manager/suppliers.component').then((m) => m.SuppliersComponent),
       },
-      {
-        path: 'stock-entry',
-        title: 'Stock',
-        loadComponent: () =>
-          import('./features/depot-manager/stock-entry/stock-entry.component').then((m) => m.StockEntryComponent),
-      },
+
     ],
 
   },

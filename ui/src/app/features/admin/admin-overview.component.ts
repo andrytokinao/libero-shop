@@ -40,7 +40,7 @@ const EMPTY: AdminDashboard = {
   ],
   template: `
     <!-- A new shop: what is left to set up, each box ticking itself. -->
-    <app-first-steps #steps role="admin" (createProduct)="asked.set({ action: 'create' })" />
+    <app-first-steps #steps role="admin"  />
 
     <div class="grid g4">
       <app-kpi-card
