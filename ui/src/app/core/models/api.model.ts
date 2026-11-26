@@ -4,6 +4,8 @@ import { Invoice } from './invoice.model';
 import { Product } from './product.model';
 import { ShopSettings } from './shop-settings.model';
 import { UserApp } from './user-app.model';
+import {StockApi} from '../api/stock.api';
+import {inject, Injectable} from '@angular/core';
 
 /**
  * Payloads that have no entity counterpart: requests, session state and the aggregated

@@ -5,6 +5,8 @@ import com.houssen.liberoshop.service.DeliveryService;
 import com.houssen.liberoshop.service.InventoryService;
 import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.service.delivery.dto.EntryStateDto;
+import com.houssen.liberoshop.service.delivery.dto.FullDeliveryRequest;
 import com.houssen.liberoshop.web.dto.AdjustmentSummaryResponse;
 import com.houssen.liberoshop.web.dto.CancelDeliveryRequest;
 import com.houssen.liberoshop.web.dto.CreateDeliveryRequest;
@@ -97,6 +99,12 @@ public class StockController {
     @PreAuthorize("hasRole('DEPOT_MANAGER')")
     public List<SupplyResponse> registerDelivery(@Valid @RequestBody CreateDeliveryRequest request) {
         return deliveryService.receive(request, currentUser.require());
+    }
+    @PostMapping("/charge-deliveries")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('DEPOT_MANAGER')")
+    public List<SupplyResponse> registerDeliveryWithCharge(@Valid @RequestBody FullDeliveryRequest request) {
+        return deliveryService.registerDeliveryWithCharge(request, currentUser.require());
     }
 
     /** A receipt entered by mistake, put back by an opposite correction; the receipt stays, marked. */

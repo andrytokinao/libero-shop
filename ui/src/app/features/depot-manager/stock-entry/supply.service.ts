@@ -1,7 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { StockApi } from '../../../core/api/stock.api';
-import { Product } from '../../../core/models';
+import { Product, Supply } from '../../../core/models';
 import { DeliveryLine } from '../../../core/stock/delivery-note';
+import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../../../core/api/api.config';
+import { HttpClient } from '@angular/common/http';
 
 // ======================================================================= types
 
@@ -98,9 +101,61 @@ export interface EntryState {
 
 type DeliveryRequest = Parameters<StockApi['registerDelivery']>[0];
 
+// ------------------------------------------------- corps envoyé au backend
+
+export interface LossRequest {
+  reason: LossReasonCode;
+  lineIndex: number | null;
+  quantity: string;
+}
+
+export interface TransformationInputRequest {
+  lineIndex: number | null;
+  quantity: string;
+}
+
+export interface ProductionCostRequest {
+  raison: string;
+  cost: number;
+}
+
+export interface TransformationOutputRequest {
+  index: number;
+  productId: number;
+  packagingId: number | null;
+  quantity: string;
+  costShare: number;
+}
+
+export interface TransformationRequest {
+  inputs: TransformationInputRequest[];
+  productionCosts: ProductionCostRequest[];
+  outputs: TransformationOutputRequest[];
+}
+
+export interface UnitPriceRequest {
+  packagingId: number | null;
+  price: number;
+}
+
+export interface SalePriceRequest {
+  source: 'LINE' | 'OUTPUT';
+  index: number;
+  productId: number;
+  units: UnitPriceRequest[];
+}
+
+/** Corps de POST /stock/charge-deliveries : la livraison + charges, pertes, transformation, prix de vente. */
+export type FullDeliveryRequest = DeliveryRequest & {
+  charges: SupplyChargeRequest[];
+  losses: LossRequest[];
+  transformation: TransformationRequest | null;
+  salePrices: SalePriceRequest[];
+};
+
 @Injectable({ providedIn: 'root' })
-export class SypplyService {
-  private readonly stock = inject(StockApi);
+export class SupplyService {
+  private readonly http = inject(HttpClient);
 
   readonly tabs: string[] = ['Achat', 'Charges', 'Pertes et transformation', 'Vente'];
 
@@ -469,7 +524,7 @@ export class SypplyService {
    * Corps de la requête unique : achat + charges + pertes + transformation + prix de vente.
    * Les indices (`lineIndex`, `index`) désignent la position dans `lines` ou `outputs`.
    */
-  buildPayload(request: DeliveryRequest, s: EntryState): Record<string, unknown> {
+  buildPayload(request: DeliveryRequest, s: EntryState): FullDeliveryRequest {
     const outputs = s.outputs.filter((o) => this.outputValid(s, o));
     const materials = this.activeMaterials(s);
 
@@ -492,7 +547,10 @@ export class SypplyService {
             })),
             productionCosts: s.productionCosts
               .filter((c) => this.positive(c.amount) > 0)
-              .map((c) => ({ raison: (c.label ?? '').trim() || 'Coût de production', cost: this.positive(c.amount) })),
+              .map((c) => ({
+                raison: (c.label ?? '').trim() || 'Coût de production',
+                cost: this.positive(c.amount),
+              })),
             outputs: s.outputs
               .map((o, index) => ({ o, index }))
               .filter(({ o }) => this.outputValid(s, o))
@@ -508,7 +566,7 @@ export class SypplyService {
 
       salePrices: this.saleCards(s)
         .map((card) => ({
-          source: card.kind === 'purchase' ? 'LINE' : 'OUTPUT',
+          source: card.kind === 'purchase' ? ('LINE' as const) : ('OUTPUT' as const),
           index: card.index,
           productId: card.product.id,
           units: Object.entries(s.sale)
@@ -522,8 +580,13 @@ export class SypplyService {
     };
   }
 
-  registerAll(request: DeliveryRequest, s: EntryState): ReturnType<StockApi['registerDelivery']> {
-    const payload = this.buildPayload(request, s) as unknown as DeliveryRequest;
-    return this.stock.registerDelivery(payload);
+  /** Construit le corps complet puis l'envoie : c'est lui (et non l'EntryState brut) que le serveur attend. */
+  registerAll(request: DeliveryRequest, s: EntryState): Observable<Supply[]> {
+    return this.registerDeliveryWithCharge(this.buildPayload(request, s));
+  }
+
+  registerDeliveryWithCharge(payload: FullDeliveryRequest): Observable<Supply[]> {
+    alert(JSON.stringify(payload));
+    return this.http.post<Supply[]>(`${API_BASE_URL}/stock/charge-deliveries`, payload);
   }
 }

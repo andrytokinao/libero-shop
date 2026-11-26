@@ -20,8 +20,8 @@ import {
   ProductionCostLine,
   SaleCard,
   SalePrices,
-  SypplyService,
-} from '../../../features/depot-manager/stock-entry/sypply.service';
+  SupplyService,
+} from '../../../features/depot-manager/stock-entry/supply.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ProductStore } from '../../../core/store/product.store';
 import {
@@ -51,7 +51,7 @@ import { ProductPickerComponent } from '../product-picker.component';
   styleUrl: 'stock-entry-dialog-charge.component.scss',
 })
 export class StockEntryDialogChargeComponent implements OnInit {
-  private readonly svc = inject(SypplyService);
+  private readonly svc = inject(SupplyService);
   private readonly catalog = inject(CatalogApi);
   private readonly costing = inject(CostingApi);
   private readonly undo = inject(StockUndo);
@@ -373,6 +373,8 @@ export class StockEntryDialogChargeComponent implements OnInit {
     }
 
     this.busy.set(true);
+    // Le service construit le corps complet (lines en productId, charges, losses,
+    // transformation, salePrices) et l'envoie : on ne poste plus l'EntryState brut.
     this.svc.registerAll(request, this.state).subscribe({
       next: (supplies) => {
         const amount = this.result.totalCost;
