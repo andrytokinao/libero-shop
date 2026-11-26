@@ -1,0 +1,124 @@
+<div class="modal-backdrop" (click)="onBackdrop($event)">
+  <div class="modal wide dn" role="dialog" aria-modal="true" aria-labelledby="dn-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="dn-title">Réception — bon de livraison</h2>
+        <div class="sub muted">Un fournisseur, une ligne par produit, un seul enregistrement.</div>
+      </div>
+      <app-help topic="delivery" />
+      <button class="x" type="button" aria-label="Fermer" (click)="closed.emit()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="dn-top">
+        <div class="fld">
+          <label for="dn-supplier">Fournisseur</label>
+          <div class="dn-supplier">
+            <select
+              id="dn-supplier"
+              class="field"
+              [ngModel]="supplierId()"
+              (ngModelChange)="supplierId.set($event)"
+            >
+              <option [ngValue]="null">Sans fournisseur</option>
+              @for (supplier of suppliers(); track supplier.id) {
+                <option [ngValue]="supplier.id">{{ supplier.name }}</option>
+              }
+            </select>
+            <button class="btn small ghost" type="button" title="Nouveau fournisseur" (click)="creatingSupplier.set(true)">
+              ＋
+            </button>
+          </div>
+        </div>
+        <div class="fld dn-add">
+          <label for="dn-product">Ajouter un produit</label>
+          <app-product-picker
+            inputId="dn-product"
+            [products]="products()"
+            (picked)="add($event)"
+            (unknownCode)="toasts.show('Aucun produit ne porte le code ' + $event + '.')"
+          />
+        </div>
+      </div>
+
+      @if (lines().length) {
+        <div class="dn-lines">
+          @for (line of lines(); track $index; let i = $index) {
+            <div class="dn-line">
+              <div class="dn-name">{{ line.product.name }}</div>
+              <div class="fld dn-unit">
+                <label [for]="'dn-unit-' + i">Reçu en</label>
+                <select
+                  class="field"
+                  [id]="'dn-unit-' + i"
+                  [ngModel]="line.packagingId"
+                  (ngModelChange)="setUnit(i, $event)"
+                >
+                  @for (unit of unitsOf(line.product); track unit.packagingId) {
+                    <option [ngValue]="unit.packagingId">{{ unitChoiceLabel(unit) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="fld dn-qty">
+                <label [for]="'dn-qty-' + i">Quantité</label>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [id]="'dn-qty-' + i"
+                  [ngModel]="line.quantity"
+                  (ngModelChange)="patch(i, { quantity: $event })"
+                />
+              </div>
+              <div class="fld dn-cost">
+                <label [for]="'dn-cost-' + i">Prix par {{ unitOf(line).label ?? 'unité' }}</label>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="inconnu"
+                  [id]="'dn-cost-' + i"
+                  [ngModel]="line.unitCost"
+                  (ngModelChange)="patch(i, { unitCost: $event })"
+                />
+              </div>
+              <div class="dn-total">
+                @if (lineTotal(line); as total) {
+                  {{ total | ariary }}
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </div>
+              <button class="x dn-remove" type="button" [attr.aria-label]="'Retirer ' + line.product.name" (click)="remove(i)">
+                ✕
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty">Scannez ou cherchez le premier produit du bon.</div>
+      }
+    </div>
+
+    <div class="modal-foot">
+      <div class="dn-sum">
+        Total : <strong>{{ total().amount | ariary }}</strong>
+        @if (total().unpriced) {
+          <span class="muted">&nbsp;· {{ total().unpriced }} ligne(s) sans prix</span>
+        }
+      </div>
+      <button class="btn ghost" type="button" (click)="closed.emit()">Annuler</button>
+      <button class="btn" type="button" [disabled]="busy() || !request()" (click)="save()">
+        {{ busy() ? 'Enregistrement...' : 'Enregistrer la réception (' + lines().length + ')' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (creatingSupplier()) {
+  <app-supplier-create-dialog
+    hint="Il sera choisi pour ce bon de livraison."
+    (created)="onSupplierCreated($event)"
+    (closed)="creatingSupplier.set(false)"
+  />
+}
