@@ -216,13 +216,32 @@
   color: var(--ink-soft);
 }
 
+/* Total d'une liste (frais, production, parts du coût) : une barre, pas une phrase perdue. */
 .se-total {
-  margin: 10px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--brand-soft);
   font-size: 13px;
   color: var(--ink-soft);
 
   b {
     color: var(--ink);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.neg {
+    background: var(--red-soft);
+
+    b {
+      color: var(--red);
+    }
   }
 }
 
@@ -245,7 +264,9 @@
   color: var(--red);
 }
 
-/* ------------------------------------------------------------------ lignes */
+/* ------------------------------------------------------------------ lignes
+   (anciennes lignes en grille : gardées pour les écrans qui les utilisent encore.
+   Les charges, matières, produits obtenus, pertes et coûts utilisent .line-card.) */
 
 .se-row {
   display: grid;
@@ -323,8 +344,16 @@
   }
 }
 
+/* Titre d'une sous-partie (Matières utilisées, Produits obtenus, Coûts de production). */
 .se-sub {
-  margin-top: 4px;
+  margin: 22px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+
+  &:first-child {
+    margin-top: 0;
+  }
 }
 
 /* ------------------------------------------------------------------- cartes
@@ -416,6 +445,278 @@
   .se-grid {
     margin-bottom: 4px;
   }
+}
+
+/* ==========================================================================
+   CARTES DE LIGNE — charges, matières, produits obtenus, pertes, coûts.
+
+   Une ligne saisie = une carte. Les champs se rangent sur UNE seule ligne quand
+   la place le permet, et passent à la ligne suivante sinon (flex-wrap) : aucune
+   media query, la carte s'adapte à la largeur de la fiche.
+   Le bouton de suppression reste toujours dans le coin haut droit.
+   ========================================================================== */
+
+.line-card {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 14px 52px 12px 14px; /* 52px à droite : la place du bouton de suppression */
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.line-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  min-width: 0;
+
+  .fld {
+    flex: 1 1 150px;
+    min-width: 0;
+    margin: 0;
+
+    input,
+    select {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  .lc-wide {
+    flex: 2 1 220px;
+  }
+
+  .lc-narrow {
+    flex: 0 1 130px;
+  }
+
+  .lc-full {
+    flex: 1 1 100%;
+  }
+}
+
+.lc-title {
+  flex: 1 1 100%;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+/* Case à cocher d'une carte : « Charge générale », « Vendre par… ». */
+.lc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    accent-color: var(--brand);
+  }
+
+  small {
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+}
+
+.line-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--red);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--red-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: -2px;
+  }
+}
+
+/* Pied de carte : le montant réel, le coût estimé. */
+.line-card-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 13px;
+  color: var(--ink-soft);
+
+  b {
+    color: var(--ink);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ------------------------------------------ cases « avec transformation / pertes »
+   Un bloc qu'on touche entier ; il se colore quand il est coché. */
+
+.se-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 13.5px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  input {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    accent-color: var(--brand);
+  }
+
+  &:hover {
+    border-color: var(--brand);
+  }
+
+  &:has(input:checked) {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Le contenu qui s'ouvre sous une case cochée. */
+.se-block {
+  margin: 0 0 18px 10px;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--line);
+}
+
+/* ------------------------------------------------------------ onglet Vente */
+
+.sale-card {
+  margin-bottom: 14px;
+  padding: 14px 16px 6px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.sale-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+
+  .muted {
+    flex: none;
+    font-size: 12px;
+  }
+}
+
+.sale-meta {
+  margin: 4px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+
+  b {
+    color: var(--ink);
+  }
+}
+
+/* Une unité de vente : case à cocher | prix | marge ou erreur. */
+.sale-unit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px minmax(90px, auto);
+  align-items: center;
+  gap: 8px 12px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--line);
+
+  &.off {
+    opacity: 0.6;
+  }
+}
+
+.sale-price {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.sale-ar {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.sale-margin {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--green);
+
+  &.neg {
+    color: var(--red);
+  }
+}
+
+/* ------------------------------------------------------------ validation */
+
+input.invalid,
+select.invalid {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.err {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
 }
 
 /* ---------------------------------------------------- résumé + boutons
@@ -522,6 +823,28 @@
   .se-card-head {
     flex-wrap: wrap;
   }
+
+  .line-card {
+    padding: 12px 46px 10px 12px;
+  }
+
+  .se-block {
+    margin-left: 4px;
+    padding-left: 10px;
+  }
+
+  .sale-card {
+    padding: 12px 12px 4px;
+  }
+
+  /* Le prix passe sous la case à cocher, la marge ou l'erreur en dessous. */
+  .sale-unit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sale-margin {
+    text-align: left;
+  }
 }
 
 /* ------------------------------------------------ conteneur large (≥ 960px) :
@@ -584,20 +907,12 @@
   }
 }
 
-
-.se-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
-}
-
 .se-preview {
   font-size: 12.5px;
 }
+
+/* ------------------------------------------------------------ onglet Achat */
+
 .dn-top {
   display: grid;
   grid-template-columns: minmax(200px, 1fr) minmax(240px, 2fr);
@@ -615,13 +930,18 @@
   }
 }
 
+/* Une ligne d'achat = une carte, comme les autres lignes de la fiche. */
 .dn-line {
   display: grid;
   grid-template-columns: minmax(140px, 2fr) minmax(90px, 1fr) 90px 120px 110px 30px;
   align-items: end;
   gap: 8px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: 12px;
+  background: var(--bg);
 
   .fld {
     margin-bottom: 0;

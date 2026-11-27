@@ -109,58 +109,60 @@
               }
             </div>
 
+            <!-- Une carte par charge : les champs sur une ligne quand il y a la place, sinon sur deux. -->
             @for (c of charges; track $index; let i = $index) {
-              <div class="se-row se-row-fee">
-                <div class="field">
-                  <label [for]="'ch-label-' + i">Type de frais</label>
-                  <input type="text" [id]="'ch-label-' + i" [(ngModel)]="c.label">
-                </div>
+              <div class="line-card">
+                <div class="line-card-body">
+                  <div class="fld lc-wide">
+                    <label [for]="'ch-label-' + i">Type de frais</label>
+                    <input type="text" [id]="'ch-label-' + i" [(ngModel)]="c.label">
+                  </div>
 
-                <div class="field">
-                  <label [for]="'ch-amount-' + i">{{ c.general ? 'Montant total (Ar)' : 'Montant (Ar)' }}</label>
-                  <input type="number" min="0" inputmode="decimal" [id]="'ch-amount-' + i" [(ngModel)]="c.amount">
-                </div>
+                  <div class="fld">
+                    <label [for]="'ch-amount-' + i">{{ c.general ? 'Montant total (Ar)' : 'Montant (Ar)' }}</label>
+                    <input type="number" min="0" inputmode="decimal" [id]="'ch-amount-' + i" [(ngModel)]="c.amount">
+                  </div>
 
-                <div class="field se-check">
-                  <label class="se-check-l">
+                  <label class="lc-toggle lc-full">
                     <input type="checkbox" [ngModel]="c.general" (ngModelChange)="onGeneralChange(c, $event)">
-                    Charge générale (tous les produits)
+                    <span>Charge générale <small>(répartie sur tous les produits)</small></span>
                   </label>
-                </div>
 
-                @if (!c.general) {
-                  <div class="field">
-                    <label [for]="'ch-line-' + i">Produit concerné</label>
-                    <select class="field" [id]="'ch-line-' + i" [(ngModel)]="c.lineIndex">
-                      <option [ngValue]="null" disabled>— Choisir un produit —</option>
-                      @for (line of lines(); track $index; let li = $index) {
-                        <option [ngValue]="li">{{ lineLabel(line) }}</option>
+                  @if (!c.general) {
+                    <div class="fld lc-wide">
+                      <label [for]="'ch-line-' + i">Produit concerné</label>
+                      <select class="field" [id]="'ch-line-' + i" [(ngModel)]="c.lineIndex">
+                        <option [ngValue]="null" disabled>— Choisir un produit —</option>
+                        @for (line of lines(); track $index; let li = $index) {
+                          <option [ngValue]="li">{{ lineLabel(line) }}</option>
+                        }
+                      </select>
+                      @if (!lines().length) {
+                        <span class="hint-line">Ajoutez d’abord des produits à l’étape Achat.</span>
                       }
-                    </select>
-                    @if (!lines().length) {
-                      <span class="hint-line">Ajoutez d’abord des produits à l’étape Achat.</span>
-                    }
-                  </div>
+                    </div>
 
-                  <div class="field">
-                    <label [for]="'ch-basis-' + i">Calculé</label>
-                    <select class="field" [id]="'ch-basis-' + i" [(ngModel)]="c.basis">
-                      @for (b of chargeBases; track b.v) { <option [ngValue]="b.v">{{ b.l }}</option> }
-                    </select>
-                  </div>
-                }
-
-                <div class="se-fee-total">
-                  Charge réelle : <b>{{ fmt(chargeTotal(c)) }}</b>
+                    <div class="fld">
+                      <label [for]="'ch-basis-' + i">Calculé</label>
+                      <select class="field" [id]="'ch-basis-' + i" [(ngModel)]="c.basis">
+                        @for (b of chargeBases; track b.v) { <option [ngValue]="b.v">{{ b.l }}</option> }
+                      </select>
+                    </div>
+                  }
                 </div>
 
-                <button type="button" class="se-del" aria-label="Supprimer" (click)="removeCharge(i)">✕</button>
+                <button type="button" class="line-del" aria-label="Supprimer la charge" (click)="removeCharge(i)">✕</button>
+
+                <div class="line-card-foot">
+                  <span>Charge réelle</span>
+                  <b>{{ fmt(chargeTotal(c)) }}</b>
+                </div>
               </div>
             } @empty {
               <div class="hint-line se-gap">Aucun frais ajouté. Touchez un bouton ci-dessus.</div>
             }
 
-            <p class="se-total">Total des frais : <b>{{ fmt(result.totalCharges) }}</b></p>
+            <p class="se-total"><span>Total des frais</span> <b>{{ fmt(result.totalCharges) }}</b></p>
           }
 
           <!-- ================================================ PERTES / TRANSFORMATION -->
@@ -186,23 +188,25 @@
                 </p>
 
                 @for (m of materials; track $index; let i = $index) {
-                  <div class="se-row">
-                    <div class="field">
-                      <label [for]="'mat-line-' + i">Matière</label>
-                      <select class="field" [id]="'mat-line-' + i" [ngModel]="m.lineIndex" (ngModelChange)="onMaterialLine(m, $event)">
-                        <option [ngValue]="null" disabled>— Choisir un produit —</option>
-                        @for (line of lines(); track $index; let li = $index) {
-                          <option [ngValue]="li">{{ lineLabel(line) }}</option>
-                        }
-                      </select>
+                  <div class="line-card">
+                    <div class="line-card-body">
+                      <div class="fld lc-wide">
+                        <label [for]="'mat-line-' + i">Matière</label>
+                        <select class="field" [id]="'mat-line-' + i" [ngModel]="m.lineIndex" (ngModelChange)="onMaterialLine(m, $event)">
+                          <option [ngValue]="null" disabled>— Choisir un produit —</option>
+                          @for (line of lines(); track $index; let li = $index) {
+                            <option [ngValue]="li">{{ lineLabel(line) }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="fld">
+                        <label [for]="'mat-qty-' + i">
+                          Quantité utilisée{{ m.lineIndex !== null ? ' (' + lineUnitLabel(m.lineIndex) + ')' : '' }}
+                        </label>
+                        <input type="text" inputmode="decimal" autocomplete="off" [id]="'mat-qty-' + i" [(ngModel)]="m.quantity">
+                      </div>
                     </div>
-                    <div class="field">
-                      <label [for]="'mat-qty-' + i">
-                        Quantité utilisée{{ m.lineIndex !== null ? ' (' + lineUnitLabel(m.lineIndex) + ')' : '' }}
-                      </label>
-                      <input type="text" inputmode="decimal" autocomplete="off" [id]="'mat-qty-' + i" [(ngModel)]="m.quantity">
-                    </div>
-                    <button type="button" class="se-del" aria-label="Retirer la matière" (click)="removeMaterial(i)">✕</button>
+                    <button type="button" class="line-del" aria-label="Retirer la matière" (click)="removeMaterial(i)">✕</button>
                   </div>
                 } @empty {
                   <div class="hint-line se-gap">
@@ -230,35 +234,38 @@
                 </div>
 
                 @for (o of outputs; track $index; let i = $index) {
-                  <div class="se-row se-row-out">
-                    <div class="dn-name">{{ o.product.name }}</div>
+                  <div class="line-card">
+                    <div class="line-card-body">
+                      <div class="lc-title">{{ o.product.name }}</div>
 
-                    <div class="field">
-                      <label [for]="'out-unit-' + i">Obtenu en</label>
-                      <select class="field" [id]="'out-unit-' + i" [(ngModel)]="o.packagingId">
-                        @for (unit of unitsOf(o.product); track unit.packagingId) {
-                          <option [ngValue]="unit.packagingId">{{ unitChoiceLabel(unit) }}</option>
-                        }
-                      </select>
+                      <div class="fld lc-wide">
+                        <label [for]="'out-unit-' + i">Obtenu en</label>
+                        <select class="field" [id]="'out-unit-' + i" [(ngModel)]="o.packagingId">
+                          @for (unit of unitsOf(o.product); track unit.packagingId) {
+                            <option [ngValue]="unit.packagingId">{{ unitChoiceLabel(unit) }}</option>
+                          }
+                        </select>
+                      </div>
+
+                      <div class="fld">
+                        <label [for]="'out-qty-' + i">Quantité obtenue</label>
+                        <input type="text" inputmode="decimal" autocomplete="off" [id]="'out-qty-' + i" [(ngModel)]="o.quantity">
+                      </div>
+
+                      <div class="fld lc-narrow">
+                        <label [for]="'out-share-' + i">Part du coût (%)</label>
+                        <input type="number" min="0" max="100" inputmode="decimal" [id]="'out-share-' + i" [(ngModel)]="o.costShare">
+                      </div>
                     </div>
 
-                    <div class="field">
-                      <label [for]="'out-qty-' + i">Quantité obtenue</label>
-                      <input type="text" inputmode="decimal" autocomplete="off" [id]="'out-qty-' + i" [(ngModel)]="o.quantity">
-                    </div>
-
-                    <div class="field">
-                      <label [for]="'out-share-' + i">Part du coût (%)</label>
-                      <input type="number" min="0" max="100" inputmode="decimal" [id]="'out-share-' + i" [(ngModel)]="o.costShare">
-                    </div>
+                    <button type="button" class="line-del" aria-label="Retirer le produit obtenu" (click)="removeOutput(i)">✕</button>
 
                     @if (outputCost(o) !== null) {
-                      <div class="se-fee-total">
-                        Coût estimé : <b>{{ fmt(outputCost(o)!) }}</b> par unité
+                      <div class="line-card-foot">
+                        <span>Coût de revient estimé, par unité</span>
+                        <b>{{ fmt(outputCost(o)!) }}</b>
                       </div>
                     }
-
-                    <button type="button" class="se-del" aria-label="Retirer le produit obtenu" (click)="removeOutput(i)">✕</button>
                   </div>
                 } @empty {
                   <div class="hint-line se-gap">Aucun produit obtenu pour le moment.</div>
@@ -266,8 +273,11 @@
 
                 @if (outputs.length) {
                   <p class="se-total" [class.neg]="!sharesOk()">
-                    Parts du coût : <b>{{ sharesTotal() }} %</b>
-                    @if (!sharesOk()) { <span> — elles doivent faire 100 %</span> }
+                    <span>
+                      Parts du coût
+                      @if (!sharesOk()) { — elles doivent faire 100 % }
+                    </span>
+                    <b>{{ sharesTotal() }} %</b>
                     <button type="button" class="btn small ghost" (click)="rebalanceShares()">Répartir également</button>
                   </p>
                 }
@@ -282,22 +292,24 @@
                 </div>
 
                 @for (c of productionCosts; track $index; let i = $index) {
-                  <div class="se-row se-row-fee">
-                    <div class="field">
-                      <label [for]="'pc-label-' + i">Type de coût</label>
-                      <input type="text" [id]="'pc-label-' + i" [(ngModel)]="c.label">
+                  <div class="line-card">
+                    <div class="line-card-body">
+                      <div class="fld lc-wide">
+                        <label [for]="'pc-label-' + i">Type de coût</label>
+                        <input type="text" [id]="'pc-label-' + i" [(ngModel)]="c.label">
+                      </div>
+                      <div class="fld">
+                        <label [for]="'pc-amount-' + i">Montant (Ar)</label>
+                        <input type="number" min="0" inputmode="decimal" [id]="'pc-amount-' + i" [(ngModel)]="c.amount">
+                      </div>
                     </div>
-                    <div class="field">
-                      <label [for]="'pc-amount-' + i">Montant (Ar)</label>
-                      <input type="number" min="0" inputmode="decimal" [id]="'pc-amount-' + i" [(ngModel)]="c.amount">
-                    </div>
-                    <button type="button" class="se-del" aria-label="Supprimer" (click)="removeProductionCost(i)">✕</button>
+                    <button type="button" class="line-del" aria-label="Supprimer le coût" (click)="removeProductionCost(i)">✕</button>
                   </div>
                 } @empty {
                   <div class="hint-line se-gap">Aucun coût de production ajouté.</div>
                 }
 
-                <p class="se-total">Total de la production : <b>{{ fmt(result.production) }}</b></p>
+                <p class="se-total"><span>Total de la production</span> <b>{{ fmt(result.production) }}</b></p>
               </div>
             }
 
@@ -314,29 +326,31 @@
                 </p>
 
                 @for (l of losses; track $index; let i = $index) {
-                  <div class="se-row">
-                    <div class="field">
-                      <label [for]="'ls-reason-' + i">Type de perte</label>
-                      <select class="field" [id]="'ls-reason-' + i" [(ngModel)]="l.reason">
-                        @for (r of lossReasonOptions; track r.v) { <option [ngValue]="r.v">{{ r.l }}</option> }
-                      </select>
+                  <div class="line-card">
+                    <div class="line-card-body">
+                      <div class="fld lc-wide">
+                        <label [for]="'ls-reason-' + i">Type de perte</label>
+                        <select class="field" [id]="'ls-reason-' + i" [(ngModel)]="l.reason">
+                          @for (r of lossReasonOptions; track r.v) { <option [ngValue]="r.v">{{ r.l }}</option> }
+                        </select>
+                      </div>
+                      <div class="fld lc-wide">
+                        <label [for]="'ls-line-' + i">Produit</label>
+                        <select class="field" [id]="'ls-line-' + i" [(ngModel)]="l.lineIndex">
+                          <option [ngValue]="null" disabled>— Choisir un produit —</option>
+                          @for (line of lines(); track $index; let li = $index) {
+                            <option [ngValue]="li">{{ lineLabel(line) }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="fld">
+                        <label [for]="'ls-qty-' + i">
+                          Quantité perdue{{ l.lineIndex !== null ? ' (' + lineUnitLabel(l.lineIndex) + ')' : '' }}
+                        </label>
+                        <input type="text" inputmode="decimal" autocomplete="off" [id]="'ls-qty-' + i" [(ngModel)]="l.quantity">
+                      </div>
                     </div>
-                    <div class="field">
-                      <label [for]="'ls-line-' + i">Produit</label>
-                      <select class="field" [id]="'ls-line-' + i" [(ngModel)]="l.lineIndex">
-                        <option [ngValue]="null" disabled>— Choisir un produit —</option>
-                        @for (line of lines(); track $index; let li = $index) {
-                          <option [ngValue]="li">{{ lineLabel(line) }}</option>
-                        }
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label [for]="'ls-qty-' + i">
-                        Quantité perdue{{ l.lineIndex !== null ? ' (' + lineUnitLabel(l.lineIndex) + ')' : '' }}
-                      </label>
-                      <input type="text" inputmode="decimal" autocomplete="off" [id]="'ls-qty-' + i" [(ngModel)]="l.quantity">
-                    </div>
-                    <button type="button" class="se-del" aria-label="Supprimer la perte" (click)="removeLoss(i)">✕</button>
+                    <button type="button" class="line-del" aria-label="Supprimer la perte" (click)="removeLoss(i)">✕</button>
                   </div>
                 } @empty {
                   <div class="hint-line se-gap">Aucune perte ajoutée.</div>
@@ -380,26 +394,25 @@
 
                 @for (unit of unitsOf(card.product); track unit.packagingId) {
                   <div class="sale-unit" [class.off]="!unitOn(card, unit)">
-                    <label class="se-check-l">
+                    <label class="lc-toggle">
                       <input type="checkbox" [ngModel]="unitOn(card, unit)" (ngModelChange)="setUnitOn(card, unit, $event)">
-                      Vendre par {{ unitChoiceLabel(unit) }}
+                      <span>Vendre par {{ unitChoiceLabel(unit) }}</span>
                     </label>
 
-                    <div class="field">
-                      <label>
-                        Prix de vente (Ar)
-                        <input
-                          type="text"
-                          inputmode="decimal"
-                          autocomplete="off"
-                          placeholder="obligatoire"
-                          [class.invalid]="submitted && priceInvalid(card, unit)"
-                          [disabled]="!unitOn(card, unit)"
-                          [ngModel]="unitPriceText(card, unit)"
-                          (ngModelChange)="setUnitPrice(card, unit, $event)"
-                        />
-                      </label>
-                    </div>
+                    <label class="sale-price">
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        placeholder="obligatoire"
+                        [attr.aria-label]="'Prix de vente par ' + unitChoiceLabel(unit)"
+                        [class.invalid]="submitted && priceInvalid(card, unit)"
+                        [disabled]="!unitOn(card, unit)"
+                        [ngModel]="unitPriceText(card, unit)"
+                        (ngModelChange)="setUnitPrice(card, unit, $event)"
+                      />
+                      <span class="sale-ar">Ar</span>
+                    </label>
 
                     @if (submitted && priceInvalid(card, unit)) {
                       <span class="err">Prix supérieur à 0 requis</span>
