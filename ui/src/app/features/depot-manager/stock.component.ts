@@ -19,6 +19,7 @@ import { StockTableComponent } from '../../shared/components/stock-table.compone
 import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 import { ProductImportComponent } from './product-import.component';
 import {ProductDialogs} from '../../shared/services/product-dialogs.service';
+import {SupplyService} from './stock-entry/supply.service';
 
 /** A table, which says the most per line, or cards, which a thumb reads better. */
 type StockView = 'list' | 'cards';
@@ -54,6 +55,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
           <!-- A delivery note with several products: one form, one save. -->
           @if (rights.canAddStock()) {
             <button class="btn small" type="button" (click)="receiving.set(true)">＋ Réception</button>
+            <button class="btn small" type="button" (click)="openReceivingWithCharge()">＋ Réception Avec Charge</button>
           }
           <!-- One product at a time, by hand: no file needed. -->
           @if (rights.canEdit()) {
@@ -219,6 +221,7 @@ const STOCK_VIEW_STORAGE_KEY = 'liberoshop.stock.view';
   `,
 })
 export class StockComponent {
+  protected readonly supplyService = inject(SupplyService);
   private readonly api = inject(CatalogApi);
   protected readonly rights = inject(ProductRights);
 
@@ -303,6 +306,7 @@ export class StockComponent {
   protected readonly filtered = computed(
     () => this.search().trim() !== '' || this.categoryId() !== null || this.onlyLowStock(),
   );
+  protected receivingWithCharge = signal(false);
 
   protected clearFilters(): void {
     this.search.set('');
@@ -337,6 +341,11 @@ export class StockComponent {
       this.categoryResource.reload();
 
     });
+  }
+
+  protected openReceivingWithCharge() {
+
+    this.supplyService.openOne();
   }
 }
 

@@ -2,9 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { StockApi } from '../../../core/api/stock.api';
 import { Product, Supply } from '../../../core/models';
 import { DeliveryLine } from '../../../core/stock/delivery-note';
-import { Observable } from 'rxjs';
+import {firstValueFrom, Observable} from 'rxjs';
 import { API_BASE_URL } from '../../../core/api/api.config';
 import { HttpClient } from '@angular/common/http';
+import {ProductDialogRequest} from '../../../core/catalog/product-rights';
+import {ProductDialogResult} from '../../../shared/services/product-dialogs.service';
+import {
+  StockEntryDialogChargeComponent
+} from '../../../shared/components/stock-entry-charge-dialog/stock-entry-dialog-charge.component';
+import {Dialog} from '@angular/cdk/dialog';
 
 // ======================================================================= types
 
@@ -187,6 +193,7 @@ export class SupplyService {
   ];
 
   // ================================================================ utilitaires
+  private dialog = inject(Dialog);
 
   /** Nombre saisi (virgule ou point) : le nombre s'il est positif, sinon 0. */
   positive(value: unknown): number {
@@ -588,5 +595,16 @@ export class SupplyService {
   registerDeliveryWithCharge(payload: FullDeliveryRequest): Observable<Supply[]> {
     alert(JSON.stringify(payload));
     return this.http.post<Supply[]>(`${API_BASE_URL}/stock/charge-deliveries`, payload);
+  }
+
+
+  async openOne(): Promise<ProductDialogResult | undefined> {
+    const ref = this.dialog.open<ProductDialogResult>(StockEntryDialogChargeComponent, {
+      width:'860px',
+      maxWidth: '95vw',
+      panelClass: 'app-modal-panel',
+      backdropClass: 'app-modal-backdrop',
+    });
+    return firstValueFrom(ref.closed);
   }
 }

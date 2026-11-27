@@ -37,6 +37,7 @@ import { CodeMatch } from '../../../core/catalog/product-pick';
 import { isTopmostDialog } from '../../../core/ui/topmost-dialog';
 import { AriaryPipe } from '../../pipes/ariary.pipe';
 import { ProductPickerComponent } from '../product-picker.component';
+import {DialogRef} from '@angular/cdk/dialog';
 
 /**
  * Ajoute du stock : achat, charges, pertes et transformation, prix de vente.
@@ -61,11 +62,12 @@ export class StockEntryDialogChargeComponent implements OnInit {
   protected readonly unitsOf = unitsOf;
   protected readonly unitOf = unitOf;
   protected readonly lineTotal = lineTotal;
-
+  dialogRef = inject(DialogRef<{ saved: boolean }>);
+  close(){
+    this.dialogRef.close({saved:false});
+  }
   /** "Nouvelle réception" depuis le menu d'un fournisseur : le bon démarre avec lui. */
   readonly initialSupplierId = input<number | null>(null);
-  readonly changed = output<void>();
-  readonly closed = output<void>();
   @Input() showHeader = true;
 
   protected readonly products = inject(ProductStore).list().value;
@@ -383,8 +385,7 @@ export class StockEntryDialogChargeComponent implements OnInit {
           (amount ? `, coût total ${formatAmount(Math.round(amount), null)} Ar.` : '.'),
           supplies,
         );
-        this.changed.emit();
-        this.closed.emit();
+        this.close();
       },
       // Rien n'a été enregistré : le toast d'erreur dit pourquoi, la saisie reste.
       error: () => this.busy.set(false),
@@ -395,9 +396,5 @@ export class StockEntryDialogChargeComponent implements OnInit {
     return this.costs().find((cost) => cost.productId === productId);
   }
 
-  protected close(): void {
-    if (isTopmostDialog(this.host.nativeElement)) {
-      this.closed.emit();
-    }
-  }
+
 }
