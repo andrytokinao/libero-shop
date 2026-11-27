@@ -69,9 +69,13 @@
                       </div>
                       <div class="fld dn-cost">
                         <label [for]="'dn-cost-' + i">Prix par {{ unitOf(line).label ?? 'unité' }}</label>
-                        <input type="text" inputmode="decimal" autocomplete="off" placeholder="inconnu"
+                        <input type="text" inputmode="decimal" autocomplete="off" placeholder="obligatoire" required
+                               [class.invalid]="submitted && !hasCost(line)"
                                [id]="'dn-cost-' + i" [ngModel]="line.unitCost"
                                (ngModelChange)="patch(i, { unitCost: $event })" />
+                        @if (submitted && !hasCost(line)) {
+                          <span class="hint-line err">Prix d’achat requis (supérieur à 0)</span>
+                        }
                       </div>
                       <div class="dn-total">
                         @if (lineTotal(line); as total) {
@@ -356,8 +360,8 @@
           <!-- ============================================================== VENTE -->
           @if (tab === 3) {
             <p class="se-help">
-              Pour chaque produit, cochez les unités dans lesquelles vous le vendez et indiquez le prix
-              de vente de chacune. Le prix n’est pas obligatoire : vous pourrez le fixer plus tard.
+              Pour chaque produit, cochez les unités dans lesquelles vous le vendez. Une unité cochée doit avoir
+              un prix de vente supérieur à 0 : décochez celles que vous ne vendez pas.
             </p>
 
             @for (card of cards(); track card.key) {
@@ -388,13 +392,18 @@
                           type="text"
                           inputmode="decimal"
                           autocomplete="off"
-                          placeholder="à définir"
+                          placeholder="obligatoire"
+                          [class.invalid]="submitted && priceInvalid(card, unit)"
                           [disabled]="!unitOn(card, unit)"
                           [ngModel]="unitPriceText(card, unit)"
                           (ngModelChange)="setUnitPrice(card, unit, $event)"
                         />
                       </label>
                     </div>
+
+                    @if (submitted && priceInvalid(card, unit)) {
+                      <span class="err">Prix supérieur à 0 requis</span>
+                    }
 
                     @if (margin(card, unit); as m) {
                       <span class="sale-margin" [class.neg]="m < 0">

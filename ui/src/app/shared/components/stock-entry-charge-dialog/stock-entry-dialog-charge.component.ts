@@ -104,6 +104,10 @@ export class StockEntryDialogChargeComponent implements OnInit {
 
   tab = 0;
   fin = false;
+
+  /** Passe à true au premier refus de validation : les champs fautifs s'affichent alors en rouge. */
+  submitted = false;
+
   @ViewChild('scroller') private scroller?: ElementRef<HTMLElement>;
 
   ngOnInit(): void {
@@ -329,6 +333,37 @@ export class StockEntryDialogChargeComponent implements OnInit {
     return entry.on && price > 0 ? price - card.cost : null;
   }
 
+  // ------------------------------------------------------------ validation du formulaire
+
+  /** Un prix d'achat est obligatoire et doit être supérieur à 0 (vide, 0 et négatif refusés). */
+  hasCost(line: DeliveryLine): boolean {
+    return this.svc.positive(line.unitCost) > 0;
+  }
+
+  /** Une unité cochée sans prix de vente supérieur à 0. */
+  priceInvalid(card: SaleCard, unit: { packagingId: number | null }): boolean {
+    return this.unitOn(card, unit) && this.svc.positive(this.unitPriceText(card, unit)) <= 0;
+  }
+
+  private purchaseProblem(): string | null {
+    const line = this.lines().find((l) => !this.hasCost(l));
+    return line
+      ? `Le prix d’achat de « ${line.product.name} » est obligatoire et doit être supérieur à 0.`
+      : null;
+  }
+
+  private saleProblem(): string | null {
+    for (const card of this.cards()) {
+      for (const unit of unitsOf(card.product)) {
+        if (this.priceInvalid(card, unit)) {
+          return `Prix de vente manquant pour « ${card.product.name} » (${unitChoiceLabel(unit)}) : `
+            + `saisissez un prix supérieur à 0, ou décochez cette unité.`;
+        }
+      }
+    }
+    return null;
+  }
+
   // ------------------------------------------------------------ résumé
   get result() {
     const totalCharges = this.svc.sumCharges(this.charges, this.lines());
@@ -354,6 +389,14 @@ export class StockEntryDialogChargeComponent implements OnInit {
   }
 
   protected next(): void {
+    if (this.tab === 0) {
+      const problem = this.purchaseProblem();
+      if (problem) {
+        this.submitted = true;
+        this.toasts.show(problem);
+        return;
+      }
+    }
     if (!this.isLast) {
       this.go(this.tab + 1);
       return;
@@ -364,8 +407,25 @@ export class StockEntryDialogChargeComponent implements OnInit {
 
   // ------------------------------------------------------------ enregistrement unique
   protected save(): void {
+    if (this.busy()) return;
+
+    if (!this.lines().length) {
+      this.toasts.show('Ajoutez au moins un produit à l’étape Achat.');
+      this.go(0);
+      return;
+    }
+
+    // Prix d'achat et prix de vente : vérifiés ici, avant tout le reste.
+    const formError = this.purchaseProblem() ?? this.saleProblem();
+    if (formError) {
+      this.submitted = true;
+      this.toasts.show(formError);
+      this.go(this.purchaseProblem() ? 0 : 3);
+      return;
+    }
+
     const request = this.request();
-    if (!request || this.busy()) return;
+    if (!request) return;
 
     const problem = this.svc.validate(this.state);
     if (problem) {
