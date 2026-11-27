@@ -1,4 +1,4 @@
-# Libero Shop — configuration des prix et des unités
+# Moussa Shop — configuration des prix et des unités
 
 Réalisée le 16 octobre 2026.
 

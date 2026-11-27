@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Libero Shop: jpackage's own main.wxs (JDK 21), with two additions marked "Libero Shop" below.
+  Moussa Shop: jpackage's own main.wxs (JDK 21), with two additions marked "Moussa Shop" below.
   Once installed, the server has to be up without anyone thinking of starting it:
     - it is started as soon as the installation ends, a first one or an update;
     - it is started again at every Windows logon (the "Run" key of the user, removed with
@@ -88,23 +88,23 @@
       <ComponentGroupRef Id="Shortcuts"/>
       <ComponentGroupRef Id="Files"/>
       <ComponentGroupRef Id="FileAssociations"/>
-      <!-- Libero Shop -->
-      <ComponentRef Id="LiberoShopAutostart"/>
+      <!-- Moussa Shop -->
+      <ComponentRef Id="MoussaShopAutostart"/>
     </Feature>
 
-    <!-- Libero Shop: started at every logon of the user it was installed for. -->
+    <!-- Moussa Shop: started at every logon of the user it was installed for. -->
     <DirectoryRef Id="INSTALLDIR">
-      <Component Id="LiberoShopAutostart" Guid="*">
+      <Component Id="MoussaShopAutostart" Guid="*">
         <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run"
                        Name="$(var.JpAppName)" Type="string"
                        Value="&quot;[INSTALLDIR]$(var.JpAppName).exe&quot;" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
-    <!-- Libero Shop: started when the installation ends. Not waited for: it never exits.
+    <!-- Moussa Shop: started when the installation ends. Not waited for: it never exits.
          The argument opens the shop in the browser once the server is up (ServerTray); the
          logon start above has none, so it does not. -->
-    <CustomAction Id="LiberoShopLaunch" Directory="INSTALLDIR"
+    <CustomAction Id="MoussaShopLaunch" Directory="INSTALLDIR"
                   ExeCommand="&quot;[INSTALLDIR]$(var.JpAppName).exe&quot; --liberoshop.open-browser"
                   Return="asyncNoWait"/>
 
@@ -155,8 +155,8 @@
       <?endif?>
       <RemoveExistingProducts Before="CostInitialize"/>
       <Custom Action="JpFindRelatedProducts" After="FindRelatedProducts"/>
-      <!-- Libero Shop: on an installation or an update, not on a removal. -->
-      <Custom Action="LiberoShopLaunch" After="InstallFinalize">NOT REMOVE</Custom>
+      <!-- Moussa Shop: on an installation or an update, not on a removal. -->
+      <Custom Action="MoussaShopLaunch" After="InstallFinalize">NOT REMOVE</Custom>
     </InstallExecuteSequence>
 
     <InstallUISequence>
