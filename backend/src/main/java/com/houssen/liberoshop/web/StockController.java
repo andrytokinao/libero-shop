@@ -4,7 +4,10 @@ import com.houssen.liberoshop.security.CurrentUser;
 import com.houssen.liberoshop.service.InventoryService;
 import com.houssen.liberoshop.service.MovementCancellationService;
 import com.houssen.liberoshop.service.StockService;
+import com.houssen.liberoshop.service.delivery.DeliveryHistoryService;
 import com.houssen.liberoshop.service.delivery.DeliveryService;
+import com.houssen.liberoshop.service.delivery.dto.DeliveryNoteResponse;
+import com.houssen.liberoshop.service.delivery.dto.DeliveryNoteSummaryResponse;
 import com.houssen.liberoshop.service.delivery.dto.FullDeliveryRequest;
 import com.houssen.liberoshop.web.dto.AdjustmentSummaryResponse;
 import com.houssen.liberoshop.web.dto.CancelDeliveryRequest;
@@ -17,6 +20,7 @@ import com.houssen.liberoshop.web.dto.StockAdjustmentResponse;
 import com.houssen.liberoshop.web.dto.StockOutputPageResponse;
 import com.houssen.liberoshop.web.dto.SupplyResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,24 +35,18 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/stock")
 public class StockController {
 
     private final StockService stockService;
+    private final DeliveryHistoryService deliveryHistory;
     private final DeliveryService deliveryService;
     private final MovementCancellationService cancellations;
     private final InventoryService inventories;
     private final CurrentUser currentUser;
 
-    public StockController(StockService stockService, DeliveryService deliveryService,
-                           MovementCancellationService cancellations, InventoryService inventories,
-                           CurrentUser currentUser) {
-        this.stockService = stockService;
-        this.deliveryService = deliveryService;
-        this.cancellations = cancellations;
-        this.inventories = inventories;
-        this.currentUser = currentUser;
-    }
+
 
     /**
      * The receipts, with what each cost. Restricted since receipts carry purchase prices: the
@@ -158,5 +156,22 @@ public class StockController {
     @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
     public StockAdjustmentResponse registerAdjustment(@Valid @RequestBody CreateStockAdjustmentRequest request) {
         return stockService.registerAdjustment(request, currentUser.require());
+    }
+    @GetMapping("/charge-deliveries")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public List<DeliveryNoteSummaryResponse> chargeDeliveries(@RequestParam(required = false) Long supplierId) {
+        return deliveryHistory.findNotes(supplierId);
+    }
+
+    @GetMapping("/charge-deliveries/{noteId}")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public DeliveryNoteResponse chargeDelivery(@PathVariable Long noteId) {
+        return deliveryHistory.findNote(noteId);
+    }
+
+    @GetMapping("/supplies/{supplyId}/charge-delivery")
+    @PreAuthorize("hasAnyRole('DEPOT_MANAGER', 'SUPER_ADMIN')")
+    public DeliveryNoteResponse chargeDeliveryOfSupply(@PathVariable Long supplyId) {
+        return deliveryHistory.findNoteOfSupply(supplyId);
     }
 }
