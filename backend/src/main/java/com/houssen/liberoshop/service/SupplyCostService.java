@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.service;
 
+import com.houssen.liberoshop.license.RequiresActiveLicense; // A ADAPTER : package de votre annotation
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.SupplyCharge;
 import com.houssen.liberoshop.entity.SupplyUseCharge;
@@ -28,6 +29,7 @@ public class SupplyCostService {
     private final SupplyChargeRepository chargeRepository;
 
     /** At entry: splits the charges, saves them, then stores the cost of every receipt. */
+    @RequiresActiveLicense
     public EntryCostSummary applyCharges(Collection<Supply> receipts,
                                          Collection<SupplyCharge> charges) {
         Set<Supply> affected = new LinkedHashSet<>(receipts);
@@ -44,6 +46,7 @@ public class SupplyCostService {
      * After the quantity, unit cost or factor of a receipt was corrected: its charges are split
      * again, which also changes the other receipts sharing them.
      */
+    @RequiresActiveLicense
     public void onReceiptChanged(Supply receipt) {
         Set<Supply> affected = new LinkedHashSet<>();
         affected.add(receipt);
@@ -58,6 +61,7 @@ public class SupplyCostService {
     }
 
     /** Deletes a charge and takes it out of the cost of the receipts that carried it. */
+    @RequiresActiveLicense
     public void removeCharge(SupplyCharge charge) {
         List<Supply> affected = charge.getSupplys().stream()
                 .map(SupplyUseCharge::getSupply)

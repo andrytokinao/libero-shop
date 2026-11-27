@@ -1,5 +1,6 @@
 package com.houssen.liberoshop.service.delivery;
 
+import com.houssen.liberoshop.license.RequiresActiveLicense; // A ADAPTER : package de votre annotation
 import com.houssen.liberoshop.entity.*;
 import com.houssen.liberoshop.service.StockChangedEvent;
 import com.houssen.liberoshop.service.StockService;
@@ -73,6 +74,7 @@ public class DeliveryService {
 
     /** @return the receipts, in the order of the note's lines */
 
+    @RequiresActiveLicense
     @Transactional
     public List<SupplyResponse> receive(CreateDeliveryRequest request, UserApp receiver) {
         List<CreateDeliveryRequest.Line> lines = request.lines();
@@ -111,6 +113,7 @@ public class DeliveryService {
      *
      * @return the receipts, in the order of the note's lines
      */
+    @RequiresActiveLicense
     @Transactional
     public List<SupplyResponse> registerDeliveryWithCharge(@Valid FullDeliveryRequest request, UserApp receiver) {
         List<DeliveryLineRequest> lines = request.lines();
