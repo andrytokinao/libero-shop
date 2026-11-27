@@ -17,5 +17,4 @@ public interface InvoiceCounterRepository extends JpaRepository<InvoiceCounter, 
     @Query("select c from InvoiceCounter c where c.id = :id")
     Optional<InvoiceCounter> findForUpdate(@Param("id") Long id);
 
-    <T> ScopedValue<T> findWithLinesById(Long id);
 }
