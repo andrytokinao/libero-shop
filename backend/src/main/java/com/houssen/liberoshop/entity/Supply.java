@@ -186,4 +186,9 @@ public class Supply extends StockMovement {
         BigDecimal purchase = totalCost();
         entryCost = purchase == null ? null : purchase.add(chargesCost);
     }
+    public BigDecimal usableQuantity() {
+        return getQuantity().subtract(lostQuantity());
+    }
+
+
 }

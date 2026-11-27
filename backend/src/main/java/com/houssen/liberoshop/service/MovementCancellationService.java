@@ -8,6 +8,7 @@ import com.houssen.liberoshop.entity.StockMovement;
 import com.houssen.liberoshop.entity.StockOutput;
 import com.houssen.liberoshop.entity.Supply;
 import com.houssen.liberoshop.entity.UserApp;
+import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.service.delivery.DeliveryService;

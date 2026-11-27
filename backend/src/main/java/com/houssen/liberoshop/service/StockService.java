@@ -12,6 +12,7 @@ import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.repository.ProductRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 import com.houssen.liberoshop.repository.SupplierRepository;
+import com.houssen.liberoshop.service.delivery.SupplyBooking;
 import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.service.exception.ResourceNotFoundException;
 import com.houssen.liberoshop.util.Quantities;
@@ -122,12 +123,31 @@ public class StockService {
     @RequiresActiveLicense
     @Transactional
     public SupplyResponse registerSupply(CreateSupplyRequest request, UserApp receiver) {
+        Supply supply = bookSupply(SupplyBooking.builder()
+                .request(request)
+                .receiver(receiver)
+                .build());
+        addToStock(supply);
+
+        events.publishEvent(new StockChangedEvent(List.of(supply.getProduct().getId())));
+        return SupplyResponse.of(supply);
+    }
+
+    /**
+     * Records a receipt and locks its product, <em>without moving the stock yet</em>: the charges
+     * and the losses of a delivery note are attached to the receipt first, since both change what
+     * a unit costs. The caller must then call {@link #addToStock}, in the same transaction.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public Supply bookSupply(SupplyBooking booking) {
+        CreateSupplyRequest request = booking.request();
         Product product = products.findByIdForUpdate(request.productId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Produit", request.productId()));
         // No supplier named is allowed: the entry is kept all the same, only nobody is credited.
         Supplier supplier = request.supplierId() == null ? null
                 : suppliers.findById(request.supplierId())
-                        .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
+                .orElseThrow(() -> ResourceNotFoundException.of("Fournisseur", request.supplierId()));
         if (Quantities.tooPrecise(request.quantity())) {
             throw new BusinessRuleException("QUANTITY_TOO_PRECISE",
                     "Une quantite se saisit au millieme au plus (" + request.quantity() + ").");
@@ -140,18 +160,32 @@ public class StockService {
                 .quantity(Quantities.scaled(request.quantity().multiply(unit.factor())))
                 .movementDate(calendar.now())
                 .product(product)
-                .performedBy(receiver)
+                .performedBy(booking.receiver())
                 .supplier(supplier)
                 .unitCost(PurchaseCosting.scaled(request.unitCost()))
                 .unitLabel(inBaseUnit ? null : unit.label())
                 .unitFactor(inBaseUnit ? null : unit.factor())
+                .deliveryNote(booking.note())
                 .build();
-        // The average is kept per base unit: ten sacks at 145 000 teach it 828.571429 a kapoka.
-        PurchaseCosting.receive(product, supply.getQuantity(), supply.exactBaseUnitCost());
+        // Purchase only for now: SupplyCostService adds the charges afterwards.
+        supply.recalculateCosts();
         movements.save(supply);
+        return supply;
+    }
 
-        events.publishEvent(new StockChangedEvent(List.of(product.getId())));
-        return SupplyResponse.of(supply);
+    /**
+     * Raises the stock by what is usable of a receipt and blends its landed cost -- purchase and
+     * charges over what was not lost -- into the product's average. To call once per receipt.
+     */
+    @RequiresActiveLicense
+    @Transactional
+    public void addToStock(Supply supply) {
+        BigDecimal usable = supply.usableQuantity();
+        // Everything lost on the way: nothing reaches the shelf.
+        if (usable.signum() > 0) {
+            // The average is kept per base unit: ten sacks at 145 000 teach it 828.571429 a kapoka.
+            PurchaseCosting.receive(supply.getProduct(), usable, supply.landedBaseUnitCost());
+        }
     }
 
     /**

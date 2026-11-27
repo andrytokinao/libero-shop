@@ -1,6 +1,6 @@
 package com.houssen.liberoshop.service.delivery;
 
-import com.houssen.liberoshop.license.RequiresActiveLicense; // A ADAPTER : package de votre annotation
+import com.houssen.liberoshop.license.RequiresActiveLicense;
 import com.houssen.liberoshop.entity.*;
 import com.houssen.liberoshop.service.StockChangedEvent;
 import com.houssen.liberoshop.service.StockService;
@@ -24,8 +24,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// A ADAPTER : packages de ces classes, les memes que dans StockService
-import com.houssen.liberoshop.exception.BusinessRuleException;
+import com.houssen.liberoshop.service.exception.BusinessRuleException;
 import com.houssen.liberoshop.repository.DeliveryNoteRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
 
@@ -138,29 +137,20 @@ public class DeliveryService {
         note.setWithTransformation(request.transformation() != null);
         notes.save(note);
 
-        // 2. What each line carries on top of its price, and what it loses on the way. The shares
-        //    are needed to book the receipts (average cost): computed first on drafts, never saved,
-        //    by the same charge classes as the real ones.
-        Supply[] drafts = drafts(lines);
-        buildCharges(charges, drafts).forEach(SupplyCharge::allocate);
-
-        BigDecimal[] extra = Arrays.stream(drafts)
-                .map(Supply::chargesTotal)
-                .toArray(BigDecimal[]::new);
-        BigDecimal[] lost = zeros(n);
-        lineLosses.forEach(l -> lost[l.lineIndex()] = lost[l.lineIndex()].add(l.quantity()));
-
-        // 3. The receipts, locked in the order of the product ids.
+        // 2. The receipts, locked in the order of the product ids. The stock does not move yet.
         Supply[] booked = new Supply[n];
         IntStream.range(0, n).boxed()
                 .sorted(Comparator.comparing(i -> lines.get(i).productId()))
-                .forEach(i -> booked[i] = stock.bookSupply(
-                        asSupply(request.supplierId(), lines.get(i)), receiver, extra[i], lost[i], note));
+                .forEach(i -> booked[i] = stock.bookSupply(SupplyBooking.builder()
+                        .request(asSupply(request.supplierId(), lines.get(i)))
+                        .receiver(receiver)
+                        .note(note)
+                        .build()));
 
         note.setSupplier(booked[0].getSupplier());
         note.setDate(booked[0].getMovementDate());
 
-        // 4. The charges linked to the receipts, split, and the entry cost stored on each receipt.
+        // 3. The charges linked to the receipts, split, and the entry cost stored on each receipt.
         List<SupplyCharge> bookedCharges = buildCharges(charges, booked);
         bookedCharges.forEach(charge -> charge.setDeliveryNote(note));
         SupplyCostService.EntryCostSummary summary =
@@ -169,7 +159,7 @@ public class DeliveryService {
         note.setPurchaseTotal(summary.purchaseTotal());
         note.setChargesTotal(summary.chargesTotal());
 
-        // 5. The losses on the way: quantity only, their cost is carried by what is left.
+        // 4. The losses on the way: quantity only, their cost is carried by what is left.
         for (LossRequest loss : lineLosses) {
             Supply receipt = booked[loss.lineIndex()];
             StockLoss saved = movements.save(StockLoss.builder()
@@ -186,6 +176,9 @@ public class DeliveryService {
             }
             receipt.getLosses().add(saved);
         }
+
+        // 5. Charges and losses are known: each receipt enters the stock at its landed cost.
+        Arrays.stream(booked).forEach(stock::addToStock);
 
         // 6. The transformation: declared only, refuses the note until it is written.
         if (request.transformation() != null) {
@@ -234,16 +227,6 @@ public class DeliveryService {
         return charge.general() || charge.lineIndexes() == null || charge.lineIndexes().isEmpty()
                 ? IntStream.range(0, lineCount).boxed().toList()
                 : charge.lineIndexes().stream().distinct().sorted().toList();
-    }
-
-    /** Unsaved receipts carrying only what a split reads: quantity and price as received. */
-    private static Supply[] drafts(List<DeliveryLineRequest> lines) {
-        return lines.stream()
-                .map(line -> (Supply) Supply.builder()
-                        .quantity(line.quantity())
-                        .unitCost(line.unitCost())
-                        .build())
-                .toArray(Supply[]::new);
     }
 
     // ===================================================================================
