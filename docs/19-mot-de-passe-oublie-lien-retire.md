@@ -1,4 +1,4 @@
-# Libero Shop — mot de passe administrateur oublié : le lien est retiré
+# Moussa Shop — mot de passe administrateur oublié : le lien est retiré
 
 Réalisée le 13 octobre 2026.
 
@@ -24,7 +24,7 @@ visible de toute personne assise devant l'ordinateur du serveur.
 
 ## Pour le support : guider l'administrateur
 
-Sur l'ordinateur où Libero Shop est installé, la page de connexion étant ouverte :
+Sur l'ordinateur où Moussa Shop est installé, la page de connexion étant ouverte :
 
 1. Dans la barre d'adresse du navigateur, remplacer la fin `/login` par **`/secours`**, puis
    Entrée. La page « Mot de passe administrateur oublié » s'ouvre.

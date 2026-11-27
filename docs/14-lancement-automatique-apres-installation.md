@@ -1,4 +1,4 @@
-# Libero Shop — lancement automatique après installation
+# Moussa Shop — lancement automatique après installation
 
 Réalisée le 11 octobre 2026.
 
@@ -25,12 +25,12 @@ serveur, et recommencer à chaque fois que l'ordinateur était rallumé.
 Le raccourci du bureau et l'entrée du menu Démarrer existaient déjà et ne changent pas.
 
 Pour **désactiver** le démarrage avec Windows sur un poste : Gestionnaire des tâches → onglet
-« Applications de démarrage » → Libero Shop → Désactiver.
+« Applications de démarrage » → Moussa Shop → Désactiver.
 
 ## Détail
 
 - `backend/src/main/jpackage/windows/main.wxs` (nouveau) : le modèle d'installateur de jpackage
-  (JDK 21), recopié avec deux ajouts marqués « Libero Shop » :
+  (JDK 21), recopié avec deux ajouts marqués « Moussa Shop » :
   - une valeur dans la clé de registre `Run` de l'utilisateur
     (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`), qui pointe sur le lanceur installé ;
   - une action de fin d'installation qui démarre le lanceur, sauf lors d'une désinstallation.
@@ -44,7 +44,7 @@ aucun droit d'administrateur n'est demandé.
 ## Vérifications faites
 
 Avec un installateur d'essai construit par jpackage à partir de ce modèle et des mêmes options
-Windows (une application factice, pas Libero Shop) :
+Windows (une application factice, pas Moussa Shop) :
 
 - le modèle est accepté par WiX 3.14 ; les seuls avertissements sont ceux du modèle d'origine ;
 - installation : l'application a été lancée toute seule, depuis son dossier d'installation ;
@@ -53,7 +53,7 @@ Windows (une application factice, pas Libero Shop) :
 
 ## Non vérifié
 
-- **L'installateur de Libero Shop lui-même n'a pas été reconstruit ni installé.** Le PC de
+- **L'installateur de Moussa Shop lui-même n'a pas été reconstruit ni installé.** Le PC de
   développement est signalé infecté par un virus (`Expiro`) : un installateur construit dessus
   n'est pas à distribuer tant qu'il n'est pas nettoyé.
 - Le démarrage à l'ouverture de session n'a pas été essayé en fermant et rouvrant une session :

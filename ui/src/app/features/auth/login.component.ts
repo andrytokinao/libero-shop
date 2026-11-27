@@ -55,7 +55,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
       <aside class="login-about">
         <div class="about-inner">
           <img class="about-logo" src="logo.png" alt="" />
-          <h1>Libero <span>Shop</span></h1>
+          <h1>Moussa <span>Shop</span></h1>
           <p class="lead">
             Le logiciel de gestion de votre magasin : la caisse, le stock et les commandes réunis
             au même endroit, sur votre propre réseau.
@@ -90,7 +90,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
       <main class="login-main">
         <form class="card login-card" (ngSubmit)="submit()">
           <div class="login-brand">
-            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
             <div class="sub">Gestion supermarche</div>
           </div>
 
@@ -109,7 +109,7 @@ const HIGHLIGHTS: readonly Highlight[] = [
               } @else {
                 <div class="text">
                   L'identifiant et le mot de passe de départ sont affichés sur cette page, sur
-                  l'ordinateur où Libero Shop est installé.
+                  l'ordinateur où Moussa Shop est installé.
                 </div>
               }
             </div>

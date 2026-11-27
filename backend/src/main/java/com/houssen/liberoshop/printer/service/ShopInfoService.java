@@ -24,7 +24,7 @@ public class ShopInfoService {
     private final String defaultContact;
 
     public ShopInfoService(ShopInfoRepository shops,
-                           @Value("${liberoshop.shop-name:Libero Shop}") String defaultName,
+                           @Value("${liberoshop.shop-name:Moussa Shop}") String defaultName,
                            @Value("${liberoshop.shop-address:}") String defaultAddress,
                            @Value("${liberoshop.shop-contact:}") String defaultContact) {
         this.shops = shops;

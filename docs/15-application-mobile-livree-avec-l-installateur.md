@@ -1,4 +1,4 @@
-# Libero Shop — application mobile livrée avec l'installateur
+# Moussa Shop — application mobile livrée avec l'installateur
 
 Réalisée le 11 octobre 2026.
 
@@ -68,7 +68,7 @@ Fichiers : `backend/pom.xml`, `jpackage/runtime.args`, `resources/application.pr
 
 ## Non vérifié
 
-- **L'installateur de Libero Shop n'a pas été reconstruit ni installé** (PC de développement
+- **L'installateur de Moussa Shop n'a pas été reconstruit ni installé** (PC de développement
   signalé infecté, voir `14-lancement-automatique-apres-installation.md`). Le téléchargement
   depuis un vrai téléphone n'a pas été essayé.
 
