@@ -1,9 +1,6 @@
 package com.houssen.liberoshop.service.delivery.dto;
 
-import com.houssen.liberoshop.entity.DeliveryNote;
-import com.houssen.liberoshop.entity.StockLoss;
-import com.houssen.liberoshop.entity.Supply;
-import com.houssen.liberoshop.entity.SupplyCharge;
+import com.houssen.liberoshop.entity.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -68,7 +65,7 @@ public record DeliveryNoteResponse(
             String raison,
             BigDecimal cust,
             boolean general,
-            String basis,                  // "lot" or "unit": how it was typed
+            ChargeBasis basis,
             List<Share> shares
     ) {
         static Charge of(SupplyCharge charge) {

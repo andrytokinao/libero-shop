@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import lombok.Builder;
 
 import java.math.BigDecimal;
 
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
  *                    goods; a receipt without it still raises the stock, it just teaches the
  *                    average cost nothing.
  */
+@Builder
 public record CreateSupplyRequest(@NotNull Long productId,
                                   Long supplierId,
                                   Long packagingId,

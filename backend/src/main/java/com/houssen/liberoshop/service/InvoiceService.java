@@ -178,6 +178,11 @@ public class InvoiceService {
         return shares;
     }
 
+    public BigDecimal benefitToday() {
+        // TODO : A IMPLEMENTER
+        return BigDecimal.ZERO;
+    }
+
     /**
      * @param scope          how much of the shop's orders the account reads
      * @param invoices       the orders of the message it may read

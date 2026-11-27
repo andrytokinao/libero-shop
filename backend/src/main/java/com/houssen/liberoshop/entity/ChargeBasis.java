@@ -1,8 +1,7 @@
-package com.houssen.liberoshop.service.delivery.dto;
+package com.houssen.liberoshop.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-/** Base de calcul d'une charge : montant global du lot, ou montant par unité reçue. */
 public enum ChargeBasis {
     @JsonProperty("lot")  LOT,
     @JsonProperty("unit") UNIT

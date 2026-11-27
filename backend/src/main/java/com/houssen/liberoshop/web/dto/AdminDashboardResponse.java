@@ -1,5 +1,7 @@
 package com.houssen.liberoshop.web.dto;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -8,7 +10,9 @@ import java.util.List;
  * hands, slips awaiting acknowledgement, slips confirmed today — which is the control
  * the role exists for.
  */
+@Builder
 public record AdminDashboardResponse(BigDecimal revenueToday,
+                                     BigDecimal beneficeDoday,
                                      BigDecimal stockValue,
                                      long referenceCount,
                                      long unpaidInvoices,

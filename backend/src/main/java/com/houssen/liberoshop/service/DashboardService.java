@@ -117,21 +117,29 @@ public class DashboardService {
 
     public AdminDashboardResponse forAdmin() {
         List<RevenueBySellerResponse> bySeller = revenueBySellerToday();
-        return new AdminDashboardResponse(
-                bySeller.stream().map(RevenueBySellerResponse::amount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add),
-                catalogService.totalStockValue(),
-                catalogService.countProducts(),
-                invoiceService.countUnpaid(),
-                invoiceService.unpaidAmount(),
-                invoiceService.countPendingDeliveries(),
-                remittanceService.depotCashInHandTotal(),
-                remittanceService.depotCashInHandCount(),
-                remittanceService.pendingTotal(),
-                remittanceService.pendingCount(),
-                remittanceService.confirmedTodayTotal(),
-                bySeller,
-                catalogService.findLowStock());
+        return AdminDashboardResponse.builder()
+                .revenueToday(
+                        bySeller.stream()
+                                .map(RevenueBySellerResponse::amount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                )
+                .beneficeDoday(
+                        invoiceService.benefitToday()
+                )
+                .stockValue(catalogService.totalStockValue())
+                .referenceCount(catalogService.countProducts())
+                .unpaidInvoices(invoiceService.countUnpaid())
+                .unpaidAmount(invoiceService.unpaidAmount())
+                .pendingDeliveries(invoiceService.countPendingDeliveries())
+                .depotCashInHand(remittanceService.depotCashInHandTotal())
+                .depotCashInHandCount(remittanceService.depotCashInHandCount())
+                .pendingRemittanceAmount(remittanceService.pendingTotal())
+                .pendingRemittanceCount(remittanceService.pendingCount())
+                .confirmedRemittanceAmountToday(remittanceService.confirmedTodayTotal())
+                .revenueBySeller(bySeller)
+                .lowStockProducts(catalogService.findLowStock())
+                .build();
+
     }
 
     public RevenueReportResponse revenueReport() {
@@ -163,14 +171,19 @@ public class DashboardService {
      * and the day's total and its split always agree.
      */
     public List<RevenueBySellerResponse> revenueBySellerToday() {
-        return payments.aggregateCashedBySeller(calendar.startOfToday(), calendar.startOfTomorrow()).stream()
-                .map(row -> new RevenueBySellerResponse(
-                        (Long) row[0],
-                        (String) row[1],
-                        (BigDecimal) row[2],
-                        ((Number) row[3]).longValue()))
+        return payments.aggregateCashedBySeller(
+                        calendar.startOfToday(),
+                        calendar.startOfTomorrow()
+                ).stream()
+                .map(row -> RevenueBySellerResponse.builder()
+                        .sellerId((Long) row[0])
+                        .sellerName((String) row[1])
+                        .amount((BigDecimal) row[2])
+                        .saleCount(((Number) row[3]).longValue())
+                        .build())
                 .toList();
     }
+
 
     /** How many sales each seller recorded today, whatever their payment status: {@code [sellerId, count]}. */
     public List<Object[]> salesTodayBySeller() {

@@ -1,5 +1,6 @@
+package com.houssen.liberoshop.entity;
 
-import com.houssen.liberoshop.service.delivery.dto.ChargeBasis;
+import com.houssen.liberoshop.entity.ChargeBasis;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

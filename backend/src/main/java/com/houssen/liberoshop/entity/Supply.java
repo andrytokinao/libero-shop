@@ -58,7 +58,14 @@ public class Supply extends StockMovement {
      */
     @Column(precision = 12, scale = 2)
     private BigDecimal unitCost;
+    @Setter(AccessLevel.NONE)
+    @Column(precision = 14, scale = COST_SCALE)
+    private BigDecimal chargesCost;
 
+    /** Purchase total plus charges. Stored, null when no purchase cost was given. */
+    @Setter(AccessLevel.NONE)
+    @Column(precision = 14, scale = COST_SCALE)
+    private BigDecimal entryCost;
     /**
      * The unit the goods came in, as it was called then: "sac 50 kg". Copied, never linked, like
      * a sale line's: renaming or deleting the unit later must not rewrite the receipt. Null when
@@ -173,5 +180,10 @@ public class Supply extends StockMovement {
             return null;
         }
         return purchase.add(chargesTotal()).divide(usable, EXACT_COST_SCALE, RoundingMode.HALF_UP);
+    }
+    public void recalculateCosts() {
+        chargesCost = chargesTotal().setScale(COST_SCALE, RoundingMode.HALF_UP);
+        BigDecimal purchase = totalCost();
+        entryCost = purchase == null ? null : purchase.add(chargesCost);
     }
 }

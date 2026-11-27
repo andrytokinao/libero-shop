@@ -1,15 +1,10 @@
 package com.houssen.liberoshop.service.delivery;
 
-import com.houssen.liberoshop.entity.DeliveryNote;
-import com.houssen.liberoshop.entity.LossReason;
-import com.houssen.liberoshop.entity.StockLoss;
-import com.houssen.liberoshop.entity.Supply;
-import com.houssen.liberoshop.entity.SupplyCharge;
-import com.houssen.liberoshop.entity.SupplyUseCharge;
-import com.houssen.liberoshop.entity.UserApp;
+import com.houssen.liberoshop.entity.*;
 import com.houssen.liberoshop.service.StockChangedEvent;
 import com.houssen.liberoshop.service.StockService;
-import com.houssen.liberoshop.service.delivery.dto.ChargeBasis;
+import com.houssen.liberoshop.service.SupplyChargeMapper;
+import com.houssen.liberoshop.service.SupplyCostService;
 import com.houssen.liberoshop.service.delivery.dto.DeliveryLineRequest;
 import com.houssen.liberoshop.service.delivery.dto.FullDeliveryRequest;
 import com.houssen.liberoshop.service.delivery.dto.LossReasonCode;
@@ -32,17 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.houssen.liberoshop.exception.BusinessRuleException;
 import com.houssen.liberoshop.repository.DeliveryNoteRepository;
 import com.houssen.liberoshop.repository.StockMovementRepository;
-import com.houssen.liberoshop.repository.SupplyChargeRepository;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 /**
@@ -62,20 +53,20 @@ public class DeliveryService {
     private final StockService stock;
     private final TransformationService transformations;
     private final DeliveryNoteRepository notes;
-    private final SupplyChargeRepository supplyCharges;
+    private final SupplyCostService supplyCosts;
     private final StockMovementRepository movements;
     private final ApplicationEventPublisher events;
 
     public DeliveryService(StockService stock,
                            TransformationService transformations,
                            DeliveryNoteRepository notes,
-                           SupplyChargeRepository supplyCharges,
+                           SupplyCostService supplyCosts,
                            StockMovementRepository movements,
                            ApplicationEventPublisher events) {
         this.stock = stock;
         this.transformations = transformations;
         this.notes = notes;
-        this.supplyCharges = supplyCharges;
+        this.supplyCosts = supplyCosts;
         this.movements = movements;
         this.events = events;
     }
@@ -93,8 +84,13 @@ public class DeliveryService {
     }
 
     private static CreateSupplyRequest asSupply(Long supplierId, CreateDeliveryRequest.Line line) {
-        return new CreateSupplyRequest(line.productId(), supplierId, line.packagingId(), line.quantity(),
-                line.unitCost());
+        return CreateSupplyRequest.builder()
+                .productId(line.productId())
+                .supplierId(supplierId)
+                .packagingId(line.packagingId())
+                .quantity(line.quantity())
+                .unitCost(line.unitCost())
+                .build();
     }
 
     // ===================================================================================
@@ -139,12 +135,16 @@ public class DeliveryService {
         note.setWithTransformation(request.transformation() != null);
         notes.save(note);
 
-        // 2. What each line carries on top of its price, and what it loses on the way.
-        List<Map<Integer, BigDecimal>> allocations = charges.stream()
-                .map(c -> allocate(c, lines)).toList();
-        BigDecimal[] extra = zeros(n);
+        // 2. What each line carries on top of its price, and what it loses on the way. The shares
+        //    are needed to book the receipts (average cost): computed first on drafts, never saved,
+        //    by the same charge classes as the real ones.
+        Supply[] drafts = drafts(lines);
+        buildCharges(charges, drafts).forEach(SupplyCharge::allocate);
+
+        BigDecimal[] extra = Arrays.stream(drafts)
+                .map(Supply::chargesTotal)
+                .toArray(BigDecimal[]::new);
         BigDecimal[] lost = zeros(n);
-        allocations.forEach(shares -> shares.forEach((i, share) -> extra[i] = extra[i].add(share)));
         lineLosses.forEach(l -> lost[l.lineIndex()] = lost[l.lineIndex()].add(l.quantity()));
 
         // 3. The receipts, locked in the order of the product ids.
@@ -156,38 +156,20 @@ public class DeliveryService {
 
         note.setSupplier(booked[0].getSupplier());
         note.setDate(booked[0].getMovementDate());
-        note.setPurchaseTotal(Arrays.stream(booked)
-                .map(Supply::totalCost)
-                .filter(total -> total != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-        note.setChargesTotal(charges.stream()
-                .map(SupplyChargeRequest::cust)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // 4. The charges, each linked to the receipts that carry a part of it.
-        for (int c = 0; c < charges.size(); c++) {
-            SupplyChargeRequest req = charges.get(c);
-            SupplyCharge charge = new SupplyCharge();
-            charge.setRaison(req.raison().trim());
-            charge.setCust(req.cust());
-            charge.setGeneral(req.general());
-            charge.setBasis(req.basis() == ChargeBasis.UNIT ? "unit" : "lot");
-            charge.setDeliveryNote(note);
-            allocations.get(c).forEach((i, share) -> {
-                SupplyUseCharge use = new SupplyUseCharge();
-                use.setCharge(charge);
-                use.setSupply(booked[i]);
-                use.setShare(share);
-                charge.getSupplys().add(use);
-            });
-            supplyCharges.save(charge);          // the uses are saved with it (cascade)
-            note.getCharges().add(charge);
-        }
+        // 4. The charges linked to the receipts, split, and the entry cost stored on each receipt.
+        List<SupplyCharge> bookedCharges = buildCharges(charges, booked);
+        bookedCharges.forEach(charge -> charge.setDeliveryNote(note));
+        SupplyCostService.EntryCostSummary summary =
+                supplyCosts.applyCharges(Arrays.asList(booked), bookedCharges);
+        note.getCharges().addAll(bookedCharges);
+        note.setPurchaseTotal(summary.purchaseTotal());
+        note.setChargesTotal(summary.chargesTotal());
 
         // 5. The losses on the way: quantity only, their cost is carried by what is left.
         for (LossRequest loss : lineLosses) {
             Supply receipt = booked[loss.lineIndex()];
-            movements.save(StockLoss.builder()
+            StockLoss saved = movements.save(StockLoss.builder()
                     .quantity(Quantities.scaled(loss.quantity().multiply(receipt.factor())))
                     .movementDate(receipt.getMovementDate())
                     .product(receipt.getProduct())
@@ -195,6 +177,11 @@ public class DeliveryService {
                     .reason(LossReason.valueOf(loss.reason().name()))
                     .supply(receipt)
                     .build());
+            // Both sides, so the landed costs read in this transaction see the loss.
+            if (receipt.getLosses() == null) {
+                receipt.setLosses(new ArrayList<>());
+            }
+            receipt.getLosses().add(saved);
         }
 
         // 6. The transformation: declared only, refuses the note until it is written.
@@ -225,54 +212,35 @@ public class DeliveryService {
     // ===================================================================================
 
     /**
-     * Spreads a charge over the lines it is for: a charge on one product is carried by that
-     * receipt alone; a general one is shared in proportion to what each line cost (to its quantity
-     * when no price was given). The last line takes the rounding, so the shares add up to the
-     * charge to the ariary.
+     * The charges of the request, each linked to the receipts it is for. How a charge is split is
+     * the business of its class: see {@link SupplyCharge#allocate()}.
      *
-     * @return the share of each line, by line index
+     * @param receipts the receipts by line index
      */
-    private static Map<Integer, BigDecimal> allocate(SupplyChargeRequest charge, List<DeliveryLineRequest> lines) {
-        List<Integer> targets = (charge.general() || charge.lineIndexes() == null || charge.lineIndexes().isEmpty())
-                ? IntStream.range(0, lines.size()).boxed().toList()
-                : charge.lineIndexes().stream().distinct().sorted().toList();
-
-        Map<Integer, BigDecimal> shares = new LinkedHashMap<>();
-        if (targets.size() == 1) {
-            shares.put(targets.get(0), charge.cust());
-            return shares;
-        }
-
-        BigDecimal totalWeight = BigDecimal.ZERO;
-        for (int i : targets) {
-            totalWeight = totalWeight.add(purchaseValue(lines.get(i)));
-        }
-        boolean byValue = totalWeight.signum() > 0;
-        if (!byValue) {
-            for (int i : targets) {
-                totalWeight = totalWeight.add(lines.get(i).quantity());
-            }
-        }
-
-        BigDecimal given = BigDecimal.ZERO;
-        for (int k = 0; k < targets.size(); k++) {
-            int i = targets.get(k);
-            BigDecimal share;
-            if (k == targets.size() - 1) {
-                share = charge.cust().subtract(given);
-            } else {
-                BigDecimal weight = byValue ? purchaseValue(lines.get(i)) : lines.get(i).quantity();
-                share = charge.cust().multiply(weight).divide(totalWeight, 2, RoundingMode.HALF_UP);
-            }
-            given = given.add(share);
-            shares.put(i, share);
-        }
-        return shares;
+    private static List<SupplyCharge> buildCharges(List<SupplyChargeRequest> requests,
+                                                   Supply[] receipts) {
+        return requests.stream().map(request -> {
+            SupplyCharge charge = SupplyChargeMapper.toCharge(request);
+            targets(request, receipts.length).forEach(i -> charge.addSupply(receipts[i]));
+            return charge;
+        }).toList();
     }
 
-    /** What a line costs on the invoice: price as received x quantity as received. Zero when unpriced. */
-    private static BigDecimal purchaseValue(DeliveryLineRequest line) {
-        return line.unitCost() == null ? BigDecimal.ZERO : line.unitCost().multiply(line.quantity());
+    /** The lines a charge is for: all of them when general, else the ones it names. */
+    private static List<Integer> targets(SupplyChargeRequest charge, int lineCount) {
+        return charge.general() || charge.lineIndexes() == null || charge.lineIndexes().isEmpty()
+                ? IntStream.range(0, lineCount).boxed().toList()
+                : charge.lineIndexes().stream().distinct().sorted().toList();
+    }
+
+    /** Unsaved receipts carrying only what a split reads: quantity and price as received. */
+    private static Supply[] drafts(List<DeliveryLineRequest> lines) {
+        return lines.stream()
+                .map(line -> (Supply) Supply.builder()
+                        .quantity(line.quantity())
+                        .unitCost(line.unitCost())
+                        .build())
+                .toArray(Supply[]::new);
     }
 
     // ===================================================================================
@@ -283,6 +251,12 @@ public class DeliveryService {
         List<DeliveryLineRequest> lines = request.lines();
         int n = lines.size();
         TransformationRequest transformation = request.transformation();
+
+        for (int i = 0; i < n; i++) {
+            if (lines.get(i).quantity().signum() <= 0) {
+                throw invalid("Ligne " + (i + 1) + " : la quantit\u00e9 re\u00e7ue doit \u00eatre positive.");
+            }
+        }
 
         for (SupplyChargeRequest charge : orEmpty(request.charges())) {
             boolean noTarget = charge.lineIndexes() == null || charge.lineIndexes().isEmpty();
@@ -354,7 +328,12 @@ public class DeliveryService {
     }
 
     private static CreateSupplyRequest asSupply(Long supplierId, DeliveryLineRequest line) {
-        return new CreateSupplyRequest(line.productId(), supplierId, line.packagingId(), line.quantity(),
-                line.unitCost());
+        return CreateSupplyRequest.builder()
+                .productId(line.productId())
+                .supplierId(supplierId)
+                .packagingId(line.packagingId())
+                .quantity(line.quantity())
+                .unitCost(line.unitCost())
+                .build();
     }
 }

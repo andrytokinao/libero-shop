@@ -1,6 +1,7 @@
 package com.houssen.liberoshop.service.delivery.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.houssen.liberoshop.entity.ChargeBasis;
 
 import java.math.BigDecimal;
 

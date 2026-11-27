@@ -1,6 +1,8 @@
 package com.houssen.liberoshop.web.dto;
 
-import java.math.BigDecimal;
+import lombok.Builder;
 
-public record RevenueBySellerResponse(Long sellerId, String sellerName, BigDecimal amount, long saleCount) {
+import java.math.BigDecimal;
+@Builder
+public record RevenueBySellerResponse(Long sellerId, String sellerName, BigDecimal amount, BigDecimal benefit, long saleCount) {
 }

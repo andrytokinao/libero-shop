@@ -13,6 +13,7 @@ import { AriaryPipe } from '../../shared/pipes/ariary.pipe';
 
 const EMPTY: AdminDashboard = {
   revenueToday: 0,
+  beneficeDoday:0,
   stockValue: 0,
   referenceCount: 0,
   unpaidInvoices: 0,
@@ -42,10 +43,15 @@ const EMPTY: AdminDashboard = {
     <!-- A new shop: what is left to set up, each box ticking itself. -->
     <app-first-steps #steps role="admin"  />
 
-    <div class="grid g4">
+    <div class="grid g5">
       <app-kpi-card
         label="Chiffre d'affaires du jour"
         [value]="data().revenueToday | ariary"
+        hint="toutes caisses confondues"
+      />
+      <app-kpi-card
+        label="Benefice du jour"
+        [value]="data().beneficeDoday | ariary"
         hint="toutes caisses confondues"
       />
       <app-kpi-card

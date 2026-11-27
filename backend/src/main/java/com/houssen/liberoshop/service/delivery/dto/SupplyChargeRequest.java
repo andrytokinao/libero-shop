@@ -1,9 +1,11 @@
 package com.houssen.liberoshop.service.delivery.dto;
 
+import com.houssen.liberoshop.entity.ChargeBasis;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;

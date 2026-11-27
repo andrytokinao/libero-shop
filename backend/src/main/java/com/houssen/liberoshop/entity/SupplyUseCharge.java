@@ -10,9 +10,12 @@ import java.math.BigDecimal;
  * A general charge has one row per receipt of the note; their shares add up to the charge.
  */
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"charge_id", "supply_id"}))
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SupplyUseCharge {
 
     @Id

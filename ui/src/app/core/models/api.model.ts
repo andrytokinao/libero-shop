@@ -247,6 +247,7 @@ export interface StockDashboard {
 
 export interface AdminDashboard {
   revenueToday: number;
+  beneficeDoday: number;
   stockValue: number;
   referenceCount: number;
   unpaidInvoices: number;
