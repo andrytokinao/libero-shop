@@ -33,7 +33,7 @@ type Network = 'local' | 'internet';
       <div class="download">
         @if (!auth.isAuthenticated()) {
           <div class="card brand">
-            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Libero <span>Shop</span></div>
+            <div class="mark"><img class="brand-logo" src="logo.png" alt="" />Moussa <span>Shop</span></div>
             <div class="sub">Application mobile Android</div>
           </div>
         }
@@ -147,7 +147,7 @@ type Network = 'local' | 'internet';
                 <!-- Opening a server to the Internet is a box, a name and a certificate: not
                      something a shop does alone, so it is told who does it for them. -->
                 <div class="support">
-                  Pour utiliser l'application partout, contactez le support de Libero Shop : il
+                  Pour utiliser l'application partout, contactez le support de Moussa Shop : il
                   rend votre serveur accessible depuis Internet.
                   <div>
                     Support — WhatsApp :
